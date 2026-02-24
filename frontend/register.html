@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow — Inscription</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="auth-wrapper">
+    <div class="auth-card glass">
+      <div class="auth-logo">
+        <div class="logo-icon">✦</div>
+        <span>TaskFlow</span>
+      </div>
+      <h2>Créer un compte ✨</h2>
+      <p class="auth-sub">Rejoins TaskFlow et organise ta vie</p>
+
+      <div id="erreur" class="alert alert-error" style="display:none"></div>
+      <div id="succes" class="alert alert-success" style="display:none"></div>
+
+      <form id="formRegister">
+        <div class="field">
+          <label>Nom complet</label>
+          <input type="text" id="nom" placeholder="John Doe" required>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="email" placeholder="toi@email.com" required>
+        </div>
+        <div class="field">
+          <label>Mot de passe</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+        <div class="field">
+          <label>Confirmer le mot de passe</label>
+          <input type="password" id="password2" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-main">
+          <span>Créer mon compte</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </form>
+
+      <p class="auth-switch">Déjà un compte ? <a href="index.html">Se connecter</a></p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

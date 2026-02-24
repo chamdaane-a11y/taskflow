@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dash-page">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">✦</div>
+      <span>TaskFlow</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active">
+        <span class="nav-icon">⊞</span> Dashboard
+      </a>
+      <a href="#" class="nav-item" onclick="filtrerPar('toutes')">
+        <span class="nav-icon">◈</span> Toutes les tâches
+      </a>
+      <a href="#" class="nav-item" onclick="filtrerPar('haute')">
+        <span class="nav-icon">▲</span> Priorité haute
+      </a>
+      <a href="#" class="nav-item" onclick="filtrerPar('terminee')">
+        <span class="nav-icon">✓</span> Terminées
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">H</div>
+        <div>
+          <div class="user-name" id="userName">...</div>
+          <div class="user-role">Membre</div>
+        </div>
+      </div>
+      <button onclick="deconnexion()" class="btn-logout">↩ Déconnexion</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Header -->
+    <header class="dash-header">
+      <div>
+        <h1 id="greetingMsg">Bonjour 👋</h1>
+        <p class="dash-date" id="dateAujourdhui"></p>
+      </div>
+      <div class="header-search">
+        <input type="text" id="searchInput" placeholder="🔍 Rechercher une tâche..." oninput="rechercherTaches()">
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#f0f7ff">📋</div>
+        <div>
+          <div class="stat-number" id="statTotal">0</div>
+          <div class="stat-label">Total tâches</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#f0fff4">✅</div>
+        <div>
+          <div class="stat-number" id="statTerminees">0</div>
+          <div class="stat-label">Terminées</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fff7f0">🔥</div>
+        <div>
+          <div class="stat-number" id="statHaute">0</div>
+          <div class="stat-label">Priorité haute</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fdf0ff">⏳</div>
+        <div>
+          <div class="stat-number" id="statEnCours">0</div>
+          <div class="stat-label">En cours</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progression -->
+    <div class="progress-card">
+      <div class="progress-header">
+        <span>Progression globale</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="add-card">
+      <h3>+ Nouvelle tâche</h3>
+      <div class="add-form">
+        <input type="text" id="inputTitre" placeholder="Que dois-tu faire ?">
+        <select id="inputPriorite">
+          <option value="basse">🟢 Basse</option>
+          <option value="moyenne" selected>🟡 Moyenne</option>
+          <option value="haute">🔴 Haute</option>
+        </select>
+        <input type="date" id="inputDeadline">
+        <button onclick="ajouterTache()" class="btn-add">Ajouter</button>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filtres">
+      <button class="filtre-btn active" onclick="filtrerPar('toutes', this)">Toutes</button>
+      <button class="filtre-btn" onclick="filtrerPar('haute', this)">🔴 Haute</button>
+      <button class="filtre-btn" onclick="filtrerPar('moyenne', this)">🟡 Moyenne</button>
+      <button class="filtre-btn" onclick="filtrerPar('basse', this)">🟢 Basse</button>
+      <button class="filtre-btn" onclick="filtrerPar('terminee', this)">✅ Terminées</button>
+    </div>
+
+    <!-- Liste tâches -->
+    <div id="listeTaches" class="taches-grid"></div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
