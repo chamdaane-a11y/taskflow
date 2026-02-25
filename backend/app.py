@@ -834,3 +834,35 @@ def ajouter_commentaire():
 # ============================================
 if __name__ == '__main__':
     app.run(debug=True)
+# Google OAuth
+from flask_dance.contrib.google import make_google_blueprint, google
+
+google_bp = make_google_blueprint(
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    redirect_url="/auth/google/callback",
+    scope=["profile", "email"]
+)
+app.register_blueprint(google_bp, url_prefix="/auth")
+
+@app.route("/auth/google/callback")
+def google_callback():
+    if not google.authorized:
+        return jsonify({"erreur": "Non autorisé"}), 401
+    resp = google.get("/oauth2/v2/userinfo")
+    info = resp.json()
+    email = info["email"]
+    nom = info["name"]
+    db = connecter()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+    user = cursor.fetchone()
+    if not user:
+        cursor.execute("INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)", (nom, email, "google_oauth"))
+        db.commit()
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+    cursor.close()
+    db.close()
+    frontend_url = f"https://chamdaane-a11y.github.io/taskflow/dashboard?user={json.dumps({'id': user['id'], 'nom': user['nom'], 'email': user['email']})}"
+    return redirect(frontend_url)
