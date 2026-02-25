@@ -10,6 +10,7 @@ load_dotenv()
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
 CORS(app)
 
 # ============================================
@@ -833,36 +834,6 @@ def ajouter_commentaire():
         return jsonify({"erreur": str(e)}), 500
 # ============================================
 if __name__ == '__main__':
-    app.run(debug=True)
-# Google OAuth
-from flask_dance.contrib.google import make_google_blueprint, google
-
-google_bp = make_google_blueprint(
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    redirect_url="/auth/google/callback",
-    scope=["profile", "email"]
-)
-app.register_blueprint(google_bp, url_prefix="/auth")
-
-@app.route("/auth/google/callback")
-def google_callback():
-    if not google.authorized:
-        return jsonify({"erreur": "Non autorisé"}), 401
-    resp = google.get("/oauth2/v2/userinfo")
-    info = resp.json()
-    email = info["email"]
-    nom = info["name"]
-    db = connecter()
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-    user = cursor.fetchone()
-    if not user:
-        cursor.execute("INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)", (nom, email, "google_oauth"))
-        db.commit()
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
-    cursor.close()
-    db.close()
-    frontend_url = f"https://chamdaane-a11y.github.io/taskflow/dashboard?user={json.dumps({'id': user['id'], 'nom': user['nom'], 'email': user['email']})}"
-    return redirect(frontend_url)
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
