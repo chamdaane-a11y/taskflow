@@ -5,3 +5,4 @@ frontend-react/node_modules/
 frontend-react/dist/
 .env
 *.env
+backend/.env
