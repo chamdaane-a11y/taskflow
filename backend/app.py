@@ -11,6 +11,7 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
+app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
 CORS(app)
 
 # ============================================
