@@ -4,8 +4,9 @@ import { motion } from 'framer-motion'
 import axios from 'axios'
 import { useTheme } from '../useTheme'
 import { Line, Doughnut, Bar } from 'react-chartjs-2'
-import { LayoutDashboard, Bot, BarChart2, Calendar, LogOut, TrendingUp, TrendingDown, CheckSquare, Clock, Target, Layers } from 'lucide-react'
+import { LayoutDashboard, Bot, BarChart2, Calendar, LogOut, TrendingUp, TrendingDown, CheckSquare, Clock, Target, Layers, Menu } from 'lucide-react'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js'
+import { useMediaQuery } from '../useMediaQuery'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -15,6 +16,8 @@ export default function Analytics() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
+  const [showSidebar, setShowSidebar] = useState(false)
   const user = JSON.parse(localStorage.getItem('user'))
   const { T } = useTheme()
 
@@ -105,7 +108,9 @@ export default function Analytics() {
     <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* Sidebar */}
-      <aside style={{ width: 248, background: T.bg2, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', top: 0, left: 0, height: '100vh' }}>
+      <aside style={{ width: 248, background: T.bg2, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', top: 0, left: isMobile ? (showSidebar ? 0 : -260) : 0,
+transition: 'left 0.3s ease',
+zIndex: 100, height: '100vh' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32, padding: '0 8px' }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Layers size={16} color={T.bg} strokeWidth={2.5} />
@@ -138,8 +143,20 @@ export default function Analytics() {
         </div>
       </aside>
 
+{isMobile && (
+  <motion.button
+    style={{ position: 'fixed', top: 16, left: 16, zIndex: 200, width: 40, height: 40, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    onClick={() => setShowSidebar(!showSidebar)}>
+    <Menu size={20} />
+  </motion.button>
+)}
+{isMobile && showSidebar && (
+  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }}
+    onClick={() => setShowSidebar(false)} />
+)}
+
       {/* Main */}
-      <main style={{ marginLeft: 248, flex: 1, padding: '32px 40px' }}>
+      <main style={{ marginLeft: isMobile ? 0 : 248, flex: 1, padding: '32px 40px' }}>
         <motion.div style={{ marginBottom: 32 }} initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.5px' }}>Analytiques</h1>
           <p style={{ color: T.text2, fontSize: 13, marginTop: 4 }}>Vue d'ensemble de votre productivité</p>

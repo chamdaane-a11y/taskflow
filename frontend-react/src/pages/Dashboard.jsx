@@ -12,8 +12,9 @@ import fr from 'date-fns/locale/fr'
 import {
   LayoutDashboard, CheckSquare, Clock, AlertTriangle,
   ChevronRight, Trash2, Plus, LogOut, Bot, BarChart2,
-  Calendar, Layers, Bell, Award, Palette, Sparkles, Target, Users
+  Calendar, Layers, Bell, Award, Palette, Sparkles, Target, Users, Menu
 } from 'lucide-react'
+import { useMediaQuery } from '../useMediaQuery'
 
 registerLocale('fr', fr)
 const API = 'https://taskflow-production-75c1.up.railway.app'
@@ -66,6 +67,8 @@ export default function Dashboard() {
   const [showRappels, setShowRappels] = useState(false)
   const [objectif, setObjectif] = useState('')
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
+  const [showSidebar, setShowSidebar] = useState(false)
   const user = JSON.parse(localStorage.getItem('user'))
   const T = themes[theme]
 
@@ -200,13 +203,19 @@ export default function Dashboard() {
 
       {/* Sidebar */}
       <aside style={{
-        width: 248, background: T.bg2,
-        borderRight: `1px solid ${T.border}`,
-        display: 'flex', flexDirection: 'column',
-        padding: '24px 16px', position: 'fixed',
-        top: 0, left: 0, height: '100vh',
-        transition: 'all 0.5s ease'
-      }}>
+  width: 248,
+  background: T.bg2,
+  borderRight: `1px solid ${T.border}`,
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '24px 16px',
+  position: 'fixed',
+  top: 0,
+  left: isMobile ? (showSidebar ? 0 : -260) : 0,
+  height: '100vh',
+  transition: 'left 0.3s ease',
+  zIndex: 100
+}}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32, padding: '0 8px' }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -343,8 +352,21 @@ export default function Dashboard() {
         </motion.button>
       </aside>
 
+{isMobile && (
+  <motion.button
+    style={{ position: 'fixed', top: 16, left: 16, zIndex: 200, width: 40, height: 40, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    onClick={() => setShowSidebar(!showSidebar)}>
+    <Menu size={20} />
+  </motion.button>
+)}
+
+{isMobile && showSidebar && (
+  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }}
+    onClick={() => setShowSidebar(false)} />
+)}
+
       {/* Main */}
-      <main style={{ marginLeft: 248, flex: 1, padding: '32px 40px', maxWidth: 'calc(100vw - 248px)' }}>
+      <main style={{ marginLeft: isMobile ? 0 : 248, flex: 1, padding: '32px 40px', maxWidth: 'calc(100vw - 248px)' }}>
 
         {/* Header */}
         <motion.div style={{ marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
