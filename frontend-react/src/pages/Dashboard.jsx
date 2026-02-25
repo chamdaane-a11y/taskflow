@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 
 registerLocale('fr', fr)
-const API = 'http://localhost:5000'
+const API = 'https://taskflow-production-75c1.up.railway.app'
 
 function AnimatedNumber({ value }) {
   const [display, setDisplay] = useState(0)

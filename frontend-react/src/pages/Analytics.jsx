@@ -9,7 +9,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler)
 
-const API = 'http://localhost:5000'
+const API = 'https://taskflow-production-75c1.up.railway.app'
 
 export default function Analytics() {
   const [stats, setStats] = useState(null)

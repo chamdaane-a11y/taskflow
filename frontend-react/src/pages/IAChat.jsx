@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti'
 import { useTheme } from '../useTheme'
 import { Bot, Send, History, Link, LayoutDashboard, BarChart2, Calendar, LogOut, Copy, Plus, X, ChevronRight, Layers } from 'lucide-react'
 
-const API = 'http://localhost:5000'
+const API = 'https://taskflow-production-75c1.up.railway.app'
 
 const modeles = [
   { id: 'llama-3.3-70b-versatile', nom: 'Llama 3.3', description: 'Meta — Très puissant' },

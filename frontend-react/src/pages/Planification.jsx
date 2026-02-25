@@ -5,7 +5,7 @@ import axios from 'axios'
 import { useTheme } from '../useTheme'
 import { LayoutDashboard, Bot, BarChart2, Calendar, LogOut, Layers, Clock, Sparkles, ChevronLeft, ChevronRight, Plus, X, GripVertical } from 'lucide-react'
 
-const API = 'http://localhost:5000'
+const API = 'https://taskflow-production-75c1.up.railway.app'
 
 const HEURES = Array.from({ length: 12 }, (_, i) => i + 8) // 8h à 19h
 

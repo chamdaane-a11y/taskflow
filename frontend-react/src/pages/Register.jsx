@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import axios from 'axios'
 
-const API = 'http://localhost:5000'
+const API = 'https://taskflow-production-75c1.up.railway.app'
 
 export default function Register() {
   const [form, setForm] = useState({ nom: '', email: '', password: '', password2: '' })

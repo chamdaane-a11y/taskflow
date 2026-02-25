@@ -5,7 +5,7 @@ import axios from 'axios'
 import { useTheme } from '../useTheme'
 import { LayoutDashboard, Bot, BarChart2, Calendar, LogOut, Layers, Users, MessageSquare, Check, X, Send, UserPlus, Share2 } from 'lucide-react'
 
-const API = 'http://localhost:5000'
+const API = 'https://taskflow-production-75c1.up.railway.app'
 
 export default function Collaboration() {
   const [taches, setTaches] = useState([])
