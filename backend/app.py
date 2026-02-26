@@ -659,29 +659,63 @@ google_bp = make_google_blueprint(
     scope=["profile", "email"],
     redirect_url="/auth/google/callback"
 )
-app.register_blueprint(google_bp, url_prefix="/auth", name="google_oauth")
+app.register_blueprint(google_bp, url_prefix="/auth")
 
 @app.route("/auth/google/callback")
 def google_callback():
-    if not google_oauth.authorized:
-        return redirect("https://chamdaane-a11y.github.io/taskflow")
-    resp = google_oauth.get("/oauth2/v2/userinfo")
-    info = resp.json()
-    email = info["email"]
-    nom = info["name"]
-    db = connecter()
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-    user = cursor.fetchone()
-    if not user:
-        cursor.execute("INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)", (nom, email, "google_oauth"))
-        db.commit()
+    try:
+        # Si l'utilisateur n'est pas (ou plus) autorisé côté Google, on le renvoie à l'accueil
+        if not google_oauth.authorized:
+            return redirect("https://chamdaane-a11y.github.io/taskflow")
+
+        # Récupération des infos de profil Google
+        resp = google_oauth.get("/oauth2/v2/userinfo")
+        if not resp or not resp.ok:
+            # En cas d'erreur d'API Google, on renvoie un message expliquant le problème
+            return jsonify({"erreur": "Impossible de récupérer les informations Google", "details": getattr(resp, "text", "")}), 500
+
+        info = resp.json() or {}
+        email = info.get("email")
+        nom = info.get("name") or (email.split("@")[0] if email else "Utilisateur Google")
+
+        if not email:
+            # Cas rare : Google ne renvoie pas d'email (permissions refusées, etc.)
+            return jsonify({"erreur": "Google n'a pas renvoyé d'adresse email pour ce compte."}), 400
+
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+
+        # On cherche l'utilisateur par email
         cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
-    cursor.close()
-    db.close()
-    user_data = json.dumps({"id": user["id"], "nom": user["nom"], "email": user["email"]})
-    return redirect(f"https://chamdaane-a11y.github.io/taskflow/#/dashboard?user={quote(user_data)}")
+
+        # Création si inexistant
+        if not user:
+            cursor.execute(
+                "INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)",
+                (nom, email, "google_oauth"),
+            )
+            db.commit()
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+
+        cursor.close()
+        db.close()
+
+        if not user:
+            return jsonify({"erreur": "Utilisateur Google non trouvé après création."}), 500
+
+        user_data = json.dumps(
+            {"id": user["id"], "nom": user["nom"], "email": user["email"]}
+        )
+
+        # Redirection finale vers le frontend avec l'utilisateur sérialisé en paramètre
+        return redirect(
+            f"https://chamdaane-a11y.github.io/taskflow/#/dashboard?user={quote(user_data)}"
+        )
+    except Exception as e:
+        # Pour t'aider à déboguer en production, on renvoie le message d'erreur
+        return jsonify({"erreur": "Erreur interne dans google_callback", "details": str(e)}), 500
 
 # ============================================
 if __name__ == '__main__':
