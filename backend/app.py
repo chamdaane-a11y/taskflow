@@ -656,7 +656,14 @@ from flask_dance.contrib.google import make_google_blueprint, google as google_o
 google_bp = make_google_blueprint(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    scope=["profile", "email"],
+    # Google renvoie désormais ces scopes complets :
+    # https://www.googleapis.com/auth/userinfo.email openid https://www.googleapis.com/auth/userinfo.profile
+    # On les déclare explicitement pour éviter l'erreur "Scope has changed from ..."
+    scope=[
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "openid",
+    ],
     redirect_url="/auth/google/callback"
 )
 app.register_blueprint(google_bp, url_prefix="/auth")
