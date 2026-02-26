@@ -849,7 +849,7 @@ google_bp = make_google_blueprint(
     scope=["profile", "email"],
     redirect_url="/auth/google/callback"
 )
-app.register_blueprint(google_bp, url_prefix="/auth")
+app.register_blueprint(google_bp, url_prefix="/auth", name="google_oauth")
 
 @app.route("/auth/google/callback")
 def google_callback():
@@ -884,7 +884,7 @@ google_bp = make_google_blueprint(
     scope=["profile", "email"],
     redirect_url="/auth/google/callback"
 )
-app.register_blueprint(google_bp, url_prefix="/auth")
+app.register_blueprint(google_bp, url_prefix="/auth", name="google_oauth")
 
 @app.route("/auth/google/callback")
 def google_callback():
