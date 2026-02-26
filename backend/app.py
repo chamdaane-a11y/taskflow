@@ -15,6 +15,9 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
 CORS(app)
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'
 
 # ============================================
 # 🔐 AUTHENTIFICATION
