@@ -11,8 +11,6 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
-app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
-app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
 CORS(app)
 
 # ============================================
@@ -908,3 +906,9 @@ def google_callback():
     user_data = json_module.dumps({"id": user["id"], "nom": user["nom"], "email": user["email"]})
     from urllib.parse import quote
     return redirect(f"https://chamdaane-a11y.github.io/taskflow/#/dashboard?user={quote(user_data)}")
+
+# ============================================
+if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
