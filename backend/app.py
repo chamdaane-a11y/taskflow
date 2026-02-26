@@ -873,3 +873,38 @@ def google_callback():
     user_data = json_module.dumps({"id": user["id"], "nom": user["nom"], "email": user["email"]})
     from urllib.parse import quote
     return redirect(f"https://chamdaane-a11y.github.io/taskflow/#/dashboard?user={quote(user_data)}")
+
+# Google OAuth
+from flask_dance.contrib.google import make_google_blueprint, google as google_oauth
+import json as json_module
+
+google_bp = make_google_blueprint(
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    scope=["profile", "email"],
+    redirect_url="/auth/google/callback"
+)
+app.register_blueprint(google_bp, url_prefix="/auth")
+
+@app.route("/auth/google/callback")
+def google_callback():
+    if not google_oauth.authorized:
+        return redirect("https://chamdaane-a11y.github.io/taskflow")
+    resp = google_oauth.get("/oauth2/v2/userinfo")
+    info = resp.json()
+    email = info["email"]
+    nom = info["name"]
+    db = connecter()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+    user = cursor.fetchone()
+    if not user:
+        cursor.execute("INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)", (nom, email, "google_oauth"))
+        db.commit()
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+    cursor.close()
+    db.close()
+    user_data = json_module.dumps({"id": user["id"], "nom": user["nom"], "email": user["email"]})
+    from urllib.parse import quote
+    return redirect(f"https://chamdaane-a11y.github.io/taskflow/#/dashboard?user={quote(user_data)}")
