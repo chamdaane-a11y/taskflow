@@ -1,11 +1,10 @@
-from flask import Flask, jsonify, request, redirect
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from database import connecter
 import hashlib
 import os
 import json
 import re
-from urllib.parse import quote
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -15,9 +14,6 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
 CORS(app)
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'
 
 # ============================================
 # 🔐 AUTHENTIFICATION
@@ -646,83 +642,6 @@ def ajouter_commentaire():
         return jsonify({"message": "Commentaire ajoute !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
-# ============================================
-# 🔑 GOOGLE OAUTH
-# ============================================
-
-from flask_dance.contrib.google import make_google_blueprint, google as google_oauth
-
-google_bp = make_google_blueprint(
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    # Google renvoie désormais ces scopes complets :
-    # https://www.googleapis.com/auth/userinfo.email openid https://www.googleapis.com/auth/userinfo.profile
-    # On les déclare explicitement pour éviter l'erreur "Scope has changed from ..."
-    scope=[
-        "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "openid",
-    ],
-    redirect_url="/auth/google/callback"
-)
-app.register_blueprint(google_bp, url_prefix="/auth")
-
-@app.route("/auth/google/callback")
-def google_callback():
-    try:
-        # Si l'utilisateur n'est pas (ou plus) autorisé côté Google, on le renvoie à l'accueil
-        if not google_oauth.authorized:
-            return redirect("https://chamdaane-a11y.github.io/taskflow")
-
-        # Récupération des infos de profil Google
-        resp = google_oauth.get("/oauth2/v2/userinfo")
-        if not resp or not resp.ok:
-            # En cas d'erreur d'API Google, on renvoie un message expliquant le problème
-            return jsonify({"erreur": "Impossible de récupérer les informations Google", "details": getattr(resp, "text", "")}), 500
-
-        info = resp.json() or {}
-        email = info.get("email")
-        nom = info.get("name") or (email.split("@")[0] if email else "Utilisateur Google")
-
-        if not email:
-            # Cas rare : Google ne renvoie pas d'email (permissions refusées, etc.)
-            return jsonify({"erreur": "Google n'a pas renvoyé d'adresse email pour ce compte."}), 400
-
-        db = connecter()
-        cursor = db.cursor(dictionary=True)
-
-        # On cherche l'utilisateur par email
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
-
-        # Création si inexistant
-        if not user:
-            cursor.execute(
-                "INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)",
-                (nom, email, "google_oauth"),
-            )
-            db.commit()
-            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-            user = cursor.fetchone()
-
-        cursor.close()
-        db.close()
-
-        if not user:
-            return jsonify({"erreur": "Utilisateur Google non trouvé après création."}), 500
-
-        user_data = json.dumps(
-            {"id": user["id"], "nom": user["nom"], "email": user["email"]}
-        )
-
-        # Redirection finale vers le frontend avec l'utilisateur sérialisé en paramètre
-        return redirect(
-            f"https://chamdaane-a11y.github.io/taskflow/#/dashboard?user={quote(user_data)}"
-        )
-    except Exception as e:
-        # Pour t'aider à déboguer en production, on renvoie le message d'erreur
-        return jsonify({"erreur": "Erreur interne dans google_callback", "details": str(e)}), 500
 
 # ============================================
 if __name__ == '__main__':
