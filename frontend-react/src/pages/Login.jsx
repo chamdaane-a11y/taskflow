@@ -144,6 +144,8 @@ export default function Login() {
             {loading ? 'Connexion...' : 'Se connecter →'}
           </motion.button>
 
+         
+
           <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 24 }}>
             Pas de compte ?{' '}
             <Link to="/register" style={{ color: '#c9a84c', textDecoration: 'none', fontWeight: 600 }}>
