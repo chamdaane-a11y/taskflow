@@ -21,35 +21,70 @@ CORS(app)
 
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
-    nom = data['nom']
-    email = data['email']
-    password = hashlib.sha256(data['password'].encode()).hexdigest()
-    db = connecter()
-    curseur = db.cursor()
     try:
-        curseur.execute("INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)", (nom, email, password))
+        data = request.get_json()
+        nom = data.get('nom', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+
+        if not nom or not email or not password:
+            return jsonify({"erreur": "Tous les champs sont requis"}), 400
+
+        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+
+        # Vérification explicite si email existe
+        curseur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        existing = curseur.fetchone()
+        if existing:
+            curseur.close()
+            db.close()
+            return jsonify({"erreur": "Email déjà utilisé !"}), 400
+
+        curseur.execute(
+            "INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)",
+            (nom, email, password_hash)
+        )
         db.commit()
-        return jsonify({"message": "Compte créé !"})
-    except:
-        return jsonify({"erreur": "Email déjà utilisé !"}), 400
-    finally:
+        curseur.close()
         db.close()
+        return jsonify({"message": "Compte créé !"})
+
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
-    email = data['email']
-    password = hashlib.sha256(data['password'].encode()).hexdigest()
-    db = connecter()
-    curseur = db.cursor(dictionary=True)
-    curseur.execute("SELECT id, nom, email FROM users WHERE email=%s AND password=%s", (email, password))
-    user = curseur.fetchone()
-    db.close()
-    if user:
-        return jsonify({"message": "Connecté !", "user": user})
-    else:
-        return jsonify({"erreur": "Email ou mot de passe incorrect !"}), 401
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+
+        if not email or not password:
+            return jsonify({"erreur": "Email et mot de passe requis"}), 400
+
+        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute(
+            "SELECT id, nom, email FROM users WHERE email = %s AND password = %s",
+            (email, password_hash)
+        )
+        user = curseur.fetchone()
+        curseur.close()
+        db.close()
+
+        if user:
+            return jsonify({"message": "Connecté !", "user": user})
+        else:
+            return jsonify({"erreur": "Email ou mot de passe incorrect !"}), 401
+
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
 
 # ============================================
 # 👤 UTILISATEURS
