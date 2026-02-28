@@ -679,6 +679,78 @@ def ajouter_commentaire():
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
+# 🔔 PUSH NOTIFICATIONS
+# ============================================
+from pywebpush import webpush, WebPushException
+
+VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
+VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
+VAPID_CLAIMS = {"sub": "mailto:admin@taskflow.app"}
+
+@app.route('/push/vapid-public-key', methods=['GET'])
+def get_vapid_public_key():
+    return jsonify({"public_key": VAPID_PUBLIC_KEY})
+
+@app.route('/push/subscribe', methods=['POST'])
+def subscribe_push():
+    try:
+        data = request.get_json()
+        user_id = data['user_id']
+        subscription = json.dumps(data['subscription'])
+        db = connecter()
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM push_subscriptions WHERE user_id = %s", (user_id,))
+        cursor.execute("INSERT INTO push_subscriptions (user_id, subscription) VALUES (%s, %s)", (user_id, subscription))
+        db.commit()
+        cursor.close()
+        db.close()
+        return jsonify({"message": "Abonnement enregistré !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/push/send-rappels', methods=['POST'])
+def send_rappels():
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT t.titre, t.deadline, t.user_id,
+                   DATEDIFF(t.deadline, CURDATE()) AS jours_restants
+            FROM taches t
+            WHERE t.terminee = FALSE
+              AND t.deadline IS NOT NULL
+              AND t.deadline <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+        """)
+        taches = cursor.fetchall()
+        
+        sent = 0
+        for tache in taches:
+            cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (tache['user_id'],))
+            sub = cursor.fetchone()
+            if not sub:
+                continue
+            subscription = json.loads(sub['subscription'])
+            jours = tache['jours_restants']
+            msg = f"Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"
+            try:
+                webpush(
+                    subscription_info=subscription,
+                    data=json.dumps({
+                        "title": f"⏰ Deadline : {tache['titre']}",
+                        "body": msg
+                    }),
+                    vapid_private_key=VAPID_PRIVATE_KEY,
+                    vapid_claims=VAPID_CLAIMS
+                )
+                sent += 1
+            except WebPushException:
+                pass
+        cursor.close()
+        db.close()
+        return jsonify({"message": f"{sent} notifications envoyées"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+# ============================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
