@@ -2,12 +2,17 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <title>TaskFlow</title>
   <script>
-    var path = window.location.pathname.replace('/taskflow', '') || '/';
-    var search = window.location.search;
-    var hash = window.location.hash;
-    sessionStorage.setItem('redirect', path + search + hash);
-    window.location.replace('/taskflow/');
+    var segmentCount = 1;
+    var l = window.location;
+    l.replace(
+      l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+      l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?p=/' +
+      l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+      (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.hash
+    );
   </script>
 </head>
 <body></body>
