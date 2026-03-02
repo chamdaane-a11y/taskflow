@@ -7,6 +7,7 @@ import json
 import re
 from dotenv import load_dotenv
 from groq import Groq
+from pywebpush import webpush, WebPushException
 import requests as http_requests
 
 load_dotenv()
@@ -14,7 +15,17 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
-CORS(app)
+CORS(app, origins="*", supports_credentials=False)
+
+VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
+VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
+VAPID_CLAIMS = {"sub": "mailto:admin@taskflow.app"}
+
+def envoyer_notification_slack(webhook_url, message):
+    try:
+        http_requests.post(webhook_url, json={"text": message}, timeout=5)
+    except Exception as e:
+        print(f"Erreur Slack: {e}")
 
 # ============================================
 # 🔐 AUTHENTIFICATION
@@ -717,11 +728,6 @@ def ajouter_commentaire():
 # ============================================
 # 🔔 PUSH NOTIFICATIONS
 # ============================================
-from pywebpush import webpush, WebPushException
-
-VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
-VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
-VAPID_CLAIMS = {"sub": "mailto:admin@taskflow.app"}
 
 @app.route('/push/vapid-public-key', methods=['GET'])
 def get_vapid_public_key():
@@ -802,12 +808,6 @@ def send_rappels():
 # ============================================
 # 🔗 INTÉGRATIONS
 # ============================================
-
-def envoyer_notification_slack(webhook_url, message):
-    try:
-        http_requests.post(webhook_url, json={"text": message}, timeout=5)
-    except Exception as e:
-        print(f"Erreur Slack: {e}")
 
 @app.route('/integrations/slack', methods=['GET'])
 def get_slack_integration():
