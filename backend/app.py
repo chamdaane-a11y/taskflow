@@ -7,6 +7,7 @@ import json
 import re
 from dotenv import load_dotenv
 from groq import Groq
+import requests as http_requests
 
 load_dotenv()
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -34,8 +35,6 @@ def register():
 
         db = connecter()
         curseur = db.cursor(dictionary=True)
-
-        # Vérification explicite si email existe
         curseur.execute("SELECT id FROM users WHERE email = %s", (email,))
         existing = curseur.fetchone()
         if existing:
@@ -177,22 +176,39 @@ def get_taches(user_id):
 
 @app.route('/taches', methods=['POST'])
 def ajouter_tache():
-    data = request.get_json()
-    db = connecter()
-    curseur = db.cursor()
-    curseur.execute("""
-        INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (
-        data['titre'],
-        data.get('priorite', 'moyenne'),
-        data.get('deadline', None),
-        data['user_id'],
-        data.get('categorie_id', None)
-    ))
-    db.commit()
-    db.close()
-    return jsonify({"message": "Tâche ajoutée !"})
+    try:
+        data = request.get_json()
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("""
+            INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            data['titre'],
+            data.get('priorite', 'moyenne'),
+            data.get('deadline', None),
+            data['user_id'],
+            data.get('categorie_id', None)
+        ))
+        db.commit()
+
+        # Notifier Slack si webhook configuré
+        curseur2 = db.cursor(dictionary=True)
+        curseur2.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (data['user_id'],))
+        row = curseur2.fetchone()
+        if row:
+            config = json.loads(row['config'])
+            webhook_url = config.get('webhook_url')
+            if webhook_url:
+                deadline_str = f" (deadline: {data['deadline']})" if data.get('deadline') else ""
+                envoyer_notification_slack(
+                    webhook_url,
+                    f"✅ Nouvelle tâche TaskFlow : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}"
+                )
+        db.close()
+        return jsonify({"message": "Tâche ajoutée !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
 
 @app.route('/taches/<int:id>', methods=['PUT'])
 def terminer_tache(id):
@@ -212,6 +228,20 @@ def supprimer_tache(id):
     db.commit()
     db.close()
     return jsonify({"message": "Tâche supprimée !"})
+
+@app.route('/taches/<int:id>/statut', methods=['PATCH'])
+def update_statut_tache(id):
+    try:
+        data = request.get_json()
+        statut = data.get('statut', 'a_faire')
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("UPDATE taches SET statut=%s WHERE id=%s", (statut, id))
+        db.commit()
+        db.close()
+        return jsonify({"message": "Statut mis à jour !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
 
 @app.route('/taches/rappels/<int:user_id>', methods=['GET'])
 def get_rappels(user_id):
@@ -553,7 +583,13 @@ def get_analytics(user_id):
         """, (user_id,))
         ia_par_jour = curseur.fetchall()
         db.close()
-        return jsonify({"total": total, "terminees": terminees, "taux_completion": taux, "priorites": priorites, "par_jour": par_jour, "cette_semaine": cette_semaine, "semaine_precedente": semaine_precedente, "ia_par_jour": ia_par_jour, "evolution": round(((cette_semaine - semaine_precedente) / max(semaine_precedente, 1)) * 100, 1)})
+        return jsonify({
+            "total": total, "terminees": terminees, "taux_completion": taux,
+            "priorites": priorites, "par_jour": par_jour,
+            "cette_semaine": cette_semaine, "semaine_precedente": semaine_precedente,
+            "ia_par_jour": ia_par_jour,
+            "evolution": round(((cette_semaine - semaine_precedente) / max(semaine_precedente, 1)) * 100, 1)
+        })
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
@@ -722,34 +758,95 @@ def send_rappels():
               AND t.deadline <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
         """)
         taches = cursor.fetchall()
-        
+
         sent = 0
         for tache in taches:
+            # Envoi push notification
             cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (tache['user_id'],))
             sub = cursor.fetchone()
-            if not sub:
-                continue
-            subscription = json.loads(sub['subscription'])
-            jours = tache['jours_restants']
-            msg = f"Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"
-            try:
-                webpush(
-                    subscription_info=subscription,
-                    data=json.dumps({
-                        "title": f"⏰ Deadline : {tache['titre']}",
-                        "body": msg
-                    }),
-                    vapid_private_key=VAPID_PRIVATE_KEY,
-                    vapid_claims=VAPID_CLAIMS
-                )
-                sent += 1
-            except WebPushException:
-                pass
+            if sub:
+                subscription = json.loads(sub['subscription'])
+                jours = tache['jours_restants']
+                msg = "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"
+                try:
+                    webpush(
+                        subscription_info=subscription,
+                        data=json.dumps({
+                            "title": f"⏰ Deadline : {tache['titre']}",
+                            "body": msg
+                        }),
+                        vapid_private_key=VAPID_PRIVATE_KEY,
+                        vapid_claims=VAPID_CLAIMS
+                    )
+                    sent += 1
+                except WebPushException:
+                    pass
+
+            # Envoi Slack si webhook configuré
+            cursor.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (tache['user_id'],))
+            slack_row = cursor.fetchone()
+            if slack_row:
+                slack_config = json.loads(slack_row['config'])
+                slack_webhook = slack_config.get('webhook_url')
+                if slack_webhook:
+                    jours = tache['jours_restants']
+                    slack_msg = f"⏰ *Deadline TaskFlow* : {tache['titre']} — {'Aujourd\'hui !' if jours == 0 else f'Dans {jours} jour(s)'}"
+                    envoyer_notification_slack(slack_webhook, slack_msg)
+
         cursor.close()
         db.close()
         return jsonify({"message": f"{sent} notifications envoyées"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
+
+# ============================================
+# 🔗 INTÉGRATIONS
+# ============================================
+
+def envoyer_notification_slack(webhook_url, message):
+    try:
+        http_requests.post(webhook_url, json={"text": message}, timeout=5)
+    except Exception as e:
+        print(f"Erreur Slack: {e}")
+
+@app.route('/integrations/slack', methods=['GET'])
+def get_slack_integration():
+    try:
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({"erreur": "user_id requis"}), 400
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
+        row = curseur.fetchone()
+        db.close()
+        if row:
+            config = json.loads(row['config'])
+            return jsonify({"webhook_url": config.get('webhook_url', '')})
+        return jsonify({"webhook_url": ""})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/integrations/slack', methods=['POST'])
+def save_slack_integration():
+    try:
+        data = request.get_json()
+        user_id = data['user_id']
+        webhook_url = data['webhook_url']
+        config = json.dumps({"webhook_url": webhook_url})
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
+        curseur.execute(
+            "INSERT INTO integrations (user_id, type, config) VALUES (%s, 'slack', %s)",
+            (user_id, config)
+        )
+        db.commit()
+        db.close()
+        return jsonify({"message": "Webhook Slack sauvegardé !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 # ============================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
