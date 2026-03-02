@@ -796,7 +796,8 @@ def send_rappels():
                 slack_webhook = slack_config.get('webhook_url')
                 if slack_webhook:
                     jours = tache['jours_restants']
-                    slack_msg = f"⏰ *Deadline TaskFlow* : {tache['titre']} — {'Aujourd\'hui !' if jours == 0 else f'Dans {jours} jour(s)'}"
+                    label_jour = "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"
+                    slack_msg = f"⏰ *Deadline TaskFlow* : {tache['titre']} — {label_jour}"
                     envoyer_notification_slack(slack_webhook, slack_msg)
 
         cursor.close()
