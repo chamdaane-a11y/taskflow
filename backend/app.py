@@ -1,10 +1,16 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_mail import Mail, Message
 from database import connecter
 import hashlib
 import os
 import json
 import re
+import secrets
+from datetime import timedelta
 from dotenv import load_dotenv
 from groq import Groq
 from pywebpush import webpush, WebPushException
@@ -15,7 +21,29 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
-CORS(app, origins="*", supports_credentials=False)
+
+# JWT
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'taskflow_jwt_secret')
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+app.config['JWT_COOKIE_SECURE'] = True
+app.config['JWT_COOKIE_SAMESITE'] = 'None'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+jwt = JWTManager(app)
+
+# Mail
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+mail = Mail(app)
+
+# Rate Limiter
+limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
+
+CORS(app, origins=["https://chamdaane-a11y.github.io"], supports_credentials=True)
 
 VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
@@ -27,11 +55,36 @@ def envoyer_notification_slack(webhook_url, message):
     except Exception as e:
         print(f"Erreur Slack: {e}")
 
+def envoyer_email_verification(email, nom, token):
+    try:
+        lien = f"https://taskflow-production-75c1.up.railway.app/verify-email/{token}"
+        msg = Message(
+            subject="✅ Vérifiez votre email TaskFlow",
+            recipients=[email],
+            html=f"""
+            <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
+                <h1 style="color:#6c63ff;">TaskFlow</h1>
+                <h2>Bonjour {nom} 👋</h2>
+                <p>Merci de vous être inscrit. Cliquez ci-dessous pour vérifier votre email :</p>
+                <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
+                    ✅ Vérifier mon email
+                </a>
+                <p style="color:#888;font-size:12px;">Ce lien expire dans 24h.</p>
+            </div>
+            """
+        )
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Erreur email: {e}")
+        return False
+
 # ============================================
 # 🔐 AUTHENTIFICATION
 # ============================================
 
 @app.route('/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register():
     try:
         data = request.get_json()
@@ -41,32 +94,60 @@ def register():
 
         if not nom or not email or not password:
             return jsonify({"erreur": "Tous les champs sont requis"}), 400
+        if len(password) < 8:
+            return jsonify({"erreur": "Le mot de passe doit contenir au moins 8 caractères"}), 400
 
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        verification_token = secrets.token_urlsafe(32)
 
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute("SELECT id FROM users WHERE email = %s", (email,))
-        existing = curseur.fetchone()
-        if existing:
-            curseur.close()
-            db.close()
+        if curseur.fetchone():
+            curseur.close(); db.close()
             return jsonify({"erreur": "Email déjà utilisé !"}), 400
 
         curseur.execute(
-            "INSERT INTO users (nom, email, password) VALUES (%s, %s, %s)",
-            (nom, email, password_hash)
+            "INSERT INTO users (nom, email, password, verification_token, email_verifie) VALUES (%s, %s, %s, %s, FALSE)",
+            (nom, email, password_hash, verification_token)
         )
-        db.commit()
-        curseur.close()
-        db.close()
-        return jsonify({"message": "Compte créé !"})
+        db.commit(); curseur.close(); db.close()
+
+        envoyer_email_verification(email, nom, verification_token)
+        return jsonify({"message": "Compte créé ! Vérifiez votre email pour activer votre compte."})
 
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
 
+@app.route('/verify-email/<token>', methods=['GET'])
+def verify_email(token):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT id, nom FROM users WHERE verification_token = %s", (token,))
+        user = curseur.fetchone()
+        if not user:
+            db.close()
+            return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
+                <h1 style="color:#e05c5c">❌ Lien invalide ou expiré</h1>
+                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à TaskFlow</a>
+            </body></html>""", 400
+        curseur.execute("UPDATE users SET email_verifie=TRUE, verification_token=NULL WHERE id=%s", (user['id'],))
+        db.commit(); db.close()
+        return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
+            <h1 style="color:#6c63ff">✅ Email vérifié !</h1>
+            <p>Votre compte TaskFlow est maintenant actif.</p>
+            <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">
+                Se connecter →
+            </a>
+        </body></html>"""
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
 @app.route('/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     try:
         data = request.get_json()
@@ -81,18 +162,57 @@ def login():
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute(
-            "SELECT id, nom, email FROM users WHERE email = %s AND password = %s",
+            "SELECT id, nom, email, email_verifie, theme FROM users WHERE email = %s AND password = %s",
             (email, password_hash)
         )
         user = curseur.fetchone()
-        curseur.close()
-        db.close()
+        curseur.close(); db.close()
 
-        if user:
-            return jsonify({"message": "Connecté !", "user": user})
-        else:
+        if not user:
             return jsonify({"erreur": "Email ou mot de passe incorrect !"}), 401
+        if not user.get('email_verifie'):
+            return jsonify({"erreur": "Veuillez vérifier votre email avant de vous connecter !", "non_verifie": True}), 403
 
+        access_token = create_access_token(identity=str(user['id']))
+        response = make_response(jsonify({
+            "message": "Connecté !",
+            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'dark')}
+        }))
+        set_access_cookies(response, access_token)
+        return response
+
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    response = make_response(jsonify({"message": "Déconnecté !"}))
+    unset_jwt_cookies(response)
+    return response
+
+
+@app.route('/resend-verification', methods=['POST'])
+@limiter.limit("3 per hour")
+def resend_verification():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT id, nom, email_verifie FROM users WHERE email=%s", (email,))
+        user = curseur.fetchone()
+        if not user:
+            db.close()
+            return jsonify({"erreur": "Email introuvable"}), 404
+        if user['email_verifie']:
+            db.close()
+            return jsonify({"erreur": "Email déjà vérifié"}), 400
+        new_token = secrets.token_urlsafe(32)
+        curseur.execute("UPDATE users SET verification_token=%s WHERE email=%s", (new_token, email))
+        db.commit(); db.close()
+        envoyer_email_verification(email, user['nom'], new_token)
+        return jsonify({"message": "Email de vérification renvoyé !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
@@ -115,8 +235,7 @@ def update_theme(id):
     db = connecter()
     curseur = db.cursor()
     curseur.execute("UPDATE users SET theme=%s WHERE id=%s", (data['theme'], id))
-    db.commit()
-    db.close()
+    db.commit(); db.close()
     return jsonify({"message": "Theme mis a jour !"})
 
 @app.route('/users/<int:id>/points', methods=['PUT'])
@@ -130,8 +249,7 @@ def update_points(id):
     user = curseur.fetchone()
     nouveau_niveau = (user['points'] // 100) + 1
     curseur.execute("UPDATE users SET niveau=%s WHERE id=%s", (nouveau_niveau, id))
-    db.commit()
-    db.close()
+    db.commit(); db.close()
     return jsonify({"points": user['points'], "niveau": nouveau_niveau})
 
 # ============================================
@@ -153,8 +271,7 @@ def ajouter_categorie():
     db = connecter()
     curseur = db.cursor()
     curseur.execute("INSERT INTO categories (nom, couleur, user_id) VALUES (%s, %s, %s)", (data['nom'], data['couleur'], data['user_id']))
-    db.commit()
-    db.close()
+    db.commit(); db.close()
     return jsonify({"message": "Catégorie ajoutée !"})
 
 @app.route('/categories/<int:id>', methods=['DELETE'])
@@ -162,8 +279,7 @@ def supprimer_categorie(id):
     db = connecter()
     curseur = db.cursor()
     curseur.execute("DELETE FROM categories WHERE id=%s", (id,))
-    db.commit()
-    db.close()
+    db.commit(); db.close()
     return jsonify({"message": "Catégorie supprimée !"})
 
 # ============================================
@@ -176,24 +292,17 @@ def get_taches(user_id):
     curseur = db.cursor(dictionary=True)
     curseur.execute("""
         SELECT t.*, c.nom as categorie_nom, c.couleur as categorie_couleur
-        FROM taches t
-        LEFT JOIN categories c ON t.categorie_id = c.id
-        WHERE t.user_id = %s
-        ORDER BY t.created_at DESC
+        FROM taches t LEFT JOIN categories c ON t.categorie_id = c.id
+        WHERE t.user_id = %s ORDER BY t.created_at DESC
     """, (user_id,))
     taches = curseur.fetchall()
-
-    # Pour chaque tâche, vérifier si elle est bloquée par une dépendance
     for tache in taches:
         curseur.execute("""
-            SELECT COUNT(*) as nb_bloquantes
-            FROM dependances d
+            SELECT COUNT(*) as nb_bloquantes FROM dependances d
             JOIN taches t2 ON d.depend_de_id = t2.id
             WHERE d.tache_id = %s AND t2.terminee = FALSE
         """, (tache['id'],))
-        result = curseur.fetchone()
-        tache['bloquee'] = result['nb_bloquantes'] > 0
-
+        tache['bloquee'] = curseur.fetchone()['nb_bloquantes'] > 0
     db.close()
     return jsonify(taches)
 
@@ -204,17 +313,9 @@ def ajouter_tache():
         db = connecter()
         curseur = db.cursor()
         curseur.execute("""
-            INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            data['titre'],
-            data.get('priorite', 'moyenne'),
-            data.get('deadline', None),
-            data['user_id'],
-            data.get('categorie_id', None)
-        ))
+            INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id) VALUES (%s, %s, %s, %s, %s)
+        """, (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), data['user_id'], data.get('categorie_id')))
         db.commit()
-
         curseur2 = db.cursor(dictionary=True)
         curseur2.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (data['user_id'],))
         row = curseur2.fetchone()
@@ -223,10 +324,7 @@ def ajouter_tache():
             webhook_url = config.get('webhook_url')
             if webhook_url:
                 deadline_str = f" (deadline: {data['deadline']})" if data.get('deadline') else ""
-                envoyer_notification_slack(
-                    webhook_url,
-                    f"✅ Nouvelle tâche TaskFlow : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}"
-                )
+                envoyer_notification_slack(webhook_url, f"✅ Nouvelle tâche TaskFlow : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}")
         db.close()
         return jsonify({"message": "Tâche ajoutée !"})
     except Exception as e:
@@ -237,46 +335,35 @@ def terminer_tache(id):
     data = request.get_json()
     db = connecter()
     curseur = db.cursor(dictionary=True)
-
-    # Vérifier si la tâche est bloquée avant de la terminer
     if data.get('terminee'):
         curseur.execute("""
-            SELECT COUNT(*) as nb_bloquantes
-            FROM dependances d
-            JOIN taches t ON d.depend_de_id = t.id
-            WHERE d.tache_id = %s AND t.terminee = FALSE
+            SELECT COUNT(*) as nb_bloquantes FROM dependances d
+            JOIN taches t ON d.depend_de_id = t.id WHERE d.tache_id = %s AND t.terminee = FALSE
         """, (id,))
-        result = curseur.fetchone()
-        if result['nb_bloquantes'] > 0:
+        if curseur.fetchone()['nb_bloquantes'] > 0:
             db.close()
             return jsonify({"erreur": "Cette tâche est bloquée par des dépendances non terminées"}), 400
-
     curseur.execute("UPDATE taches SET terminee=%s WHERE id=%s", (data['terminee'], id))
-    db.commit()
-    db.close()
+    db.commit(); db.close()
     return jsonify({"message": "Tâche mise à jour !"})
 
 @app.route('/taches/<int:id>', methods=['DELETE'])
 def supprimer_tache(id):
     db = connecter()
     curseur = db.cursor()
-    # Supprimer les dépendances liées avant de supprimer la tâche
     curseur.execute("DELETE FROM dependances WHERE tache_id=%s OR depend_de_id=%s", (id, id))
     curseur.execute("DELETE FROM taches WHERE id=%s", (id,))
-    db.commit()
-    db.close()
+    db.commit(); db.close()
     return jsonify({"message": "Tâche supprimée !"})
 
 @app.route('/taches/<int:id>/statut', methods=['PATCH'])
 def update_statut_tache(id):
     try:
         data = request.get_json()
-        statut = data.get('statut', 'a_faire')
         db = connecter()
         curseur = db.cursor()
-        curseur.execute("UPDATE taches SET statut=%s WHERE id=%s", (statut, id))
-        db.commit()
-        db.close()
+        curseur.execute("UPDATE taches SET statut=%s WHERE id=%s", (data.get('statut', 'a_faire'), id))
+        db.commit(); db.close()
         return jsonify({"message": "Statut mis à jour !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -287,14 +374,9 @@ def get_rappels(user_id):
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute("""
-            SELECT id, titre, deadline, priorite,
-                   DATEDIFF(deadline, CURDATE()) AS jours_restants
-            FROM taches
-            WHERE user_id = %s
-              AND terminee = FALSE
-              AND deadline IS NOT NULL
-              AND deadline <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
-            ORDER BY deadline ASC
+            SELECT id, titre, deadline, priorite, DATEDIFF(deadline, CURDATE()) AS jours_restants
+            FROM taches WHERE user_id = %s AND terminee = FALSE AND deadline IS NOT NULL
+            AND deadline <= DATE_ADD(CURDATE(), INTERVAL 3 DAY) ORDER BY deadline ASC
         """, (user_id,))
         rappels = curseur.fetchall()
         db.close()
@@ -303,7 +385,7 @@ def get_rappels(user_id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 🔗 DEPENDANCES ENTRE TACHES
+# 🔗 DEPENDANCES
 # ============================================
 
 @app.route('/taches/<int:tache_id>/dependances', methods=['GET'])
@@ -313,9 +395,7 @@ def get_dependances(tache_id):
         curseur = db.cursor(dictionary=True)
         curseur.execute("""
             SELECT d.id, d.depend_de_id, t.titre as titre_prerequis, t.terminee
-            FROM dependances d
-            JOIN taches t ON d.depend_de_id = t.id
-            WHERE d.tache_id = %s
+            FROM dependances d JOIN taches t ON d.depend_de_id = t.id WHERE d.tache_id = %s
         """, (tache_id,))
         dependances = curseur.fetchall()
         db.close()
@@ -328,38 +408,18 @@ def ajouter_dependance(tache_id):
     try:
         data = request.get_json()
         depend_de_id = data['depend_de_id']
-
-        # Empêcher dépendance sur soi-même
         if tache_id == depend_de_id:
             return jsonify({"erreur": "Une tâche ne peut pas dépendre d'elle-même"}), 400
-
         db = connecter()
         curseur = db.cursor(dictionary=True)
-
-        # Vérifier si la dépendance existe déjà
-        curseur.execute("""
-            SELECT id FROM dependances
-            WHERE tache_id=%s AND depend_de_id=%s
-        """, (tache_id, depend_de_id))
+        curseur.execute("SELECT id FROM dependances WHERE tache_id=%s AND depend_de_id=%s", (tache_id, depend_de_id))
         if curseur.fetchone():
-            db.close()
-            return jsonify({"erreur": "Cette dépendance existe déjà"}), 400
-
-        # Vérifier dépendance circulaire
-        curseur.execute("""
-            SELECT id FROM dependances
-            WHERE tache_id=%s AND depend_de_id=%s
-        """, (depend_de_id, tache_id))
+            db.close(); return jsonify({"erreur": "Cette dépendance existe déjà"}), 400
+        curseur.execute("SELECT id FROM dependances WHERE tache_id=%s AND depend_de_id=%s", (depend_de_id, tache_id))
         if curseur.fetchone():
-            db.close()
-            return jsonify({"erreur": "Dépendance circulaire détectée"}), 400
-
-        curseur.execute("""
-            INSERT INTO dependances (tache_id, depend_de_id)
-            VALUES (%s, %s)
-        """, (tache_id, depend_de_id))
-        db.commit()
-        db.close()
+            db.close(); return jsonify({"erreur": "Dépendance circulaire détectée"}), 400
+        curseur.execute("INSERT INTO dependances (tache_id, depend_de_id) VALUES (%s, %s)", (tache_id, depend_de_id))
+        db.commit(); db.close()
         return jsonify({"message": "Dépendance ajoutée !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -370,8 +430,7 @@ def supprimer_dependance(id):
         db = connecter()
         curseur = db.cursor()
         curseur.execute("DELETE FROM dependances WHERE id=%s", (id,))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Dépendance supprimée !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -395,18 +454,13 @@ def executer_ia():
             elif msg['role'] == 'ia':
                 messages_api.append({"role": "assistant", "content": msg['content']})
         messages_api.append({"role": "user", "content": prompt})
-        completion = groq_client.chat.completions.create(
-            model=modele,
-            messages=messages_api,
-            max_tokens=1024
-        )
+        completion = groq_client.chat.completions.create(model=modele, messages=messages_api, max_tokens=1024)
         reponse = completion.choices[0].message.content
         if tache_id:
             db = connecter()
             curseur = db.cursor()
             curseur.execute("UPDATE taches SET terminee=TRUE WHERE id=%s", (tache_id,))
-            db.commit()
-            db.close()
+            db.commit(); db.close()
         return jsonify({"reponse": reponse, "modele": modele, "tache_id": tache_id})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -416,12 +470,9 @@ def get_historique(user_id):
     db = connecter()
     curseur = db.cursor(dictionary=True)
     curseur.execute("""
-        SELECT h.*, t.titre as tache_titre 
-        FROM historique_ia h
-        LEFT JOIN taches t ON h.tache_id = t.id
-        WHERE h.user_id = %s
-        ORDER BY h.created_at DESC
-        LIMIT 50
+        SELECT h.*, t.titre as tache_titre FROM historique_ia h
+        LEFT JOIN taches t ON h.tache_id = t.id WHERE h.user_id = %s
+        ORDER BY h.created_at DESC LIMIT 50
     """, (user_id,))
     historique = curseur.fetchall()
     db.close()
@@ -433,11 +484,9 @@ def sauvegarder_historique():
     db = connecter()
     curseur = db.cursor()
     curseur.execute("""
-        INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (data['user_id'], data['prompt'], data['reponse'], data['modele'], data.get('tache_id', None)))
-    db.commit()
-    db.close()
+        INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s, %s, %s, %s, %s)
+    """, (data['user_id'], data['prompt'], data['reponse'], data['modele'], data.get('tache_id')))
+    db.commit(); db.close()
     return jsonify({"message": "Historique sauvegarde !"})
 
 @app.route('/ia/generer-taches', methods=['POST'])
@@ -446,28 +495,22 @@ def generer_taches():
         data = request.get_json(force=True)
         if not data or 'objectif' not in data or 'user_id' not in data:
             return jsonify({"erreur": "objectif et user_id requis"}), 400
-        objectif = data['objectif']
-        user_id = data['user_id']
-        priorite = data.get('priorite', 'moyenne')
         completion = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": f'Tu es un assistant de productivité. Objectif : "{objectif}". Génère exactement 5 tâches concrètes. Réponds UNIQUEMENT en JSON valide : ["tache 1","tache 2","tache 3","tache 4","tache 5"]'}],
+            messages=[{"role": "user", "content": f'Objectif : "{data["objectif"]}". Génère exactement 5 tâches concrètes. Réponds UNIQUEMENT en JSON : ["tache 1","tache 2","tache 3","tache 4","tache 5"]'}],
             max_tokens=300, temperature=0.4
         )
         reponse = completion.choices[0].message.content.strip()
         match = re.search(r'\[.*\]', reponse, re.S)
-        if not match:
-            raise ValueError("Réponse IA non JSON")
+        if not match: raise ValueError("Réponse IA non JSON")
         taches_list = json.loads(match.group())
-        if not isinstance(taches_list, list) or len(taches_list) != 5:
-            raise ValueError("IA n'a pas généré 5 tâches")
+        if not isinstance(taches_list, list) or len(taches_list) != 5: raise ValueError("IA n'a pas généré 5 tâches")
         taches_list = [str(t).strip() for t in taches_list if str(t).strip()]
         db = connecter()
         curseur = db.cursor()
         for titre in taches_list:
-            curseur.execute("INSERT INTO taches (titre, priorite, user_id) VALUES (%s, %s, %s)", (titre, priorite, user_id))
-        db.commit()
-        db.close()
+            curseur.execute("INSERT INTO taches (titre, priorite, user_id) VALUES (%s, %s, %s)", (titre, data.get('priorite', 'moyenne'), data['user_id']))
+        db.commit(); db.close()
         return jsonify({"taches": taches_list, "message": "5 tâches créées avec succès"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -481,14 +524,11 @@ def planifier_semaine():
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute("""
-            SELECT id, titre, priorite, deadline, temps_estime,
-                   DATEDIFF(deadline, CURDATE()) AS jours_restants
-            FROM taches WHERE user_id=%s AND terminee=FALSE
-            ORDER BY deadline ASC, priorite DESC
+            SELECT id, titre, priorite, deadline, temps_estime, DATEDIFF(deadline, CURDATE()) AS jours_restants
+            FROM taches WHERE user_id=%s AND terminee=FALSE ORDER BY deadline ASC, priorite DESC
         """, (user_id,))
         taches = curseur.fetchall()
-        if not taches:
-            return jsonify({"erreur": "Aucune tache a planifier"}), 400
+        if not taches: return jsonify({"erreur": "Aucune tache a planifier"}), 400
         taches_str = "\n".join([f"- {t['titre']} (priorite: {t['priorite']}, deadline: {t['deadline']}, temps: {t['temps_estime'] or 30} min)" for t in taches])
         completion = groq_client.chat.completions.create(
             model='llama-3.3-70b-versatile',
@@ -497,8 +537,7 @@ def planifier_semaine():
         )
         reponse = completion.choices[0].message.content.strip()
         match = re.search(r'\{.*\}', reponse, re.S)
-        if not match:
-            raise ValueError("Reponse IA invalide")
+        if not match: raise ValueError("Reponse IA invalide")
         plan = json.loads(match.group())
         for item in plan.get('planification', []):
             tache = next((t for t in taches if t['titre'] == item['titre']), None)
@@ -507,8 +546,7 @@ def planifier_semaine():
                     INSERT INTO planification (user_id, tache_id, date_planifiee, heure_debut, heure_fin, charge_minutes, genere_par_ia)
                     VALUES (%s, %s, %s, %s, %s, %s, TRUE)
                 """, (user_id, tache['id'], item['date'], item['heure_debut'], item['heure_fin'], tache.get('temps_estime', 30)))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"planification": plan['planification'], "conseil": plan.get('conseil', ''), "message": f"{len(plan['planification'])} taches planifiees !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -536,8 +574,7 @@ def ajouter_sous_tache(tache_id):
         db = connecter()
         curseur = db.cursor()
         curseur.execute("INSERT INTO sous_taches (tache_id, titre, ordre) VALUES (%s, %s, %s)", (tache_id, data['titre'], data.get('ordre', 0)))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Sous-tache ajoutee !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -549,8 +586,7 @@ def terminer_sous_tache(id):
         db = connecter()
         curseur = db.cursor()
         curseur.execute("UPDATE sous_taches SET terminee=%s WHERE id=%s", (data['terminee'], id))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Sous-tache mise a jour !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -561,8 +597,7 @@ def supprimer_sous_tache(id):
         db = connecter()
         curseur = db.cursor()
         curseur.execute("DELETE FROM sous_taches WHERE id=%s", (id,))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Sous-tache supprimee !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -578,8 +613,7 @@ def update_temps(id):
         db = connecter()
         curseur = db.cursor()
         curseur.execute("UPDATE taches SET temps_estime=%s, temps_reel=%s WHERE id=%s", (data.get('temps_estime'), data.get('temps_reel'), id))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Temps mis a jour !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -594,20 +628,16 @@ def get_planification(user_id):
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute("""
-            SELECT p.*, t.titre, t.priorite, t.temps_estime, t.statut
-            FROM planification p
-            JOIN taches t ON p.tache_id = t.id
-            WHERE p.user_id = %s AND p.date_planifiee >= CURDATE()
+            SELECT p.*, t.titre, t.priorite, t.temps_estime, t.statut FROM planification p
+            JOIN taches t ON p.tache_id = t.id WHERE p.user_id = %s AND p.date_planifiee >= CURDATE()
             ORDER BY p.date_planifiee ASC, p.heure_debut ASC
         """, (user_id,))
         planification = curseur.fetchall()
         db.close()
         for row in planification:
             for key, value in row.items():
-                if hasattr(value, 'total_seconds'):
-                    row[key] = str(value)
-                elif hasattr(value, 'isoformat'):
-                    row[key] = value.isoformat()
+                if hasattr(value, 'total_seconds'): row[key] = str(value)
+                elif hasattr(value, 'isoformat'): row[key] = value.isoformat()
         return jsonify(planification)
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -622,8 +652,7 @@ def ajouter_planification():
             INSERT INTO planification (user_id, tache_id, date_planifiee, heure_debut, heure_fin, charge_minutes, genere_par_ia)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (data['user_id'], data['tache_id'], data['date_planifiee'], data.get('heure_debut'), data.get('heure_fin'), data.get('charge_minutes', 0), data.get('genere_par_ia', False)))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Planification ajoutee !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -638,29 +667,24 @@ def priorite_intelligente(user_id):
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute("""
-            SELECT id, titre, priorite, deadline, temps_estime, statut,
-                   DATEDIFF(deadline, CURDATE()) AS jours_restants
-            FROM taches WHERE user_id=%s AND terminee=FALSE AND deadline IS NOT NULL
-            ORDER BY deadline ASC
+            SELECT id, titre, priorite, deadline, temps_estime, statut, DATEDIFF(deadline, CURDATE()) AS jours_restants
+            FROM taches WHERE user_id=%s AND terminee=FALSE AND deadline IS NOT NULL ORDER BY deadline ASC
         """, (user_id,))
         taches = curseur.fetchall()
         for t in taches:
             jours = t['jours_restants'] or 99
-            temps = t['temps_estime'] or 30
             prio = {'haute': 3, 'moyenne': 2, 'basse': 1}.get(t['priorite'], 1)
-            retard = 1 if jours < 0 else 0
-            score = (prio * 3) + (1 / max(jours, 0.5)) * 10 + (temps / 60) + (retard * 20)
+            score = (prio * 3) + (1 / max(jours, 0.5)) * 10 + ((t['temps_estime'] or 30) / 60) + (20 if jours < 0 else 0)
             t['score_priorite'] = round(score, 2)
             curseur.execute("UPDATE taches SET score_priorite=%s WHERE id=%s", (score, t['id']))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         taches.sort(key=lambda x: x['score_priorite'], reverse=True)
         return jsonify(taches)
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 📊 CHARGE & ANALYTICS
+# 📊 ANALYTICS
 # ============================================
 
 @app.route('/charge/<int:user_id>', methods=['GET'])
@@ -679,9 +703,6 @@ def get_charge(user_id):
         return jsonify(charge)
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-# ============================================
-# 📊 ANALYTICS AMÉLIORÉES
-# ============================================
 
 @app.route('/analytics/<int:user_id>', methods=['GET'])
 def get_analytics(user_id):
@@ -689,90 +710,54 @@ def get_analytics(user_id):
         jours = request.args.get('jours', 7, type=int)
         db = connecter()
         curseur = db.cursor(dictionary=True)
-
         curseur.execute("SELECT COUNT(*) as total FROM taches WHERE user_id=%s", (user_id,))
         total = curseur.fetchone()['total']
-
         curseur.execute("SELECT COUNT(*) as terminees FROM taches WHERE user_id=%s AND terminee=TRUE", (user_id,))
         terminees = curseur.fetchone()['terminees']
-
         taux = round((terminees / total * 100), 1) if total > 0 else 0
-
         curseur.execute("SELECT priorite, COUNT(*) as count FROM taches WHERE user_id=%s GROUP BY priorite", (user_id,))
         priorites = {r['priorite']: r['count'] for r in curseur.fetchall()}
-
         curseur.execute("""
-            SELECT DATE(updated_at) as jour, COUNT(*) as count
-            FROM taches
-            WHERE user_id=%s AND terminee=TRUE
-              AND updated_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            SELECT DATE(updated_at) as jour, COUNT(*) as count FROM taches
+            WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
             GROUP BY DATE(updated_at) ORDER BY jour ASC
         """, (user_id, jours))
         par_jour = curseur.fetchall()
-
         curseur.execute("""
-            SELECT DATE(updated_at) as jour, COUNT(*) as count
-            FROM taches
-            WHERE user_id=%s AND terminee=TRUE
-              AND updated_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-              AND updated_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-            GROUP BY DATE(updated_at) ORDER BY jour ASC
-        """, (user_id, jours + 7))
-        par_jour_semaine_derniere = curseur.fetchall()
-
-        curseur.execute("""
-            SELECT COUNT(*) as count FROM taches
-            WHERE user_id=%s AND terminee=TRUE
-              AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE
+            AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
         """, (user_id,))
         cette_semaine = curseur.fetchone()['count']
-
         curseur.execute("""
-            SELECT COUNT(*) as count FROM taches
-            WHERE user_id=%s AND terminee=TRUE
-              AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-              AND updated_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE
+            AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+            AND updated_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY)
         """, (user_id,))
         semaine_precedente = curseur.fetchone()['count']
-
         curseur.execute("""
-            SELECT HOUR(updated_at) as heure, COUNT(*) as count
-            FROM taches
-            WHERE user_id=%s AND terminee=TRUE
-              AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            SELECT HOUR(updated_at) as heure, COUNT(*) as count FROM taches
+            WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
             GROUP BY HOUR(updated_at) ORDER BY heure
         """, (user_id,))
         par_heure = [0] * 24
         for row in curseur.fetchall():
-            if row['heure'] is not None:
-                par_heure[row['heure']] = row['count']
-
+            if row['heure'] is not None: par_heure[row['heure']] = row['count']
         curseur.execute("""
             SELECT DATE(created_at) as jour, COUNT(*) as count FROM historique_ia
             WHERE user_id=%s AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
             GROUP BY DATE(created_at) ORDER BY jour ASC
         """, (user_id,))
         ia_par_jour = curseur.fetchall()
-
         evolution = round(((cette_semaine - semaine_precedente) / max(semaine_precedente, 1)) * 100, 1)
-
         db.close()
         return jsonify({
-            "total": total,
-            "terminees": terminees,
-            "taux_completion": taux,
-            "priorites": priorites,
-            "par_jour": par_jour,
-            "par_jour_semaine_derniere": par_jour_semaine_derniere,
-            "cette_semaine": cette_semaine,
-            "semaine_precedente": semaine_precedente,
-            "ia_par_jour": ia_par_jour,
-            "par_heure": par_heure,
-            "evolution": evolution
+            "total": total, "terminees": terminees, "taux_completion": taux,
+            "priorites": priorites, "par_jour": par_jour,
+            "cette_semaine": cette_semaine, "semaine_precedente": semaine_precedente,
+            "ia_par_jour": ia_par_jour, "par_heure": par_heure, "evolution": evolution
         })
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
 
 # ============================================
 # 👥 COLLABORATION
@@ -782,23 +767,16 @@ def get_analytics(user_id):
 def inviter_collaborateur():
     try:
         data = request.get_json()
-        tache_id = data['tache_id']
-        owner_id = data['owner_id']
-        email = data['email']
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("SELECT id, nom FROM users WHERE email=%s", (email,))
+        curseur.execute("SELECT id, nom FROM users WHERE email=%s", (data['email'],))
         collaborateur = curseur.fetchone()
-        if not collaborateur:
-            return jsonify({"erreur": "Utilisateur introuvable"}), 404
-        if collaborateur['id'] == owner_id:
-            return jsonify({"erreur": "Vous ne pouvez pas vous inviter vous-meme"}), 400
-        curseur.execute("SELECT id FROM collaborations WHERE tache_id=%s AND collaborateur_id=%s", (tache_id, collaborateur['id']))
-        if curseur.fetchone():
-            return jsonify({"erreur": "Deja invite"}), 400
-        curseur.execute("INSERT INTO collaborations (tache_id, owner_id, collaborateur_id, statut) VALUES (%s, %s, %s, 'invite')", (tache_id, owner_id, collaborateur['id']))
-        db.commit()
-        db.close()
+        if not collaborateur: return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        if collaborateur['id'] == data['owner_id']: return jsonify({"erreur": "Vous ne pouvez pas vous inviter vous-meme"}), 400
+        curseur.execute("SELECT id FROM collaborations WHERE tache_id=%s AND collaborateur_id=%s", (data['tache_id'], collaborateur['id']))
+        if curseur.fetchone(): return jsonify({"erreur": "Deja invite"}), 400
+        curseur.execute("INSERT INTO collaborations (tache_id, owner_id, collaborateur_id, statut) VALUES (%s, %s, %s, 'invite')", (data['tache_id'], data['owner_id'], collaborateur['id']))
+        db.commit(); db.close()
         return jsonify({"message": f"{collaborateur['nom']} invite avec succes !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -826,8 +804,7 @@ def repondre_invitation(id):
         db = connecter()
         curseur = db.cursor()
         curseur.execute("UPDATE collaborations SET statut=%s WHERE id=%s", (data['statut'], id))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Reponse enregistree"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -889,8 +866,7 @@ def ajouter_commentaire():
         db = connecter()
         curseur = db.cursor()
         curseur.execute("INSERT INTO commentaires (tache_id, user_id, contenu) VALUES (%s, %s, %s)", (data['tache_id'], data['user_id'], data['contenu']))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Commentaire ajoute !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -907,15 +883,12 @@ def get_vapid_public_key():
 def subscribe_push():
     try:
         data = request.get_json()
-        user_id = data['user_id']
         subscription = json.dumps(data['subscription'])
         db = connecter()
         cursor = db.cursor()
-        cursor.execute("DELETE FROM push_subscriptions WHERE user_id = %s", (user_id,))
-        cursor.execute("INSERT INTO push_subscriptions (user_id, subscription) VALUES (%s, %s)", (user_id, subscription))
-        db.commit()
-        cursor.close()
-        db.close()
+        cursor.execute("DELETE FROM push_subscriptions WHERE user_id = %s", (data['user_id'],))
+        cursor.execute("INSERT INTO push_subscriptions (user_id, subscription) VALUES (%s, %s)", (data['user_id'], subscription))
+        db.commit(); cursor.close(); db.close()
         return jsonify({"message": "Abonnement enregistré !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -926,12 +899,9 @@ def send_rappels():
         db = connecter()
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT t.titre, t.deadline, t.user_id,
-                   DATEDIFF(t.deadline, CURDATE()) AS jours_restants
-            FROM taches t
-            WHERE t.terminee = FALSE
-              AND t.deadline IS NOT NULL
-              AND t.deadline <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+            SELECT t.titre, t.deadline, t.user_id, DATEDIFF(t.deadline, CURDATE()) AS jours_restants
+            FROM taches t WHERE t.terminee = FALSE AND t.deadline IS NOT NULL
+            AND t.deadline <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
         """)
         taches = cursor.fetchall()
         sent = 0
@@ -939,30 +909,15 @@ def send_rappels():
             cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (tache['user_id'],))
             sub = cursor.fetchone()
             if sub:
-                subscription = json.loads(sub['subscription'])
-                jours = tache['jours_restants']
-                msg = "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"
                 try:
-                    webpush(
-                        subscription_info=subscription,
-                        data=json.dumps({"title": f"⏰ Deadline : {tache['titre']}", "body": msg}),
-                        vapid_private_key=VAPID_PRIVATE_KEY,
-                        vapid_claims=VAPID_CLAIMS
-                    )
+                    jours = tache['jours_restants']
+                    webpush(subscription_info=json.loads(sub['subscription']),
+                        data=json.dumps({"title": f"⏰ Deadline : {tache['titre']}", "body": "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"}),
+                        vapid_private_key=VAPID_PRIVATE_KEY, vapid_claims=VAPID_CLAIMS)
                     sent += 1
                 except WebPushException:
                     pass
-            cursor.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (tache['user_id'],))
-            slack_row = cursor.fetchone()
-            if slack_row:
-                slack_config = json.loads(slack_row['config'])
-                slack_webhook = slack_config.get('webhook_url')
-                if slack_webhook:
-                    jours = tache['jours_restants']
-                    label_jour = "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"
-                    envoyer_notification_slack(slack_webhook, f"⏰ *Deadline TaskFlow* : {tache['titre']} — {label_jour}")
-        cursor.close()
-        db.close()
+        cursor.close(); db.close()
         return jsonify({"message": f"{sent} notifications envoyées"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -975,8 +930,7 @@ def send_rappels():
 def get_slack_integration():
     try:
         user_id = request.args.get('user_id')
-        if not user_id:
-            return jsonify({"erreur": "user_id requis"}), 400
+        if not user_id: return jsonify({"erreur": "user_id requis"}), 400
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
@@ -993,15 +947,12 @@ def get_slack_integration():
 def save_slack_integration():
     try:
         data = request.get_json()
-        user_id = data['user_id']
-        webhook_url = data['webhook_url']
-        config = json.dumps({"webhook_url": webhook_url})
+        config = json.dumps({"webhook_url": data['webhook_url']})
         db = connecter()
         curseur = db.cursor()
-        curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
-        curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, 'slack', %s)", (user_id, config))
-        db.commit()
-        db.close()
+        curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='slack'", (data['user_id'],))
+        curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, 'slack', %s)", (data['user_id'], config))
+        db.commit(); db.close()
         return jsonify({"message": "Webhook Slack sauvegardé !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500

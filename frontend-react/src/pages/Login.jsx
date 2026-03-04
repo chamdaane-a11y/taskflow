@@ -32,6 +32,14 @@ export default function Login() {
   return (
     <div style={{ minHeight: '100vh', background: '#080810', display: 'flex', fontFamily: "'DM Sans', sans-serif", overflow: 'hidden', position: 'relative' }}>
 
+      {/* Styles responsive */}
+      <style>{`
+        @media (max-width: 768px) {
+          .login-left { display: none !important; }
+          .login-right { width: 100% !important; padding: 40px 24px !important; }
+        }
+      `}</style>
+
       {/* Fond animé */}
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
         {[...Array(3)].map((_, i) => (
@@ -42,8 +50,8 @@ export default function Login() {
         ))}
       </div>
 
-      {/* Panel gauche - Branding */}
-      <motion.div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px', position: 'relative', borderRight: '1px solid rgba(255,255,255,0.05)' }}
+      {/* Panel gauche - Branding (caché sur mobile) */}
+      <motion.div className="login-left" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px', position: 'relative', borderRight: '1px solid rgba(255,255,255,0.05)' }}
         initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
 
         <div style={{ marginBottom: 60 }}>
@@ -69,7 +77,6 @@ export default function Login() {
           </motion.p>
         </div>
 
-        {/* Features */}
         {[
           { icon: Bot, text: 'IA génère vos tâches automatiquement' },
           { icon: BarChart2, text: 'Analytics de productivité en temps réel' },
@@ -89,8 +96,24 @@ export default function Login() {
       </motion.div>
 
       {/* Panel droit - Formulaire */}
-      <motion.div style={{ width: 480, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 60px', position: 'relative' }}
+      <motion.div className="login-right" style={{ width: 480, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 60px', position: 'relative' }}
         initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
+
+        {/* Logo visible uniquement sur mobile */}
+        <div style={{ display: 'none' }} className="mobile-logo">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32, justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #c9a84c, #6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Layers size={20} color="white" strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 20, fontWeight: 700, color: 'white' }}>TaskFlow</span>
+          </div>
+        </div>
+
+        <style>{`
+          @media (max-width: 768px) {
+            .mobile-logo { display: block !important; }
+          }
+        `}</style>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, color: 'white', marginBottom: 8, letterSpacing: '-0.5px' }}>Bon retour</h2>
@@ -143,8 +166,6 @@ export default function Login() {
             whileTap={!loading ? { scale: 0.98 } : {}}>
             {loading ? 'Connexion...' : 'Se connecter →'}
           </motion.button>
-
-         
 
           <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 24 }}>
             Pas de compte ?{' '}
