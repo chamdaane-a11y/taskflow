@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import axios from 'axios'
-import { Bot, BarChart2, Bell, Layers } from 'lucide-react'
+import { Layers } from 'lucide-react'
 
 const API = 'https://taskflow-production-75c1.up.railway.app'
 
@@ -11,169 +11,291 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [erreur, setErreur] = useState('')
   const [loading, setLoading] = useState(false)
-  const [focused, setFocused] = useState(null)
+  const [nonVerifie, setNonVerifie] = useState(false)
+  const [renvoyeMsg, setRenvoyeMsg] = useState('')
   const navigate = useNavigate()
 
   const login = async () => {
     if (!email || !password) { setErreur('Remplis tous les champs'); return }
     setLoading(true)
     setErreur('')
+    setNonVerifie(false)
+    setRenvoyeMsg('')
     try {
-      const res = await axios.post(`${API}/login`, { email, password })
+      const res = await axios.post(`${API}/login`, { email, password }, { withCredentials: true })
       localStorage.setItem('user', JSON.stringify(res.data.user))
       localStorage.setItem('theme', res.data.user.theme || 'dark')
       navigate('/dashboard')
-    } catch {
-      setErreur('Email ou mot de passe incorrect')
+    } catch (err) {
+      const data = err.response?.data
+      if (data?.non_verifie) {
+        setNonVerifie(true)
+        setErreur(data.erreur)
+      } else {
+        setErreur(data?.erreur || 'Email ou mot de passe incorrect')
+      }
     }
     setLoading(false)
   }
 
-  return (
-    <div style={{ minHeight: '100vh', background: '#080810', display: 'flex', fontFamily: "'DM Sans', sans-serif", overflow: 'hidden', position: 'relative' }}>
+  const renvoyerEmail = async () => {
+    try {
+      await axios.post(`${API}/resend-verification`, { email })
+      setRenvoyeMsg('Email de vérification renvoyé ! Vérifiez votre boîte mail.')
+    } catch (err) {
+      setRenvoyeMsg(err.response?.data?.erreur || 'Erreur lors de l\'envoi')
+    }
+  }
 
-      {/* Styles responsive */}
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#0A0A12',
+      display: 'flex',
+      fontFamily: "'DM Sans', sans-serif",
+      overflow: 'hidden',
+      position: 'relative'
+    }}>
+
       <style>{`
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .login-left { display: none !important; }
-          .login-right { width: 100% !important; padding: 40px 24px !important; }
+          .login-right { 
+            width: 100% !important; 
+            max-width: 100% !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .login-right { padding: 40px 20px !important; }
+          .login-right h2 { font-size: 24px !important; }
+          .login-right input, 
+          .login-right button { 
+            padding: 12px 16px !important; 
+            font-size: 16px !important;
+          }
+        }
+
+        @media (min-width: 1025px) and (max-width: 1366px) {
+          .login-left { padding: 60px !important; }
+          .login-left h1 { font-size: 44px !important; }
         }
       `}</style>
 
-      {/* Fond animé */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-        {[...Array(3)].map((_, i) => (
-          <motion.div key={i} style={{ position: 'absolute', borderRadius: '50%', filter: 'blur(120px)', opacity: 0.12, background: i === 0 ? '#6c63ff' : i === 1 ? '#c9a84c' : '#4caf82', width: i === 0 ? 600 : i === 1 ? 400 : 300, height: i === 0 ? 600 : i === 1 ? 400 : 300, left: i === 0 ? '-10%' : i === 1 ? '60%' : '30%', top: i === 0 ? '-10%' : i === 1 ? '50%' : '20%' }}
-            animate={{ x: [0, 30, 0], y: [0, -30, 0] }}
-            transition={{ duration: 8 + i * 2, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        ))}
-      </div>
+     {/* Fond animé + image de fond */}
+<div style={{
+  position: 'absolute',
+  inset: 0,
+  overflow: 'hidden',
+  pointerEvents: 'none'
+}}>
+  <div style={{
+    position: 'absolute',
+    inset: 0,
+    backgroundImage: "url('https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80')",
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    opacity: 0.08,
+    filter: 'brightness(0.6)'
+  }} />
+  {[...Array(3)].map((_, i) => (
+    <motion.div key={i} style={{
+      position: 'absolute',
+      borderRadius: '50%',
+      filter: 'blur(120px)',
+      opacity: 0.1,
+      background: i === 0 ? '#00C896' : i === 1 ? '#6C63FF' : '#FFD166',
+      width: i === 0 ? 500 : i === 1 ? 400 : 300,
+      height: i === 0 ? 500 : i === 1 ? 400 : 300,
+      left: i === 0 ? '-10%' : i === 1 ? '60%' : '30%',
+      top: i === 0 ? '-10%' : i === 1 ? '50%' : '20%'
+    }}
+      animate={{ x: [0, 30, 0], y: [0, -30, 0] }}
+      transition={{ duration: 8 + i * 2, repeat: Infinity, ease: 'easeInOut' }}
+    />
+  ))}
+</div>
 
-      {/* Panel gauche - Branding (caché sur mobile) */}
-      <motion.div className="login-left" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px', position: 'relative', borderRight: '1px solid rgba(255,255,255,0.05)' }}
-        initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
-
+      {/* Panel gauche */}
+      <motion.div className="login-left" style={{
+        flex: '1 1 50%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: 'clamp(40px, 6vw, 80px)',
+        position: 'relative',
+        borderRight: '1px solid rgba(255,255,255,0.05)'
+      }}
+        initial={{ opacity: 0, x: -40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8 }}
+      >
         <div style={{ marginBottom: 60 }}>
-          <motion.div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #c9a84c, #6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <motion.div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 16
+          }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, #C9A84C, #6C63FF)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 20px rgba(108,99,255,0.3)'
+            }}>
               <Layers size={22} color="white" strokeWidth={2.5} />
             </div>
-            <span style={{ fontSize: 22, fontWeight: 700, color: 'white', letterSpacing: '-0.5px' }}>TaskFlow</span>
+            <span style={{
+              fontSize: 'clamp(18px, 2.5vw, 22px)',
+              fontWeight: 700,
+              color: 'white',
+              letterSpacing: '-0.5px'
+            }}>TaskFlow</span>
           </motion.div>
 
-          <motion.h1 style={{ fontSize: 52, fontWeight: 800, color: 'white', lineHeight: 1.1, letterSpacing: '-2px', marginBottom: 20 }}
-            initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <motion.h1 style={{
+            fontSize: 'clamp(32px, 5vw, 52px)',
+            fontWeight: 800,
+            color: 'white',
+            lineHeight: 1.1,
+            letterSpacing: '-2px',
+            marginBottom: 20
+          }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
             Gérez vos tâches<br />
-            <span style={{ background: 'linear-gradient(90deg, #c9a84c, #6c63ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              avec l'IA
-            </span>
+            <span style={{
+  background: 'linear-gradient(90deg, #00C896, #6C63FF)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent'
+}}>
+  Exécutez. Progressez.
+</span>
           </motion.h1>
 
-          <motion.p style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: 400 }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-            Automatisez votre productivité. L'IA génère vos tâches, planifie votre semaine et vous guide vers vos objectifs.
+          <motion.p style={{
+            fontSize: 'clamp(14px, 1.8vw, 16px)',
+            color: 'rgba(255,255,255,0.6)',
+            lineHeight: 1.6
+          }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            L'intelligence au service de votre productivité.
           </motion.p>
         </div>
-
-        {[
-          { icon: Bot, text: 'IA génère vos tâches automatiquement' },
-          { icon: BarChart2, text: 'Analytics de productivité en temps réel' },
-          { icon: Bell, text: 'Rappels intelligents pour vos deadlines' },
-        ].map((f, i) => {
-          const Icon = f.icon
-          return (
-            <motion.div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + i * 0.1 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon size={16} color='rgba(255,255,255,0.5)' strokeWidth={1.8} />
-              </div>
-              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>{f.text}</span>
-            </motion.div>
-          )
-        })}
       </motion.div>
 
-      {/* Panel droit - Formulaire */}
-      <motion.div className="login-right" style={{ width: 480, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 60px', position: 'relative' }}
-        initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
+      {/* Panel droit */}
+      <motion.div className="login-right" style={{
+        width: 'min(480px, 100%)',
+        maxWidth: '480px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: 'clamp(40px, 6vw, 80px) clamp(24px, 5vw, 60px)',
+        background: 'rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '16px',
+        boxShadow: '0 0 40px rgba(0,0,0,0.3)',
+        margin: 'auto'
+      }}
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        <h2 style={{
+          color: 'white',
+          fontSize: 'clamp(24px, 4vw, 28px)',
+          fontWeight: 700,
+          marginBottom: 'clamp(24px, 4vh, 40px)'
+        }}>Connexion</h2>
 
-        {/* Logo visible uniquement sur mobile */}
-        <div style={{ display: 'none' }} className="mobile-logo">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32, justifyContent: 'center' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #c9a84c, #6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Layers size={20} color="white" strokeWidth={2.5} />
-            </div>
-            <span style={{ fontSize: 20, fontWeight: 700, color: 'white' }}>TaskFlow</span>
-          </div>
-        </div>
+        <input
+          type="email"
+          placeholder="Adresse e-mail"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          style={{
+  background: 'rgba(16,16,32,0.8)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 8,
+  padding: '14px 18px',
+  color: 'white',
+  marginBottom: 20,
+  outline: 'none',
+  transition: 'border 0.25s ease-in-out'
+}}
+        />
+        <input
+          type="password"
+          placeholder="Mot de passe"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          style={{
+  background: 'rgba(16,16,32,0.8)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 8,
+  padding: '14px 18px',
+  color: 'white',
+  marginBottom: 20,
+  outline: 'none',
+  transition: 'border 0.25s ease-in-out'
+}}
+        />
 
-        <style>{`
-          @media (max-width: 768px) {
-            .mobile-logo { display: block !important; }
-          }
-        `}</style>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 700, color: 'white', marginBottom: 8, letterSpacing: '-0.5px' }}>Bon retour</h2>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)', marginBottom: 40 }}>Connecte-toi pour continuer</p>
-
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, display: 'block', marginBottom: 8 }}>EMAIL</label>
-            <motion.div style={{ borderRadius: 12, border: `1px solid ${focused === 'email' ? '#c9a84c' : 'rgba(255,255,255,0.08)'}`, background: 'rgba(255,255,255,0.03)', transition: 'all 0.2s' }}>
-              <input
-                style={{ width: '100%', padding: '14px 16px', background: 'transparent', border: 'none', color: 'white', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                placeholder="ton@email.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                onFocus={() => setFocused('email')}
-                onBlur={() => setFocused(null)}
-                onKeyDown={e => e.key === 'Enter' && login()}
-              />
-            </motion.div>
-          </div>
-
-          <div style={{ marginBottom: 32 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, display: 'block', marginBottom: 8 }}>MOT DE PASSE</label>
-            <motion.div style={{ borderRadius: 12, border: `1px solid ${focused === 'password' ? '#c9a84c' : 'rgba(255,255,255,0.08)'}`, background: 'rgba(255,255,255,0.03)', transition: 'all 0.2s' }}>
-              <input
-                type="password"
-                style={{ width: '100%', padding: '14px 16px', background: 'transparent', border: 'none', color: 'white', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onFocus={() => setFocused('password')}
-                onBlur={() => setFocused(null)}
-                onKeyDown={e => e.key === 'Enter' && login()}
-              />
-            </motion.div>
-          </div>
-
-          <AnimatePresence>
-            {erreur && (
-              <motion.div style={{ padding: '12px 16px', background: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.3)', borderRadius: 10, fontSize: 13, color: '#e05c5c', marginBottom: 20 }}
-                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                {erreur}
-              </motion.div>
+        {erreur && (
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ color: '#ff6b6b', margin: '0 0 8px 0' }}>{erreur}</p>
+            {nonVerifie && (
+              <motion.button
+                style={{ background: 'transparent', border: '1px solid rgba(108,99,255,0.5)', borderRadius: 8, padding: '8px 14px', color: '#6C63FF', cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}
+                onClick={renvoyerEmail}
+                whileHover={{ borderColor: '#6C63FF', background: 'rgba(108,99,255,0.1)' }}>
+                📧 Renvoyer l'email de vérification
+              </motion.button>
             )}
-          </AnimatePresence>
+          </div>
+        )}
 
-          <motion.button
-            style={{ width: '100%', padding: '15px', background: 'linear-gradient(135deg, #c9a84c, #e0a83c)', border: 'none', borderRadius: 12, color: '#080810', fontWeight: 700, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, letterSpacing: '-0.2px' }}
-            onClick={login}
-            whileHover={!loading ? { scale: 1.02, boxShadow: '0 8px 32px rgba(201,168,76,0.3)' } : {}}
-            whileTap={!loading ? { scale: 0.98 } : {}}>
-            {loading ? 'Connexion...' : 'Se connecter →'}
-          </motion.button>
+        {renvoyeMsg && (
+          <p style={{ color: '#00C896', marginBottom: 16, fontSize: 13 }}>{renvoyeMsg}</p>
+        )}
 
-          <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 24 }}>
-            Pas de compte ?{' '}
-            <Link to="/register" style={{ color: '#c9a84c', textDecoration: 'none', fontWeight: 600 }}>
-              Créer un compte
-            </Link>
-          </p>
-        </motion.div>
+        <button onClick={login} disabled={loading} style={{
+  background: 'linear-gradient(90deg, #00C896, #6C63FF)',
+  border: 'none',
+  borderRadius: 8,
+  padding: '14px 18px',
+  color: 'white',
+  fontWeight: 600,
+  cursor: 'pointer',
+  boxShadow: '0 0 25px rgba(0,200,150,0.4)',
+  transition: 'all 0.25s ease-in-out'
+}}>
+          {loading ? 'Connexion...' : 'Se connecter'}
+        </button>
+
+        <p style={{
+          color: 'rgba(255,255,255,0.5)',
+          marginTop: 24,
+          fontSize: 'clamp(12px, 3vw, 14px)'
+        }}>
+          Pas encore de compte ? <Link to="/register" style={{ color: '#C9A84C', textDecoration: 'none' }}>Inscrisvez-vous</Link>
+        </p>
       </motion.div>
     </div>
   )
