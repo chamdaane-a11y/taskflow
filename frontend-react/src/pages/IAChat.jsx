@@ -15,9 +15,15 @@ const modeles = [
 ]
 
 export default function IAChat() {
+  const user = JSON.parse(localStorage.getItem('user')) 
+  const { T } = useTheme()
+  
   const [prompt, setPrompt] = useState('')
   const [modele, setModele] = useState('llama-3.3-70b-versatile')
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem(`chat_messages_${user?.id}`)
+    return saved ? JSON.parse(saved) : []
+  })
   const [loading, setLoading] = useState(false)
   const [taches, setTaches] = useState([])
   const [tacheSelectionnee, setTacheSelectionnee] = useState(null)
@@ -27,8 +33,6 @@ export default function IAChat() {
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const [showSidebar, setShowSidebar] = useState(false)
-  const user = JSON.parse(localStorage.getItem('user'))
-  const { T } = useTheme()
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
@@ -39,6 +43,12 @@ export default function IAChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+  if (user) {
+    localStorage.setItem(`chat_messages_${user.id}`, JSON.stringify(messages))
+  }
+}, [messages])
 
   const chargerTaches = async () => {
     const res = await axios.get(`${API}/taches/${user.id}`)
@@ -95,6 +105,11 @@ export default function IAChat() {
     { icon: Calendar, label: 'Planification', path: '/planification' },
     { icon: HelpCircle, label: 'Aide', path: '/help' },
   ]
+
+  const effacerConversation = () => {
+  localStorage.removeItem(`chat_messages_${user.id}`)
+  setMessages([])
+}
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
@@ -257,7 +272,26 @@ export default function IAChat() {
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#4caf82', flexShrink: 0 }} />
             <span style={{ fontSize: 'clamp(11px, 2.5vw, 12px)', color: T.text, fontWeight: 500, whiteSpace: 'nowrap' }}>{modeleActuel?.nom}</span>
           </div>
+
+          {/* Bouton nouvelle conversation */}
+{!isMobile ? (
+  <motion.button
+    style={{ padding: '6px 12px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap' }}
+    onClick={effacerConversation}
+    whileHover={{ borderColor: '#ef4444', color: '#ef4444' }}>
+    Nouvelle conversation
+  </motion.button>
+) : (
+  <motion.button
+    style={{ width: 32, height: 32, background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+    onClick={effacerConversation}
+    whileHover={{ borderColor: '#ef4444', color: '#ef4444' }}>
+    <X size={14} />
+  </motion.button>
+)}
         </div>
+
+        
 
         {/* Historique panel */}
         <AnimatePresence>
