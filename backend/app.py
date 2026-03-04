@@ -43,7 +43,7 @@ mail = Mail(app)
 # Rate Limiter
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
-CORS(app, origins=["https://chamdaane-a11y.github.io"], supports_credentials=True)
+CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 
 VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
