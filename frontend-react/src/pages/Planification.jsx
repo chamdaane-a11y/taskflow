@@ -299,10 +299,10 @@ export default function Planification() {
       {isMobile && showSidebar && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 99, backdropFilter: 'blur(4px)' }} onClick={() => setShowSidebar(false)} />}
 
       {/* ── MAIN ── */}
-      <main style={{ marginLeft: isMobile ? 0 : 256, flex: 1, padding: 'clamp(16px, 3vw, 32px)', display: 'flex', flexDirection: 'column', minHeight: '100vh', width: isMobile ? '100%' : 'calc(100% - 256px)' }}>
+      <main style={{ marginLeft: isMobile ? 0 : 256, flex: 1, padding: isMobile ? '16px' : 'clamp(16px, 3vw, 32px)', display: 'flex', flexDirection: 'column', minHeight: '100vh', width: isMobile ? '100%' : 'calc(100% - 256px)' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12, paddingTop: isMobile ? 52 : 0 }}>
           <div>
             <h1 style={{ fontSize: 'clamp(20px, 4vw, 25px)', fontWeight: 800, letterSpacing: '-0.6px', marginBottom: 3 }}>Planification</h1>
             <p style={{ color: T.text2, fontSize: 12, textTransform: 'capitalize' }}>
@@ -327,12 +327,12 @@ export default function Planification() {
         </div>
 
         {/* Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 12, marginBottom: 20 }}>
           {stats.map((s, i) => {
             const Icon = s.icon
             return (
               <motion.div key={i} className="card-hover"
-                style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 13, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}
+                style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 13, padding: isMobile ? '12px' : '14px 16px', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: s.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon size={17} color={s.color} strokeWidth={2} />
@@ -405,7 +405,7 @@ export default function Planification() {
                             <GripVertical size={13} color={T.text} />
                           </div>
 
-                          <p style={{ fontSize: 13, fontWeight: 500, color: T.text, lineHeight: 1.45, marginBottom: 10, paddingRight: 18 }}>{tache.titre}</p>
+                          <p style={{ fontSize: 13, fontWeight: 500, color: T.text, lineHeight: 1.45, marginBottom: 10, paddingRight: 18, wordBreak: 'break-word' }}>{tache.titre}</p>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: pBg(tache.priorite), color: pColor(tache.priorite), textTransform: 'uppercase', letterSpacing: 0.3 }}>{tache.priorite}</span>
