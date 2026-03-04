@@ -386,10 +386,18 @@ def executer_ia():
     prompt = data['prompt']
     modele = data.get('modele', 'llama-3.3-70b-versatile')
     tache_id = data.get('tache_id')
+    historique_messages = data.get('messages', [])
     try:
+        messages_api = [{"role": "system", "content": "Tu es un assistant de productivité TaskFlow. Tu aides l'utilisateur à gérer ses tâches et à être plus productif. Tu réponds en français."}]
+        for msg in historique_messages:
+            if msg['role'] == 'user':
+                messages_api.append({"role": "user", "content": msg['content']})
+            elif msg['role'] == 'ia':
+                messages_api.append({"role": "assistant", "content": msg['content']})
+        messages_api.append({"role": "user", "content": prompt})
         completion = groq_client.chat.completions.create(
             model=modele,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages_api,
             max_tokens=1024
         )
         reponse = completion.choices[0].message.content

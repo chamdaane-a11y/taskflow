@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import confetti from 'canvas-confetti'
 import { useTheme } from '../useTheme'
-import { Bot, Send, History, Link, LayoutDashboard, BarChart2, Calendar, LogOut, Copy, Plus, X, ChevronRight, Layers,Menu } from 'lucide-react'
+import { Bot, Send, History, Link, LayoutDashboard, BarChart2, Calendar, LogOut, Copy, Plus, X, ChevronRight, Layers, Menu, HelpCircle} from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 const API = 'https://taskflow-production-75c1.up.railway.app'
 
@@ -58,7 +58,12 @@ export default function IAChat() {
     setPrompt('')
     setLoading(true)
     try {
-      const res = await axios.post(`${API}/ia/executer`, { prompt: promptEnvoye, modele, tache_id: tacheSelectionnee })
+      const res = await axios.post(`${API}/ia/executer`, { 
+  prompt: promptEnvoye, 
+  modele, 
+  tache_id: tacheSelectionnee,
+  messages: messages.filter(m => m.role === 'user' || m.role === 'ia').slice(-20)
+})
       const iaMsg = { role: 'ia', content: res.data.reponse, modele: res.data.modele }
       setMessages(prev => [...prev, iaMsg])
       await axios.post(`${API}/ia/historique`, { user_id: user.id, prompt: promptEnvoye, reponse: res.data.reponse, modele, tache_id: tacheSelectionnee })
@@ -88,46 +93,69 @@ export default function IAChat() {
     { icon: Bot, label: 'Assistant IA', path: '/ia' },
     { icon: BarChart2, label: 'Analytiques', path: '/analytics' },
     { icon: Calendar, label: 'Planification', path: '/planification' },
+    { icon: HelpCircle, label: 'Aide', path: '/help' },
   ]
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
 
+      {/* Styles responsive globaux */}
+      <style>{`
+        @media (max-width: 1024px) {
+          aside { width: 240px !important; }
+          main { margin-left: 240px !important; }
+        }
+        
+        @media (max-width: 768px) {
+          main { margin-left: 0 !important; }
+          .message-content { max-width: 85% !important; }
+          .prompt-examples { flex-wrap: wrap !important; }
+        }
+
+        @media (max-width: 480px) {
+          .message-content { max-width: 90% !important; padding: 12px !important; }
+          .message-actions { flex-direction: column !important; gap: 4px !important; }
+          .message-actions button { width: 100% !important; }
+        }
+      `}</style>
+
       {/* Sidebar */}
       <aside style={{
-  width: 248,
-  background: T.bg2,
-  borderRight: `1px solid ${T.border}`,
-  display: 'flex',
-  flexDirection: 'column',
-  padding: '24px 16px',
-  position: 'fixed',
-  top: 0,
-  left: isMobile ? (showSidebar ? 0 : -260) : 0,
-transition: 'left 0.3s ease',
-zIndex: 100,
-  height: '100vh',
-}}>
+        width: 'min(248px, 85%)',
+        maxWidth: '248px',
+        background: T.bg2,
+        borderRight: `1px solid ${T.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'clamp(16px, 3vh, 24px) clamp(12px, 2vw, 16px)',
+        position: 'fixed',
+        top: 0,
+        left: isMobile ? (showSidebar ? 0 : '-100%') : 0,
+        transition: 'left 0.3s ease',
+        zIndex: 100,
+        height: '100vh',
+        overflowY: 'auto'
+      }}>
 
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32, padding: '0 8px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 'clamp(24px, 4vh, 32px)', padding: '0 8px' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Layers size={16} color={T.bg} strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>TaskFlow</span>
+          <span style={{ fontSize: 'clamp(14px, 2vw, 16px)', fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>TaskFlow</span>
         </div>
 
         {/* Navigation */}
-        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
+        <p style={{ fontSize: 'clamp(9px, 2vw, 10px)', fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
         {navItems.map(item => {
           const Icon = item.icon
           const active = item.path === '/ia'
           return (
             <motion.button key={item.path}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, color: active ? T.accent : T.text2, background: active ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
-              onClick={() => navigate(item.path)} whileHover={{ x: 2, color: T.accent }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, color: active ? T.accent : T.text2, background: active ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 'clamp(12px, 2.5vw, 13px)', fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
+              onClick={() => { navigate(item.path); if (isMobile) setShowSidebar(false) }} whileHover={{ x: 2, color: T.accent }}>
               <Icon size={16} strokeWidth={active ? 2.5 : 1.8} />
-              {item.label}
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
             </motion.button>
           )
         })}
@@ -135,35 +163,35 @@ zIndex: 100,
         <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
 
         {/* Modèles IA */}
-        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>MODÈLE IA</p>
+        <p style={{ fontSize: 'clamp(9px, 2vw, 10px)', fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>MODÈLE IA</p>
         {modeles.map(m => (
           <motion.button key={m.id}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, background: modele === m.id ? `${T.accent}15` : 'transparent', border: `1px solid ${modele === m.id ? T.accent + '40' : 'transparent'}`, color: modele === m.id ? T.accent : T.text2, cursor: 'pointer', fontSize: 13, textAlign: 'left', marginBottom: 4 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, background: modele === m.id ? `${T.accent}15` : 'transparent', border: `1px solid ${modele === m.id ? T.accent + '40' : 'transparent'}`, color: modele === m.id ? T.accent : T.text2, cursor: 'pointer', fontSize: 'clamp(12px, 2.5vw, 13px)', textAlign: 'left', marginBottom: 4 }}
             onClick={() => setModele(m.id)} whileHover={{ x: 2 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: modele === m.id ? T.accent : T.border, flexShrink: 0 }} />
-            <div>
-              <div style={{ fontWeight: modele === m.id ? 600 : 400, fontSize: 13 }}>{m.nom}</div>
-              <div style={{ fontSize: 11, color: T.text2, opacity: 0.7 }}>{m.description}</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontWeight: modele === m.id ? 600 : 400, fontSize: 'clamp(12px, 2.5vw, 13px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.nom}</div>
+              <div style={{ fontSize: 'clamp(10px, 2vw, 11px)', color: T.text2, opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.description}</div>
             </div>
-            {modele === m.id && <ChevronRight size={12} style={{ marginLeft: 'auto' }} />}
+            {modele === m.id && <ChevronRight size={12} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
           </motion.button>
         ))}
 
         <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
 
         {/* Lier une tâche */}
-        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>LIER UNE TÂCHE</p>
+        <p style={{ fontSize: 'clamp(9px, 2vw, 10px)', fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>LIER UNE TÂCHE</p>
         <motion.button
-          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', borderRadius: 10, background: !tacheSelectionnee ? `${T.accent}15` : 'transparent', border: `1px solid ${!tacheSelectionnee ? T.accent + '40' : T.border}`, color: !tacheSelectionnee ? T.accent : T.text2, cursor: 'pointer', fontSize: 12, textAlign: 'left', marginBottom: 6 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', borderRadius: 10, background: !tacheSelectionnee ? `${T.accent}15` : 'transparent', border: `1px solid ${!tacheSelectionnee ? T.accent + '40' : T.border}`, color: !tacheSelectionnee ? T.accent : T.text2, cursor: 'pointer', fontSize: 'clamp(11px, 2.5vw, 12px)', textAlign: 'left', marginBottom: 6 }}
           onClick={() => setTacheSelectionnee(null)}>
           <Link size={12} />
-          Aucune tâche
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Aucune tâche</span>
         </motion.button>
         {taches.length === 0 ? (
-          <p style={{ fontSize: 12, color: T.text2, padding: '4px 8px' }}>Aucune tâche en cours</p>
+          <p style={{ fontSize: 'clamp(11px, 2.5vw, 12px)', color: T.text2, padding: '4px 8px' }}>Aucune tâche en cours</p>
         ) : taches.map(t => (
           <motion.button key={t.id}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: 10, background: tacheSelectionnee === t.id ? `${T.accent}15` : T.bg3, border: `1px solid ${tacheSelectionnee === t.id ? T.accent + '40' : T.border}`, color: tacheSelectionnee === t.id ? T.accent : T.text2, cursor: 'pointer', fontSize: 12, textAlign: 'left', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: 10, background: tacheSelectionnee === t.id ? `${T.accent}15` : T.bg3, border: `1px solid ${tacheSelectionnee === t.id ? T.accent + '40' : T.border}`, color: tacheSelectionnee === t.id ? T.accent : T.text2, cursor: 'pointer', fontSize: 'clamp(11px, 2.5vw, 12px)', textAlign: 'left', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
             onClick={() => setTacheSelectionnee(t.id)} whileHover={{ x: 2 }}>
             {tacheSelectionnee === t.id ? '✓ ' : ''}{t.titre}
           </motion.button>
@@ -171,65 +199,88 @@ zIndex: 100,
 
         <div style={{ marginTop: 'auto', paddingTop: 16 }}>
           <motion.button
-            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', borderRadius: 10, background: showHistorique ? `${T.accent}15` : 'transparent', border: 'none', color: showHistorique ? T.accent : T.text2, cursor: 'pointer', fontSize: 13, textAlign: 'left', marginBottom: 4 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', borderRadius: 10, background: showHistorique ? `${T.accent}15` : 'transparent', border: 'none', color: showHistorique ? T.accent : T.text2, cursor: 'pointer', fontSize: 'clamp(12px, 2.5vw, 13px)', textAlign: 'left', marginBottom: 4 }}
             onClick={() => setShowHistorique(!showHistorique)} whileHover={{ color: T.accent }}>
             <History size={16} strokeWidth={1.8} />
-            Historique ({historique.length})
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Historique ({historique.length})</span>
           </motion.button>
           <motion.button
-            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', borderRadius: 10, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 13 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', borderRadius: 10, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 'clamp(12px, 2.5vw, 13px)' }}
             onClick={() => { localStorage.removeItem('user'); navigate('/') }}
             whileHover={{ color: '#e05c5c' }}>
             <LogOut size={16} strokeWidth={1.8} />
-            Déconnexion
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Déconnexion</span>
           </motion.button>
         </div>
       </aside>
       
-{isMobile && (
-  <motion.button
-    style={{ position: 'fixed', top: 16, left: 16, zIndex: 200, width: 40, height: 40, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    onClick={() => setShowSidebar(!showSidebar)}>
-    <Menu size={20} />
-  </motion.button>
-)}
-{isMobile && showSidebar && (
-  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }}
-    onClick={() => setShowSidebar(false)} />
-)}
+      {isMobile && (
+        <motion.button
+          style={{ position: 'fixed', top: 16, left: 16, zIndex: 200, width: 40, height: 40, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setShowSidebar(!showSidebar)}>
+          <Menu size={20} />
+        </motion.button>
+      )}
+      {isMobile && showSidebar && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }}
+          onClick={() => setShowSidebar(false)} />
+      )}
+
       {/* Main */}
-      <main style={{ marginLeft: isMobile ? 0 : 248, flex: 1, display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <main style={{ 
+        marginLeft: isMobile ? 0 : 248, 
+        flex: 1, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100vh',
+        width: isMobile ? '100%' : 'calc(100% - 248px)'
+      }}>
 
         {/* Header */}
-        <div style={{ padding: '16px 28px', borderBottom: `1px solid ${T.border}`, background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.3px' }}>Assistant IA</h1>
-            <p style={{ fontSize: 12, color: T.text2, marginTop: 2 }}>
+        <div style={{ 
+          padding: 'clamp(12px, 3vw, 16px) clamp(16px, 4vw, 28px)', 
+          borderBottom: `1px solid ${T.border}`, 
+          background: T.bg2, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
+          gap: 10
+        }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 style={{ fontSize: 'clamp(16px, 4vw, 18px)', fontWeight: 700, letterSpacing: '-0.3px' }}>Assistant IA</h1>
+            <p style={{ fontSize: 'clamp(11px, 2.5vw, 12px)', color: T.text2, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {tacheSelectionnee ? `Tâche liée : ${taches.find(t => t.id === tacheSelectionnee)?.titre}` : 'Prompt libre — aucune tâche liée'}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: T.bg3, borderRadius: 99, border: `1px solid ${T.border}` }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#4caf82' }} />
-            <span style={{ fontSize: 12, color: T.text, fontWeight: 500 }}>{modeleActuel?.nom}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: T.bg3, borderRadius: 99, border: `1px solid ${T.border}`, flexShrink: 0 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#4caf82', flexShrink: 0 }} />
+            <span style={{ fontSize: 'clamp(11px, 2.5vw, 12px)', color: T.text, fontWeight: 500, whiteSpace: 'nowrap' }}>{modeleActuel?.nom}</span>
           </div>
         </div>
 
         {/* Historique panel */}
         <AnimatePresence>
           {showHistorique && (
-            <motion.div style={{ background: T.bg2, borderBottom: `1px solid ${T.border}`, padding: '16px 28px', maxHeight: 250, overflowY: 'auto' }}
+            <motion.div style={{ 
+              background: T.bg2, 
+              borderBottom: `1px solid ${T.border}`, 
+              padding: 'clamp(12px, 3vw, 16px) clamp(16px, 4vw, 28px)', 
+              maxHeight: 'min(250px, 40vh)', 
+              overflowY: 'auto' 
+            }}
               initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>Historique des conversations</p>
+              <p style={{ fontSize: 'clamp(12px, 2.5vw, 13px)', fontWeight: 600, color: T.text, marginBottom: 12 }}>Historique des conversations</p>
               {historique.length === 0 ? (
-                <p style={{ color: T.text2, fontSize: 13 }}>Aucun historique</p>
+                <p style={{ color: T.text2, fontSize: 'clamp(12px, 2.5vw, 13px)' }}>Aucun historique</p>
               ) : historique.map(h => (
                 <motion.div key={h.id}
                   style={{ background: T.bg3, borderRadius: 10, padding: '10px 14px', marginBottom: 8, cursor: 'pointer', border: `1px solid ${T.border}` }}
                   whileHover={{ borderColor: T.accent }}
                   onClick={() => { setPrompt(h.prompt); setShowHistorique(false) }}>
-                  <div style={{ fontSize: 11, color: T.text2, marginBottom: 4 }}>{new Date(h.created_at).toLocaleDateString('fr-FR')} • {h.modele.split('-')[0]}</div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{h.prompt.substring(0, 80)}...</div>
-                  {h.tache_titre && <div style={{ fontSize: 11, color: T.accent, marginTop: 4 }}>Tâche : {h.tache_titre}</div>}
+                  <div style={{ fontSize: 'clamp(10px, 2vw, 11px)', color: T.text2, marginBottom: 4 }}>{new Date(h.created_at).toLocaleDateString('fr-FR')} • {h.modele.split('-')[0]}</div>
+                  <div style={{ fontSize: 'clamp(12px, 2.5vw, 13px)', fontWeight: 500, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.prompt.substring(0, 80)}...</div>
+                  {h.tache_titre && <div style={{ fontSize: 'clamp(10px, 2vw, 11px)', color: T.accent, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Tâche : {h.tache_titre}</div>}
                 </motion.div>
               ))}
             </motion.div>
@@ -237,18 +288,25 @@ zIndex: 100,
         </AnimatePresence>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ 
+          flex: 1, 
+          overflowY: 'auto', 
+          padding: 'clamp(16px, 4vw, 24px) clamp(16px, 4vw, 28px)', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 14 
+        }}>
           {messages.length === 0 && (
-            <motion.div style={{ textAlign: 'center', marginTop: '10%', color: T.text2 }} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 18, background: `${T.accent}15`, border: `1px solid ${T.accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <motion.div style={{ textAlign: 'center', marginTop: '10%', color: T.text2, padding: '0 16px' }} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <div style={{ width: 'clamp(48px, 10vw, 64px)', height: 'clamp(48px, 10vw, 64px)', borderRadius: 18, background: `${T.accent}15`, border: `1px solid ${T.accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                 <Bot size={28} color={T.accent} strokeWidth={1.5} />
               </div>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 8, letterSpacing: '-0.3px' }}>Prêt à vous aider</h2>
-              <p style={{ fontSize: 14, marginBottom: 24, color: T.text2 }}>Écrivez un prompt ou sélectionnez une tâche à terminer</p>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: 'clamp(18px, 5vw, 20px)', fontWeight: 700, color: T.text, marginBottom: 8, letterSpacing: '-0.3px' }}>Prêt à vous aider</h2>
+              <p style={{ fontSize: 'clamp(13px, 3vw, 14px)', marginBottom: 24, color: T.text2 }}>Écrivez un prompt ou sélectionnez une tâche à terminer</p>
+              <div className="prompt-examples" style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                 {['Résume cet article...', 'Génère 5 idées de...', 'Traduis ce texte...', 'Explique-moi...'].map(ex => (
                   <motion.button key={ex}
-                    style={{ padding: '8px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 99, color: T.text2, fontSize: 12, cursor: 'pointer' }}
+                    style={{ padding: '8px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 99, color: T.text2, fontSize: 'clamp(11px, 2.5vw, 12px)', cursor: 'pointer' }}
                     onClick={() => setPrompt(ex)} whileHover={{ borderColor: T.accent, color: T.accent }}>
                     {ex}
                   </motion.button>
@@ -263,30 +321,36 @@ zIndex: 100,
                 style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : msg.role === 'systeme' ? 'center' : 'flex-start' }}
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                 {msg.role === 'systeme' ? (
-                  <div style={{ padding: '6px 14px', background: 'rgba(76,175,130,0.1)', border: '1px solid rgba(76,175,130,0.2)', borderRadius: 99, fontSize: 12, color: '#4caf82', fontWeight: 500 }}>
+                  <div style={{ padding: '6px 14px', background: 'rgba(76,175,130,0.1)', border: '1px solid rgba(76,175,130,0.2)', borderRadius: 99, fontSize: 'clamp(11px, 2.5vw, 12px)', color: '#4caf82', fontWeight: 500, maxWidth: '90%' }}>
                     {msg.content}
                   </div>
                 ) : (
-                  <div style={{ maxWidth: '72%', padding: '14px 18px', borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: msg.role === 'user' ? `${T.accent}15` : msg.role === 'erreur' ? 'rgba(224,92,92,0.1)' : T.bg2, border: `1px solid ${msg.role === 'user' ? T.accent + '30' : msg.role === 'erreur' ? 'rgba(224,92,92,0.2)' : T.border}` }}>
+                  <div className="message-content" style={{ 
+                    maxWidth: isMobile ? '90%' : '72%', 
+                    padding: 'clamp(12px, 3vw, 14px) clamp(14px, 3vw, 18px)', 
+                    borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', 
+                    background: msg.role === 'user' ? `${T.accent}15` : msg.role === 'erreur' ? 'rgba(224,92,92,0.1)' : T.bg2, 
+                    border: `1px solid ${msg.role === 'user' ? T.accent + '30' : msg.role === 'erreur' ? 'rgba(224,92,92,0.2)' : T.border}` 
+                  }}>
                     {msg.role === 'ia' && (
-                      <div style={{ fontSize: 11, color: T.accent, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4caf82' }} />
+                      <div style={{ fontSize: 'clamp(10px, 2vw, 11px)', color: T.accent, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4caf82', flexShrink: 0 }} />
                         {modeles.find(m => m.id === msg.modele)?.nom}
                       </div>
                     )}
-                    <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap', color: msg.role === 'erreur' ? '#e05c5c' : T.text }}>
+                    <div style={{ fontSize: 'clamp(13px, 3vw, 14px)', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: msg.role === 'erreur' ? '#e05c5c' : T.text }}>
                       {msg.content}
                     </div>
                     {msg.role === 'ia' && (
-                      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                      <div className="message-actions" style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <motion.button
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 99, color: T.text2, fontSize: 11, cursor: 'pointer' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 99, color: T.text2, fontSize: 'clamp(10px, 2vw, 11px)', cursor: 'pointer' }}
                           onClick={() => navigator.clipboard.writeText(msg.content)}
                           whileHover={{ borderColor: T.accent, color: T.accent }}>
                           <Copy size={11} /> Copier
                         </motion.button>
                         <motion.button
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 99, color: T.text2, fontSize: 11, cursor: 'pointer' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 99, color: T.text2, fontSize: 'clamp(10px, 2vw, 11px)', cursor: 'pointer' }}
                           onClick={() => creerTacheDepuisIA(msg.content.substring(0, 50))}
                           whileHover={{ borderColor: T.accent, color: T.accent }}>
                           <Plus size={11} /> Créer une tâche
@@ -315,12 +379,28 @@ zIndex: 100,
         </div>
 
         {/* Input */}
-        <div style={{ padding: '16px 28px', borderTop: `1px solid ${T.border}`, background: T.bg2 }}>
+        <div style={{ 
+          padding: 'clamp(12px, 3vw, 16px) clamp(16px, 4vw, 28px)', 
+          borderTop: `1px solid ${T.border}`, 
+          background: T.bg2 
+        }}>
           {tacheSelectionnee && (
-            <motion.div style={{ marginBottom: 10, padding: '8px 14px', background: `${T.accent}10`, border: `1px solid ${T.accent}30`, borderRadius: 10, fontSize: 12, color: T.accent, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            <motion.div style={{ 
+              marginBottom: 10, 
+              padding: '8px 14px', 
+              background: `${T.accent}10`, 
+              border: `1px solid ${T.accent}30`, 
+              borderRadius: 10, 
+              fontSize: 'clamp(11px, 2.5vw, 12px)', 
+              color: T.accent, 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              gap: 8
+            }}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <span>Tâche liée : {taches.find(t => t.id === tacheSelectionnee)?.titre}</span>
-              <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex' }}
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Tâche liée : {taches.find(t => t.id === tacheSelectionnee)?.titre}</span>
+              <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', flexShrink: 0 }}
                 onClick={() => setTacheSelectionnee(null)} whileHover={{ color: '#e05c5c' }}>
                 <X size={14} />
               </motion.button>
@@ -328,7 +408,21 @@ zIndex: 100,
           )}
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
             <textarea
-              style={{ flex: 1, padding: '12px 16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, color: T.text, fontSize: 14, outline: 'none', resize: 'none', minHeight: 48, maxHeight: 140, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
+              style={{ 
+                flex: 1, 
+                padding: 'clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px)', 
+                background: T.bg3, 
+                border: `1px solid ${T.border}`, 
+                borderRadius: 12, 
+                color: T.text, 
+                fontSize: 'clamp(13px, 3vw, 14px)', 
+                outline: 'none', 
+                resize: 'none', 
+                minHeight: 48, 
+                maxHeight: 140, 
+                fontFamily: "'DM Sans', sans-serif", 
+                lineHeight: 1.5 
+              }}
               placeholder={tacheSelectionnee ? `Prompt pour : "${taches.find(t => t.id === tacheSelectionnee)?.titre}"` : `Écrivez votre prompt pour ${modeleActuel?.nom}...`}
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
@@ -336,12 +430,24 @@ zIndex: 100,
               rows={1}
             />
             <motion.button
-              style={{ padding: '12px 16px', background: loading ? T.bg3 : T.accent, color: loading ? T.text2 : T.bg, border: 'none', borderRadius: 12, fontWeight: 600, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+              style={{ 
+                padding: 'clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px)', 
+                background: loading ? T.bg3 : T.accent, 
+                color: loading ? T.text2 : T.bg, 
+                border: 'none', 
+                borderRadius: 12, 
+                fontWeight: 600, 
+                fontSize: 'clamp(13px, 3vw, 14px)', 
+                cursor: loading ? 'not-allowed' : 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8 
+              }}
               onClick={envoyerPrompt} whileHover={!loading ? { scale: 1.03 } : {}} whileTap={!loading ? { scale: 0.97 } : {}}>
               {loading ? <div style={{ display: 'flex', gap: 3 }}>{[0,1,2].map(i => <motion.div key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: T.text2 }} animate={{ y: [-2, 2, -2] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }} />)}</div> : <Send size={16} strokeWidth={2} />}
             </motion.button>
           </div>
-          <p style={{ fontSize: 11, color: T.text2, marginTop: 8 }}>Entrée pour envoyer • Shift+Entrée pour nouvelle ligne</p>
+          <p style={{ fontSize: 'clamp(10px, 2vw, 11px)', color: T.text2, marginTop: 8 }}>Entrée pour envoyer • Shift+Entrée pour nouvelle ligne</p>
         </div>
       </main>
     </div>
