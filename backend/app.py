@@ -594,6 +594,12 @@ def get_planification(user_id):
         """, (user_id,))
         planification = curseur.fetchall()
         db.close()
+        for row in planification:
+            for key, value in row.items():
+                if hasattr(value, 'total_seconds'):
+                    row[key] = str(value)
+                elif hasattr(value, 'isoformat'):
+                    row[key] = value.isoformat()
         return jsonify(planification)
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
