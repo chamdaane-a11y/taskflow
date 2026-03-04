@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Splash from './pages/Splash'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -7,10 +7,11 @@ import IAChat from './pages/IAChat'
 import Analytics from './pages/Analytics'
 import Planification from './pages/Planification'
 import Collaboration from './pages/Collaboration'
+import Help from './pages/Help'
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/login" element={<Login />} />
@@ -20,9 +21,10 @@ function App() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/planification" element={<Planification />} />
         <Route path="/collaboration" element={<Collaboration />} />
+        <Route path="/help" element={<Help />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 

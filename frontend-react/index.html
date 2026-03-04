@@ -1,25 +1,49 @@
-
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="manifest" href="/taskflow/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Taskflow</title>
-<script>
-  (function(l) {
-    if (l.search[1] === '/' ) {
-      var decoded = l.search.slice(1).split('&').map(function(s) { 
-        return s.replace(/~and~/g, '&')
-      }).join('?');
-      window.history.replaceState(null, null,
-        l.pathname.slice(0, -1) + decoded + l.hash
-      );
-    }
-  }(window.location))
-</script>
- </head>
+
+    <!-- ===== PWA MANIFEST ===== -->
+    <link rel="manifest" href="/taskflow/manifest.json" />
+
+    <!-- ===== THEME & COULEURS ===== -->
+    <meta name="theme-color" content="#6c63ff" />
+    <meta name="background-color" content="#0f1117" />
+
+    <!-- ===== iOS PWA ===== -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TaskFlow" />
+    <link rel="apple-touch-icon" href="/taskflow/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/taskflow/icons/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/taskflow/icons/icon-144.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/taskflow/icons/icon-128.png" />
+
+    <!-- ===== WINDOWS / MICROSOFT ===== -->
+    <meta name="msapplication-TileImage" content="/taskflow/icons/icon-144.png" />
+    <meta name="msapplication-TileColor" content="#6c63ff" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- ===== SEO & META ===== -->
+    <meta name="description" content="TaskFlow - Gérez vos tâches avec l'IA, gamification et collaboration en temps réel" />
+    <meta name="keywords" content="tâches, productivité, IA, gestion de projet, TaskFlow" />
+    <meta name="author" content="TaskFlow" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- ===== OPEN GRAPH ===== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TaskFlow - Gestionnaire de tâches intelligent" />
+    <meta property="og:description" content="Gérez vos tâches avec l'IA, gamification et collaboration" />
+    <meta property="og:image" content="/taskflow/icons/icon-512.png" />
+    <meta property="og:url" content="https://chamdaane-a11y.github.io/taskflow/" />
+
+    <!-- ===== ICÔNES ===== -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/taskflow/icons/icon-96.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/taskflow/icons/icon-72.png" />
+
+    <title>TaskFlow</title>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
