@@ -4,7 +4,6 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_mail import Mail, Message
 from database import connecter
 import hashlib
 import os
@@ -16,9 +15,12 @@ from dotenv import load_dotenv
 from groq import Groq
 from pywebpush import webpush, WebPushException
 import requests as http_requests
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail as SGMail
 
 load_dotenv()
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
@@ -31,15 +33,6 @@ app.config['JWT_COOKIE_SAMESITE'] = 'None'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
-
-# Mail
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-mail = Mail(app)
 
 # Rate Limiter
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
@@ -56,29 +49,33 @@ def envoyer_notification_slack(webhook_url, message):
     except Exception as e:
         print(f"Erreur Slack: {e}")
 
-def envoyer_email_verification(email, nom, token):
+def envoyer_email(to_email, subject, html_content):
     try:
-        lien = f"https://taskflow-production-75c1.up.railway.app/verify-email/{token}"
-        msg = Message(
-            subject="✅ Vérifiez votre email TaskFlow",
-            recipients=[email],
-            html=f"""
-            <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
-                <h1 style="color:#6c63ff;">TaskFlow</h1>
-                <h2>Bonjour {nom} 👋</h2>
-                <p>Merci de vous être inscrit. Cliquez ci-dessous pour vérifier votre email :</p>
-                <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
-                    ✅ Vérifier mon email
-                </a>
-                <p style="color:#888;font-size:12px;">Ce lien expire dans 24h.</p>
-            </div>
-            """
+        message = SGMail(
+            from_email=os.getenv('MAIL_DEFAULT_SENDER', 'chamdaane@gmail.com'),
+            to_emails=to_email,
+            subject=subject,
+            html_content=html_content
         )
-        mail.send(msg)
+        sg.send(message)
+        print(f"Email envoyé à {to_email}")
         return True
     except Exception as e:
-        print(f"Erreur email: {e}")
+        print(f"Erreur email SendGrid: {e}")
         return False
+
+def envoyer_email_verification(email, nom, token):
+    lien = f"https://taskflow-production-75c1.up.railway.app/verify-email/{token}"
+    html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
+        <h1 style="color:#6c63ff;">TaskFlow</h1>
+        <h2>Bonjour {nom} !</h2>
+        <p>Merci de vous etre inscrit. Cliquez ci-dessous pour verifier votre email :</p>
+        <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
+            Verifier mon email
+        </a>
+        <p style="color:#888;font-size:12px;">Ce lien expire dans 24h.</p>
+    </div>"""
+    threading.Thread(target=envoyer_email, args=(email, "Verifiez votre email TaskFlow", html)).start()
 
 # ============================================
 # 🔐 AUTHENTIFICATION
@@ -217,66 +214,6 @@ def resend_verification():
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-@app.route('/forgot-password', methods=['POST'])
-@limiter.limit("3 per hour")
-def forgot_password():
-    try:
-        data = request.get_json()
-        email = data.get('email', '').strip().lower()
-        db = connecter()
-        curseur = db.cursor(dictionary=True)
-        curseur.execute("SELECT id, nom FROM users WHERE email=%s", (email,))
-        user = curseur.fetchone()
-        if not user:
-            db.close()
-            return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
-        reset_token = secrets.token_urlsafe(32)
-        from datetime import datetime, timedelta
-        expiry = datetime.now() + timedelta(hours=1)
-        curseur.execute("UPDATE users SET reset_token=%s, reset_token_expiry=%s WHERE id=%s", (reset_token, expiry, user['id']))
-        db.commit(); db.close()
-        lien = f"https://chamdaane-a11y.github.io/taskflow/#/reset-password/{reset_token}"
-        msg = Message(subject="🔑 Réinitialisation de votre mot de passe TaskFlow", recipients=[email],
-            html=f"""<div style="font-family:Arial;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
-                <h1 style="color:#6c63ff;">TaskFlow</h1>
-                <h2>Bonjour {user['nom']} 👋</h2>
-                <p>Cliquez ci-dessous pour réinitialiser votre mot de passe :</p>
-                <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
-                    🔑 Réinitialiser mon mot de passe
-                </a>
-                <p style="color:#888;font-size:12px;">Ce lien expire dans 1h.</p>
-            </div>""")
-        threading.Thread(target=lambda: mail.send(msg)).start()
-        return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
-    except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
-
-
-@app.route('/reset-password', methods=['POST'])
-def reset_password():
-    try:
-        from datetime import datetime
-        data = request.get_json()
-        token = data.get('token', '')
-        password = data.get('password', '').strip()
-        if len(password) < 8:
-            return jsonify({"erreur": "Le mot de passe doit contenir au moins 8 caractères"}), 400
-        db = connecter()
-        curseur = db.cursor(dictionary=True)
-        curseur.execute("SELECT id, reset_token_expiry FROM users WHERE reset_token=%s", (token,))
-        user = curseur.fetchone()
-        if not user:
-            db.close()
-            return jsonify({"erreur": "Lien invalide ou expiré"}), 400
-        if user['reset_token_expiry'] and datetime.now() > user['reset_token_expiry']:
-            db.close()
-            return jsonify({"erreur": "Lien expiré, demandez un nouveau"}), 400
-        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
-        curseur.execute("UPDATE users SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE id=%s", (password_hash, user['id']))
-        db.commit(); db.close()
-        return jsonify({"message": "Mot de passe modifié avec succès !"})
-    except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
 
 # ============================================
 # 👤 UTILISATEURS
