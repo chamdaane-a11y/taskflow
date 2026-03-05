@@ -23,8 +23,8 @@ export default function Register() {
       await axios.post(`${API}/register`, {
   nom: form.nom, email: form.email, password: form.password
 }, { withCredentials: true })
-      setSucces('Compte créé ! Redirection...')
-      setTimeout(() => navigate('/'), 1500)
+
+      setSucces('Compte créé ! Vérifiez votre boîte email pour activer votre compte.')
     } catch (err) {
       setErreur(err.response?.data?.erreur || 'Erreur lors de l\'inscription')
     }
