@@ -1,3 +1,4 @@
+import threading
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies
@@ -113,7 +114,8 @@ def register():
         )
         db.commit(); curseur.close(); db.close()
 
-        envoyer_email_verification(email, nom, verification_token)
+        import threading
+        threading.Thread(target=envoyer_email_verification, args=(email, nom, verification_token)).start()
         return jsonify({"message": "Compte créé ! Vérifiez votre email pour activer votre compte."})
 
     except Exception as e:
