@@ -1,4 +1,3 @@
-import threading
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies
@@ -44,7 +43,7 @@ mail = Mail(app)
 # Rate Limiter
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
-CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+CORS(app, origins=["https://chamdaane-a11y.github.io"], supports_credentials=True)
 
 VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
@@ -114,8 +113,7 @@ def register():
         )
         db.commit(); curseur.close(); db.close()
 
-        import threading
-        threading.Thread(target=envoyer_email_verification, args=(email, nom, verification_token)).start()
+        envoyer_email_verification(email, nom, verification_token)
         return jsonify({"message": "Compte créé ! Vérifiez votre email pour activer votre compte."})
 
     except Exception as e:
