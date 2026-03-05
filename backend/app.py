@@ -215,6 +215,67 @@ def resend_verification():
         return jsonify({"erreur": str(e)}), 500
 
 
+@app.route('/forgot-password', methods=['POST'])
+@limiter.limit("3 per hour")
+def forgot_password():
+    try:
+        from datetime import datetime
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT id, nom FROM users WHERE email=%s", (email,))
+        user = curseur.fetchone()
+        if not user:
+            db.close()
+            return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
+        reset_token = secrets.token_urlsafe(32)
+        expiry = datetime.now() + timedelta(hours=1)
+        curseur.execute("UPDATE users SET reset_token=%s, reset_token_expiry=%s WHERE id=%s", (reset_token, expiry, user['id']))
+        db.commit(); db.close()
+        lien = f"https://chamdaane-a11y.github.io/taskflow/#/reset-password/{reset_token}"
+        html = f"""<div style="font-family:Arial;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
+            <h1 style="color:#6c63ff;">TaskFlow</h1>
+            <h2>Bonjour {user['nom']} !</h2>
+            <p>Cliquez ci-dessous pour reinitialiser votre mot de passe :</p>
+            <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
+                Reinitialiser mon mot de passe
+            </a>
+            <p style="color:#888;font-size:12px;">Ce lien expire dans 1h.</p>
+        </div>"""
+        threading.Thread(target=envoyer_email, args=(email, "Reinitialisation mot de passe TaskFlow", html)).start()
+        return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/reset-password', methods=['POST'])
+def reset_password():
+    try:
+        from datetime import datetime
+        data = request.get_json()
+        token = data.get('token', '')
+        password = data.get('password', '').strip()
+        if len(password) < 8:
+            return jsonify({"erreur": "Le mot de passe doit contenir au moins 8 caractères"}), 400
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT id, reset_token_expiry FROM users WHERE reset_token=%s", (token,))
+        user = curseur.fetchone()
+        if not user:
+            db.close()
+            return jsonify({"erreur": "Lien invalide ou expiré"}), 400
+        if user['reset_token_expiry'] and datetime.now() > user['reset_token_expiry']:
+            db.close()
+            return jsonify({"erreur": "Lien expiré, demandez un nouveau"}), 400
+        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        curseur.execute("UPDATE users SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE id=%s", (password_hash, user['id']))
+        db.commit(); db.close()
+        return jsonify({"message": "Mot de passe modifié avec succès !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
 # ============================================
 # 👤 UTILISATEURS
 # ============================================
