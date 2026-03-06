@@ -1,4 +1,6 @@
 import threading
+import schedule
+import time
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies
@@ -10,7 +12,7 @@ import os
 import json
 import re
 import secrets
-from datetime import timedelta
+from datetime import timedelta, datetime
 from dotenv import load_dotenv
 from groq import Groq
 from pywebpush import webpush, WebPushException
@@ -41,7 +43,11 @@ CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.g
 
 VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
-VAPID_CLAIMS = {"sub": "mailto:admin@taskflow.app"}
+VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
+
+# ============================================
+# 📧 HELPERS EMAIL & SLACK
+# ============================================
 
 def envoyer_notification_slack(webhook_url, message):
     try:
@@ -58,7 +64,6 @@ def envoyer_email(to_email, subject, html_content):
             html_content=html_content
         )
         sg.send(message)
-        print(f"Email envoyé à {to_email}")
         return True
     except Exception as e:
         print(f"Erreur email SendGrid: {e}")
@@ -81,6 +86,176 @@ def envoyer_email_verification(email, nom, token):
     threading.Thread(target=envoyer_email, args=(email, "Verifiez votre email TaskFlow", html)).start()
 
 # ============================================
+# 🔔 PUSH NOTIFICATIONS HELPERS
+# ============================================
+
+def envoyer_push(subscription_json, titre, body, url="/dashboard"):
+    try:
+        webpush(
+            subscription_info=json.loads(subscription_json),
+            data=json.dumps({"title": titre, "body": body, "url": url}),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims=VAPID_CLAIMS
+        )
+        return True
+    except WebPushException:
+        return False
+
+# ============================================
+# ⏰ JOBS AUTOMATIQUES (SCHEDULER)
+# ============================================
+
+def job_resume_matin():
+    """Résumé quotidien envoyé chaque matin à 8h"""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom,
+                COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as taches_en_cours,
+                COUNT(CASE WHEN t.terminee = FALSE AND t.deadline = CURDATE() THEN 1 END) as deadlines_aujourd_hui,
+                COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() THEN 1 END) as taches_en_retard,
+                COUNT(CASE WHEN t.terminee = TRUE AND DATE(t.updated_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) THEN 1 END) as terminees_hier
+            FROM users u
+            LEFT JOIN taches t ON u.id = t.user_id
+            WHERE u.email_verifie = TRUE
+            GROUP BY u.id
+        """)
+        users = cursor.fetchall()
+        for user in users:
+            cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (user['id'],))
+            sub = cursor.fetchone()
+            if not sub:
+                continue
+            en_cours = user['taches_en_cours'] or 0
+            aujourd_hui = user['deadlines_aujourd_hui'] or 0
+            en_retard = user['taches_en_retard'] or 0
+            hier = user['terminees_hier'] or 0
+            if en_cours == 0:
+                continue
+            parties = []
+            if aujourd_hui > 0:
+                parties.append(f"{aujourd_hui} deadline(s) aujourd'hui")
+            if en_retard > 0:
+                parties.append(f"{en_retard} tâche(s) en retard")
+            if hier > 0:
+                parties.append(f"{hier} terminée(s) hier")
+            if not parties:
+                parties.append(f"{en_cours} tâche(s) en cours")
+            body = " · ".join(parties)
+            envoyer_push(sub['subscription'], f"Bonjour {user['nom']} — Votre journée TaskFlow", body)
+        cursor.close()
+        db.close()
+        print(f"[Résumé matin] OK")
+    except Exception as e:
+        print(f"[Résumé matin] Erreur: {e}")
+
+def job_rappels_deadline():
+    """Rappels pour les tâches dont la deadline est aujourd'hui"""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT t.id, t.titre, t.user_id
+            FROM taches t
+            WHERE t.terminee = FALSE
+            AND t.deadline = CURDATE()
+            AND (t.rappel_envoye = FALSE OR t.rappel_envoye IS NULL)
+        """)
+        taches = cursor.fetchall()
+        for tache in taches:
+            cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (tache['user_id'],))
+            sub = cursor.fetchone()
+            if sub:
+                envoyer_push(sub['subscription'],
+                    f"Deadline aujourd'hui : {tache['titre']}",
+                    "Cette tâche est à rendre aujourd'hui. Ne l'oubliez pas !")
+                cursor.execute("UPDATE taches SET rappel_envoye = TRUE WHERE id = %s", (tache['id'],))
+        db.commit()
+        cursor.close()
+        db.close()
+        print(f"[Rappels deadline] {len(taches)} rappels envoyés")
+    except Exception as e:
+        print(f"[Rappels deadline] Erreur: {e}")
+
+def job_taches_en_retard():
+    """Notifie les utilisateurs pour leurs tâches en retard"""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id as user_id, u.nom, COUNT(*) as nb_retard
+            FROM taches t JOIN users u ON t.user_id = u.id
+            WHERE t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL
+            GROUP BY u.id
+        """)
+        users = cursor.fetchall()
+        for user in users:
+            cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (user['user_id'],))
+            sub = cursor.fetchone()
+            if sub:
+                nb = user['nb_retard']
+                envoyer_push(sub['subscription'],
+                    f"{nb} tâche(s) en retard",
+                    f"{user['nom']}, rattrapez vos tâches dépassées dès maintenant !")
+        cursor.close()
+        db.close()
+        print(f"[Tâches en retard] OK")
+    except Exception as e:
+        print(f"[Tâches en retard] Erreur: {e}")
+
+def job_encouragements():
+    """Encouragements personnalisés selon la productivité du jour"""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom,
+                COUNT(CASE WHEN t.terminee = TRUE AND DATE(t.updated_at) = CURDATE() THEN 1 END) as terminees_auj
+            FROM users u
+            LEFT JOIN taches t ON u.id = t.user_id
+            WHERE u.email_verifie = TRUE
+            GROUP BY u.id
+            HAVING terminees_auj > 0
+        """)
+        users = cursor.fetchall()
+        messages = [
+            (10, "Légendaire !", "10 tâches bouclées aujourd'hui. Vous êtes une machine TaskFlow !"),
+            (5,  "Exceptionnel !", "5 tâches terminées ! Vous êtes au sommet de votre productivité."),
+            (3,  "En feu !", "3 tâches terminées aujourd'hui. Vous êtes dans la zone !"),
+            (1,  "Belle journée !", "Vous avez terminé votre première tâche du jour. Continuez !"),
+        ]
+        for user in users:
+            cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (user['id'],))
+            sub = cursor.fetchone()
+            if not sub:
+                continue
+            n = user['terminees_auj']
+            for seuil, titre, body in messages:
+                if n >= seuil:
+                    envoyer_push(sub['subscription'], titre, body)
+                    break
+        cursor.close()
+        db.close()
+        print(f"[Encouragements] OK")
+    except Exception as e:
+        print(f"[Encouragements] Erreur: {e}")
+
+def demarrer_scheduler():
+    """Lance le scheduler en arrière-plan"""
+    schedule.every().day.at("08:00").do(job_resume_matin)
+    schedule.every().hour.do(job_rappels_deadline)
+    schedule.every().day.at("09:00").do(job_taches_en_retard)
+    schedule.every(2).hours.do(job_encouragements)
+    print("[Scheduler] Démarré ✅")
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+# Démarrage du scheduler en thread
+threading.Thread(target=demarrer_scheduler, daemon=True).start()
+
+# ============================================
 # 🔐 AUTHENTIFICATION
 # ============================================
 
@@ -92,34 +267,27 @@ def register():
         nom = data.get('nom', '').strip()
         email = data.get('email', '').strip().lower()
         password = data.get('password', '').strip()
-
         if not nom or not email or not password:
             return jsonify({"erreur": "Tous les champs sont requis"}), 400
         if len(password) < 8:
             return jsonify({"erreur": "Le mot de passe doit contenir au moins 8 caractères"}), 400
-
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
         verification_token = secrets.token_urlsafe(32)
-
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute("SELECT id FROM users WHERE email = %s", (email,))
         if curseur.fetchone():
             curseur.close(); db.close()
             return jsonify({"erreur": "Email déjà utilisé !"}), 400
-
         curseur.execute(
             "INSERT INTO users (nom, email, password, verification_token, email_verifie) VALUES (%s, %s, %s, %s, FALSE)",
             (nom, email, password_hash, verification_token)
         )
         db.commit(); curseur.close(); db.close()
-
         threading.Thread(target=envoyer_email_verification, args=(email, nom, verification_token)).start()
         return jsonify({"message": "Compte créé ! Vérifiez votre email pour activer votre compte."})
-
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
 
 @app.route('/verify-email/<token>', methods=['GET'])
 def verify_email(token):
@@ -131,13 +299,13 @@ def verify_email(token):
         if not user:
             db.close()
             return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
-                <h1 style="color:#e05c5c">❌ Lien invalide ou expiré</h1>
+                <h1 style="color:#e05c5c">Lien invalide ou expiré</h1>
                 <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à TaskFlow</a>
             </body></html>""", 400
         curseur.execute("UPDATE users SET email_verifie=TRUE, verification_token=NULL WHERE id=%s", (user['id'],))
         db.commit(); db.close()
         return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
-            <h1 style="color:#6c63ff">✅ Email vérifié !</h1>
+            <h1 style="color:#6c63ff">Email vérifié !</h1>
             <p>Votre compte TaskFlow est maintenant actif.</p>
             <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">
                 Se connecter →
@@ -146,7 +314,6 @@ def verify_email(token):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
 @app.route('/login', methods=['POST'])
 @limiter.limit("10 per minute")
 def login():
@@ -154,12 +321,9 @@ def login():
         data = request.get_json()
         email = data.get('email', '').strip().lower()
         password = data.get('password', '').strip()
-
         if not email or not password:
             return jsonify({"erreur": "Email et mot de passe requis"}), 400
-
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
-
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute(
@@ -168,12 +332,10 @@ def login():
         )
         user = curseur.fetchone()
         curseur.close(); db.close()
-
         if not user:
             return jsonify({"erreur": "Email ou mot de passe incorrect !"}), 401
         if not user.get('email_verifie'):
             return jsonify({"erreur": "Veuillez vérifier votre email avant de vous connecter !", "non_verifie": True}), 403
-
         access_token = create_access_token(identity=str(user['id']))
         response = make_response(jsonify({
             "message": "Connecté !",
@@ -181,17 +343,14 @@ def login():
         }))
         set_access_cookies(response, access_token)
         return response
-
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
 
 @app.route('/logout', methods=['POST'])
 def logout():
     response = make_response(jsonify({"message": "Déconnecté !"}))
     unset_jwt_cookies(response)
     return response
-
 
 @app.route('/resend-verification', methods=['POST'])
 @limiter.limit("3 per hour")
@@ -217,12 +376,10 @@ def resend_verification():
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
 @app.route('/forgot-password', methods=['POST'])
 @limiter.limit("3 per hour")
 def forgot_password():
     try:
-        from datetime import datetime
         data = request.get_json()
         email = data.get('email', '').strip().lower()
         db = connecter()
@@ -246,7 +403,7 @@ def forgot_password():
             </a>
             <p style="color:#888;font-size:12px;">Ce lien expire dans 1h.</p>
             <div style="margin-top:24px;padding:14px;background:rgba(255,255,255,0.05);border-radius:8px;border-left:3px solid #6c63ff;">
-                <p style="color:#aaa;font-size:12px;margin:0;">Si vous ne trouvez pas cet email, verifiez votre dossier Spams et marquez-le comme Pas un spam.</p>
+                <p style="color:#aaa;font-size:12px;margin:0;">Si vous ne trouvez pas cet email, verifiez votre dossier Spams.</p>
             </div>
         </div>"""
         threading.Thread(target=envoyer_email, args=(email, "Reinitialisation mot de passe TaskFlow", html)).start()
@@ -254,11 +411,9 @@ def forgot_password():
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
 @app.route('/reset-password', methods=['POST'])
 def reset_password():
     try:
-        from datetime import datetime
         data = request.get_json()
         token = data.get('token', '')
         password = data.get('password', '').strip()
@@ -280,7 +435,6 @@ def reset_password():
         return jsonify({"message": "Mot de passe modifié avec succès !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
 
 # ============================================
 # 👤 UTILISATEURS
@@ -429,7 +583,7 @@ def ajouter_tache():
             webhook_url = config.get('webhook_url')
             if webhook_url:
                 deadline_str = f" (deadline: {data['deadline']})" if data.get('deadline') else ""
-                envoyer_notification_slack(webhook_url, f"✅ Nouvelle tâche TaskFlow : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}")
+                envoyer_notification_slack(webhook_url, f"Nouvelle tâche TaskFlow : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}")
         db.close()
         return jsonify({"message": "Tâche ajoutée !"})
     except Exception as e:
@@ -977,7 +1131,7 @@ def ajouter_commentaire():
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 🔔 PUSH NOTIFICATIONS
+# 🔔 PUSH NOTIFICATIONS ROUTES
 # ============================================
 
 @app.route('/push/vapid-public-key', methods=['GET'])
@@ -1014,18 +1168,31 @@ def send_rappels():
             cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (tache['user_id'],))
             sub = cursor.fetchone()
             if sub:
-                try:
-                    jours = tache['jours_restants']
-                    webpush(subscription_info=json.loads(sub['subscription']),
-                        data=json.dumps({"title": f"⏰ Deadline : {tache['titre']}", "body": "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"}),
-                        vapid_private_key=VAPID_PRIVATE_KEY, vapid_claims=VAPID_CLAIMS)
+                jours = tache['jours_restants']
+                if envoyer_push(sub['subscription'],
+                    f"Deadline : {tache['titre']}",
+                    "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"):
                     sent += 1
-                except WebPushException:
-                    pass
         cursor.close(); db.close()
         return jsonify({"message": f"{sent} notifications envoyées"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
+
+# Routes de déclenchement manuel (pour tests)
+@app.route('/push/resume-matin', methods=['POST'])
+def trigger_resume_matin():
+    threading.Thread(target=job_resume_matin).start()
+    return jsonify({"message": "Résumé matin déclenché !"})
+
+@app.route('/push/rappels-deadline', methods=['POST'])
+def trigger_rappels_deadline():
+    threading.Thread(target=job_rappels_deadline).start()
+    return jsonify({"message": "Rappels deadline déclenchés !"})
+
+@app.route('/push/encouragements', methods=['POST'])
+def trigger_encouragements():
+    threading.Thread(target=job_encouragements).start()
+    return jsonify({"message": "Encouragements déclenchés !"})
 
 # ============================================
 # 🔗 INTÉGRATIONS

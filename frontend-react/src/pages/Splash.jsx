@@ -200,6 +200,30 @@ export default function Splash() {
       >
         Chargement...
       </motion.p>
+
+      <motion.button
+        onClick={() => navigate('/landing')}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5 }}
+        whileHover={{ scale: 1.05 }}
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          zIndex: 2,
+          background: 'transparent',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: 99,
+          padding: '10px 24px',
+          color: 'rgba(255,255,255,0.5)',
+          fontSize: 13,
+          cursor: 'pointer',
+          fontFamily: "'DM Sans', sans-serif",
+          fontWeight: 500
+        }}
+      >
+        🌐 Voir la présentation
+      </motion.button>
     </div>
   )
 }

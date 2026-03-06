@@ -13,7 +13,7 @@ import {
   LayoutDashboard, CheckSquare, Clock, AlertTriangle,
   ChevronRight, Trash2, Plus, LogOut, Bot, BarChart2,
   Calendar, Layers, Bell, Award, Palette, Sparkles, Target, Users, Menu, Settings, HelpCircle,
-  ChevronDown, ChevronUp, ExternalLink
+  ChevronDown, ChevronUp, ExternalLink, User
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import { useOffline } from '../useOffline'
@@ -682,15 +682,20 @@ export default function Dashboard() {
           <span style={{ fontSize: 'clamp(14px, 2vw, 16px)', fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>TaskFlow</span>
         </div>
 
-        <div style={{ background: T.bg3, borderRadius: 12, padding: 'clamp(10px, 2vh, 14px)', marginBottom: 24, border: `1px solid ${T.border}` }}>
+        <motion.div
+          style={{ background: T.bg3, borderRadius: 12, padding: 'clamp(10px, 2vh, 14px)', marginBottom: 24, border: `1px solid ${T.border}`, cursor: 'pointer' }}
+          onClick={() => navigate('/profile')}
+          whileHover={{ borderColor: T.accent }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{ width: 36, height: 36, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, color: T.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
               {user?.nom?.charAt(0).toUpperCase()}
             </div>
-            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ minWidth: 0, overflow: 'hidden', flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: 13, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.nom}</div>
               <div style={{ fontSize: 11, color: T.text2 }}>Niveau {niveau} — {niveauActuel.label}</div>
             </div>
+            <User size={14} color={T.text2} strokeWidth={1.8} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.text2, marginBottom: 6 }}>
             <span>{points} pts</span><span>{pctNiveau}%</span>
@@ -699,7 +704,7 @@ export default function Dashboard() {
             <motion.div style={{ height: '100%', background: `linear-gradient(90deg, ${T.accent}, ${T.accent2})`, borderRadius: 99 }}
               initial={{ width: 0 }} animate={{ width: `${pctNiveau}%` }} transition={{ duration: 1 }} />
           </div>
-        </div>
+        </motion.div>
 
         <nav style={{ flex: 1 }}>
           <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
@@ -739,7 +744,7 @@ export default function Dashboard() {
         </nav>
 
         <motion.button
-          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', borderRadius: 10, background: showSettings ? `${T.accent}15` : 'transparent', border: 'none', color: showSettings ? T.accent : T.text2, cursor: 'pointer', fontSize: 13, textAlign: 'left', marginTop: 8, marginBottom: 2 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', borderRadius: 10, background: showSettings ? `${T.accent}15` : 'transparent', border: 'none', color: showSettings ? T.accent : T.text2, cursor: 'pointer', fontSize: 13, textAlign: 'left', marginTop: 0, marginBottom: 2 }}
           onClick={() => { setShowSettings(!showSettings); if (showSettings) { setShowBadges(false); setShowThemes(false); setShowIntegrations(false) } }}
           whileHover={{ color: T.accent }}>
           <Settings size={16} strokeWidth={1.8} /><span>Paramètres</span>

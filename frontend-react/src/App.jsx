@@ -11,12 +11,16 @@ import Help from './pages/Help'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Profile from './pages/Profile'
+import Landing from './pages/Landing'
+import CGU from './pages/CGU'
 
 function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<Splash />} />
+        <Route path="/cgu" element={<CGU />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/splash" element={<Splash />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
