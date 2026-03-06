@@ -74,6 +74,9 @@ def envoyer_email_verification(email, nom, token):
             Verifier mon email
         </a>
         <p style="color:#888;font-size:12px;">Ce lien expire dans 24h.</p>
+        <div style="margin-top:24px;padding:14px;background:rgba(255,255,255,0.05);border-radius:8px;border-left:3px solid #6c63ff;">
+            <p style="color:#aaa;font-size:12px;margin:0;">Si vous ne trouvez pas cet email, verifiez votre dossier Spams et marquez-le comme Pas un spam pour recevoir nos prochains emails directement.</p>
+        </div>
     </div>"""
     threading.Thread(target=envoyer_email, args=(email, "Verifiez votre email TaskFlow", html)).start()
 
@@ -242,6 +245,9 @@ def forgot_password():
                 Reinitialiser mon mot de passe
             </a>
             <p style="color:#888;font-size:12px;">Ce lien expire dans 1h.</p>
+            <div style="margin-top:24px;padding:14px;background:rgba(255,255,255,0.05);border-radius:8px;border-left:3px solid #6c63ff;">
+                <p style="color:#aaa;font-size:12px;margin:0;">Si vous ne trouvez pas cet email, verifiez votre dossier Spams et marquez-le comme Pas un spam.</p>
+            </div>
         </div>"""
         threading.Thread(target=envoyer_email, args=(email, "Reinitialisation mot de passe TaskFlow", html)).start()
         return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
