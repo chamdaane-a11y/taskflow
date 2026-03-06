@@ -10,6 +10,7 @@ import Collaboration from './pages/Collaboration'
 import Help from './pages/Help'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import Profile from './pages/Profile'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/ia" element={<IAChat />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/planification" element={<Planification />} />
