@@ -295,6 +295,45 @@ def get_user(id):
     db.close()
     return jsonify(user)
 
+@app.route('/users/<int:id>/nom', methods=['PUT'])
+def update_nom(id):
+    try:
+        data = request.get_json()
+        nom = data.get('nom', '').strip()
+        if not nom:
+            return jsonify({"erreur": "Le nom ne peut pas être vide"}), 400
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("UPDATE users SET nom=%s WHERE id=%s", (nom, id))
+        db.commit(); db.close()
+        return jsonify({"message": "Nom mis à jour !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/password', methods=['PUT'])
+def update_password(id):
+    try:
+        data = request.get_json()
+        ancien = data.get('ancien_password', '').strip()
+        nouveau = data.get('nouveau_password', '').strip()
+        if not ancien or not nouveau:
+            return jsonify({"erreur": "Tous les champs sont requis"}), 400
+        if len(nouveau) < 8:
+            return jsonify({"erreur": "Le mot de passe doit contenir au moins 8 caractères"}), 400
+        ancien_hash = hashlib.sha256(ancien.encode('utf-8')).hexdigest()
+        nouveau_hash = hashlib.sha256(nouveau.encode('utf-8')).hexdigest()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT id FROM users WHERE id=%s AND password=%s", (id, ancien_hash))
+        if not curseur.fetchone():
+            db.close()
+            return jsonify({"erreur": "Mot de passe actuel incorrect"}), 400
+        curseur.execute("UPDATE users SET password=%s WHERE id=%s", (nouveau_hash, id))
+        db.commit(); db.close()
+        return jsonify({"message": "Mot de passe modifié avec succès !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 @app.route('/users/<int:id>/theme', methods=['PUT'])
 def update_theme(id):
     data = request.get_json()
