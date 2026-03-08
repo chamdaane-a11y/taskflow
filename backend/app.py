@@ -355,69 +355,203 @@ def _html_taches_retard(nom, taches):
     return _base_email(contenu, "Tâches en retard — TaskFlow")
 
 def _html_resume_hebdo(nom, stats):
-    terminees  = stats.get("terminees", 0)
-    en_cours   = stats.get("en_cours", 0)
-    en_retard  = stats.get("en_retard", 0)
-    taux       = stats.get("taux", 0)
-    points     = stats.get("points", 0)
-    niveau     = stats.get("niveau", 1)
-    barre_w    = max(4, min(100, int(taux)))
-    taux_color = "#4caf82" if taux >= 70 else "#e08a3c" if taux >= 40 else "#e05c5c"
-    contenu = f"""
-    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Bilan de ta semaine 📊</h2>
-    <p style="margin:0 0 28px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, voici ton résumé TaskFlow de la semaine.</p>
+    terminees       = stats.get("terminees", 0)
+    en_cours        = stats.get("en_cours", 0)
+    en_retard       = stats.get("en_retard", 0)
+    taux            = stats.get("taux", 0)
+    points          = stats.get("points", 0)
+    niveau          = stats.get("niveau", 1)
+    points_semaine  = stats.get("points_semaine", 0)
+    terminees_prec  = stats.get("terminees_prec", 0)
+    conseil_ia      = stats.get("conseil_ia", "")
+    taches_haute    = stats.get("taches_haute", [])
+    jours_actifs    = stats.get("jours_actifs", {})  # {"Lun":3,"Mar":0,...}
 
-    <!-- Stats grid -->
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+    taux_color  = "#4caf82" if taux >= 70 else "#e08a3c" if taux >= 40 else "#e05c5c"
+    barre_w     = max(4, min(100, int(taux)))
+
+    # Comparaison semaine précédente
+    diff = terminees - terminees_prec
+    diff_color  = "#4caf82" if diff >= 0 else "#e05c5c"
+    diff_symbol = "▲" if diff >= 0 else "▼"
+    diff_label  = f"{diff_symbol} {abs(diff)} vs semaine précédente"
+
+    # Niveaux labels
+    niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende"}
+    niveau_label = niveaux_labels.get(niveau, f"Niveau {niveau}")
+    points_prochain = (niveau * 100) - points
+    niveau_pct = max(4, min(100, int((points % 100))))
+
+    # Graphique jours actifs (barres HTML)
+    jours_ordre = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+    max_val = max(jours_actifs.values()) if jours_actifs and max(jours_actifs.values()) > 0 else 1
+    barres_html = ""
+    for j in jours_ordre:
+        val = jours_actifs.get(j, 0)
+        h = max(4, int((val / max_val) * 52))
+        bar_color = "#6c63ff" if val > 0 else "#ffffff0a"
+        barres_html += f"""
+        <td style="text-align:center;padding:0 3px;vertical-align:bottom;">
+          <div style="font-size:10px;color:#6c63ff;font-weight:700;margin-bottom:4px;">{val if val > 0 else ''}</div>
+          <div style="width:100%;height:{h}px;background:{bar_color};border-radius:4px 4px 0 0;min-width:28px;"></div>
+          <div style="font-size:10px;color:#44445a;margin-top:5px;">{j}</div>
+        </td>"""
+
+    # Tâches haute priorité non terminées
+    haute_html = ""
+    if taches_haute:
+        for t in taches_haute[:5]:
+            dl = f" · {t.get('deadline_str','')}" if t.get('deadline_str') else ""
+            haute_html += f"""
+            <tr>
+              <td style="padding:10px 14px;border-bottom:1px solid #ffffff06;">
+                <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                  <td><span style="font-size:12px;color:#e8e8f0;font-weight:600;">{t['titre']}</span>
+                      <span style="font-size:10px;color:#44445a;">{dl}</span></td>
+                  <td align="right" style="white-space:nowrap;">
+                    <span style="font-size:10px;font-weight:700;color:#e05c5c;background:#e05c5c15;padding:2px 8px;border-radius:99px;">HAUTE</span>
+                  </td>
+                </tr></table>
+              </td>
+            </tr>"""
+    else:
+        haute_html = '<tr><td style="padding:14px;text-align:center;font-size:12px;color:#44445a;">✓ Aucune tâche haute priorité en suspens</td></tr>'
+
+    # Conseil IA
+    conseil_block = ""
+    if conseil_ia:
+        conseil_block = f"""
+        <!-- Conseil IA -->
+        <div style="background:linear-gradient(135deg,#a855f712,#6c63ff12);border:1px solid #a855f725;border-radius:14px;padding:20px;margin-bottom:20px;">
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="padding-right:12px;vertical-align:top;">
+              <div style="width:32px;height:32px;background:linear-gradient(135deg,#6c63ff,#a855f7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;">🤖</div>
+            </td>
+            <td>
+              <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1px;margin-bottom:5px;">CONSEIL IA PERSONNALISÉ</div>
+              <div style="font-size:13px;color:#c8c8e8;line-height:1.7;">{conseil_ia}</div>
+            </td>
+          </tr></table>
+        </div>"""
+
+    contenu = f"""
+    <!-- En-tête personnalisé -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;color:#6c63ff;letter-spacing:1.5px;margin-bottom:8px;">BILAN HEBDOMADAIRE</div>
+      <h2 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1.2;">
+        Bonjour {nom} 👋<br>
+        <span style="color:#8888a8;font-size:18px;font-weight:600;">Voici ta semaine en un coup d'œil.</span>
+      </h2>
+    </div>
+
+    <!-- KPIs principaux -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
       <tr>
-        <td width="33%" style="padding:0 6px 0 0;">
-          <div style="background:#0f0f18;border:1px solid #4caf8220;border-radius:12px;padding:16px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#4caf82;">{terminees}</div>
-            <div style="font-size:11px;color:#8888a8;margin-top:4px;">Terminées</div>
+        <td width="33%" style="padding:0 5px 0 0;">
+          <div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:14px;padding:18px 14px;text-align:center;">
+            <div style="font-size:32px;font-weight:800;color:#4caf82;letter-spacing:-1px;">{terminees}</div>
+            <div style="font-size:11px;color:#8888a8;margin-top:3px;font-weight:500;">Terminées</div>
+            <div style="font-size:10px;color:{diff_color};margin-top:5px;font-weight:700;">{diff_label}</div>
           </div>
         </td>
-        <td width="33%" style="padding:0 3px;">
-          <div style="background:#0f0f18;border:1px solid #6c63ff20;border-radius:12px;padding:16px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#6c63ff;">{en_cours}</div>
-            <div style="font-size:11px;color:#8888a8;margin-top:4px;">En cours</div>
+        <td width="33%" style="padding:0 2px;">
+          <div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:18px 14px;text-align:center;">
+            <div style="font-size:32px;font-weight:800;color:#6c63ff;letter-spacing:-1px;">{en_cours}</div>
+            <div style="font-size:11px;color:#8888a8;margin-top:3px;font-weight:500;">En cours</div>
+            <div style="font-size:10px;color:#44445a;margin-top:5px;">À finir</div>
           </div>
         </td>
-        <td width="33%" style="padding:0 0 0 6px;">
-          <div style="background:#0f0f18;border:1px solid #e05c5c20;border-radius:12px;padding:16px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#e05c5c;">{en_retard}</div>
-            <div style="font-size:11px;color:#8888a8;margin-top:4px;">En retard</div>
+        <td width="33%" style="padding:0 0 0 5px;">
+          <div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:18px 14px;text-align:center;">
+            <div style="font-size:32px;font-weight:800;color:#e05c5c;letter-spacing:-1px;">{en_retard}</div>
+            <div style="font-size:11px;color:#8888a8;margin-top:3px;font-weight:500;">En retard</div>
+            <div style="font-size:10px;color:#e05c5c;margin-top:5px;">⚠ À traiter</div>
           </div>
         </td>
       </tr>
     </table>
 
-    <!-- Taux complétion -->
-    <div style="background:#0f0f18;border:1px solid #ffffff0a;border-radius:12px;padding:18px;margin-bottom:24px;">
-      <table width="100%" cellpadding="0" cellspacing="0">
+    <!-- Taux complétion + barre -->
+    <div style="background:#0f0f18;border:1px solid #ffffff0a;border-radius:14px;padding:18px 20px;margin-bottom:16px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
         <tr>
-          <td><span style="font-size:13px;color:#8888a8;font-weight:500;">Taux de complétion</span></td>
-          <td align="right"><span style="font-size:14px;font-weight:800;color:{taux_color};">{taux}%</span></td>
+          <td>
+            <span style="font-size:12px;color:#8888a8;font-weight:600;letter-spacing:0.5px;">TAUX DE COMPLÉTION</span>
+          </td>
+          <td align="right">
+            <span style="font-size:20px;font-weight:800;color:{taux_color};">{taux}%</span>
+          </td>
         </tr>
       </table>
-      <div style="margin-top:10px;height:6px;background:#ffffff0a;border-radius:99px;overflow:hidden;">
-        <div style="height:6px;width:{barre_w}%;background:{taux_color};border-radius:99px;"></div>
+      <div style="height:8px;background:#ffffff08;border-radius:99px;overflow:hidden;">
+        <div style="height:8px;width:{barre_w}%;background:linear-gradient(90deg,{taux_color},{taux_color}aa);border-radius:99px;"></div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#44445a;">
+        {"🔥 Excellente semaine, continue comme ça !" if taux >= 70 else "💪 Bonne progression, encore un effort !" if taux >= 40 else "🎯 Semaine difficile — recentre-toi sur l'essentiel."}
       </div>
     </div>
 
-    <!-- Points & Niveau -->
-    <div style="background:linear-gradient(135deg,#6c63ff15,#a855f715);border:1px solid #6c63ff25;border-radius:12px;padding:16px 20px;margin-bottom:28px;">
-      <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td><span style="font-size:13px;color:#8888a8;">Niveau actuel</span><br>
-            <span style="font-size:16px;font-weight:800;color:#a855f7;">Niveau {niveau}</span></td>
-        <td align="right"><span style="font-size:13px;color:#8888a8;">Points accumulés</span><br>
-            <span style="font-size:16px;font-weight:800;color:#6c63ff;">{points} pts</span></td>
-      </tr></table>
+    <!-- Graphique jours actifs -->
+    <div style="background:#0f0f18;border:1px solid #ffffff0a;border-radius:14px;padding:18px 20px;margin-bottom:16px;">
+      <div style="font-size:12px;color:#8888a8;font-weight:600;letter-spacing:0.5px;margin-bottom:16px;">ACTIVITÉ PAR JOUR</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+        <tr style="vertical-align:bottom;">
+          {barres_html}
+        </tr>
+      </table>
     </div>
 
-    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
-      Voir mon Dashboard →
-    </a>"""
-    return _base_email(contenu, "Bilan de la semaine — TaskFlow")
+    <!-- Badge niveau + points -->
+    <div style="background:linear-gradient(135deg,#1a1230,#120f1e);border:1px solid #6c63ff25;border-radius:14px;padding:20px;margin-bottom:16px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="vertical-align:middle;">
+            <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1px;margin-bottom:4px;">TON NIVEAU</div>
+            <div style="font-size:20px;font-weight:800;color:#fff;">{niveau_label}</div>
+            <div style="font-size:11px;color:#44445a;margin-top:4px;">{points_prochain} pts pour le niveau suivant</div>
+          </td>
+          <td align="right" style="vertical-align:middle;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;color:#8888a8;margin-bottom:2px;">Cette semaine</div>
+              <div style="font-size:24px;font-weight:800;color:#6c63ff;">+{points_semaine}</div>
+              <div style="font-size:10px;color:#44445a;">points gagnés</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:14px;height:5px;background:#ffffff08;border-radius:99px;overflow:hidden;">
+        <div style="height:5px;width:{niveau_pct}%;background:linear-gradient(90deg,#6c63ff,#a855f7);border-radius:99px;"></div>
+      </div>
+    </div>
+
+    <!-- Tâches haute priorité non terminées -->
+    <div style="background:#0f0f18;border:1px solid #e05c5c18;border-radius:14px;overflow:hidden;margin-bottom:16px;">
+      <div style="padding:14px 18px;border-bottom:1px solid #ffffff06;">
+        <span style="font-size:12px;font-weight:700;color:#e05c5c;letter-spacing:0.5px;">⚡ PRIORITÉ HAUTE — NON TERMINÉES</span>
+      </div>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        {haute_html}
+      </table>
+    </div>
+
+    {conseil_block}
+
+    <!-- CTA -->
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 6px 0 0;" width="50%">
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 20px;border-radius:11px;text-decoration:none;font-weight:700;font-size:13px;">
+            Dashboard →
+          </a>
+        </td>
+        <td style="padding:0 0 0 6px;" width="50%">
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/analytics" style="display:block;text-align:center;background:#1a1a28;color:#8888a8;padding:13px 20px;border-radius:11px;text-decoration:none;font-weight:600;font-size:13px;border:1px solid #ffffff0f;">
+            Analytics →
+          </a>
+        </td>
+      </tr>
+    </table>"""
+    return _base_email(contenu, "Bilan hebdomadaire — TaskFlow")
 
 # ============================================
 # 📧 JOBS EMAIL
@@ -515,15 +649,20 @@ def job_email_taches_retard():
         print(f"[Email Retard] Erreur: {e}")
 
 def job_email_resume_hebdo():
-    """Envoie le bilan hebdo chaque vendredi soir."""
+    """Envoie le bilan hebdo enrichi chaque vendredi soir."""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
+
+        # Stats globales par user
         cursor.execute("""
             SELECT u.id, u.nom, u.email, u.points, u.niveau,
                 COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
+                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                           AND t.updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
                 COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as en_cours,
                 COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
+                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) * 10 as points_semaine,
                 COUNT(t.id) as total
             FROM users u
             LEFT JOIN taches t ON u.id = t.user_id
@@ -531,21 +670,84 @@ def job_email_resume_hebdo():
             GROUP BY u.id
         """)
         users = cursor.fetchall()
-        cursor.close(); db.close()
+
         for u in users:
             if u['total'] == 0:
                 continue
+
+            user_id = u['id']
             taux = round((u['terminees'] / max(u['total'], 1)) * 100, 0) if u['terminees'] else 0
-            stats = {
-                "terminees": u['terminees'] or 0,
-                "en_cours":  u['en_cours']  or 0,
-                "en_retard": u['en_retard'] or 0,
-                "taux":      int(taux),
-                "points":    u['points']    or 0,
-                "niveau":    u['niveau']    or 1,
+
+            # Activité par jour de la semaine (lun→dim)
+            cursor.execute("""
+                SELECT DAYOFWEEK(updated_at) as dow, COUNT(*) as cnt
+                FROM taches
+                WHERE user_id = %s AND terminee = TRUE
+                  AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                GROUP BY DAYOFWEEK(updated_at)
+            """, (user_id,))
+            dow_map = {r['dow']: r['cnt'] for r in cursor.fetchall()}
+            # MySQL: 1=dim, 2=lun, ..., 7=sam
+            jours_actifs = {
+                "Lun": dow_map.get(2, 0),
+                "Mar": dow_map.get(3, 0),
+                "Mer": dow_map.get(4, 0),
+                "Jeu": dow_map.get(5, 0),
+                "Ven": dow_map.get(6, 0),
+                "Sam": dow_map.get(7, 0),
+                "Dim": dow_map.get(1, 0),
             }
+
+            # Tâches haute priorité non terminées
+            cursor.execute("""
+                SELECT titre, deadline FROM taches
+                WHERE user_id = %s AND terminee = FALSE AND priorite = 'haute'
+                ORDER BY deadline ASC LIMIT 5
+            """, (user_id,))
+            taches_haute_raw = cursor.fetchall()
+            taches_haute = []
+            for t in taches_haute_raw:
+                dl_str = t['deadline'].strftime('%d/%m') if t.get('deadline') and hasattr(t['deadline'], 'strftime') else ""
+                taches_haute.append({"titre": t['titre'], "deadline_str": dl_str})
+
+            # Conseil IA généré par Groq
+            conseil_ia = ""
+            try:
+                contexte = f"Utilisateur: {u['nom']}. Cette semaine: {u['terminees']} tâches terminées, {u['en_cours']} en cours, {u['en_retard']} en retard. Taux de complétion: {int(taux)}%. Semaine précédente: {u['terminees_prec']} terminées."
+                completion = groq_client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{
+                        "role": "user",
+                        "content": f"{contexte}\n\nDonne un conseil de productivité personnalisé en 2 phrases maximum, bienveillant et actionnable. Réponds uniquement le conseil, sans introduction."
+                    }],
+                    max_tokens=120, temperature=0.7
+                )
+                conseil_ia = completion.choices[0].message.content.strip()
+            except Exception:
+                conseil_ia = "Continue sur ta lancée et concentre-toi sur tes tâches prioritaires la semaine prochaine."
+
+            stats = {
+                "terminees":      u['terminees']      or 0,
+                "terminees_prec": u['terminees_prec'] or 0,
+                "en_cours":       u['en_cours']       or 0,
+                "en_retard":      u['en_retard']      or 0,
+                "taux":           int(taux),
+                "points":         u['points']         or 0,
+                "niveau":         u['niveau']         or 1,
+                "points_semaine": u['points_semaine'] or 0,
+                "jours_actifs":   jours_actifs,
+                "taches_haute":   taches_haute,
+                "conseil_ia":     conseil_ia,
+            }
+
             html = _html_resume_hebdo(u['nom'], stats)
-            threading.Thread(target=envoyer_email, args=(u['email'], "📊 Ton bilan TaskFlow de la semaine", html)).start()
+            threading.Thread(target=envoyer_email, args=(
+                u['email'],
+                f"📊 Ton bilan TaskFlow — semaine du {datetime.now().strftime('%d/%m')}",
+                html
+            )).start()
+
+        cursor.close(); db.close()
         print(f"[Email Hebdo] {len(users)} emails envoyés")
     except Exception as e:
         print(f"[Email Hebdo] Erreur: {e}")
@@ -1728,7 +1930,18 @@ def test_email_user(user_id):
         cursor.close(); db.close()
         if not u:
             return jsonify({"erreur": "User introuvable"}), 404
-        stats = {"terminees": 8, "en_cours": 3, "en_retard": 1, "taux": 73, "points": u['points'] or 0, "niveau": u['niveau'] or 1}
+        # Stats fictives réalistes pour le test
+        stats = {
+            "terminees": 7, "terminees_prec": 4, "en_cours": 3, "en_retard": 1,
+            "taux": 70, "points": u['points'] or 0, "niveau": u['niveau'] or 1,
+            "points_semaine": 70,
+            "jours_actifs": {"Lun": 2, "Mar": 3, "Mer": 1, "Jeu": 0, "Ven": 1, "Sam": 0, "Dim": 0},
+            "taches_haute": [
+                {"titre": "Finir le rapport client", "deadline_str": "15/03"},
+                {"titre": "Revoir la présentation", "deadline_str": "18/03"},
+            ],
+            "conseil_ia": "Tu as bien progressé cette semaine avec 7 tâches terminées ! Pour la semaine prochaine, essaie de travailler en blocs de 90 minutes sur tes tâches haute priorité dès le matin."
+        }
         html = _html_resume_hebdo(u['nom'], stats)
         envoyer_email(u['email'], "📊 [TEST] Ton bilan TaskFlow de la semaine", html)
         return jsonify({"message": f"Email de test envoyé à {u['email']} !"})
