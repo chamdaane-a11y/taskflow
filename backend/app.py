@@ -19,6 +19,8 @@ from pywebpush import webpush, WebPushException
 import requests as http_requests
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SGMail
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 load_dotenv()
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -773,6 +775,81 @@ threading.Thread(target=demarrer_scheduler, daemon=True).start()
 # ============================================
 # 🔐 AUTHENTIFICATION
 # ============================================
+
+GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleusercontent.com'
+
+@app.route('/auth/google', methods=['POST'])
+@limiter.limit("20 per minute")
+def auth_google():
+    """Connexion / inscription via Google OAuth — crée le compte si inexistant."""
+    try:
+        credential = request.json.get('credential')
+        if not credential:
+            return jsonify({"erreur": "Token Google manquant"}), 400
+
+        # Vérifier le token Google
+        idinfo = id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+
+        google_id  = idinfo['sub']
+        email      = idinfo['email']
+        nom        = idinfo.get('name', email.split('@')[0])
+        avatar_url = idinfo.get('picture', '')
+
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+
+        # Chercher user existant par google_id ou email
+        cursor.execute("SELECT * FROM users WHERE google_id = %s OR email = %s LIMIT 1", (google_id, email))
+        user = cursor.fetchone()
+
+        if user:
+            # Mettre à jour google_id si connexion email existante
+            if not user.get('google_id'):
+                cursor.execute("UPDATE users SET google_id = %s, email_verifie = TRUE WHERE id = %s", (google_id, user['id']))
+                db.commit()
+            user_id = user['id']
+            nom_final = user['nom']
+            niveau = user.get('niveau', 1)
+            points = user.get('points', 0)
+            theme  = user.get('theme', 'dark')
+        else:
+            # Créer nouveau compte Google
+            cursor.execute("""
+                INSERT INTO users (nom, email, password, google_id, email_verifie, points, niveau, theme)
+                VALUES (%s, %s, %s, %s, TRUE, 0, 1, 'dark')
+            """, (nom, email, secrets.token_hex(32), google_id))
+            db.commit()
+            user_id   = cursor.lastrowid
+            nom_final = nom
+            niveau    = 1
+            points    = 0
+            theme     = 'dark'
+
+        cursor.close()
+        db.close()
+
+        # Générer JWT
+        access_token = create_access_token(identity=str(user_id))
+        response = make_response(jsonify({
+            "message": "Connexion Google réussie",
+            "user": {
+                "id": user_id, "nom": nom_final, "email": email,
+                "niveau": niveau, "points": points, "theme": theme,
+                "avatar": avatar_url
+            }
+        }))
+        set_access_cookies(response, access_token)
+        return response, 200
+
+    except ValueError as e:
+        return jsonify({"erreur": "Token Google invalide"}), 401
+    except Exception as e:
+        print(f"[Google OAuth] Erreur: {e}")
+        return jsonify({"erreur": "Erreur serveur"}), 500
 
 @app.route('/register', methods=['POST'])
 @limiter.limit("5 per minute")
