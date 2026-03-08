@@ -295,7 +295,7 @@ def _html_rappel_veille(nom, taches):
           </td>
         </tr>"""
     contenu = f"""
-    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Rappel · Demain c'est deadline ⏰</h2>
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Rappel · Demain c'est deadline</h2>
     <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, tu as <strong style="color:#6c63ff;">{len(taches)} tâche(s)</strong> à rendre demain. Ne laisse rien passer !</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #ffffff0a;margin-bottom:24px;overflow:hidden;">
       {lignes}
@@ -319,7 +319,7 @@ def _html_rappel_jour_j(nom, taches):
           </td>
         </tr>"""
     contenu = f"""
-    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Deadline aujourd'hui 🚨</h2>
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Deadline aujourd'hui</h2>
     <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, <strong style="color:#e05c5c;">{len(taches)} tâche(s)</strong> sont à rendre <strong style="color:#e05c5c;">aujourd'hui</strong>. C'est le moment d'agir !</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #e05c5c20;margin-bottom:24px;overflow:hidden;">
       {lignes}
@@ -344,7 +344,7 @@ def _html_taches_retard(nom, taches):
           </td>
         </tr>"""
     contenu = f"""
-    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Tâches en retard 🔴</h2>
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Tâches en retard</h2>
     <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, tu as <strong style="color:#e05c5c;">{len(taches)} tâche(s) en retard</strong>. Rattrape-les dès maintenant pour ne pas perdre le fil.</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #e05c5c20;margin-bottom:24px;overflow:hidden;">
       {lignes}
@@ -415,7 +415,7 @@ def _html_resume_hebdo(nom, stats):
               </td>
             </tr>"""
     else:
-        haute_html = '<tr><td style="padding:14px;text-align:center;font-size:12px;color:#44445a;">✓ Aucune tâche haute priorité en suspens</td></tr>'
+        haute_html = '<tr><td style="padding:14px;text-align:center;font-size:12px;color:#44445a;">Aucune tâche haute priorité en suspens —<br><span style="color:#4caf82;font-weight:700;">tout est sous contrôle.</span></td></tr>'
 
     # Conseil IA
     conseil_block = ""
@@ -425,7 +425,7 @@ def _html_resume_hebdo(nom, stats):
         <div style="background:linear-gradient(135deg,#a855f712,#6c63ff12);border:1px solid #a855f725;border-radius:14px;padding:20px;margin-bottom:20px;">
           <table cellpadding="0" cellspacing="0"><tr>
             <td style="padding-right:12px;vertical-align:top;">
-              <div style="width:32px;height:32px;background:linear-gradient(135deg,#6c63ff,#a855f7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;">🤖</div>
+              <div style="width:32px;height:32px;background:linear-gradient(135deg,#6c63ff,#a855f7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;"><span style="font-size:13px;font-weight:800;color:white;">IA</span></div>
             </td>
             <td>
               <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1px;margin-bottom:5px;">CONSEIL IA PERSONNALISÉ</div>
@@ -439,7 +439,7 @@ def _html_resume_hebdo(nom, stats):
     <div style="margin-bottom:28px;">
       <div style="font-size:11px;font-weight:700;color:#6c63ff;letter-spacing:1.5px;margin-bottom:8px;">BILAN HEBDOMADAIRE</div>
       <h2 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1.2;">
-        Bonjour {nom} 👋<br>
+        Bonjour {nom},<br>
         <span style="color:#8888a8;font-size:18px;font-weight:600;">Voici ta semaine en un coup d'œil.</span>
       </h2>
     </div>
@@ -465,7 +465,7 @@ def _html_resume_hebdo(nom, stats):
           <div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:18px 14px;text-align:center;">
             <div style="font-size:32px;font-weight:800;color:#e05c5c;letter-spacing:-1px;">{en_retard}</div>
             <div style="font-size:11px;color:#8888a8;margin-top:3px;font-weight:500;">En retard</div>
-            <div style="font-size:10px;color:#e05c5c;margin-top:5px;">⚠ À traiter</div>
+            <div style="font-size:10px;color:#e05c5c;margin-top:5px;">· À traiter</div>
           </div>
         </td>
       </tr>
@@ -487,7 +487,7 @@ def _html_resume_hebdo(nom, stats):
         <div style="height:8px;width:{barre_w}%;background:linear-gradient(90deg,{taux_color},{taux_color}aa);border-radius:99px;"></div>
       </div>
       <div style="margin-top:10px;font-size:11px;color:#44445a;">
-        {"🔥 Excellente semaine, continue comme ça !" if taux >= 70 else "💪 Bonne progression, encore un effort !" if taux >= 40 else "🎯 Semaine difficile — recentre-toi sur l'essentiel."}
+        {"Excellente semaine — continue sur cette lancée." if taux >= 70 else "Bonne progression — encore un effort la semaine prochaine." if taux >= 40 else "Semaine difficile — recentre-toi sur l'essentiel."}
       </div>
     </div>
 
@@ -527,7 +527,7 @@ def _html_resume_hebdo(nom, stats):
     <!-- Tâches haute priorité non terminées -->
     <div style="background:#0f0f18;border:1px solid #e05c5c18;border-radius:14px;overflow:hidden;margin-bottom:16px;">
       <div style="padding:14px 18px;border-bottom:1px solid #ffffff06;">
-        <span style="font-size:12px;font-weight:700;color:#e05c5c;letter-spacing:0.5px;">⚡ PRIORITÉ HAUTE — NON TERMINÉES</span>
+        <span style="font-size:12px;font-weight:700;color:#e05c5c;letter-spacing:0.5px;">PRIORITÉ HAUTE — NON TERMINÉES</span>
       </div>
       <table width="100%" cellpadding="0" cellspacing="0">
         {haute_html}
@@ -581,7 +581,7 @@ def job_email_rappel_veille():
             taches = list(taches_iter)
             u = taches[0]
             html = _html_rappel_veille(u['nom'], taches)
-            threading.Thread(target=envoyer_email, args=(u['email'], f"⏰ Deadline demain : {len(taches)} tâche(s) — TaskFlow", html)).start()
+            threading.Thread(target=envoyer_email, args=(u['email'], f"Rappel · Deadline demain : {len(taches)} tâche(s) — TaskFlow", html)).start()
         print(f"[Email J-1] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email J-1] Erreur: {e}")
@@ -609,7 +609,7 @@ def job_email_rappel_jour_j():
             taches = list(taches_iter)
             u = taches[0]
             html = _html_rappel_jour_j(u['nom'], taches)
-            threading.Thread(target=envoyer_email, args=(u['email'], f"🚨 Deadline aujourd'hui : {len(taches)} tâche(s) — TaskFlow", html)).start()
+            threading.Thread(target=envoyer_email, args=(u['email'], f"Deadline aujourd'hui : {len(taches)} tâche(s) — TaskFlow", html)).start()
         print(f"[Email Jour J] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email Jour J] Erreur: {e}")
@@ -643,7 +643,7 @@ def job_email_taches_retard():
                 if t['deadline']:
                     t['deadline_str'] = t['deadline'].strftime('%d/%m/%Y') if hasattr(t['deadline'], 'strftime') else str(t['deadline'])
             html = _html_taches_retard(u['nom'], taches)
-            threading.Thread(target=envoyer_email, args=(u['email'], f"🔴 {len(taches)} tâche(s) en retard — TaskFlow", html)).start()
+            threading.Thread(target=envoyer_email, args=(u['email'], f"{len(taches)} tâche(s) en retard — TaskFlow", html)).start()
         print(f"[Email Retard] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email Retard] Erreur: {e}")
@@ -743,7 +743,7 @@ def job_email_resume_hebdo():
             html = _html_resume_hebdo(u['nom'], stats)
             threading.Thread(target=envoyer_email, args=(
                 u['email'],
-                f"📊 Ton bilan TaskFlow — semaine du {datetime.now().strftime('%d/%m')}",
+                f"Bilan · semaine du {datetime.now().strftime('%d/%m')} — TaskFlow",
                 html
             )).start()
 
@@ -1943,7 +1943,7 @@ def test_email_user(user_id):
             "conseil_ia": "Tu as bien progressé cette semaine avec 7 tâches terminées ! Pour la semaine prochaine, essaie de travailler en blocs de 90 minutes sur tes tâches haute priorité dès le matin."
         }
         html = _html_resume_hebdo(u['nom'], stats)
-        envoyer_email(u['email'], "📊 [TEST] Ton bilan TaskFlow de la semaine", html)
+        envoyer_email(u['email'], "Bilan hebdomadaire [TEST] — TaskFlow", html)
         return jsonify({"message": f"Email de test envoyé à {u['email']} !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
