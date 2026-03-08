@@ -41,7 +41,8 @@ limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="m
 
 CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 
-VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
+# ✅ VAPID : correction du format de la clé privée (sauts de ligne)
+VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
 VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
@@ -98,7 +99,8 @@ def envoyer_push(subscription_json, titre, body, url="/dashboard"):
             vapid_claims=VAPID_CLAIMS
         )
         return True
-    except WebPushException:
+    except WebPushException as e:
+        print(f"[Push] Erreur: {e}")
         return False
 
 # ============================================
@@ -106,7 +108,6 @@ def envoyer_push(subscription_json, titre, body, url="/dashboard"):
 # ============================================
 
 def job_resume_matin():
-    """Résumé quotidien envoyé chaque matin à 8h"""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -146,12 +147,11 @@ def job_resume_matin():
             envoyer_push(sub['subscription'], f"Bonjour {user['nom']} — Votre journée TaskFlow", body)
         cursor.close()
         db.close()
-        print(f"[Résumé matin] OK")
+        print("[Résumé matin] OK")
     except Exception as e:
         print(f"[Résumé matin] Erreur: {e}")
 
 def job_rappels_deadline():
-    """Rappels pour les tâches dont la deadline est aujourd'hui"""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -179,7 +179,6 @@ def job_rappels_deadline():
         print(f"[Rappels deadline] Erreur: {e}")
 
 def job_taches_en_retard():
-    """Notifie les utilisateurs pour leurs tâches en retard"""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -200,12 +199,11 @@ def job_taches_en_retard():
                     f"{user['nom']}, rattrapez vos tâches dépassées dès maintenant !")
         cursor.close()
         db.close()
-        print(f"[Tâches en retard] OK")
+        print("[Tâches en retard] OK")
     except Exception as e:
         print(f"[Tâches en retard] Erreur: {e}")
 
 def job_encouragements():
-    """Encouragements personnalisés selon la productivité du jour"""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -237,12 +235,11 @@ def job_encouragements():
                     break
         cursor.close()
         db.close()
-        print(f"[Encouragements] OK")
+        print("[Encouragements] OK")
     except Exception as e:
         print(f"[Encouragements] Erreur: {e}")
 
 def demarrer_scheduler():
-    """Lance le scheduler en arrière-plan"""
     schedule.every().day.at("08:00").do(job_resume_matin)
     schedule.every().hour.do(job_rappels_deadline)
     schedule.every().day.at("09:00").do(job_taches_en_retard)
@@ -252,7 +249,6 @@ def demarrer_scheduler():
         schedule.run_pending()
         time.sleep(60)
 
-# Démarrage du scheduler en thread
 threading.Thread(target=demarrer_scheduler, daemon=True).start()
 
 # ============================================
@@ -402,9 +398,6 @@ def forgot_password():
                 Reinitialiser mon mot de passe
             </a>
             <p style="color:#888;font-size:12px;">Ce lien expire dans 1h.</p>
-            <div style="margin-top:24px;padding:14px;background:rgba(255,255,255,0.05);border-radius:8px;border-left:3px solid #6c63ff;">
-                <p style="color:#aaa;font-size:12px;margin:0;">Si vous ne trouvez pas cet email, verifiez votre dossier Spams.</p>
-            </div>
         </div>"""
         threading.Thread(target=envoyer_email, args=(email, "Reinitialisation mot de passe TaskFlow", html)).start()
         return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
@@ -1022,6 +1015,196 @@ def get_analytics(user_id):
 # 👥 COLLABORATION
 # ============================================
 
+# ============================================
+# EQUIPES — NOUVEAU SYSTEME COLLABORATION
+# ============================================
+
+@app.route('/equipes', methods=['POST'])
+def creer_equipe():
+    try:
+        data = request.get_json()
+        import secrets
+        code = secrets.token_urlsafe(16)
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute(
+            "INSERT INTO equipes (nom, description, code_invitation, createur_id) VALUES (%s, %s, %s, %s)",
+            (data['nom'], data.get('description', ''), code, data['user_id'])
+        )
+        equipe_id = curseur.lastrowid
+        curseur.execute("INSERT INTO equipe_membres (equipe_id, user_id, role) VALUES (%s, %s, 'admin')", (equipe_id, data['user_id']))
+        db.commit()
+        curseur.execute("SELECT * FROM equipes WHERE id=%s", (equipe_id,))
+        equipe = curseur.fetchone()
+        db.close()
+        return jsonify(equipe)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/rejoindre', methods=['POST'])
+def rejoindre_equipe():
+    try:
+        data = request.get_json()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT * FROM equipes WHERE code_invitation=%s", (data['code'],))
+        equipe = curseur.fetchone()
+        if not equipe:
+            return jsonify({"erreur": "Code invalide"}), 404
+        curseur.execute("SELECT id FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe['id'], data['user_id']))
+        if curseur.fetchone():
+            return jsonify({"erreur": "Deja membre", "equipe": equipe}), 200
+        curseur.execute("INSERT INTO equipe_membres (equipe_id, user_id, role) VALUES (%s, %s, 'membre')", (equipe['id'], data['user_id']))
+        db.commit()
+        db.close()
+        return jsonify({"message": f"Vous avez rejoint {equipe['nom']} !", "equipe": equipe})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/user/<int:user_id>', methods=['GET'])
+def get_mes_equipes(user_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT e.*, em.role,
+                (SELECT COUNT(*) FROM equipe_membres WHERE equipe_id=e.id) as nb_membres,
+                (SELECT COUNT(*) FROM taches_equipe WHERE equipe_id=e.id) as nb_taches,
+                u.nom as createur_nom
+            FROM equipe_membres em JOIN equipes e ON em.equipe_id=e.id JOIN users u ON e.createur_id=u.id
+            WHERE em.user_id=%s ORDER BY e.created_at DESC
+        """, (user_id,))
+        equipes = curseur.fetchall()
+        db.close()
+        return jsonify(equipes)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/<int:equipe_id>/membres', methods=['GET'])
+def get_membres_equipe(equipe_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT u.id, u.nom, u.email, em.role, em.rejoint_le
+            FROM equipe_membres em JOIN users u ON em.user_id=u.id
+            WHERE em.equipe_id=%s ORDER BY em.rejoint_le ASC
+        """, (equipe_id,))
+        membres = curseur.fetchall()
+        db.close()
+        return jsonify(membres)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/<int:equipe_id>/taches', methods=['GET'])
+def get_taches_equipe(equipe_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom,
+                (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires
+            FROM taches_equipe te JOIN users u1 ON te.createur_id=u1.id LEFT JOIN users u2 ON te.assignee_id=u2.id
+            WHERE te.equipe_id=%s ORDER BY te.created_at DESC
+        """, (equipe_id,))
+        taches = curseur.fetchall()
+        db.close()
+        return jsonify(taches)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/taches', methods=['POST'])
+def creer_tache_equipe():
+    try:
+        data = request.get_json()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            INSERT INTO taches_equipe (equipe_id, titre, description, priorite, assignee_id, createur_id, deadline)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (data['equipe_id'], data['titre'], data.get('description',''), data.get('priorite','moyenne'), data.get('assignee_id'), data['createur_id'], data.get('deadline')))
+        tache_id = curseur.lastrowid
+        db.commit()
+        curseur.execute("""
+            SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom
+            FROM taches_equipe te JOIN users u1 ON te.createur_id=u1.id LEFT JOIN users u2 ON te.assignee_id=u2.id
+            WHERE te.id=%s
+        """, (tache_id,))
+        tache = curseur.fetchone()
+        db.close()
+        return jsonify(tache)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/taches/<int:tache_id>', methods=['PUT'])
+def modifier_tache_equipe(tache_id):
+    try:
+        data = request.get_json()
+        db = connecter()
+        curseur = db.cursor()
+        fields, vals = [], []
+        for key in ['titre', 'statut', 'priorite', 'assignee_id', 'deadline', 'description']:
+            if key in data:
+                fields.append(f"{key}=%s")
+                vals.append(data[key])
+        if fields:
+            vals.append(tache_id)
+            curseur.execute(f"UPDATE taches_equipe SET {', '.join(fields)} WHERE id=%s", vals)
+            db.commit()
+        db.close()
+        return jsonify({"message": "Tache mise a jour"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/taches/<int:tache_id>/commentaires', methods=['GET'])
+def get_commentaires_equipe(tache_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT c.*, u.nom FROM commentaires_tache c JOIN users u ON c.user_id=u.id
+            WHERE c.tache_id=%s ORDER BY c.created_at ASC
+        """, (tache_id,))
+        commentaires = curseur.fetchall()
+        db.close()
+        return jsonify(commentaires)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/taches/commentaires', methods=['POST'])
+def ajouter_commentaire_equipe():
+    try:
+        data = request.get_json()
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("INSERT INTO commentaires_tache (tache_id, user_id, contenu) VALUES (%s, %s, %s)", (data['tache_id'], data['user_id'], data['contenu']))
+        db.commit()
+        db.close()
+        return jsonify({"message": "Commentaire ajoute"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/<int:equipe_id>', methods=['DELETE'])
+def supprimer_equipe(equipe_id):
+    try:
+        data = request.get_json()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT createur_id FROM equipes WHERE id=%s", (equipe_id,))
+        equipe = curseur.fetchone()
+        if not equipe or equipe['createur_id'] != data['user_id']:
+            return jsonify({"erreur": "Non autorise"}), 403
+        curseur.execute("DELETE FROM equipes WHERE id=%s", (equipe_id,))
+        db.commit()
+        db.close()
+        return jsonify({"message": "Equipe supprimee"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+# ============================================
+# ANCIEN SYSTEME (conserve pour compatibilite)
+# ============================================
+
 @app.route('/collaboration/inviter', methods=['POST'])
 def inviter_collaborateur():
     try:
@@ -1178,7 +1361,6 @@ def send_rappels():
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-# Routes de déclenchement manuel (pour tests)
 @app.route('/push/resume-matin', methods=['POST'])
 def trigger_resume_matin():
     threading.Thread(target=job_resume_matin).start()
