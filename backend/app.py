@@ -239,11 +239,328 @@ def job_encouragements():
     except Exception as e:
         print(f"[Encouragements] Erreur: {e}")
 
+# ============================================
+# 📧 TEMPLATES HTML EMAILS
+# ============================================
+
+def _base_email(contenu_html, titre_preheader="TaskFlow"):
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{titre_preheader}</title></head>
+<body style="margin:0;padding:0;background:#0c0c12;font-family:'Helvetica Neue',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0c0c12;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="100%" style="max-width:540px;background:#13131e;border-radius:20px;border:1px solid #ffffff0f;overflow:hidden;">
+      <!-- Header bande colorée -->
+      <tr><td style="background:linear-gradient(135deg,#6c63ff,#a855f7);padding:28px 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td>
+              <span style="font-size:20px;font-weight:800;color:white;letter-spacing:-0.5px;">TaskFlow</span>
+            </td>
+            <td align="right">
+              <span style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:500;letter-spacing:1px;">PRODUCTIVITÉ</span>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+      <!-- Contenu -->
+      <tr><td style="padding:36px;">
+        {contenu_html}
+      </td></tr>
+      <!-- Footer -->
+      <tr><td style="padding:20px 36px 28px;border-top:1px solid #ffffff08;">
+        <p style="margin:0;font-size:11px;color:#44445a;text-align:center;line-height:1.7;">
+          Tu reçois cet email car tu as un compte TaskFlow.<br>
+          <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff;text-decoration:none;">Ouvrir TaskFlow</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>"""
+
+def _html_rappel_veille(nom, taches):
+    lignes = ""
+    for t in taches:
+        prio_color = {"haute": "#e05c5c", "moyenne": "#e08a3c", "basse": "#4caf82"}.get(t.get("priorite","moyenne"), "#e08a3c")
+        lignes += f"""
+        <tr>
+          <td style="padding:12px 14px;border-bottom:1px solid #ffffff08;">
+            <table width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td><span style="font-size:13px;color:#e8e8f0;font-weight:600;">{t['titre']}</span></td>
+              <td align="right"><span style="font-size:11px;font-weight:700;color:{prio_color};background:{prio_color}18;padding:3px 9px;border-radius:99px;">{t.get('priorite','moyenne').upper()}</span></td>
+            </tr></table>
+          </td>
+        </tr>"""
+    contenu = f"""
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Rappel · Demain c'est deadline ⏰</h2>
+    <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, tu as <strong style="color:#6c63ff;">{len(taches)} tâche(s)</strong> à rendre demain. Ne laisse rien passer !</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #ffffff0a;margin-bottom:24px;overflow:hidden;">
+      {lignes}
+    </table>
+    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
+      Ouvrir le Dashboard →
+    </a>"""
+    return _base_email(contenu, "Rappel deadline demain — TaskFlow")
+
+def _html_rappel_jour_j(nom, taches):
+    lignes = ""
+    for t in taches:
+        prio_color = {"haute": "#e05c5c", "moyenne": "#e08a3c", "basse": "#4caf82"}.get(t.get("priorite","moyenne"), "#e08a3c")
+        lignes += f"""
+        <tr>
+          <td style="padding:12px 14px;border-bottom:1px solid #ffffff08;">
+            <table width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td><span style="font-size:13px;color:#e8e8f0;font-weight:600;">{t['titre']}</span></td>
+              <td align="right"><span style="font-size:11px;font-weight:700;color:{prio_color};background:{prio_color}18;padding:3px 9px;border-radius:99px;">{t.get('priorite','moyenne').upper()}</span></td>
+            </tr></table>
+          </td>
+        </tr>"""
+    contenu = f"""
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Deadline aujourd'hui 🚨</h2>
+    <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, <strong style="color:#e05c5c;">{len(taches)} tâche(s)</strong> sont à rendre <strong style="color:#e05c5c;">aujourd'hui</strong>. C'est le moment d'agir !</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #e05c5c20;margin-bottom:24px;overflow:hidden;">
+      {lignes}
+    </table>
+    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#e08a3c);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
+      Terminer maintenant →
+    </a>"""
+    return _base_email(contenu, "Deadline aujourd'hui — TaskFlow")
+
+def _html_taches_retard(nom, taches):
+    lignes = ""
+    for t in taches:
+        jours = t.get("jours_retard", 0)
+        lignes += f"""
+        <tr>
+          <td style="padding:12px 14px;border-bottom:1px solid #ffffff08;">
+            <table width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td><span style="font-size:13px;color:#e8e8f0;font-weight:600;">{t['titre']}</span><br>
+                  <span style="font-size:11px;color:#e05c5c;">Deadline : {t.get('deadline_str','?')}</span></td>
+              <td align="right" style="white-space:nowrap;"><span style="font-size:11px;font-weight:700;color:#e05c5c;background:#e05c5c18;padding:3px 9px;border-radius:99px;">+{jours}j</span></td>
+            </tr></table>
+          </td>
+        </tr>"""
+    contenu = f"""
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Tâches en retard 🔴</h2>
+    <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, tu as <strong style="color:#e05c5c;">{len(taches)} tâche(s) en retard</strong>. Rattrape-les dès maintenant pour ne pas perdre le fil.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #e05c5c20;margin-bottom:24px;overflow:hidden;">
+      {lignes}
+    </table>
+    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
+      Rattraper le retard →
+    </a>"""
+    return _base_email(contenu, "Tâches en retard — TaskFlow")
+
+def _html_resume_hebdo(nom, stats):
+    terminees  = stats.get("terminees", 0)
+    en_cours   = stats.get("en_cours", 0)
+    en_retard  = stats.get("en_retard", 0)
+    taux       = stats.get("taux", 0)
+    points     = stats.get("points", 0)
+    niveau     = stats.get("niveau", 1)
+    barre_w    = max(4, min(100, int(taux)))
+    taux_color = "#4caf82" if taux >= 70 else "#e08a3c" if taux >= 40 else "#e05c5c"
+    contenu = f"""
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Bilan de ta semaine 📊</h2>
+    <p style="margin:0 0 28px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, voici ton résumé TaskFlow de la semaine.</p>
+
+    <!-- Stats grid -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td width="33%" style="padding:0 6px 0 0;">
+          <div style="background:#0f0f18;border:1px solid #4caf8220;border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#4caf82;">{terminees}</div>
+            <div style="font-size:11px;color:#8888a8;margin-top:4px;">Terminées</div>
+          </div>
+        </td>
+        <td width="33%" style="padding:0 3px;">
+          <div style="background:#0f0f18;border:1px solid #6c63ff20;border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#6c63ff;">{en_cours}</div>
+            <div style="font-size:11px;color:#8888a8;margin-top:4px;">En cours</div>
+          </div>
+        </td>
+        <td width="33%" style="padding:0 0 0 6px;">
+          <div style="background:#0f0f18;border:1px solid #e05c5c20;border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#e05c5c;">{en_retard}</div>
+            <div style="font-size:11px;color:#8888a8;margin-top:4px;">En retard</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Taux complétion -->
+    <div style="background:#0f0f18;border:1px solid #ffffff0a;border-radius:12px;padding:18px;margin-bottom:24px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td><span style="font-size:13px;color:#8888a8;font-weight:500;">Taux de complétion</span></td>
+          <td align="right"><span style="font-size:14px;font-weight:800;color:{taux_color};">{taux}%</span></td>
+        </tr>
+      </table>
+      <div style="margin-top:10px;height:6px;background:#ffffff0a;border-radius:99px;overflow:hidden;">
+        <div style="height:6px;width:{barre_w}%;background:{taux_color};border-radius:99px;"></div>
+      </div>
+    </div>
+
+    <!-- Points & Niveau -->
+    <div style="background:linear-gradient(135deg,#6c63ff15,#a855f715);border:1px solid #6c63ff25;border-radius:12px;padding:16px 20px;margin-bottom:28px;">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td><span style="font-size:13px;color:#8888a8;">Niveau actuel</span><br>
+            <span style="font-size:16px;font-weight:800;color:#a855f7;">Niveau {niveau}</span></td>
+        <td align="right"><span style="font-size:13px;color:#8888a8;">Points accumulés</span><br>
+            <span style="font-size:16px;font-weight:800;color:#6c63ff;">{points} pts</span></td>
+      </tr></table>
+    </div>
+
+    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
+      Voir mon Dashboard →
+    </a>"""
+    return _base_email(contenu, "Bilan de la semaine — TaskFlow")
+
+# ============================================
+# 📧 JOBS EMAIL
+# ============================================
+
+def job_email_rappel_veille():
+    """Envoie un email J-1 à chaque user qui a des deadlines demain."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom, u.email,
+                   t.titre, t.priorite
+            FROM taches t
+            JOIN users u ON t.user_id = u.id
+            WHERE t.terminee = FALSE
+              AND t.deadline = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+              AND u.email_verifie = TRUE
+            ORDER BY u.id, t.priorite DESC
+        """)
+        rows = cursor.fetchall()
+        cursor.close(); db.close()
+        # Grouper par user
+        from itertools import groupby
+        rows.sort(key=lambda r: r['id'])
+        for user_id, taches_iter in groupby(rows, key=lambda r: r['id']):
+            taches = list(taches_iter)
+            u = taches[0]
+            html = _html_rappel_veille(u['nom'], taches)
+            threading.Thread(target=envoyer_email, args=(u['email'], f"⏰ Deadline demain : {len(taches)} tâche(s) — TaskFlow", html)).start()
+        print(f"[Email J-1] {len(rows)} emails envoyés")
+    except Exception as e:
+        print(f"[Email J-1] Erreur: {e}")
+
+def job_email_rappel_jour_j():
+    """Envoie un email jour J à chaque user qui a des deadlines aujourd'hui."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom, u.email,
+                   t.titre, t.priorite
+            FROM taches t
+            JOIN users u ON t.user_id = u.id
+            WHERE t.terminee = FALSE
+              AND t.deadline = CURDATE()
+              AND u.email_verifie = TRUE
+            ORDER BY u.id, t.priorite DESC
+        """)
+        rows = cursor.fetchall()
+        cursor.close(); db.close()
+        from itertools import groupby
+        rows.sort(key=lambda r: r['id'])
+        for user_id, taches_iter in groupby(rows, key=lambda r: r['id']):
+            taches = list(taches_iter)
+            u = taches[0]
+            html = _html_rappel_jour_j(u['nom'], taches)
+            threading.Thread(target=envoyer_email, args=(u['email'], f"🚨 Deadline aujourd'hui : {len(taches)} tâche(s) — TaskFlow", html)).start()
+        print(f"[Email Jour J] {len(rows)} emails envoyés")
+    except Exception as e:
+        print(f"[Email Jour J] Erreur: {e}")
+
+def job_email_taches_retard():
+    """Envoie un email aux users qui ont des tâches en retard."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom, u.email,
+                   t.titre,
+                   t.deadline,
+                   DATEDIFF(CURDATE(), t.deadline) as jours_retard
+            FROM taches t
+            JOIN users u ON t.user_id = u.id
+            WHERE t.terminee = FALSE
+              AND t.deadline < CURDATE()
+              AND t.deadline IS NOT NULL
+              AND u.email_verifie = TRUE
+            ORDER BY u.id, t.deadline ASC
+        """)
+        rows = cursor.fetchall()
+        cursor.close(); db.close()
+        from itertools import groupby
+        rows.sort(key=lambda r: r['id'])
+        for user_id, taches_iter in groupby(rows, key=lambda r: r['id']):
+            taches = list(taches_iter)
+            u = taches[0]
+            for t in taches:
+                if t['deadline']:
+                    t['deadline_str'] = t['deadline'].strftime('%d/%m/%Y') if hasattr(t['deadline'], 'strftime') else str(t['deadline'])
+            html = _html_taches_retard(u['nom'], taches)
+            threading.Thread(target=envoyer_email, args=(u['email'], f"🔴 {len(taches)} tâche(s) en retard — TaskFlow", html)).start()
+        print(f"[Email Retard] {len(rows)} emails envoyés")
+    except Exception as e:
+        print(f"[Email Retard] Erreur: {e}")
+
+def job_email_resume_hebdo():
+    """Envoie le bilan hebdo chaque vendredi soir."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom, u.email, u.points, u.niveau,
+                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
+                COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as en_cours,
+                COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
+                COUNT(t.id) as total
+            FROM users u
+            LEFT JOIN taches t ON u.id = t.user_id
+            WHERE u.email_verifie = TRUE
+            GROUP BY u.id
+        """)
+        users = cursor.fetchall()
+        cursor.close(); db.close()
+        for u in users:
+            if u['total'] == 0:
+                continue
+            taux = round((u['terminees'] / max(u['total'], 1)) * 100, 0) if u['terminees'] else 0
+            stats = {
+                "terminees": u['terminees'] or 0,
+                "en_cours":  u['en_cours']  or 0,
+                "en_retard": u['en_retard'] or 0,
+                "taux":      int(taux),
+                "points":    u['points']    or 0,
+                "niveau":    u['niveau']    or 1,
+            }
+            html = _html_resume_hebdo(u['nom'], stats)
+            threading.Thread(target=envoyer_email, args=(u['email'], "📊 Ton bilan TaskFlow de la semaine", html)).start()
+        print(f"[Email Hebdo] {len(users)} emails envoyés")
+    except Exception as e:
+        print(f"[Email Hebdo] Erreur: {e}")
+
 def demarrer_scheduler():
+    # Push notifications existantes
     schedule.every().day.at("08:00").do(job_resume_matin)
     schedule.every().hour.do(job_rappels_deadline)
     schedule.every().day.at("09:00").do(job_taches_en_retard)
     schedule.every(2).hours.do(job_encouragements)
+    # Emails notifications
+    schedule.every().day.at("09:00").do(job_email_rappel_veille)   # J-1 chaque matin 9h
+    schedule.every().day.at("08:00").do(job_email_rappel_jour_j)   # Jour J chaque matin 8h
+    schedule.every().day.at("10:00").do(job_email_taches_retard)   # Retard chaque matin 10h
+    schedule.every().friday.at("18:00").do(job_email_resume_hebdo) # Résumé vendredi 18h
     print("[Scheduler] Démarré ✅")
     while True:
         schedule.run_pending()
@@ -1375,6 +1692,48 @@ def trigger_rappels_deadline():
 def trigger_encouragements():
     threading.Thread(target=job_encouragements).start()
     return jsonify({"message": "Encouragements déclenchés !"})
+
+# ============================================
+# 📧 ROUTES EMAIL — DÉCLENCHEMENT MANUEL
+# ============================================
+
+@app.route('/email/rappel-veille', methods=['POST'])
+def trigger_email_rappel_veille():
+    threading.Thread(target=job_email_rappel_veille).start()
+    return jsonify({"message": "Emails rappel J-1 déclenchés !"})
+
+@app.route('/email/rappel-jour-j', methods=['POST'])
+def trigger_email_rappel_jour_j():
+    threading.Thread(target=job_email_rappel_jour_j).start()
+    return jsonify({"message": "Emails rappel jour J déclenchés !"})
+
+@app.route('/email/taches-retard', methods=['POST'])
+def trigger_email_taches_retard():
+    threading.Thread(target=job_email_taches_retard).start()
+    return jsonify({"message": "Emails tâches en retard déclenchés !"})
+
+@app.route('/email/resume-hebdo', methods=['POST'])
+def trigger_email_resume_hebdo():
+    threading.Thread(target=job_email_resume_hebdo).start()
+    return jsonify({"message": "Emails résumé hebdo déclenchés !"})
+
+@app.route('/email/test/<int:user_id>', methods=['POST'])
+def test_email_user(user_id):
+    """Envoie un email de test résumé hebdo à un user spécifique."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, nom, email, points, niveau FROM users WHERE id=%s", (user_id,))
+        u = cursor.fetchone()
+        cursor.close(); db.close()
+        if not u:
+            return jsonify({"erreur": "User introuvable"}), 404
+        stats = {"terminees": 8, "en_cours": 3, "en_retard": 1, "taux": 73, "points": u['points'] or 0, "niveau": u['niveau'] or 1}
+        html = _html_resume_hebdo(u['nom'], stats)
+        envoyer_email(u['email'], "📊 [TEST] Ton bilan TaskFlow de la semaine", html)
+        return jsonify({"message": f"Email de test envoyé à {u['email']} !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
 
 # ============================================
 # 🔗 INTÉGRATIONS
