@@ -787,17 +787,27 @@ def auth_google():
         if not credential:
             return jsonify({"erreur": "Token Google manquant"}), 400
 
-        # Vérifier le token Google
-        idinfo = id_token.verify_oauth2_token(
-            credential,
-            google_requests.Request(),
-            GOOGLE_CLIENT_ID
-        )
-
-        google_id  = idinfo['sub']
-        email      = idinfo['email']
-        nom        = idinfo.get('name', email.split('@')[0])
-        avatar_url = idinfo.get('picture', '')
+        # Support deux flows : credential (id_token) ou google_id direct (implicit flow)
+        google_id_direct = request.json.get('google_id')
+        if google_id_direct:
+            # Flow implicit — données envoyées directement depuis userinfo Google
+            google_id  = google_id_direct
+            email      = request.json.get('email', '')
+            nom        = request.json.get('nom', email.split('@')[0])
+            avatar_url = request.json.get('avatar', '')
+        else:
+            # Flow credential (id_token)
+            if not credential:
+                return jsonify({"erreur": "Token Google manquant"}), 400
+            idinfo = id_token.verify_oauth2_token(
+                credential,
+                google_requests.Request(),
+                GOOGLE_CLIENT_ID
+            )
+            google_id  = idinfo['sub']
+            email      = idinfo['email']
+            nom        = idinfo.get('name', email.split('@')[0])
+            avatar_url = idinfo.get('picture', '')
 
         db = connecter()
         cursor = db.cursor(dictionary=True)
