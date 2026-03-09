@@ -27,10 +27,10 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'taskflow_secret')
+app.secret_key = os.getenv('SECRET_KEY', 'getshift_secret')
 
 # JWT
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'taskflow_jwt_secret')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'getshift_jwt_secret')
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_COOKIE_SECURE'] = True
 app.config['JWT_COOKIE_SAMESITE'] = 'None'
@@ -75,7 +75,7 @@ def envoyer_email(to_email, subject, html_content):
 def envoyer_email_verification(email, nom, token):
     lien = f"https://taskflow-production-75c1.up.railway.app/verify-email/{token}"
     html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
-        <h1 style="color:#6c63ff;">TaskFlow</h1>
+        <h1 style="color:#6c63ff;">GetShift</h1>
         <h2>Bonjour {nom} !</h2>
         <p>Merci de vous etre inscrit. Cliquez ci-dessous pour verifier votre email :</p>
         <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
@@ -86,7 +86,7 @@ def envoyer_email_verification(email, nom, token):
             <p style="color:#aaa;font-size:12px;margin:0;">Si vous ne trouvez pas cet email, verifiez votre dossier Spams et marquez-le comme Pas un spam pour recevoir nos prochains emails directement.</p>
         </div>
     </div>"""
-    threading.Thread(target=envoyer_email, args=(email, "Verifiez votre email TaskFlow", html)).start()
+    threading.Thread(target=envoyer_email, args=(email, "Verifiez votre email GetShift", html)).start()
 
 # ============================================
 # 🔔 PUSH NOTIFICATIONS HELPERS
@@ -146,7 +146,7 @@ def job_resume_matin():
             if not parties:
                 parties.append(f"{en_cours} tâche(s) en cours")
             body = " · ".join(parties)
-            envoyer_push(sub['subscription'], f"Bonjour {user['nom']} — Votre journée TaskFlow", body)
+            envoyer_push(sub['subscription'], f"Bonjour {user['nom']} — Votre journée GetShift", body)
         cursor.close()
         db.close()
         print("[Résumé matin] OK")
@@ -220,7 +220,7 @@ def job_encouragements():
         """)
         users = cursor.fetchall()
         messages = [
-            (10, "Légendaire !", "10 tâches bouclées aujourd'hui. Vous êtes une machine TaskFlow !"),
+            (10, "Légendaire !", "10 tâches bouclées aujourd'hui. Vous êtes une machine GetShift !"),
             (5,  "Exceptionnel !", "5 tâches terminées ! Vous êtes au sommet de votre productivité."),
             (3,  "En feu !", "3 tâches terminées aujourd'hui. Vous êtes dans la zone !"),
             (1,  "Belle journée !", "Vous avez terminé votre première tâche du jour. Continuez !"),
@@ -245,7 +245,7 @@ def job_encouragements():
 # 📧 TEMPLATES HTML EMAILS
 # ============================================
 
-def _base_email(contenu_html, titre_preheader="TaskFlow"):
+def _base_email(contenu_html, titre_preheader="GetShift"):
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -259,7 +259,7 @@ def _base_email(contenu_html, titre_preheader="TaskFlow"):
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td>
-              <span style="font-size:20px;font-weight:800;color:white;letter-spacing:-0.5px;">TaskFlow</span>
+              <span style="font-size:20px;font-weight:800;color:white;letter-spacing:-0.5px;">GetShift</span>
             </td>
             <td align="right">
               <span style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:500;letter-spacing:1px;">PRODUCTIVITÉ</span>
@@ -274,8 +274,8 @@ def _base_email(contenu_html, titre_preheader="TaskFlow"):
       <!-- Footer -->
       <tr><td style="padding:20px 36px 28px;border-top:1px solid #ffffff08;">
         <p style="margin:0;font-size:11px;color:#44445a;text-align:center;line-height:1.7;">
-          Tu reçois cet email car tu as un compte TaskFlow.<br>
-          <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff;text-decoration:none;">Ouvrir TaskFlow</a>
+          Tu reçois cet email car tu as un compte GetShift.<br>
+          <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff;text-decoration:none;">Ouvrir GetShift</a>
         </p>
       </td></tr>
     </table>
@@ -305,7 +305,7 @@ def _html_rappel_veille(nom, taches):
     <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
       Ouvrir le Dashboard →
     </a>"""
-    return _base_email(contenu, "Rappel deadline demain — TaskFlow")
+    return _base_email(contenu, "Rappel deadline demain — GetShift")
 
 def _html_rappel_jour_j(nom, taches):
     lignes = ""
@@ -329,7 +329,7 @@ def _html_rappel_jour_j(nom, taches):
     <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#e08a3c);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
       Terminer maintenant →
     </a>"""
-    return _base_email(contenu, "Deadline aujourd'hui — TaskFlow")
+    return _base_email(contenu, "Deadline aujourd'hui — GetShift")
 
 def _html_taches_retard(nom, taches):
     lignes = ""
@@ -354,7 +354,7 @@ def _html_taches_retard(nom, taches):
     <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
       Rattraper le retard →
     </a>"""
-    return _base_email(contenu, "Tâches en retard — TaskFlow")
+    return _base_email(contenu, "Tâches en retard — GetShift")
 
 def _html_resume_hebdo(nom, stats):
     terminees       = stats.get("terminees", 0)
@@ -553,7 +553,7 @@ def _html_resume_hebdo(nom, stats):
         </td>
       </tr>
     </table>"""
-    return _base_email(contenu, "Bilan hebdomadaire — TaskFlow")
+    return _base_email(contenu, "Bilan hebdomadaire — GetShift")
 
 # ============================================
 # 📧 JOBS EMAIL
@@ -583,7 +583,7 @@ def job_email_rappel_veille():
             taches = list(taches_iter)
             u = taches[0]
             html = _html_rappel_veille(u['nom'], taches)
-            threading.Thread(target=envoyer_email, args=(u['email'], f"Rappel · Deadline demain : {len(taches)} tâche(s) — TaskFlow", html)).start()
+            threading.Thread(target=envoyer_email, args=(u['email'], f"Rappel · Deadline demain : {len(taches)} tâche(s) — GetShift", html)).start()
         print(f"[Email J-1] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email J-1] Erreur: {e}")
@@ -611,7 +611,7 @@ def job_email_rappel_jour_j():
             taches = list(taches_iter)
             u = taches[0]
             html = _html_rappel_jour_j(u['nom'], taches)
-            threading.Thread(target=envoyer_email, args=(u['email'], f"Deadline aujourd'hui : {len(taches)} tâche(s) — TaskFlow", html)).start()
+            threading.Thread(target=envoyer_email, args=(u['email'], f"Deadline aujourd'hui : {len(taches)} tâche(s) — GetShift", html)).start()
         print(f"[Email Jour J] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email Jour J] Erreur: {e}")
@@ -645,7 +645,7 @@ def job_email_taches_retard():
                 if t['deadline']:
                     t['deadline_str'] = t['deadline'].strftime('%d/%m/%Y') if hasattr(t['deadline'], 'strftime') else str(t['deadline'])
             html = _html_taches_retard(u['nom'], taches)
-            threading.Thread(target=envoyer_email, args=(u['email'], f"{len(taches)} tâche(s) en retard — TaskFlow", html)).start()
+            threading.Thread(target=envoyer_email, args=(u['email'], f"{len(taches)} tâche(s) en retard — GetShift", html)).start()
         print(f"[Email Retard] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email Retard] Erreur: {e}")
@@ -745,7 +745,7 @@ def job_email_resume_hebdo():
             html = _html_resume_hebdo(u['nom'], stats)
             threading.Thread(target=envoyer_email, args=(
                 u['email'],
-                f"Bilan · semaine du {datetime.now().strftime('%d/%m')} — TaskFlow",
+                f"Bilan · semaine du {datetime.now().strftime('%d/%m')} — GetShift",
                 html
             )).start()
 
@@ -902,13 +902,13 @@ def verify_email(token):
             db.close()
             return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
                 <h1 style="color:#e05c5c">Lien invalide ou expiré</h1>
-                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à TaskFlow</a>
+                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
             </body></html>""", 400
         curseur.execute("UPDATE users SET email_verifie=TRUE, verification_token=NULL WHERE id=%s", (user['id'],))
         db.commit(); db.close()
         return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
             <h1 style="color:#6c63ff">Email vérifié !</h1>
-            <p>Votre compte TaskFlow est maintenant actif.</p>
+            <p>Votre compte GetShift est maintenant actif.</p>
             <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">
                 Se connecter →
             </a>
@@ -997,7 +997,7 @@ def forgot_password():
         db.commit(); db.close()
         lien = f"https://chamdaane-a11y.github.io/taskflow/#/reset-password/{reset_token}"
         html = f"""<div style="font-family:Arial;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
-            <h1 style="color:#6c63ff;">TaskFlow</h1>
+            <h1 style="color:#6c63ff;">GetShift</h1>
             <h2>Bonjour {user['nom']} !</h2>
             <p>Cliquez ci-dessous pour reinitialiser votre mot de passe :</p>
             <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
@@ -1005,7 +1005,7 @@ def forgot_password():
             </a>
             <p style="color:#888;font-size:12px;">Ce lien expire dans 1h.</p>
         </div>"""
-        threading.Thread(target=envoyer_email, args=(email, "Reinitialisation mot de passe TaskFlow", html)).start()
+        threading.Thread(target=envoyer_email, args=(email, "Reinitialisation mot de passe GetShift", html)).start()
         return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -1182,7 +1182,7 @@ def ajouter_tache():
             webhook_url = config.get('webhook_url')
             if webhook_url:
                 deadline_str = f" (deadline: {data['deadline']})" if data.get('deadline') else ""
-                envoyer_notification_slack(webhook_url, f"Nouvelle tâche TaskFlow : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}")
+                envoyer_notification_slack(webhook_url, f"Nouvelle tâche GetShift : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}")
         db.close()
         return jsonify({"message": "Tâche ajoutée !"})
     except Exception as e:
@@ -1305,7 +1305,7 @@ def executer_ia():
     tache_id = data.get('tache_id')
     historique_messages = data.get('messages', [])
     try:
-        messages_api = [{"role": "system", "content": "Tu es un assistant de productivité TaskFlow. Tu aides l'utilisateur à gérer ses tâches et à être plus productif. Tu réponds en français."}]
+        messages_api = [{"role": "system", "content": "Tu es un assistant de productivité GetShift. Tu aides l'utilisateur à gérer ses tâches et à être plus productif. Tu réponds en français."}]
         for msg in historique_messages:
             if msg['role'] == 'user':
                 messages_api.append({"role": "user", "content": msg['content']})
@@ -2030,7 +2030,7 @@ def test_email_user(user_id):
             "conseil_ia": "Tu as bien progressé cette semaine avec 7 tâches terminées ! Pour la semaine prochaine, essaie de travailler en blocs de 90 minutes sur tes tâches haute priorité dès le matin."
         }
         html = _html_resume_hebdo(u['nom'], stats)
-        envoyer_email(u['email'], "Bilan hebdomadaire [TEST] — TaskFlow", html)
+        envoyer_email(u['email'], "Bilan hebdomadaire [TEST] — GetShift", html)
         return jsonify({"message": f"Email de test envoyé à {u['email']} !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
