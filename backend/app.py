@@ -1344,6 +1344,35 @@ def sauvegarder_historique():
     db.commit(); db.close()
     return jsonify({"message": "Historique sauvegarde !"})
 
+@app.route('/ia/sous-taches-contextuelles', methods=['POST'])
+def generer_sous_taches_contextuelles():
+    """Génère des sous-tâches contextuelles à partir du titre d'une tâche."""
+    try:
+        data = request.get_json(force=True)
+        titre = data.get('titre', '').strip()
+        if not titre:
+            return jsonify({"erreur": "Titre requis"}), 400
+        prompt = f"""Tu es un assistant de productivité expert.
+Analyse cette tâche : "{titre}"
+Génère entre 4 et 6 sous-tâches concrètes, actionnables et ordonnées logiquement.
+Détecte le type parmi : entretien, voyage, projet, événement, habitude, apprentissage, autre.
+Réponds UNIQUEMENT en JSON valide, sans texte autour, sans backticks :
+{{"type": "le type détecté", "sous_taches": [{{"titre": "sous-tâche concrète", "priorite": "haute|moyenne|basse"}}], "conseil": "Un conseil court et motivant en 1 phrase"}}"""
+        completion = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=600, temperature=0.4
+        )
+        reponse = completion.choices[0].message.content.strip()
+        reponse = re.sub(r'```json|```', '', reponse).strip()
+        match = re.search(r'\{.*\}', reponse, re.S)
+        if not match:
+            raise ValueError("Réponse IA invalide")
+        result = json.loads(match.group())
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 @app.route('/ia/generer-taches', methods=['POST'])
 def generer_taches():
     try:
