@@ -1096,16 +1096,129 @@ def update_theme(id):
 @app.route('/users/<int:id>/points', methods=['PUT'])
 def update_points(id):
     data = request.get_json()
+    pts = data['points']
     db = connecter()
     curseur = db.cursor(dictionary=True)
-    curseur.execute("UPDATE users SET points=points+%s WHERE id=%s", (data['points'], id))
+
+    # Ajouter les points
+    curseur.execute("UPDATE users SET points=points+%s WHERE id=%s", (pts, id))
     db.commit()
-    curseur.execute("SELECT points, niveau FROM users WHERE id=%s", (id,))
+
+    # Recalculer le niveau (paliers fixes)
+    curseur.execute("SELECT points FROM users WHERE id=%s", (id,))
     user = curseur.fetchone()
-    nouveau_niveau = (user['points'] // 100) + 1
+    total_pts = user['points']
+    paliers = [(1,0),(2,100),(3,250),(4,500),(5,1000),(6,2000),(7,5000),(8,10000)]
+    nouveau_niveau = max([n for n, m in paliers if total_pts >= m])
     curseur.execute("UPDATE users SET niveau=%s WHERE id=%s", (nouveau_niveau, id))
-    db.commit(); db.close()
-    return jsonify({"points": user['points'], "niveau": nouveau_niveau})
+    db.commit()
+
+    # Mettre à jour le streak
+    curseur.execute("SELECT streak, derniere_activite FROM users WHERE id=%s", (id,))
+    u = curseur.fetchone()
+    from datetime import date, timedelta
+    aujourd_hui = date.today()
+    derniere = u['derniere_activite'].date() if u['derniere_activite'] else None
+    streak = u['streak'] or 0
+    if derniere is None or derniere < aujourd_hui - timedelta(days=1):
+        streak = 1
+    elif derniere == aujourd_hui - timedelta(days=1):
+        streak += 1
+    # Si déjà aujourd'hui, streak inchangé
+    curseur.execute("UPDATE users SET streak=%s, derniere_activite=%s WHERE id=%s", (streak, aujourd_hui, id))
+    db.commit()
+
+    # Vérifier et attribuer les badges
+    curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=TRUE", (id,))
+    nb_terminees = curseur.fetchone()['nb']
+    nouveaux_badges = verifier_badges(curseur, db, id, nb_terminees, total_pts, streak)
+    db.commit()
+    db.close()
+    return jsonify({"points": total_pts, "niveau": nouveau_niveau, "streak": streak, "nouveaux_badges": nouveaux_badges})
+
+# ============================================
+# 🏆 BADGES
+# ============================================
+
+REGLES_BADGES = [
+    # Performance
+    {"id": "first_task",     "nom": "Premier pas",       "icon": "🌱", "description": "Première tâche terminée",          "condition": lambda t, p, s: t >= 1},
+    {"id": "five_tasks",     "nom": "En rythme",         "icon": "🔥", "description": "5 tâches terminées",               "condition": lambda t, p, s: t >= 5},
+    {"id": "ten_tasks",      "nom": "Productif",         "icon": "⚡", "description": "10 tâches terminées",              "condition": lambda t, p, s: t >= 10},
+    {"id": "fifty_tasks",    "nom": "Machine",           "icon": "🤖", "description": "50 tâches terminées",              "condition": lambda t, p, s: t >= 50},
+    {"id": "century",        "nom": "Centurion",         "icon": "💯", "description": "100 tâches terminées",             "condition": lambda t, p, s: t >= 100},
+    # Points
+    {"id": "pts_100",        "nom": "Débutant",          "icon": "🥉", "description": "100 points gagnés",               "condition": lambda t, p, s: p >= 100},
+    {"id": "pts_500",        "nom": "Confirmé",          "icon": "🥈", "description": "500 points gagnés",               "condition": lambda t, p, s: p >= 500},
+    {"id": "pts_1000",       "nom": "Expert",            "icon": "🥇", "description": "1000 points gagnés",              "condition": lambda t, p, s: p >= 1000},
+    {"id": "pts_5000",       "nom": "Maître",            "icon": "👑", "description": "5000 points gagnés",              "condition": lambda t, p, s: p >= 5000},
+    # Streak
+    {"id": "streak_3",       "nom": "3 jours de suite",  "icon": "🔥", "description": "Actif 3 jours consécutifs",       "condition": lambda t, p, s: s >= 3},
+    {"id": "streak_7",       "nom": "Semaine parfaite",  "icon": "📅", "description": "Actif 7 jours consécutifs",       "condition": lambda t, p, s: s >= 7},
+    {"id": "streak_30",      "nom": "Mois de feu",       "icon": "🌟", "description": "Actif 30 jours consécutifs",      "condition": lambda t, p, s: s >= 30},
+    # Spéciaux
+    {"id": "early_bird",     "nom": "Lève-tôt",          "icon": "🌅", "description": "Tâche terminée avant 8h",        "condition": lambda t, p, s: False},  # Géré séparément
+    {"id": "night_owl",      "nom": "Noctambule",        "icon": "🦉", "description": "Tâche terminée après 23h",       "condition": lambda t, p, s: False},  # Géré séparément
+    {"id": "speedster",      "nom": "Fulgurant",         "icon": "⚡", "description": "5 tâches terminées en 1 jour",   "condition": lambda t, p, s: False},  # Géré séparément
+]
+
+def verifier_badges(curseur, db, user_id, nb_terminees, points_total, streak):
+    """Vérifie et attribue les badges manquants. Retourne la liste des nouveaux badges."""
+    curseur.execute("SELECT badge_id FROM badges_utilisateurs WHERE user_id=%s", (user_id,))
+    deja_obtenus = {r['badge_id'] for r in curseur.fetchall()}
+    nouveaux = []
+    for regle in REGLES_BADGES:
+        if regle['id'] in deja_obtenus:
+            continue
+        if regle['condition'](nb_terminees, points_total, streak):
+            curseur.execute(
+                "INSERT INTO badges_utilisateurs (user_id, badge_id) VALUES (%s, %s)",
+                (user_id, regle['id'])
+            )
+            nouveaux.append({"id": regle['id'], "nom": regle['nom'], "icon": regle['icon'], "description": regle['description']})
+    return nouveaux
+
+@app.route('/users/<int:id>/badges', methods=['GET'])
+def get_badges(id):
+    """Retourne tous les badges avec statut obtenu/non obtenu."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT badge_id, obtenu_le FROM badges_utilisateurs WHERE user_id=%s", (id,))
+        obtenus = {r['badge_id']: r['obtenu_le'] for r in curseur.fetchall()}
+        curseur.execute("SELECT points, streak FROM users WHERE id=%s", (id,))
+        user = curseur.fetchone()
+        db.close()
+        result = []
+        for b in REGLES_BADGES:
+            result.append({
+                "id": b['id'], "nom": b['nom'], "icon": b['icon'],
+                "description": b['description'],
+                "obtenu": b['id'] in obtenus,
+                "obtenu_le": str(obtenus[b['id']]) if b['id'] in obtenus else None
+            })
+        return jsonify({
+            "badges": result,
+            "streak": user['streak'] if user else 0,
+            "nb_obtenus": len(obtenus),
+            "nb_total": len(REGLES_BADGES)
+        })
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/streak', methods=['GET'])
+def get_streak(id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT streak, derniere_activite FROM users WHERE id=%s", (id,))
+        user = curseur.fetchone()
+        db.close()
+        return jsonify({"streak": user['streak'] or 0, "derniere_activite": str(user['derniere_activite']) if user['derniere_activite'] else None})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
 
 # ============================================
 # 📂 CATEGORIES
@@ -1171,6 +1284,7 @@ def ajouter_tache():
             INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id) VALUES (%s, %s, %s, %s, %s)
         """, (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), data['user_id'], data.get('categorie_id')))
         db.commit()
+        tache_id = curseur.lastrowid
         curseur2 = db.cursor(dictionary=True)
         curseur2.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (data['user_id'],))
         row = curseur2.fetchone()
@@ -1181,7 +1295,7 @@ def ajouter_tache():
                 deadline_str = f" (deadline: {data['deadline']})" if data.get('deadline') else ""
                 envoyer_notification_slack(webhook_url, f"Nouvelle tâche GetShift : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}")
         db.close()
-        return jsonify({"message": "Tâche ajoutée !"})
+        return jsonify({"message": "Tâche ajoutée !", "id": tache_id})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
