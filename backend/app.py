@@ -783,22 +783,17 @@ GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleuse
 def auth_google():
     """Connexion / inscription via Google OAuth — crée le compte si inexistant."""
     try:
-        credential = request.json.get('credential')
-        if not credential:
-            return jsonify({"erreur": "Token Google manquant"}), 400
-
-        # Support deux flows : credential (id_token) ou google_id direct (implicit flow)
+        # Flow implicit — google_id envoyé directement depuis userinfo Google
         google_id_direct = request.json.get('google_id')
+        credential       = request.json.get('credential')
+
         if google_id_direct:
-            # Flow implicit — données envoyées directement depuis userinfo Google
             google_id  = google_id_direct
             email      = request.json.get('email', '')
             nom        = request.json.get('nom', email.split('@')[0])
             avatar_url = request.json.get('avatar', '')
-        else:
+        elif credential:
             # Flow credential (id_token)
-            if not credential:
-                return jsonify({"erreur": "Token Google manquant"}), 400
             idinfo = id_token.verify_oauth2_token(
                 credential,
                 google_requests.Request(),
@@ -808,6 +803,8 @@ def auth_google():
             email      = idinfo['email']
             nom        = idinfo.get('name', email.split('@')[0])
             avatar_url = idinfo.get('picture', '')
+        else:
+            return jsonify({"erreur": "Token Google manquant"}), 400
 
         db = connecter()
         cursor = db.cursor(dictionary=True)
