@@ -2493,6 +2493,322 @@ def supprimer_template(template_id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
+# SPRINT 4 — TOMORROW BUILDER + SMART PLANNING
+# ============================================
+
+def calculer_score_energie(user_id, db_cursor):
+    """Calcule un score d'énergie 0-100 basé sur l'activité récente"""
+    try:
+        # Tâches complétées aujourd'hui
+        db_cursor.execute("""
+            SELECT COUNT(*) as nb FROM taches
+            WHERE user_id=%s AND terminee=1
+            AND DATE(updated_at) = CURDATE()
+        """, (user_id,))
+        row = db_cursor.fetchone()
+        taches_aujourd_hui = row['nb'] if row else 0
+
+        # Streak
+        db_cursor.execute("SELECT streak FROM users WHERE id=%s", (user_id,))
+        row = db_cursor.fetchone()
+        streak = row['streak'] if row else 0
+
+        # Tâches en retard (drainent l'énergie)
+        db_cursor.execute("""
+            SELECT COUNT(*) as nb FROM taches
+            WHERE user_id=%s AND terminee=0
+            AND deadline < NOW()
+        """, (user_id,))
+        row = db_cursor.fetchone()
+        en_retard = row['nb'] if row else 0
+
+        # Score : base 60 + bonus streak + bonus tâches jour - malus retard
+        score = 60
+        score += min(streak * 3, 20)
+        score += min(taches_aujourd_hui * 5, 15)
+        score -= min(en_retard * 5, 30)
+        return max(10, min(100, score))
+    except:
+        return 60
+
+def estimer_duree_tache(titre, priorite):
+    """Estime la durée d'une tâche en minutes selon son titre et priorité"""
+    titre_lower = titre.lower()
+    # Mots-clés indiquant des tâches longues
+    mots_longs = ['rédiger', 'analyser', 'concevoir', 'développer', 'coder', 'créer', 'préparer', 'planifier', 'rechercher']
+    mots_courts = ['appeler', 'email', 'envoyer', 'vérifier', 'lire', 'répondre', 'noter', 'checker']
+    mots_moyens = ['réunion', 'meeting', 'réviser', 'corriger', 'mettre à jour', 'organiser']
+
+    duree_base = 45  # défaut
+    for mot in mots_longs:
+        if mot in titre_lower:
+            duree_base = 90
+            break
+    for mot in mots_courts:
+        if mot in titre_lower:
+            duree_base = 20
+            break
+    for mot in mots_moyens:
+        if mot in titre_lower:
+            duree_base = 60
+            break
+
+    # Ajustement par priorité
+    if priorite == 'haute':
+        duree_base = int(duree_base * 1.3)
+    elif priorite == 'basse':
+        duree_base = int(duree_base * 0.8)
+
+    return duree_base
+
+def detecter_heure_productive(user_id, db_cursor):
+    """Détecte l'heure de pointe productive de l'utilisateur"""
+    try:
+        db_cursor.execute("""
+            SELECT HOUR(updated_at) as heure, COUNT(*) as nb
+            FROM taches
+            WHERE user_id=%s AND terminee=1
+            AND updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY HOUR(updated_at)
+            ORDER BY nb DESC
+            LIMIT 1
+        """, (user_id,))
+        row = db_cursor.fetchone()
+        if row:
+            return row['heure']
+    except:
+        pass
+    return 9  # défaut : 9h du matin
+
+@app.route('/ia/tomorrow-builder/<int:user_id>', methods=['GET'])
+def tomorrow_builder(user_id):
+    """Génère le planning optimal du lendemain avec l'IA"""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+
+        # 1. Récupérer les tâches actives
+        curseur.execute("""
+            SELECT id, titre, priorite, deadline, bloquee
+            FROM taches
+            WHERE user_id=%s AND terminee=0
+            ORDER BY
+                CASE priorite WHEN 'haute' THEN 1 WHEN 'moyenne' THEN 2 ELSE 3 END,
+                deadline ASC
+            LIMIT 15
+        """, (user_id,))
+        taches = curseur.fetchall()
+
+        if not taches:
+            return jsonify({"erreur": "Aucune tâche active"}), 404
+
+        # 2. Calculer métriques utilisateur
+        score_energie = calculer_score_energie(user_id, curseur)
+        heure_productive = detecter_heure_productive(user_id, curseur)
+
+        # 3. Enrichir les tâches avec durée estimée
+        for t in taches:
+            t['duree_estimee'] = estimer_duree_tache(t['titre'], t['priorite'])
+            if t['deadline']:
+                t['deadline'] = str(t['deadline'])
+
+        # 4. Appel IA pour générer le planning
+        from groq import Groq
+        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+
+        niveau_energie = "élevé" if score_energie >= 70 else "moyen" if score_energie >= 40 else "faible"
+        demain = (datetime.now() + timedelta(days=1)).strftime('%A %d %B %Y')
+
+        prompt_taches = "\n".join([
+            f"- [{t['priorite'].upper()}] {t['titre']} | Durée estimée: {t['duree_estimee']}min | Deadline: {t.get('deadline', 'non définie')}"
+            for t in taches[:10]
+        ])
+
+        prompt = f"""Tu es un expert en productivité et planification. Tu dois créer le planning optimal pour demain ({demain}).
+
+PROFIL UTILISATEUR:
+- Score d'énergie: {score_energie}/100 (niveau {niveau_energie})
+- Heure de pointe productive détectée: {heure_productive}h
+- Nombre de tâches actives: {len(taches)}
+
+TÂCHES À PLANIFIER:
+{prompt_taches}
+
+RÈGLES DE PLANIFICATION:
+- Commencer par les tâches haute priorité pendant l'heure de pointe ({heure_productive}h-{heure_productive+2}h)
+- Maximum 6h de travail effectif planifié
+- Intercaler des pauses (pause 15min après chaque 90min de travail)
+- Si énergie faible: maximum 4h, tâches légères en priorité
+- Les quick wins (< 20min) en début ou fin de journée
+- Éviter de planifier plus de 3 tâches haute priorité par jour
+
+Réponds UNIQUEMENT en JSON valide avec cette structure exacte:
+{{
+  "score_energie": {score_energie},
+  "niveau_energie": "{niveau_energie}",
+  "heure_productive": {heure_productive},
+  "duree_totale_planifiee": <nombre en minutes>,
+  "conseil_journee": "<conseil personnalisé en 1-2 phrases>",
+  "alerte_burnout": <true ou false>,
+  "message_alerte": "<message si alerte_burnout=true, sinon null>",
+  "planning": [
+    {{
+      "ordre": 1,
+      "heure_debut": "<ex: 09:00>",
+      "heure_fin": "<ex: 10:30>",
+      "type": "tache" ou "pause",
+      "titre": "<titre de la tâche ou 'Pause'>",
+      "priorite": "<haute/moyenne/basse>",
+      "duree_minutes": <nombre>,
+      "raison_placement": "<pourquoi cette tâche à cette heure>",
+      "energie_requise": "<faible/moyenne/élevée>",
+      "tips": "<conseil spécifique pour cette tâche>"
+    }}
+  ],
+  "taches_reportees": [
+    {{
+      "titre": "<titre>",
+      "raison": "<pourquoi reportée>"
+    }}
+  ],
+  "resume_global": "<résumé du planning en 2-3 phrases motivantes>"
+}}"""
+
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2000,
+            temperature=0.7
+        )
+
+        contenu = response.choices[0].message.content.strip()
+        # Nettoyer le JSON
+        if '```json' in contenu:
+            contenu = contenu.split('```json')[1].split('```')[0].strip()
+        elif '```' in contenu:
+            contenu = contenu.split('```')[1].split('```')[0].strip()
+
+        planning_data = json.loads(contenu)
+
+        # 5. Sauvegarder le planning en base
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS tomorrow_plans (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                planning_json LONGTEXT,
+                score_energie INT,
+                cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
+                date_planifiee DATE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        demain_date = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        curseur.execute("DELETE FROM tomorrow_plans WHERE user_id=%s AND date_planifiee=%s", (user_id, demain_date))
+        curseur.execute(
+            "INSERT INTO tomorrow_plans (user_id, planning_json, score_energie, date_planifiee) VALUES (%s, %s, %s, %s)",
+            (user_id, json.dumps(planning_data), score_energie, demain_date)
+        )
+        db.commit()
+        db.close()
+
+        return jsonify(planning_data)
+
+    except Exception as e:
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
+
+@app.route('/ia/tomorrow-builder/<int:user_id>/saved', methods=['GET'])
+def get_saved_planning(user_id):
+    """Récupère le dernier planning sauvegardé"""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT * FROM tomorrow_plans
+            WHERE user_id=%s
+            ORDER BY cree_le DESC LIMIT 1
+        """, (user_id,))
+        row = curseur.fetchone()
+        db.close()
+        if row:
+            return jsonify({"planning": json.loads(row['planning_json']), "cree_le": str(row['cree_le']), "date_planifiee": str(row['date_planifiee'])})
+        return jsonify({"planning": None})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/ia/procrastination/<int:user_id>', methods=['GET'])
+def analyser_procrastination(user_id):
+    """Détecte les tâches procrastinées et génère des alertes"""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT id, titre, priorite, deadline, created_at, updated_at
+            FROM taches
+            WHERE user_id=%s AND terminee=0
+        """, (user_id,))
+        taches = curseur.fetchall()
+        db.close()
+
+        alertes = []
+        for t in taches:
+            if not t['updated_at'] or not t['deadline']:
+                continue
+            jours_sans_action = (datetime.now() - t['updated_at']).days
+            jours_avant_deadline = (t['deadline'] - datetime.now()).days if t['deadline'] else 999
+
+            score = 0
+            if jours_sans_action > 3 and t['priorite'] == 'haute':
+                score = 90
+            elif jours_sans_action > 5 and t['priorite'] == 'moyenne':
+                score = 70
+            elif jours_sans_action > 7:
+                score = 50
+
+            if score > 0:
+                alertes.append({
+                    "tache_id": t['id'],
+                    "titre": t['titre'],
+                    "priorite": t['priorite'],
+                    "jours_sans_action": jours_sans_action,
+                    "jours_avant_deadline": jours_avant_deadline,
+                    "score_procrastination": score,
+                    "niveau": "critique" if score >= 80 else "modere"
+                })
+
+        alertes.sort(key=lambda x: x['score_procrastination'], reverse=True)
+        return jsonify({"alertes": alertes, "total": len(alertes)})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/ia/smart-planning/trigger', methods=['POST'])
+def trigger_tomorrow_builder_notif():
+    """Déclenché par cron à 19h — envoie notif push Tomorrow Builder"""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT id FROM users")
+        users = curseur.fetchall()
+        db.close()
+
+        envoyes = 0
+        for u in users:
+            try:
+                # Générer le planning (appel interne)
+                import requests as req
+                req.get(f"http://localhost:{os.environ.get('PORT', 5000)}/ia/tomorrow-builder/{u['id']}", timeout=30)
+                envoyes += 1
+            except:
+                pass
+
+        return jsonify({"message": f"Tomorrow Builder déclenché pour {envoyes} utilisateurs"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+# ============================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
