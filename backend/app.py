@@ -2211,6 +2211,288 @@ def save_slack_integration():
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
+# SPRINT 3 — TEMPLATES COMMUNAUTAIRES
+# ============================================
+
+@app.route('/templates/init', methods=['POST'])
+def init_templates():
+    """Créer la table templates si elle n'existe pas"""
+    try:
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS templates (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                titre VARCHAR(200) NOT NULL,
+                description TEXT,
+                categorie VARCHAR(50) DEFAULT 'autre',
+                icone VARCHAR(10) DEFAULT '📋',
+                utilisations INT DEFAULT 0,
+                cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS template_taches (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                template_id INT NOT NULL,
+                titre VARCHAR(200) NOT NULL,
+                priorite VARCHAR(20) DEFAULT 'moyenne',
+                deadline_jours INT DEFAULT NULL,
+                ordre INT DEFAULT 0,
+                FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
+            )
+        """)
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS template_sous_taches (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                template_tache_id INT NOT NULL,
+                titre VARCHAR(200) NOT NULL,
+                ordre INT DEFAULT 0,
+                FOREIGN KEY (template_tache_id) REFERENCES template_taches(id) ON DELETE CASCADE
+            )
+        """)
+        db.commit()
+
+        # Insérer templates par défaut si table vide
+        curseur.execute("SELECT COUNT(*) FROM templates")
+        count = curseur.fetchone()[0]
+        if count == 0:
+            templates_defaut = [
+                {
+                    "user_id": 1,
+                    "titre": "Lancer un projet",
+                    "description": "Toutes les étapes pour démarrer un nouveau projet de A à Z",
+                    "categorie": "projet",
+                    "icone": "🚀",
+                    "taches": [
+                        {"titre": "Définir les objectifs du projet", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Rédiger le cahier des charges", "Identifier les parties prenantes"]},
+                        {"titre": "Constituer l'équipe", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Lister les compétences nécessaires", "Assigner les rôles"]},
+                        {"titre": "Planifier le budget", "priorite": "moyenne", "deadline_jours": 5, "sous_taches": ["Estimer les coûts", "Obtenir les validations"]},
+                        {"titre": "Créer le planning", "priorite": "moyenne", "deadline_jours": 7, "sous_taches": ["Définir les jalons", "Répartir les tâches"]},
+                        {"titre": "Lancer le kick-off", "priorite": "haute", "deadline_jours": 10, "sous_taches": ["Préparer la présentation", "Inviter les parties prenantes"]},
+                    ]
+                },
+                {
+                    "user_id": 1,
+                    "titre": "Préparer un voyage",
+                    "description": "Checklist complète pour organiser votre prochain voyage",
+                    "categorie": "voyage",
+                    "icone": "✈️",
+                    "taches": [
+                        {"titre": "Réserver les billets", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Comparer les prix", "Choisir les dates"]},
+                        {"titre": "Réserver l'hébergement", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Rechercher les hôtels", "Lire les avis"]},
+                        {"titre": "Préparer les documents", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["Vérifier passeport", "Demander visa si nécessaire"]},
+                        {"titre": "Faire la valise", "priorite": "moyenne", "deadline_jours": 14, "sous_taches": ["Liste vêtements", "Médicaments et trousse"]},
+                        {"titre": "Organiser le transport local", "priorite": "basse", "deadline_jours": 7, "sous_taches": ["Location voiture", "Transports en commun"]},
+                    ]
+                },
+                {
+                    "user_id": 1,
+                    "titre": "Routine matinale",
+                    "description": "Démarrez chaque journée avec productivité et énergie",
+                    "categorie": "habitude",
+                    "icone": "🌅",
+                    "taches": [
+                        {"titre": "Sport / Exercice", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Échauffement 5 min", "Séance 20 min"]},
+                        {"titre": "Méditation", "priorite": "moyenne", "deadline_jours": 1, "sous_taches": ["Respiration profonde", "Visualisation"]},
+                        {"titre": "Petit-déjeuner sain", "priorite": "moyenne", "deadline_jours": 1, "sous_taches": ["Préparer les ingrédients", "Manger sans écrans"]},
+                        {"titre": "Planifier sa journée", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Lister les 3 priorités", "Vérifier le calendrier"]},
+                    ]
+                },
+                {
+                    "user_id": 1,
+                    "titre": "Apprendre une compétence",
+                    "description": "Plan structuré pour acquérir une nouvelle compétence en 30 jours",
+                    "categorie": "apprentissage",
+                    "icone": "📚",
+                    "taches": [
+                        {"titre": "Définir l'objectif d'apprentissage", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Niveau cible", "Ressources nécessaires"]},
+                        {"titre": "Trouver les ressources", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Livres / cours en ligne", "Mentors / communautés"]},
+                        {"titre": "Créer un planning d'étude", "priorite": "moyenne", "deadline_jours": 5, "sous_taches": ["Sessions quotidiennes", "Révisions hebdomadaires"]},
+                        {"titre": "Pratiquer chaque jour", "priorite": "haute", "deadline_jours": 7, "sous_taches": ["Exercices pratiques", "Projets personnels"]},
+                        {"titre": "Évaluer les progrès", "priorite": "moyenne", "deadline_jours": 30, "sous_taches": ["Test de niveau", "Ajuster le plan"]},
+                    ]
+                },
+                {
+                    "user_id": 1,
+                    "titre": "Organiser un événement",
+                    "description": "Checklist pour organiser une réunion, fête ou conférence",
+                    "categorie": "evenement",
+                    "icone": "🎉",
+                    "taches": [
+                        {"titre": "Définir le concept", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Thème", "Nombre d'invités"]},
+                        {"titre": "Choisir la date et le lieu", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["Disponibilités", "Réserver le lieu"]},
+                        {"titre": "Envoyer les invitations", "priorite": "moyenne", "deadline_jours": 7, "sous_taches": ["Créer les invitations", "Gérer les RSVP"]},
+                        {"titre": "Préparer la logistique", "priorite": "moyenne", "deadline_jours": 10, "sous_taches": ["Traiteur / nourriture", "Décoration"]},
+                        {"titre": "Jour J — coordination", "priorite": "haute", "deadline_jours": 14, "sous_taches": ["Arrivée anticipée", "Accueil des invités"]},
+                    ]
+                },
+                {
+                    "user_id": 1,
+                    "titre": "Recherche d'emploi",
+                    "description": "Plan complet pour trouver et décrocher votre prochain emploi",
+                    "categorie": "projet",
+                    "icone": "💼",
+                    "taches": [
+                        {"titre": "Mettre à jour le CV", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Expériences récentes", "Compétences clés"]},
+                        {"titre": "Rédiger une lettre de motivation type", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Version générique", "Versions personnalisées"]},
+                        {"titre": "Identifier les offres cibles", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["LinkedIn", "Sites spécialisés"]},
+                        {"titre": "Préparer les entretiens", "priorite": "haute", "deadline_jours": 7, "sous_taches": ["Questions fréquentes", "Recherche sur les entreprises"]},
+                        {"titre": "Relances et suivi", "priorite": "moyenne", "deadline_jours": 14, "sous_taches": ["Tableau de suivi", "Emails de relance"]},
+                    ]
+                },
+            ]
+
+            for tmpl in templates_defaut:
+                curseur.execute(
+                    "INSERT INTO templates (user_id, titre, description, categorie, icone) VALUES (%s, %s, %s, %s, %s)",
+                    (tmpl['user_id'], tmpl['titre'], tmpl['description'], tmpl['categorie'], tmpl['icone'])
+                )
+                template_id = curseur.lastrowid
+                for t in tmpl['taches']:
+                    curseur.execute(
+                        "INSERT INTO template_taches (template_id, titre, priorite, deadline_jours, ordre) VALUES (%s, %s, %s, %s, %s)",
+                        (template_id, t['titre'], t['priorite'], t['deadline_jours'], tmpl['taches'].index(t))
+                    )
+                    tache_id = curseur.lastrowid
+                    for j, st in enumerate(t.get('sous_taches', [])):
+                        curseur.execute(
+                            "INSERT INTO template_sous_taches (template_tache_id, titre, ordre) VALUES (%s, %s, %s)",
+                            (tache_id, st, j)
+                        )
+            db.commit()
+
+        db.close()
+        return jsonify({"message": "Tables templates créées avec succès"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/templates', methods=['GET'])
+def get_templates():
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        categorie = request.args.get('categorie', None)
+        if categorie:
+            curseur.execute("SELECT * FROM templates WHERE categorie=%s ORDER BY utilisations DESC, cree_le DESC", (categorie,))
+        else:
+            curseur.execute("SELECT * FROM templates ORDER BY utilisations DESC, cree_le DESC")
+        templates = curseur.fetchall()
+        for tmpl in templates:
+            curseur.execute("SELECT * FROM template_taches WHERE template_id=%s ORDER BY ordre", (tmpl['id'],))
+            taches = curseur.fetchall()
+            for tache in taches:
+                curseur.execute("SELECT * FROM template_sous_taches WHERE template_tache_id=%s ORDER BY ordre", (tache['id'],))
+                tache['sous_taches'] = curseur.fetchall()
+            tmpl['taches'] = taches
+            # Auteur
+            curseur.execute("SELECT nom FROM users WHERE id=%s", (tmpl['user_id'],))
+            auteur = curseur.fetchone()
+            tmpl['auteur'] = auteur['nom'] if auteur else 'Anonyme'
+        db.close()
+        return jsonify(templates)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/templates', methods=['POST'])
+def creer_template():
+    try:
+        data = request.get_json()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute(
+            "INSERT INTO templates (user_id, titre, description, categorie, icone) VALUES (%s, %s, %s, %s, %s)",
+            (data['user_id'], data['titre'], data.get('description', ''), data.get('categorie', 'autre'), data.get('icone', '📋'))
+        )
+        template_id = curseur.lastrowid
+        for i, tache in enumerate(data.get('taches', [])):
+            curseur.execute(
+                "INSERT INTO template_taches (template_id, titre, priorite, deadline_jours, ordre) VALUES (%s, %s, %s, %s, %s)",
+                (template_id, tache['titre'], tache.get('priorite', 'moyenne'), tache.get('deadline_jours'), i)
+            )
+            tache_id = curseur.lastrowid
+            for j, st in enumerate(tache.get('sous_taches', [])):
+                curseur.execute(
+                    "INSERT INTO template_sous_taches (template_tache_id, titre, ordre) VALUES (%s, %s, %s)",
+                    (tache_id, st['titre'] if isinstance(st, dict) else st, j)
+                )
+        db.commit()
+        db.close()
+        return jsonify({"message": "Template créé", "id": template_id})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/templates/<int:template_id>/utiliser', methods=['POST'])
+def utiliser_template(template_id):
+    try:
+        data = request.get_json()
+        user_id = data['user_id']
+        date_debut = data.get('date_debut')  # ISO string
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+
+        # Charger le template
+        curseur.execute("SELECT * FROM templates WHERE id=%s", (template_id,))
+        tmpl = curseur.fetchone()
+        if not tmpl:
+            return jsonify({"erreur": "Template introuvable"}), 404
+
+        curseur.execute("SELECT * FROM template_taches WHERE template_id=%s ORDER BY ordre", (template_id,))
+        taches = curseur.fetchall()
+
+        taches_creees = []
+        from datetime import datetime, timedelta
+        debut = datetime.fromisoformat(date_debut) if date_debut else datetime.now()
+
+        for tache in taches:
+            deadline = debut + timedelta(days=tache['deadline_jours'] or 7)
+            curseur.execute(
+                "INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)",
+                (tache['titre'], tache['priorite'], deadline.strftime('%Y-%m-%d %H:%M'), user_id)
+            )
+            tache_id = curseur.lastrowid
+
+            curseur.execute("SELECT * FROM template_sous_taches WHERE template_tache_id=%s ORDER BY ordre", (tache['id'],))
+            sous_taches = curseur.fetchall()
+            for j, st in enumerate(sous_taches):
+                curseur.execute(
+                    "INSERT INTO sous_taches (tache_id, titre, ordre) VALUES (%s, %s, %s)",
+                    (tache_id, st['titre'], j)
+                )
+            taches_creees.append(tache_id)
+
+        # Incrémenter le compteur d'utilisations
+        curseur.execute("UPDATE templates SET utilisations=utilisations+1 WHERE id=%s", (template_id,))
+        db.commit()
+        db.close()
+        return jsonify({"message": f"{len(taches_creees)} tâches créées depuis le template", "taches_ids": taches_creees})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/templates/<int:template_id>', methods=['DELETE'])
+def supprimer_template(template_id):
+    try:
+        data = request.get_json()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT user_id FROM templates WHERE id=%s", (template_id,))
+        tmpl = curseur.fetchone()
+        if not tmpl or tmpl['user_id'] != data['user_id']:
+            return jsonify({"erreur": "Non autorisé"}), 403
+        curseur.execute("DELETE FROM templates WHERE id=%s", (template_id,))
+        db.commit()
+        db.close()
+        return jsonify({"message": "Template supprimé"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+# ============================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
