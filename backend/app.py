@@ -2589,7 +2589,7 @@ def tomorrow_builder(user_id):
 
         # 1. Récupérer les tâches actives
         curseur.execute("""
-            SELECT id, titre, priorite, deadline, bloquee
+            SELECT id, titre, priorite, deadline
             FROM taches
             WHERE user_id=%s AND terminee=0
             ORDER BY
