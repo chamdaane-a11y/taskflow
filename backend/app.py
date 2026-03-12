@@ -2756,8 +2756,14 @@ def analyser_procrastination(user_id):
         for t in taches:
             if not t['updated_at'] or not t['deadline']:
                 continue
-            jours_sans_action = (datetime.now() - t['updated_at']).days
-            jours_avant_deadline = (t['deadline'] - datetime.now()).days if t['deadline'] else 999
+            updated_at = t['updated_at']
+            if updated_at and not isinstance(updated_at, datetime):
+                updated_at = datetime.combine(updated_at, datetime.min.time())
+            deadline_dt = t['deadline']
+            if deadline_dt and not isinstance(deadline_dt, datetime):
+                deadline_dt = datetime.combine(deadline_dt, datetime.min.time())
+            jours_sans_action = (datetime.now() - updated_at).days if updated_at else 0
+            jours_avant_deadline = (deadline_dt - datetime.now()).days if deadline_dt else 999
 
             score = 0
             if jours_sans_action > 3 and t['priorite'] == 'haute':
