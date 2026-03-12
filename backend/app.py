@@ -2738,6 +2738,114 @@ def get_saved_planning(user_id):
         return jsonify({"erreur": str(e)}), 500
 
 
+# ============================================
+# SPRINT 5 — TASK DNA
+# ============================================
+
+@app.route('/ia/task-dna', methods=['POST'])
+def analyser_task_dna():
+    """Analyse le DNA d'une tache et predit son succes/abandon"""
+    try:
+        data = request.get_json()
+        titre = data.get('titre', '')
+        priorite = data.get('priorite', 'moyenne')
+        user_id = data.get('user_id')
+        if not titre.strip():
+            return jsonify({"erreur": "Titre requis"}), 400
+
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute(
+            "SELECT titre, priorite, terminee FROM taches WHERE user_id=%s ORDER BY created_at DESC LIMIT 50",
+            (user_id,)
+        )
+        historique = curseur.fetchall()
+
+        total = len(historique)
+        terminees = sum(1 for t in historique if t['terminee'])
+        taux_global = round((terminees / total * 100)) if total > 0 else 50
+        h_p = [t for t in historique if t['priorite'] == priorite]
+        taux_priorite = round(sum(1 for t in h_p if t['terminee']) / len(h_p) * 100) if h_p else taux_global
+        duree_estimee = estimer_duree_tache(titre, priorite)
+
+        from groq import Groq
+        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+
+        dernieres = ', '.join([t['titre'][:25] for t in historique[:5]])
+        prompt = (
+            "Tu es un expert en productivite. Analyse cette tache et genere son Task DNA.\n\n"
+            f"TACHE: \"{titre}\" | Priorite: {priorite} | Duree estimee: {duree_estimee}min\n"
+            f"HISTORIQUE: Taux completion global: {taux_global}% | Priorite {priorite!r}: {taux_priorite}%\n"
+            f"Dernieres taches: {dernieres}\n\n"
+            "Reponds UNIQUEMENT en JSON valide:\n"
+            "{\n"
+            '  \"score_viabilite\": <0-100>,\n'
+            '  \"prediction\": \"succes\" ou \"abandon\" ou \"risque\",\n'
+            '  \"categorie\": \"<deep_work|communication|routine|projet|quick_win|apprentissage|administratif>\",\n'
+            '  \"emoji_categorie\": \"<emoji>\",\n'
+            '  \"label_categorie\": \"<nom francais>\",\n'
+            f'  \"duree_estimee\": {duree_estimee},\n'
+            '  \"duree_label\": \"<ex: 45 min>\",\n'
+            '  \"facteurs_succes\": [\"<f1>\", \"<f2>\"],\n'
+            '  \"facteurs_risque\": [\"<r1>\", \"<r2>\"],\n'
+            '  \"conseil_principal\": \"<conseil 1-2 phrases>\",\n'
+            '  \"conseil_reformulation\": \"<titre ameliore ou null>\",\n'
+            '  \"niveau_complexite\": \"faible\" ou \"moyenne\" ou \"elevee\",\n'
+            '  \"meilleur_moment\": \"<matin|apres-midi|soir>\",\n'
+            '  \"explication_score\": \"<explication 1 phrase>\"\n'
+            "}"
+        )
+
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800, temperature=0.6
+        )
+        contenu = response.choices[0].message.content.strip()
+        if '```json' in contenu:
+            contenu = contenu.split('```json')[1].split('```')[0].strip()
+        elif '```' in contenu:
+            contenu = contenu.split('```')[1].split('```')[0].strip()
+        dna = json.loads(contenu)
+
+        sql_create = (
+            "CREATE TABLE IF NOT EXISTS task_dna_analyses ("
+            "id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, "
+            "titre_tache VARCHAR(200), score_viabilite INT, prediction VARCHAR(20), "
+            "categorie VARCHAR(50), dna_json LONGTEXT, "
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+            "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)"
+        )
+        curseur.execute(sql_create)
+        curseur.execute(
+            "INSERT INTO task_dna_analyses (user_id, titre_tache, score_viabilite, prediction, categorie, dna_json) VALUES (%s,%s,%s,%s,%s,%s)",
+            (user_id, titre, dna.get('score_viabilite'), dna.get('prediction'), dna.get('categorie'), json.dumps(dna))
+        )
+        db.commit()
+        db.close()
+        return jsonify(dna)
+    except Exception as e:
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
+
+
+
+@app.route('/ia/task-dna/stats/<int:user_id>', methods=['GET'])
+def get_dna_stats(user_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT categorie, COUNT(*) as total, AVG(score_viabilite) as score_moyen FROM task_dna_analyses WHERE user_id=%s GROUP BY categorie ORDER BY total DESC", (user_id,))
+        stats = curseur.fetchall()
+        curseur.execute("SELECT AVG(score_viabilite) as score_global, COUNT(*) as total_analyses FROM task_dna_analyses WHERE user_id=%s", (user_id,))
+        g = curseur.fetchone()
+        db.close()
+        return jsonify({"stats_par_categorie": stats, "score_global": round(g['score_global'] or 0), "total_analyses": g['total_analyses'] or 0})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
 @app.route('/ia/procrastination/<int:user_id>', methods=['GET'])
 def analyser_procrastination(user_id):
     """Détecte les tâches procrastinées et génère des alertes"""
