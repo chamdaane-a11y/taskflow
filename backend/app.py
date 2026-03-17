@@ -2960,10 +2960,10 @@ def get_coach_context(user_id, curseur):
     curseur.execute("SELECT COUNT(*) as actives FROM taches WHERE user_id=%s AND terminee=0", (user_id,))
     actives = curseur.fetchone()['actives']
     # Streak
-    curseur.execute("SELECT streak, prenom FROM users WHERE id=%s", (user_id,))
+    curseur.execute("SELECT streak, nom FROM users WHERE id=%s", (user_id,))
     user_row = curseur.fetchone()
     streak = user_row['streak'] if user_row else 0
-    prenom = user_row['prenom'] if user_row else 'Utilisateur'
+    prenom = user_row['nom'] if user_row else 'Utilisateur'
     taux = round(done / total * 100) if total > 0 else 0
 
     return {
