@@ -2922,6 +2922,240 @@ def trigger_tomorrow_builder_notif():
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+
+# ============================================
+# SPRINT 6 — ACCOUNTABILITY PARTNER AI (COACH)
+# ============================================
+
+COACH_STYLES = {
+    "bienveillant": {
+        "nom": "Alex",
+        "emoji": "🤗",
+        "description": "Doux, encourageant, toujours positif",
+        "persona": "Tu es Alex, un coach bienveillant et empathique. Tu encourages toujours, tu celebres chaque petite victoire, tu utilises un langage chaleureux et positif. Tu ne juges jamais. Tu poses des questions douces pour comprendre les blocages."
+    },
+    "motivateur": {
+        "nom": "Max",
+        "emoji": "🔥",
+        "description": "Energique, challengeant, pousse à se dépasser",
+        "persona": "Tu es Max, un coach motivateur et dynamique. Tu challenges l'utilisateur, tu utilises un langage energique et direct. Tu crois fermement en son potentiel et tu le pousses a se depasser. Tu utilises des metaphores sportives et des appels a l'action forts."
+    },
+    "analytique": {
+        "nom": "Nova",
+        "emoji": "📊",
+        "description": "Précis, basé sur les données, factuel",
+        "persona": "Tu es Nova, un coach analytique et precis. Tu bases tes conseils sur les donnees et les faits. Tu identifies des patterns, tu proposes des strategies concretes et mesurables. Tu es neutre emotionnellement mais tres efficace."
+    }
+}
+
+def get_coach_context(user_id, curseur):
+    """Construit le contexte complet de l'utilisateur pour le coach"""
+    # Tâches
+    curseur.execute("SELECT COUNT(*) as total FROM taches WHERE user_id=%s", (user_id,))
+    total = curseur.fetchone()['total']
+    curseur.execute("SELECT COUNT(*) as done FROM taches WHERE user_id=%s AND terminee=1", (user_id,))
+    done = curseur.fetchone()['done']
+    curseur.execute("SELECT COUNT(*) as retard FROM taches WHERE user_id=%s AND terminee=0 AND deadline < NOW()", (user_id,))
+    retard = curseur.fetchone()['retard']
+    curseur.execute("SELECT COUNT(*) as actives FROM taches WHERE user_id=%s AND terminee=0", (user_id,))
+    actives = curseur.fetchone()['actives']
+    # Streak
+    curseur.execute("SELECT streak, prenom FROM users WHERE id=%s", (user_id,))
+    user_row = curseur.fetchone()
+    streak = user_row['streak'] if user_row else 0
+    prenom = user_row['prenom'] if user_row else 'Utilisateur'
+    taux = round(done / total * 100) if total > 0 else 0
+
+    return {
+        "prenom": prenom,
+        "total_taches": total,
+        "taches_terminees": done,
+        "taches_actives": actives,
+        "taches_en_retard": retard,
+        "taux_completion": taux,
+        "streak": streak
+    }
+
+@app.route('/ia/coach/styles', methods=['GET'])
+def get_coach_styles():
+    styles = []
+    for key, val in COACH_STYLES.items():
+        styles.append({"id": key, "nom": val["nom"], "emoji": val["emoji"], "description": val["description"]})
+    return jsonify({"styles": styles})
+
+@app.route('/ia/coach/chat', methods=['POST'])
+def coach_chat():
+    """Chat interactif avec le coach IA"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        message = data.get('message', '')
+        style = data.get('style', 'bienveillant')
+        historique = data.get('historique', [])
+
+        if not message.strip():
+            return jsonify({"erreur": "Message vide"}), 400
+
+        coach = COACH_STYLES.get(style, COACH_STYLES['bienveillant'])
+
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        ctx = get_coach_context(user_id, curseur)
+
+        # Sauvegarder message user
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS coach_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                role VARCHAR(10),
+                contenu TEXT,
+                style_coach VARCHAR(30),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        curseur.execute(
+            "INSERT INTO coach_messages (user_id, role, contenu, style_coach) VALUES (%s, %s, %s, %s)",
+            (user_id, 'user', message, style)
+        )
+
+        from groq import Groq
+        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+
+        system_prompt = (
+            coach['persona'] + "\n\n"
+            f"PROFIL DE {ctx['prenom'].upper()}:\n"
+            f"- Taches actives: {ctx['taches_actives']} | Terminees: {ctx['taches_terminees']} | En retard: {ctx['taches_en_retard']}\n"
+            f"- Taux de completion: {ctx['taux_completion']}%\n"
+            f"- Streak actuel: {ctx['streak']} jours\n\n"
+            "Reponds en francais, de facon concise (3-5 phrases max). "
+            "Tu connais le profil de l'utilisateur et tu t'y referes naturellement. "
+            "Ne repete pas les donnees chiffrees a chaque fois, integre-les naturellement."
+        )
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for h in historique[-6:]:
+            messages.append({"role": h['role'], "content": h['contenu']})
+        messages.append({"role": "user", "content": message})
+
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            max_tokens=400,
+            temperature=0.8
+        )
+        reponse = response.choices[0].message.content.strip()
+
+        curseur.execute(
+            "INSERT INTO coach_messages (user_id, role, contenu, style_coach) VALUES (%s, %s, %s, %s)",
+            (user_id, 'assistant', reponse, style)
+        )
+        db.commit()
+        db.close()
+
+        return jsonify({"reponse": reponse, "coach": {"nom": coach['nom'], "emoji": coach['emoji']}})
+
+    except Exception as e:
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
+
+@app.route('/ia/coach/rapport/<int:user_id>', methods=['GET'])
+def coach_rapport(user_id):
+    """Génère un rapport automatique hebdomadaire du coach"""
+    try:
+        style = request.args.get('style', 'bienveillant')
+        coach = COACH_STYLES.get(style, COACH_STYLES['bienveillant'])
+
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        ctx = get_coach_context(user_id, curseur)
+
+        # Tâches complétées cette semaine
+        curseur.execute("""
+            SELECT COUNT(*) as nb FROM taches
+            WHERE user_id=%s AND terminee=1
+            AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        """, (user_id,))
+        terminees_semaine = curseur.fetchone()['nb']
+
+        # Tâches créées cette semaine
+        curseur.execute("""
+            SELECT COUNT(*) as nb FROM taches
+            WHERE user_id=%s AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        """, (user_id,))
+        creees_semaine = curseur.fetchone()['nb']
+
+        from groq import Groq
+        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+
+        prompt = (
+            coach['persona'] + "\n\n"
+            f"Genere un rapport de coaching hebdomadaire pour {ctx['prenom']}.\n\n"
+            f"DONNEES DE LA SEMAINE:\n"
+            f"- Taches completees: {terminees_semaine}\n"
+            f"- Taches creees: {creees_semaine}\n"
+            f"- Taches en retard: {ctx['taches_en_retard']}\n"
+            f"- Taux completion global: {ctx['taux_completion']}%\n"
+            f"- Streak: {ctx['streak']} jours\n\n"
+            "Reponds en JSON valide:\n"
+            '{"titre": "<titre motivant>", '
+            '"note_semaine": <1-10>, '
+            '"resume": "<resume 2-3 phrases>", '
+            '"point_fort": "<meilleur point de la semaine>", '
+            '"point_amelioration": "<un axe d amelioration>", '
+            '"defi_semaine_prochaine": "<un defi concret et mesurable>", '
+            '"message_coach": "<message personnalise 2-3 phrases dans le style du coach>"}'
+        )
+
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=600, temperature=0.75
+        )
+        contenu = response.choices[0].message.content.strip()
+        if '```json' in contenu:
+            contenu = contenu.split('```json')[1].split('```')[0].strip()
+        elif '```' in contenu:
+            contenu = contenu.split('```')[1].split('```')[0].strip()
+
+        rapport = json.loads(contenu)
+        rapport['coach'] = {"nom": coach['nom'], "emoji": coach['emoji'], "style": style}
+        rapport['stats'] = {
+            "terminees_semaine": terminees_semaine,
+            "creees_semaine": creees_semaine,
+            "taux_completion": ctx['taux_completion'],
+            "streak": ctx['streak']
+        }
+
+        db.close()
+        return jsonify(rapport)
+
+    except Exception as e:
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
+
+@app.route('/ia/coach/historique/<int:user_id>', methods=['GET'])
+def get_coach_historique(user_id):
+    """Récupère l'historique des messages coach"""
+    try:
+        style = request.args.get('style', 'bienveillant')
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT role, contenu, created_at FROM coach_messages
+            WHERE user_id=%s AND style_coach=%s
+            ORDER BY created_at DESC LIMIT 20
+        """, (user_id, style))
+        messages = curseur.fetchall()
+        db.close()
+        for m in messages:
+            m['created_at'] = str(m['created_at'])
+        return jsonify({"messages": list(reversed(messages))})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 # ============================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
