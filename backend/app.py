@@ -3165,36 +3165,56 @@ def goal_reverse():
     objectif = data.get('objectif')
     deadline = data.get('deadline')
     niveau = data.get('niveau', 'realiste')
-
-    from datetime import datetime
     aujourd_hui = datetime.now().strftime('%Y-%m-%d')
-    
-    prompt = f"""Tu es un expert en planification et productivité. 
-Un utilisateur veut atteindre cet objectif : "{objectif}"
-Deadline finale : {deadline}
-Niveau d'ambition : {niveau}
+
+    prompt = f"""Tu es un expert en productivité, planification stratégique et coaching pour débutants.
+Ton rôle est de faire du Goal Reverse Engineering :
+tu pars d'un objectif final et tu reconstruis le chemin étape par étape, de manière logique, réaliste et actionnable.
+
+⚠️ IMPORTANT :
+L'utilisateur est débutant. Tu dois :
+- simplifier au maximum
+- éviter le jargon
+- proposer des actions concrètes
+- détailler suffisamment sans être confus
+
+🎯 CONTEXTE UTILISATEUR :
+Objectif : {objectif}
+Deadline : {deadline}
+Niveau : {niveau} (realiste, ambitieux, extreme)
 Date d'aujourd'hui : {aujourd_hui}
 
-Décompose cet objectif à rebours en jalons hebdomadaires puis en tâches concrètes.
+🧠 INSTRUCTIONS :
+1. Analyse l'objectif et estime sa complexité, les compétences nécessaires, les étapes clés
+2. Crée un plan en remontant depuis l'objectif final, découpé en jalons par semaine
+3. Pour chaque jalon : titre clair, semaine, date de fin, difficulté (faible/moyenne/élevée)
+4. Pour chaque jalon, créer des tâches concrètes faisables en moins de 1h :
+   - titre, durée estimée (minutes), priorité (faible/moyenne/haute), deadline cohérente
+5. Adapter selon le niveau :
+   - realiste → rythme lent, marge de sécurité
+   - ambitieux → rythme soutenu
+   - extreme → intensité élevée, peu de marge
+6. Calculer durée totale en semaines et score de faisabilité (0 à 100)
+7. Identifier les risques (manque de temps, compétences, motivation)
+8. Donner un conseil global personnalisé
 
-Réponds UNIQUEMENT avec un JSON valide, sans texte avant ou après, sans balises markdown :
+📦 FORMAT DE SORTIE JSON STRICT — aucun texte en dehors :
 {{
-  "objectif": "...",
-  "deadline": "{deadline}",
-  "duree_semaines": <nombre>,
-  "score_faisabilite": <0-100>,
-  "conseil_global": "...",
+  "duree_semaines": <number>,
+  "score_faisabilite": <number>,
+  "conseil_global": "<string>",
+  "risques": ["<string>"],
   "jalons": [
     {{
-      "semaine": 1,
-      "titre": "...",
+      "semaine": <number>,
+      "titre": "<string>",
       "date_fin": "YYYY-MM-DD",
-      "difficulte": "faible|moyenne|élevée",
+      "difficulte": "faible | moyenne | élevée",
       "taches": [
         {{
-          "titre": "...",
-          "priorite": "haute|moyenne|basse",
-          "duree_estimee": <minutes>,
+          "titre": "<string>",
+          "duree_estimee": <number>,
+          "priorite": "faible | moyenne | haute",
           "deadline": "YYYY-MM-DD"
         }}
       ]
@@ -3202,22 +3222,21 @@ Réponds UNIQUEMENT avec un JSON valide, sans texte avant ou après, sans balise
   ]
 }}
 
-Règles :
-- Maximum 8 jalons
-- Maximum 4 tâches par jalon
-- Les deadlines des tâches doivent être entre aujourd'hui et {deadline}
-- Adapte la densité au niveau : réaliste=léger, ambitieux=dense, extrême=très dense
-- Le conseil_global doit être personnalisé et actionnable"""
+⚠️ RÈGLES STRICTES :
+- JSON uniquement, aucun texte en dehors, pas de balises markdown
+- Dates cohérentes entre {aujourd_hui} et {deadline}
+- Maximum 8 jalons, maximum 4 tâches par jalon
+- Tâches simples, concrètes, logique progressive
+- Adapte la densité : realiste=léger, ambitieux=dense, extreme=très dense"""
 
     try:
         response = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
-            max_tokens=2000
+            max_tokens=2500
         )
         raw = response.choices[0].message.content.strip()
-        # Nettoyer si balises markdown
         if raw.startswith('```'):
             raw = raw.split('```')[1]
             if raw.startswith('json'):
