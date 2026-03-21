@@ -3211,7 +3211,7 @@ Règles :
 
     try:
         response = groq_client.chat.completions.create(
-            model="llama3-70b-8192",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
             max_tokens=2000
@@ -3237,7 +3237,7 @@ def goal_reverse_importer():
     
     ids_crees = []
     try:
-        conn = get_db_connection()
+        conn = connecter()
         cursor = conn.cursor()
         for t in taches:
             cursor.execute(
@@ -3256,7 +3256,6 @@ def goal_reverse_importer():
     except Exception as e:
         print(f"Erreur import goal: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 # ============================================
 if __name__ == '__main__':
