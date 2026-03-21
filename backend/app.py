@@ -3156,6 +3156,108 @@ def get_coach_historique(user_id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+# ===== SPRINT 7 — GOAL REVERSE ENGINEERING =====
+
+@app.route('/ia/goal-reverse', methods=['POST'])
+def goal_reverse():
+    data = request.json
+    user_id = data.get('user_id')
+    objectif = data.get('objectif')
+    deadline = data.get('deadline')
+    niveau = data.get('niveau', 'realiste')
+
+    from datetime import datetime
+    aujourd_hui = datetime.now().strftime('%Y-%m-%d')
+    
+    prompt = f"""Tu es un expert en planification et productivité. 
+Un utilisateur veut atteindre cet objectif : "{objectif}"
+Deadline finale : {deadline}
+Niveau d'ambition : {niveau}
+Date d'aujourd'hui : {aujourd_hui}
+
+Décompose cet objectif à rebours en jalons hebdomadaires puis en tâches concrètes.
+
+Réponds UNIQUEMENT avec un JSON valide, sans texte avant ou après, sans balises markdown :
+{{
+  "objectif": "...",
+  "deadline": "{deadline}",
+  "duree_semaines": <nombre>,
+  "score_faisabilite": <0-100>,
+  "conseil_global": "...",
+  "jalons": [
+    {{
+      "semaine": 1,
+      "titre": "...",
+      "date_fin": "YYYY-MM-DD",
+      "difficulte": "faible|moyenne|élevée",
+      "taches": [
+        {{
+          "titre": "...",
+          "priorite": "haute|moyenne|basse",
+          "duree_estimee": <minutes>,
+          "deadline": "YYYY-MM-DD"
+        }}
+      ]
+    }}
+  ]
+}}
+
+Règles :
+- Maximum 8 jalons
+- Maximum 4 tâches par jalon
+- Les deadlines des tâches doivent être entre aujourd'hui et {deadline}
+- Adapte la densité au niveau : réaliste=léger, ambitieux=dense, extrême=très dense
+- Le conseil_global doit être personnalisé et actionnable"""
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=2000
+        )
+        raw = response.choices[0].message.content.strip()
+        # Nettoyer si balises markdown
+        if raw.startswith('```'):
+            raw = raw.split('```')[1]
+            if raw.startswith('json'):
+                raw = raw[4:]
+        result = json.loads(raw)
+        return jsonify(result)
+    except Exception as e:
+        print(f"Erreur goal-reverse: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/ia/goal-reverse/importer', methods=['POST'])
+def goal_reverse_importer():
+    data = request.json
+    user_id = data.get('user_id')
+    taches = data.get('taches', [])
+    
+    ids_crees = []
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        for t in taches:
+            cursor.execute(
+                """INSERT INTO taches (titre, priorite, deadline, user_id, terminee, bloquee)
+                   VALUES (%s, %s, %s, %s, FALSE, FALSE)""",
+                (t['titre'], t['priorite'], t['deadline'], user_id)
+            )
+            ids_crees.append(cursor.lastrowid)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({
+            "message": f"{len(ids_crees)} tâches importées avec succès",
+            "ids": ids_crees
+        })
+    except Exception as e:
+        print(f"Erreur import goal: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 # ============================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
