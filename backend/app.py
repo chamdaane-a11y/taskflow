@@ -3241,8 +3241,8 @@ def goal_reverse_importer():
         cursor = conn.cursor()
         for t in taches:
             cursor.execute(
-                """INSERT INTO taches (titre, priorite, deadline, user_id, terminee, bloquee)
-                   VALUES (%s, %s, %s, %s, FALSE, FALSE)""",
+                """INSERT INTO taches (titre, priorite, deadline, user_id)
+                   VALUES (%s, %s, %s, %s)""",
                 (t['titre'], t['priorite'], t['deadline'], user_id)
             )
             ids_crees.append(cursor.lastrowid)
@@ -3256,7 +3256,7 @@ def goal_reverse_importer():
     except Exception as e:
         print(f"Erreur import goal: {e}")
         return jsonify({"error": str(e)}), 500
-
+    
 # ============================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
