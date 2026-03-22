@@ -1,0 +1,19 @@
+ backend/app.py                             | 126 [32m++++++++++++++++[m[31m-[m
+ frontend-react/index.html                  |  32 [32m++[m[31m---[m
+ frontend-react/package-lock.json           |  11 [32m++[m
+ frontend-react/package.json                |   1 [32m+[m
+ frontend-react/public/manifest.json        |  95 [32m+++++++++++[m[31m--[m
+ frontend-react/requirements.txt            |   1 [31m-[m
+ frontend-react/src/pages/Analytics.jsx     |   2 [32m+[m[31m-[m
+ frontend-react/src/pages/CGU.jsx           |  94 [32m++++++[m[31m------[m
+ frontend-react/src/pages/Collaboration.jsx | 997 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m[31m-------------------------------------------------[m
+ frontend-react/src/pages/Dashboard.jsx     | 637 [32m++++++++++++++++++++++++++++++++++[m[31m------------------------------------------------[m
+ frontend-react/src/pages/Help.jsx          |  12 [32m+[m[31m-[m
+ frontend-react/src/pages/IAChat.jsx        | 759 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m[31m--------------------------------------[m
+ frontend-react/src/pages/Landing.jsx       |  65 [32m++++[m[31m-----[m
+ frontend-react/src/pages/Login.jsx         | 373 [32m++++++++++++++++++++++++++[m[31m----------------------[m
+ frontend-react/src/pages/Planification.jsx |   2 [32m+[m[31m-[m
+ frontend-react/src/pages/Profile.jsx       | 558 [32m++++++++++++++++++++++++[m[31m------------------------------------------------[m
+ frontend-react/src/pages/Register.jsx      | 464 [32m+++++++++++++++++++++++++++++++++[m[31m---------------------------[m
+ frontend-react/src/pages/Splash.jsx        | 245 [32m++++++++++++[m[31m--------------------[m
+ 18 files changed, 2381 insertions(+), 2093 deletions(-)

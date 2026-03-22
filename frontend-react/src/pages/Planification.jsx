@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 
-const API = 'https://taskflow-production-75c1.up.railway.app'
+const API = 'https://getshift-backend.onrender.com'
 const HEURES = Array.from({ length: 12 }, (_, i) => i + 8)
 
 export default function Planification() {
@@ -216,7 +216,7 @@ export default function Planification() {
           <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px ${T.accent}40` }}>
             <Layers size={15} color="#fff" strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: '-0.4px' }}>TaskFlow</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: '-0.4px' }}>GetShift</span>
         </div>
 
         {/* Nav */}

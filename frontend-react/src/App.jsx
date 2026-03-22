@@ -13,11 +13,16 @@ import ResetPassword from './pages/ResetPassword'
 import Profile from './pages/Profile'
 import Landing from './pages/Landing'
 import CGU from './pages/CGU'
+import TomorrowBuilder from './pages/TomorrowBuilder'
+import Settings from './pages/Settings'
+import GoalReverse from './pages/GoalReverse'
 
 function App() {
   return (
     <HashRouter>
       <Routes>
+        <Route path="/goal" element={<GoalReverse />} />
+        <Route path="/tomorrow" element={<TomorrowBuilder />} />
         <Route path="/cgu" element={<CGU />} />
         <Route path="/" element={<Landing />} />
         <Route path="/splash" element={<Splash />} />
@@ -31,6 +36,7 @@ function App() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/planification" element={<Planification />} />
         <Route path="/collaboration" element={<Collaboration />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/help" element={<Help />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

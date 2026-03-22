@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -10,7 +10,7 @@ const FEATURES = [
   {
     icon: Bot,
     titre: 'Assistant IA',
-    desc: 'Générez des tâches automatiquement, planifiez votre semaine et obtenez des conseils personnalisés grâce à l\'intelligence artificielle.',
+    desc: "Générez des tâches automatiquement, planifiez votre semaine et obtenez des conseils personnalisés grâce à l'intelligence artificielle.",
     couleur: '#6C63FF',
   },
   {
@@ -28,13 +28,13 @@ const FEATURES = [
   {
     icon: Calendar,
     titre: 'Planification Intelligente',
-    desc: 'Planifiez votre semaine avec l\'IA, exportez vers Google Calendar et ne manquez plus aucune deadline.',
+    desc: "Planifiez votre semaine avec l'IA, exportez vers Google Calendar et ne manquez plus aucune deadline.",
     couleur: '#0ea5e9',
   },
   {
     icon: Target,
     titre: 'Priorité Intelligente',
-    desc: 'Score de priorité automatique basé sur vos deadlines, l\'urgence et l\'importance de chaque tâche.',
+    desc: 'Score de priorité automatique basé sur vos deadlines, urgence et importance de chaque tâche.',
     couleur: '#e05c5c',
   },
   {
@@ -56,7 +56,7 @@ const TEMOIGNAGES = [
   {
     nom: 'Sarah M.',
     role: 'Product Manager',
-    texte: 'TaskFlow a complètement transformé ma façon de travailler. L\'assistant IA me fait gagner un temps précieux chaque jour.',
+    texte: "GetShift a complètement transformé ma façon de travailler. L'assistant IA me fait gagner un temps précieux chaque jour.",
     avatar: 'S', couleur: '#6C63FF'
   },
   {
@@ -68,7 +68,7 @@ const TEMOIGNAGES = [
   {
     nom: 'Amina D.',
     role: 'Entrepreneur',
-    texte: 'Je gère toute mon équipe avec TaskFlow. Simple, puissant et élégant. Je ne pourrais plus m\'en passer.',
+    texte: "Je gère toute mon équipe avec GetShift. Simple, puissant et élégant. Je ne pourrais plus m'en passer.",
     avatar: 'A', couleur: '#C9A84C'
   },
 ]
@@ -118,21 +118,17 @@ export default function Landing() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .gradient-text { background: linear-gradient(135deg, #6C63FF, #00C896); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         html { scroll-behavior: smooth; }
-
         @media (max-width: 900px) {
           .pricing-grid { grid-template-columns: 1fr !important; max-width: 480px; margin: 0 auto; }
           .temoignages-grid { grid-template-columns: 1fr !important; max-width: 520px; margin: 0 auto; }
         }
-
         @media (max-width: 768px) {
           .features-grid { grid-template-columns: 1fr 1fr !important; }
           .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .nav-links { display: none !important; }
           .hero-ctas { flex-direction: column !important; align-items: stretch !important; }
           .mockup-sidebar { display: none !important; }
-          .mockup-stats { grid-template-columns: repeat(2, 1fr) !important; }
         }
-
         @media (max-width: 480px) {
           .features-grid { grid-template-columns: 1fr !important; }
           .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -144,18 +140,12 @@ export default function Landing() {
 
       {/* NAVBAR */}
       <motion.nav initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
-        style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-          height: 64, padding: '0 clamp(20px, 5vw, 80px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(248,249,252,0.92)', backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(0,0,0,0.06)'
-        }}>
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 64, padding: '0 clamp(20px, 5vw, 80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(248,249,252,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(108,99,255,0.25)' }}>
             <Layers size={17} color="white" strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>TaskFlow</span>
+          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>GetShift</span>
         </div>
         <div className="nav-links" style={{ display: 'flex', gap: 36 }}>
           {[['#fonctionnalites', 'Fonctionnalités'], ['#tarifs', 'Tarifs'], ['#temoignages', 'Témoignages']].map(([href, label]) => (
@@ -171,7 +161,6 @@ export default function Landing() {
           <motion.button onClick={() => navigate('/register')} whileHover={{ scale: 1.02, boxShadow: '0 8px 25px rgba(108,99,255,0.3)' }}
             style={{ padding: '8px 18px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', border: 'none', borderRadius: 9, color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 14px rgba(108,99,255,0.2)', whiteSpace: 'nowrap' }}>
             <span className="nav-btn-text">Essayer gratuitement</span>
-            <span style={{ display: 'none' }} className="nav-btn-short">Essayer</span>
           </motion.button>
         </div>
       </motion.nav>
@@ -198,7 +187,7 @@ export default function Landing() {
 
         <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
           style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: '#64748b', maxWidth: 560, lineHeight: 1.75, marginBottom: 40, fontWeight: 400 }}>
-          TaskFlow combine la gestion de tâches et l'IA pour vous aider à accomplir plus, en moins de temps. Gratuit, puissant et conçu pour les ambitieux.
+          GetShift combine la gestion de tâches et l'IA pour vous aider à accomplir plus, en moins de temps. Gratuit, puissant et conçu pour les ambitieux.
         </motion.p>
 
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
@@ -306,7 +295,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: 'center', marginBottom: 56 }}>
             <div style={{ display: 'inline-block', fontSize: 12, color: '#C9A84C', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14, background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 99, padding: '5px 14px' }}>Témoignages</div>
-            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 46px)', fontWeight: 800, letterSpacing: '-1.5px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>Ils font confiance à TaskFlow</h2>
+            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 46px)', fontWeight: 800, letterSpacing: '-1.5px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>Ils font confiance à GetShift</h2>
           </motion.div>
           <div className="temoignages-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
             {TEMOIGNAGES.map((t, i) => (
@@ -391,24 +380,24 @@ export default function Landing() {
 
       {/* FOOTER */}
       <footer style={{ padding: 'clamp(32px, 5vh, 48px) clamp(20px, 5vw, 80px)', borderTop: '1px solid #f1f5f9', background: 'white' }}>
-      <div className="footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Layers size={13} color="white" strokeWidth={2.5} />
+        <div className="footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Layers size={13} color="white" strokeWidth={2.5} />
+            </div>
+            <span style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>GetShift</span>
           </div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>TaskFlow</span>
-        </div>
-        <p style={{ fontSize: 13, color: '#94a3b8' }}>© 2026 TaskFlow. Tous droits réservés.</p>
-        <div style={{ display: 'flex', gap: 24 }}>
-          {[
-            { label: 'CGU', action: () => navigate('/cgu') },
-            { label: 'Confidentialité', action: () => navigate('/cgu') },
-            { label: 'Contact', action: () => window.location.href = 'mailto:chamdaane@gmail.com' },
-          ].map(link => (
-            <span key={link.label} onClick={link.action} style={{ fontSize: 13, color: '#94a3b8', cursor: 'pointer', transition: 'color 0.2s' }}
-              onMouseEnter={e => e.target.style.color = '#0f172a'} onMouseLeave={e => e.target.style.color = '#94a3b8'}>{link.label}</span>
-          ))}
-        </div>
+          <p style={{ fontSize: 13, color: '#94a3b8' }}>© 2026 GetShift. Tous droits réservés.</p>
+          <div style={{ display: 'flex', gap: 24 }}>
+            {[
+              { label: 'CGU', action: () => navigate('/cgu') },
+              { label: 'Confidentialité', action: () => navigate('/cgu') },
+              { label: 'Contact', action: () => window.location.href = 'mailto:chamdaane@gmail.com' },
+            ].map(link => (
+              <span key={link.label} onClick={link.action} style={{ fontSize: 13, color: '#94a3b8', cursor: 'pointer', transition: 'color 0.2s' }}
+                onMouseEnter={e => e.target.style.color = '#0f172a'} onMouseLeave={e => e.target.style.color = '#94a3b8'}>{link.label}</span>
+            ))}
+          </div>
         </div>
       </footer>
     </div>

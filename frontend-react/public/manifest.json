@@ -1,20 +1,95 @@
 {
-  "name": "TaskFlow - Gestionnaire de tâches",
-  "short_name": "TaskFlow",
+  "name": "GetShift - Gestionnaire de tâches",
+  "short_name": "GetShift",
   "description": "Gérez vos tâches avec l'IA, gamification et collaboration",
-  "start_url": "/taskflow/",
-  "scope": "/taskflow/",
+  "start_url": "/getshift/",
+  "scope": "/getshift/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0f1117",
   "theme_color": "#6c63ff",
   "lang": "fr",
+  "categories": ["productivity", "utilities"],
   "icons": [
-    { "src": "/taskflow/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/taskflow/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "/getshift/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/getshift/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/getshift/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/getshift/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/getshift/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/getshift/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/getshift/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/getshift/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/getshift/icons/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/getshift/icons/screenshot-narrow.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
   ],
   "shortcuts": [
-    { "name": "Tableau de bord", "url": "/taskflow/#/dashboard" },
-    { "name": "Assistant IA", "url": "/taskflow/#/ia" }
-  ]
+    {
+      "name": "Nouvelle tâche",
+      "short_name": "Ajouter",
+      "description": "Ajouter une nouvelle tâche",
+      "url": "/getshift/#/dashboard",
+      "icons": [{ "src": "/getshift/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Assistant IA",
+      "short_name": "IA",
+      "description": "Ouvrir l'assistant IA",
+      "url": "/getshift/#/ia",
+      "icons": [{ "src": "/getshift/icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

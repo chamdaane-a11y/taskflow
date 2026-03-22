@@ -73,7 +73,7 @@ def envoyer_email(to_email, subject, html_content):
         return False
 
 def envoyer_email_verification(email, nom, token):
-    lien = f"https://taskflow-production-75c1.up.railway.app/verify-email/{token}"
+    lien = f"https://getshift-backend.onrender.com/verify-email/{token}"
     html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
         <h1 style="color:#6c63ff;">GetShift</h1>
         <h2>Bonjour {nom} !</h2>

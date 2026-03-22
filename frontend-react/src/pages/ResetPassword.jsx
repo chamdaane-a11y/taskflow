@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import axios from 'axios'
 
-const API = 'https://taskflow-production-75c1.up.railway.app'
+const API = 'https://getshift-backend.onrender.com'
 
 export default function ResetPassword() {
   const { token } = useParams()

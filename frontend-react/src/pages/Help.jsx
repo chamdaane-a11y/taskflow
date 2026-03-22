@@ -11,17 +11,17 @@ import {
   UserPlus, ListTodo, Trophy, TrendingUp, Share2
 } from 'lucide-react'
 
-const API = 'https://taskflow-production-75c1.up.railway.app'
+const API = 'https://getshift-backend.onrender.com'
 
 const stepIcons = [UserPlus, ListTodo, Sparkles, Trophy, TrendingUp, Bell, Share2, Palette]
 
 const steps = [
   {
     num: 1,
-    icon: '👤➕',
+    icon: '📝',
     title: 'Créer ton compte',
     color: '#6c63ff',
-    description: 'Commence par créer ton compte TaskFlow gratuitement.',
+    description: 'Commence par créer ton compte GetShift gratuitement.',
     details: [
       'Va sur la page d\'accueil et clique sur "Créer un compte"',
       'Entre ton nom, email et mot de passe',
@@ -213,7 +213,7 @@ const steps = [
               <div style={{ width: 40, padding: 6, background: T.bg3, borderRadius: 6, border: `1px solid #e05c5c40` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 3 }}>
                   <Bell size={8} color="#e05c5c" />
-                  <span style={{ fontSize: 7, fontWeight: 600, color: T.text }}>TaskFlow</span>
+                  <span style={{ fontSize: 7, fontWeight: 600, color: T.text }}>GetShift</span>
                 </div>
                 <div style={{ fontSize: 6, color: T.text2, lineHeight: 1.4 }}>⏰ Deadline demain !</div>
               </div>
@@ -263,7 +263,7 @@ const steps = [
     icon: '🎨',
     title: 'Changer le thème',
     color: '#c9a84c',
-    description: 'Personnalisez l\'apparence de TaskFlow selon vos préférences.',
+    description: 'Personnalisez l\'apparence de GetShift selon vos préférences.',
     details: [
       'Cliquez sur "Paramètres" dans la barre latérale',
       'Sélectionnez "Thème" pour voir les options',
@@ -342,7 +342,7 @@ export default function Help() {
           <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Layers size={16} color={T.bg} strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>TaskFlow</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>GetShift</span>
         </div>
 
         {user && (
@@ -441,7 +441,7 @@ export default function Help() {
             </div>
             <div>
               <h1 style={{ fontSize: 'clamp(22px, 4vw, 28px)', fontWeight: 700, color: T.text, letterSpacing: '-0.5px' }}>Guide d'utilisation</h1>
-              <p style={{ color: T.text2, fontSize: 13, marginTop: 2 }}>Tout ce qu'il faut savoir pour maîtriser TaskFlow</p>
+              <p style={{ color: T.text2, fontSize: 13, marginTop: 2 }}>Tout ce qu'il faut savoir pour maîtriser GetShift</p>
             </div>
           </div>
 

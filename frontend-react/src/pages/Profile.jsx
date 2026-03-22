@@ -2,46 +2,46 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
-import { 
-  User, Lock, Star, Zap, Trophy, ArrowLeft, 
-  CheckCircle, AlertCircle, Edit3, Shield, 
-  TrendingUp, Award, Flame, Target
+import {
+  User, Lock, ArrowLeft, CheckCircle, AlertCircle,
+  Edit3, Shield, Zap, Trophy, Star, Flame, Layers
 } from 'lucide-react'
+import { themes } from '../themes'
+import { useTheme } from '../useTheme'
 
-const API = 'https://taskflow-production-75c1.up.railway.app'
+const API = 'https://getshift-backend.onrender.com'
 
 const NIVEAUX = [
-  { niveau: 1, nom: 'Débutant', emoji: '🌱', couleur: '#4ade80', min: 0 },
-  { niveau: 2, nom: 'Apprenti', emoji: '⚡', couleur: '#facc15', min: 100 },
-  { niveau: 3, nom: 'Confirmé', emoji: '🔥', couleur: '#f97316', min: 300 },
-  { niveau: 4, nom: 'Expert', emoji: '💎', couleur: '#6C63FF', min: 600 },
-  { niveau: 5, nom: 'Maître', emoji: '👑', couleur: '#C9A84C', min: 1000 },
+  { niveau: 1, nom: 'Débutant',  couleur: '#4ade80', min: 0,    Icon: Zap     },
+  { niveau: 2, nom: 'Apprenti',  couleur: '#facc15', min: 100,  Icon: Star    },
+  { niveau: 3, nom: 'Confirmé',  couleur: '#f97316', min: 300,  Icon: Flame   },
+  { niveau: 4, nom: 'Expert',    couleur: '#6C63FF', min: 600,  Icon: Trophy  },
+  { niveau: 5, nom: 'Maître',    couleur: '#C9A84C', min: 1000, Icon: Shield  },
 ]
 
 export default function Profile() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-  const [onglet, setOnglet] = useState('profil')
-  const [nom, setNom] = useState('')
-  const [ancienPwd, setAncienPwd] = useState('')
-  const [newPwd, setNewPwd] = useState('')
+  const { theme, T } = useTheme()
+  const [user, setUser]             = useState(null)
+  const [onglet, setOnglet]         = useState('profil')
+  const [nom, setNom]               = useState('')
+  const [ancienPwd, setAncienPwd]   = useState('')
+  const [newPwd, setNewPwd]         = useState('')
   const [confirmPwd, setConfirmPwd] = useState('')
-  const [message, setMessage] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [message, setMessage]       = useState(null)
+  const [loading, setLoading]       = useState(false)
 
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem('user') || '{}')
     if (!u?.id) { navigate('/'); return }
-    setUser(u)
-    setNom(u.nom)
+    setUser(u); setNom(u.nom)
     chargerUser(u.id)
   }, [])
 
   const chargerUser = async (id) => {
     try {
       const res = await axios.get(`${API}/users/${id}`, { withCredentials: true })
-      setUser(res.data)
-      setNom(res.data.nom)
+      setUser(res.data); setNom(res.data.nom)
       localStorage.setItem('user', JSON.stringify(res.data))
     } catch {}
   }
@@ -57,12 +57,9 @@ export default function Profile() {
     try {
       await axios.put(`${API}/users/${user.id}/nom`, { nom }, { withCredentials: true })
       const updated = { ...user, nom }
-      setUser(updated)
-      localStorage.setItem('user', JSON.stringify(updated))
-      showMessage('✅ Nom modifié avec succès !')
-    } catch (e) {
-      showMessage(e.response?.data?.erreur || 'Erreur', 'erreur')
-    }
+      setUser(updated); localStorage.setItem('user', JSON.stringify(updated))
+      showMessage('Nom modifié avec succès')
+    } catch (e) { showMessage(e.response?.data?.erreur || 'Erreur', 'erreur') }
     setLoading(false)
   }
 
@@ -73,429 +70,240 @@ export default function Profile() {
     setLoading(true)
     try {
       await axios.put(`${API}/users/${user.id}/password`, { ancien_password: ancienPwd, nouveau_password: newPwd }, { withCredentials: true })
-      showMessage('✅ Mot de passe modifié !')
+      showMessage('Mot de passe modifié')
       setAncienPwd(''); setNewPwd(''); setConfirmPwd('')
-    } catch (e) {
-      showMessage(e.response?.data?.erreur || 'Erreur', 'erreur')
-    }
+    } catch (e) { showMessage(e.response?.data?.erreur || 'Erreur', 'erreur') }
     setLoading(false)
   }
 
-  const niveauInfo = NIVEAUX.find(n => n.niveau === (user?.niveau || 1)) || NIVEAUX[0]
+  const niveauInfo    = NIVEAUX.find(n => n.niveau === (user?.niveau || 1)) || NIVEAUX[0]
   const niveauSuivant = NIVEAUX.find(n => n.niveau === (user?.niveau || 1) + 1)
   const pointsActuels = user?.points || 0
-  const progression = niveauSuivant 
+  const progression   = niveauSuivant
     ? Math.min(((pointsActuels - niveauInfo.min) / (niveauSuivant.min - niveauInfo.min)) * 100, 100)
     : 100
 
+  const initiales = user?.nom?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'GS'
+
+  const bg         = T?.bg     || '#080810'
+  const bg2        = T?.bg2    || 'rgba(255,255,255,0.04)'
+  const bg3        = T?.bg3    || 'rgba(255,255,255,0.07)'
+  const text       = T?.text   || '#f0f0f5'
+  const text2      = T?.text2  || 'rgba(255,255,255,0.45)'
+  const border     = T?.border || 'rgba(255,255,255,0.09)'
+  const accent     = T?.accent || '#6C63FF'
+  const isLight    = bg === '#F8F9FC' || bg === '#ffffff' || bg === '#f8f9fc'
+  const cardBg     = isLight ? 'white' : bg2
+  const cardBorder = isLight ? '#e2e8f0' : border
+  const inputBg    = isLight ? '#f8f9fc' : 'rgba(0,0,0,0.2)'
+  const inputBorder = isLight ? '#e2e8f0' : border
+
+  const forceLvl   = newPwd.length < 6 ? 1 : newPwd.length < 8 ? 2 : newPwd.length < 12 ? 3 : 4
+  const forceLabel = ['', 'Trop court', 'Faible', 'Moyen', 'Fort'][forceLvl]
+  const forceColor = ['', '#ef4444', '#f97316', '#facc15', '#00C896'][forceLvl]
+
   if (!user) return null
 
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#080810',
-      fontFamily: "'DM Sans', sans-serif",
-      color: '#f0f0f5',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
+  const NiveauIcon = niveauInfo.Icon
 
-      {/* Fond ambiant */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-        <div style={{
-          position: 'absolute', width: 600, height: 600,
-          borderRadius: '50%', filter: 'blur(150px)', opacity: 0.06,
-          background: 'radial-gradient(circle, #6C63FF, transparent)',
-          top: '-10%', left: '-10%'
-        }} />
-        <div style={{
-          position: 'absolute', width: 500, height: 500,
-          borderRadius: '50%', filter: 'blur(150px)', opacity: 0.05,
-          background: 'radial-gradient(circle, #C9A84C, transparent)',
-          bottom: '10%', right: '-5%'
-        }} />
-        {/* Grille subtile */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
-          backgroundSize: '60px 60px'
-        }} />
+  return (
+    <div style={{ minHeight: '100vh', background: bg, fontFamily: "'DM Sans', sans-serif", color: text, position: 'relative', overflowX: 'hidden' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .pf-input { width: 100%; padding: 13px 16px; border-radius: 10px; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+        @media (max-width: 640px) {
+          .pf-hero { flex-direction: column !important; text-align: center !important; align-items: center !important; }
+          .pf-stats { justify-content: center !important; }
+          .pf-tabs { overflow-x: auto; }
+        }
+      `}</style>
+
+      {/* Orbes fond */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', filter: 'blur(140px)', opacity: isLight ? 0.05 : 0.08, background: `radial-gradient(circle, ${accent}, transparent)`, top: '-15%', left: '-10%' }} />
+        <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', filter: 'blur(120px)', opacity: isLight ? 0.04 : 0.06, background: 'radial-gradient(circle, #00C896, transparent)', bottom: '5%', right: '-5%' }} />
       </div>
 
-      {/* Notification */}
+      {/* Toast */}
       <AnimatePresence>
         {message && (
-          <motion.div
-            initial={{ opacity: 0, y: -60, x: '-50%' }}
-            animate={{ opacity: 1, y: 20, x: '-50%' }}
-            exit={{ opacity: 0, y: -60, x: '-50%' }}
-            style={{
-              position: 'fixed', top: 0, left: '50%', zIndex: 1000,
-              background: message.type === 'succes' ? 'rgba(0,200,150,0.15)' : 'rgba(255,80,80,0.15)',
-              border: `1px solid ${message.type === 'succes' ? 'rgba(0,200,150,0.4)' : 'rgba(255,80,80,0.4)'}`,
-              borderRadius: 12, padding: '12px 24px',
-              backdropFilter: 'blur(20px)',
-              display: 'flex', alignItems: 'center', gap: 10
-            }}
-          >
-            {message.type === 'succes' 
-              ? <CheckCircle size={18} color="#00C896" />
-              : <AlertCircle size={18} color="#ff5050" />
-            }
-            <span style={{ fontSize: 14, fontWeight: 500 }}>{message.texte}</span>
+          <motion.div initial={{ opacity: 0, y: -60, x: '-50%' }} animate={{ opacity: 1, y: 20, x: '-50%' }} exit={{ opacity: 0, y: -60, x: '-50%' }}
+            style={{ position: 'fixed', top: 0, left: '50%', zIndex: 1000, background: message.type === 'succes' ? (isLight ? '#f0fdf4' : 'rgba(0,200,150,0.12)') : (isLight ? '#fef2f2' : 'rgba(239,68,68,0.12)'), border: `1px solid ${message.type === 'succes' ? '#00C89660' : '#ef444460'}`, borderRadius: 12, padding: '12px 22px', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+            {message.type === 'succes' ? <CheckCircle size={17} color="#00C896" /> : <AlertCircle size={17} color="#ef4444" />}
+            <span style={{ fontSize: 14, fontWeight: 500, color: text }}>{message.texte}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 20px', position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 32px)', position: 'relative', zIndex: 1 }}>
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 40 }}
-        >
-          <Link to="/dashboard" style={{ textDecoration: 'none' }}>
-            <motion.div
-              whileHover={{ x: -4, background: 'rgba(255,255,255,0.1)' }}
-              style={{
-                width: 42, height: 42, borderRadius: 12,
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              <ArrowLeft size={18} color="#aaa" />
-            </motion.div>
+        {/* Retour */}
+        <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} style={{ marginBottom: 32 }}>
+          <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: text2, fontSize: 14, fontWeight: 500 }}
+            onMouseEnter={e => e.currentTarget.style.color = accent}
+            onMouseLeave={e => e.currentTarget.style.color = text2}>
+            <ArrowLeft size={16} /> Retour au dashboard
           </Link>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px' }}>
-              Mon Profil
-            </h1>
-            <p style={{ margin: 0, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-              Gérez vos informations personnelles
-            </p>
-          </div>
         </motion.div>
 
-        {/* Carte hero profil */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          style={{
-            background: 'linear-gradient(135deg, rgba(108,99,255,0.15), rgba(201,168,76,0.1))',
-            border: '1px solid rgba(108,99,255,0.2)',
-            borderRadius: 24, padding: '32px',
-            marginBottom: 24, position: 'relative', overflow: 'hidden'
-          }}
-        >
-          {/* Décoration */}
-          <div style={{
-            position: 'absolute', top: -40, right: -40,
-            width: 200, height: 200, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(108,99,255,0.15), transparent)',
-            pointerEvents: 'none'
-          }} />
+        {/* ══ HERO CARD ══ */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 24, padding: 'clamp(24px, 4vw, 40px)', marginBottom: 20, position: 'relative', overflow: 'hidden', boxShadow: isLight ? '0 4px 24px rgba(0,0,0,0.06)' : '0 4px 24px rgba(0,0,0,0.25)' }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${accent}, #00C896)` }} />
+
+          <div className="pf-hero" style={{ display: 'flex', alignItems: 'center', gap: 28, marginBottom: 28 }}>
             {/* Avatar */}
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              style={{
-                width: 80, height: 80, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #6C63FF, #C9A84C)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 32, fontWeight: 800, flexShrink: 0,
-                boxShadow: '0 0 30px rgba(108,99,255,0.4)'
-              }}
-            >
-              {user.nom?.charAt(0).toUpperCase()}
-            </motion.div>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{ width: 88, height: 88, borderRadius: 24, background: `linear-gradient(135deg, ${accent}, #00C896)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'white', boxShadow: `0 8px 32px ${accent}44`, fontFamily: "'Bricolage Grotesque', sans-serif", overflow: 'hidden' }}>
+                {user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initiales}
+              </div>
+              <div style={{ position: 'absolute', bottom: -6, right: -6, width: 28, height: 28, borderRadius: 8, background: niveauInfo.couleur, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${bg}`, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                <NiveauIcon size={13} color="white" strokeWidth={2.5} />
+              </div>
+            </div>
 
+            {/* Infos */}
             <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{user.nom}</h2>
-                <span style={{
-                  background: `${niveauInfo.couleur}22`,
-                  border: `1px solid ${niveauInfo.couleur}44`,
-                  borderRadius: 20, padding: '3px 10px',
-                  fontSize: 12, color: niveauInfo.couleur, fontWeight: 600
-                }}>
-                  {niveauInfo.emoji} {niveauInfo.nom}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+                <h1 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, color: text, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{user.nom}</h1>
+                <span style={{ padding: '3px 10px', background: `${niveauInfo.couleur}22`, border: `1px solid ${niveauInfo.couleur}44`, borderRadius: 99, fontSize: 11, fontWeight: 700, color: niveauInfo.couleur, letterSpacing: 0.5 }}>
+                  {niveauInfo.nom.toUpperCase()}
                 </span>
               </div>
-              <p style={{ margin: '0 0 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-                📧 {user.email}
-              </p>
-
-              {/* Barre progression */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                    ⭐ {pointsActuels} points
-                  </span>
-                  {niveauSuivant && (
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
-                      {niveauSuivant.min} pts → {niveauSuivant.emoji} {niveauSuivant.nom}
-                    </span>
-                  )}
+              <p style={{ fontSize: 14, color: text2, marginBottom: 16 }}>{user.email}</p>
+              <div style={{ maxWidth: 340 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: text2, marginBottom: 6 }}>
+                  <span>{pointsActuels} pts</span>
+                  <span style={{ color: accent, fontWeight: 600 }}>{niveauSuivant ? `→ ${niveauSuivant.nom} à ${niveauSuivant.min} pts` : 'Niveau max atteint'}</span>
                 </div>
-                <div style={{
-                  height: 6, background: 'rgba(255,255,255,0.08)',
-                  borderRadius: 10, overflow: 'hidden'
-                }}>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progression}%` }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                    style={{
-                      height: '100%', borderRadius: 10,
-                      background: `linear-gradient(90deg, ${niveauInfo.couleur}, ${niveauSuivant?.couleur || niveauInfo.couleur})`
-                    }}
-                  />
+                <div style={{ height: 6, background: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${progression}%` }} transition={{ duration: 1, ease: 'easeOut' }}
+                    style={{ height: '100%', background: `linear-gradient(90deg, ${accent}, #00C896)`, borderRadius: 99 }} />
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Stats rapides */}
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              {[
-                { icon: <Trophy size={18} />, val: user.niveau || 1, label: 'Niveau', color: '#C9A84C' },
-                { icon: <Flame size={18} />, val: user.points || 0, label: 'Points', color: '#f97316' },
-              ].map((s, i) => (
-                <motion.div key={i}
-                  whileHover={{ scale: 1.05 }}
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: 14, padding: '14px 18px',
-                    textAlign: 'center', minWidth: 80
-                  }}
-                >
-                  <div style={{ color: s.color, marginBottom: 4 }}>{s.icon}</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{s.label}</div>
-                </motion.div>
-              ))}
-            </div>
+          {/* KPIs */}
+          <div className="pf-stats" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Points',  val: pointsActuels,          color: accent },
+              { label: 'Niveau',  val: user.niveau || 1,       color: niveauInfo.couleur },
+              { label: 'Tâches',  val: user.taches_count || 0, color: '#00C896' },
+              { label: 'Streak',  val: `${user.streak || 0}j`, color: '#f97316' },
+            ].map((s, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
+                style={{ flex: '1 1 80px', background: isLight ? '#f8f9fc' : bg3, border: `1px solid ${cardBorder}`, borderRadius: 14, padding: '14px 18px', minWidth: 80 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{s.val}</div>
+                <div style={{ fontSize: 11, color: text2, marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
 
-        {/* Onglets */}
-        <div style={{
-          display: 'flex', gap: 8, marginBottom: 24,
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 14, padding: 6
-        }}>
+        {/* ══ ONGLETS ══ */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
+          className="pf-tabs" style={{ display: 'flex', gap: 4, background: isLight ? '#f1f5f9' : bg2, borderRadius: 14, padding: 4, marginBottom: 20, border: `1px solid ${cardBorder}` }}>
           {[
-            { id: 'profil', label: 'Informations', icon: <User size={15} /> },
-            { id: 'securite', label: 'Sécurité', icon: <Shield size={15} /> },
+            { id: 'profil',   label: 'Profil',     icon: <User size={14} /> },
+            { id: 'securite', label: 'Sécurité',   icon: <Lock size={14} /> },
           ].map(o => (
-            <motion.button key={o.id}
-              onClick={() => setOnglet(o.id)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              style={{
-                flex: 1, padding: '10px 20px',
-                background: onglet === o.id ? 'linear-gradient(135deg, rgba(108,99,255,0.3), rgba(201,168,76,0.2))' : 'transparent',
-                border: onglet === o.id ? '1px solid rgba(108,99,255,0.3)' : '1px solid transparent',
-                borderRadius: 10, color: onglet === o.id ? 'white' : 'rgba(255,255,255,0.4)',
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                fontWeight: 600, fontSize: 14,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: 'all 0.2s'
-              }}
-            >
+            <button key={o.id} onClick={() => setOnglet(o.id)}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 16px', background: onglet === o.id ? (isLight ? 'white' : 'rgba(255,255,255,0.08)') : 'transparent', border: `1px solid ${onglet === o.id ? cardBorder : 'transparent'}`, borderRadius: 10, color: onglet === o.id ? text : text2, fontSize: 13, fontWeight: onglet === o.id ? 600 : 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: onglet === o.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
               {o.icon} {o.label}
-            </motion.button>
+            </button>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Contenu onglets */}
+        {/* ══ CONTENUS ══ */}
         <AnimatePresence mode="wait">
+
           {onglet === 'profil' && (
-            <motion.div key="profil"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 20, padding: 32
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  background: 'rgba(108,99,255,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <Edit3 size={16} color="#6C63FF" />
+            <motion.div key="profil" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 20, padding: 'clamp(20px, 4vw, 36px)', boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.05)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 11, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Edit3 size={16} color={accent} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>✏️ Modifier mes informations</h3>
-                  <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Mettez à jour votre nom d'affichage</p>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Modifier mes informations</h3>
+                  <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Mettez à jour votre nom d'affichage</p>
                 </div>
               </div>
-
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 8, fontWeight: 500 }}>
-                  👤 Nom complet
-                </label>
-                <input
-                  value={nom}
-                  onChange={e => setNom(e.target.value)}
-                  placeholder="Votre nom"
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    background: 'rgba(16,16,32,0.8)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 10, padding: '14px 18px',
-                    color: 'white', fontSize: 15, outline: 'none',
-                    transition: 'border-color 0.2s',
-                    fontFamily: "'DM Sans', sans-serif"
-                  }}
-                  onFocus={e => e.target.style.borderColor = 'rgba(108,99,255,0.5)'}
-                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                />
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>Nom complet</label>
+                <input className="pf-input" value={nom} onChange={e => setNom(e.target.value)} placeholder="Votre nom"
+                  onKeyDown={e => e.key === 'Enter' && modifierNom()}
+                  style={{ background: inputBg, border: `1.5px solid ${nom !== user.nom ? accent : inputBorder}`, color: text }} />
               </div>
-
               <div style={{ marginBottom: 28 }}>
-                <label style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 8, fontWeight: 500 }}>
-                  📧 Adresse email
-                </label>
-                <input
-                  value={user.email}
-                  disabled
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 10, padding: '14px 18px',
-                    color: 'rgba(255,255,255,0.3)', fontSize: 15,
-                    fontFamily: "'DM Sans', sans-serif", cursor: 'not-allowed'
-                  }}
-                />
-                <p style={{ margin: '6px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
-                  🔒 L'email ne peut pas être modifié pour des raisons de sécurité
-                </p>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>Adresse e-mail</label>
+                <input className="pf-input" value={user.email} disabled
+                  style={{ background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.02)', border: `1.5px solid ${inputBorder}`, color: text2, cursor: 'not-allowed', opacity: 0.7 }} />
+                <p style={{ fontSize: 11, color: text2, marginTop: 6 }}>L'email ne peut pas être modifié pour des raisons de sécurité.</p>
               </div>
-
-              <motion.button
-                onClick={modifierNom}
-                disabled={loading || nom === user.nom}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                style={{
-                  background: nom !== user.nom ? 'linear-gradient(90deg, #6C63FF, #C9A84C)' : 'rgba(255,255,255,0.05)',
-                  border: 'none', borderRadius: 10,
-                  padding: '14px 28px', color: nom !== user.nom ? 'white' : 'rgba(255,255,255,0.3)',
-                  fontWeight: 600, fontSize: 15, cursor: nom !== user.nom ? 'pointer' : 'not-allowed',
-                  fontFamily: "'DM Sans', sans-serif",
-                  boxShadow: nom !== user.nom ? '0 0 20px rgba(108,99,255,0.3)' : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {loading ? '⏳ Sauvegarde...' : '💾 Sauvegarder les modifications'}
+              <motion.button onClick={modifierNom} disabled={loading || nom === user.nom} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                style={{ padding: '13px 28px', background: nom !== user.nom ? `linear-gradient(135deg, ${accent}, #00C896)` : (isLight ? '#f1f5f9' : bg3), border: 'none', borderRadius: 11, color: nom !== user.nom ? 'white' : text2, fontWeight: 700, fontSize: 14, cursor: nom !== user.nom ? 'pointer' : 'not-allowed', fontFamily: "'DM Sans', sans-serif", boxShadow: nom !== user.nom ? `0 8px 24px ${accent}33` : 'none', transition: 'all 0.2s' }}>
+                {loading ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
               </motion.button>
             </motion.div>
           )}
 
           {onglet === 'securite' && (
-            <motion.div key="securite"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 20, padding: 32
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  background: 'rgba(201,168,76,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
+            <motion.div key="securite" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 20, padding: 'clamp(20px, 4vw, 36px)', boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.05)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 11, background: '#C9A84C18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Lock size={16} color="#C9A84C" />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>🔐 Changer le mot de passe</h3>
-                  <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Gardez votre compte sécurisé</p>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Changer le mot de passe</h3>
+                  <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Gardez votre compte sécurisé</p>
                 </div>
               </div>
-
               {[
-                { label: '🔑 Mot de passe actuel', val: ancienPwd, set: setAncienPwd, placeholder: 'Votre mot de passe actuel' },
-                { label: '🆕 Nouveau mot de passe', val: newPwd, set: setNewPwd, placeholder: 'Min. 8 caractères' },
-                { label: '✅ Confirmer le nouveau mot de passe', val: confirmPwd, set: setConfirmPwd, placeholder: 'Répétez le nouveau mot de passe' },
+                { label: 'Mot de passe actuel',              val: ancienPwd,  set: setAncienPwd,  ph: 'Votre mot de passe actuel' },
+                { label: 'Nouveau mot de passe',             val: newPwd,     set: setNewPwd,     ph: 'Min. 8 caractères' },
+                { label: 'Confirmer le nouveau mot de passe', val: confirmPwd, set: setConfirmPwd, ph: 'Répétez' },
               ].map((f, i) => (
-                <div key={i} style={{ marginBottom: 18 }}>
-                  <label style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 8, fontWeight: 500 }}>
-                    {f.label}
-                  </label>
-                  <input
-                    type="password"
-                    value={f.val}
-                    onChange={e => f.set(e.target.value)}
-                    placeholder={f.placeholder}
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      background: 'rgba(16,16,32,0.8)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 10, padding: '14px 18px',
-                      color: 'white', fontSize: 15, outline: 'none',
-                      fontFamily: "'DM Sans', sans-serif",
-                      transition: 'border-color 0.2s'
-                    }}
-                    onFocus={e => e.target.style.borderColor = 'rgba(201,168,76,0.5)'}
-                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                  />
+                <div key={i} style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>{f.label}</label>
+                  <input className="pf-input" type="password" value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph}
+                    style={{ background: inputBg, border: `1.5px solid ${inputBorder}`, color: text }} />
                 </div>
               ))}
-
-              {/* Indicateur force mot de passe */}
               {newPwd && (
                 <div style={{ marginBottom: 24 }}>
-                  <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
                     {[1,2,3,4].map(i => (
-                      <div key={i} style={{
-                        flex: 1, height: 3, borderRadius: 2,
-                        background: i <= (newPwd.length < 6 ? 1 : newPwd.length < 8 ? 2 : newPwd.length < 12 ? 3 : 4)
-                          ? (newPwd.length < 6 ? '#ff5050' : newPwd.length < 8 ? '#f97316' : newPwd.length < 12 ? '#facc15' : '#00C896')
-                          : 'rgba(255,255,255,0.1)'
-                      }} />
+                      <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= forceLvl ? forceColor : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.08)'), transition: 'background 0.2s' }} />
                     ))}
                   </div>
-                  <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-                    {newPwd.length < 6 ? '🔴 Trop court' : newPwd.length < 8 ? '🟠 Faible' : newPwd.length < 12 ? '🟡 Moyen' : '🟢 Fort'}
-                  </p>
+                  <p style={{ fontSize: 12, color: forceColor, fontWeight: 500 }}>{forceLabel}</p>
                 </div>
               )}
-
-              <motion.button
-                onClick={modifierPassword}
-                disabled={loading}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                style={{
-                  background: 'linear-gradient(90deg, #C9A84C, #6C63FF)',
-                  border: 'none', borderRadius: 10,
-                  padding: '14px 28px', color: 'white',
-                  fontWeight: 600, fontSize: 15, cursor: 'pointer',
-                  fontFamily: "'DM Sans', sans-serif",
-                  boxShadow: '0 0 20px rgba(201,168,76,0.3)',
-                }}
-              >
-                {loading ? '⏳ Modification...' : '🔐 Modifier le mot de passe'}
+              <motion.button onClick={modifierPassword} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                style={{ padding: '13px 28px', background: 'linear-gradient(135deg, #C9A84C, #6C63FF)', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 8px 24px rgba(201,168,76,0.25)', transition: 'all 0.2s' }}>
+                {loading ? 'Modification...' : 'Modifier le mot de passe'}
               </motion.button>
             </motion.div>
           )}
+
+
+
         </AnimatePresence>
+
+        {/* Footer */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+          style={{ marginTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px', borderTop: `1px solid ${cardBorder}` }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, background: `linear-gradient(135deg, ${accent}, #00C896)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Layers size={11} color="white" strokeWidth={2.5} />
+          </div>
+          <span style={{ fontSize: 12, color: text2, fontWeight: 500 }}>GetShift · Votre productivité augmentée</span>
+        </motion.div>
+
       </div>
     </div>
   )

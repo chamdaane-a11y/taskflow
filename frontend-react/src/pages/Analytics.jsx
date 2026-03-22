@@ -14,7 +14,7 @@ import { useMediaQuery } from '../useMediaQuery'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler)
 
-const API = 'https://taskflow-production-75c1.up.railway.app'
+const API = 'https://getshift-backend.onrender.com'
 
 export default function Analytics() {
   const [stats, setStats] = useState(null)
@@ -166,7 +166,7 @@ export default function Analytics() {
           <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Layers size={16} color={T.bg} strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 'clamp(14px, 2vw, 16px)', fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>TaskFlow</span>
+          <span style={{ fontSize: 'clamp(14px, 2vw, 16px)', fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>GetShift</span>
         </div>
         <p style={{ fontSize: 'clamp(9px, 2vw, 10px)', fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
         {navItems.map(item => {
