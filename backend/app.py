@@ -3275,6 +3275,490 @@ def goal_reverse_importer():
     except Exception as e:
         print(f"Erreur import goal: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+        # ============================================
+# SPRINT 8 — ASSISTANT IA AUGMENTÉ
+# ============================================
+# Colle ce bloc dans app.py juste avant :
+#   # ============================================
+#   if __name__ == '__main__':
+# ============================================
+
+import urllib.parse
+
+# ── Abréviations fréquentes → expansion automatique ──────────────────────────
+ABREVIATIONS = {
+    "rdv": "rendez-vous",
+    "pb": "problème",
+    "pbl": "problème",
+    "msg": "message",
+    "tj": "toujours",
+    "bcp": "beaucoup",
+    "tt": "tout",
+    "tjs": "toujours",
+    "pr": "pour",
+    "qd": "quand",
+    "dc": "donc",
+    "vs": "vous",
+    "ns": "nous",
+    "stp": "s'il te plaît",
+    "svp": "s'il vous plaît",
+    "asap": "dès que possible",
+    "fyi": "pour information",
+    "ok": "d'accord",
+    "mtn": "maintenant",
+    "ac": "avec",
+    "ss": "sans",
+    "dsl": "désolé",
+    "jsuis": "je suis",
+    "jvais": "je vais",
+    "jpe": "je peux",
+    "jsa": "je sais",
+    "cc": "salut",
+    "wsh": "salut",
+    "lgtm": "ça me semble bien",
+    "tldr": "en résumé",
+    "eta": "heure d'arrivée estimée",
+    "imo": "à mon avis",
+}
+
+def expand_abreviations(texte: str) -> str:
+    """Remplace les abréviations connues dans le texte utilisateur."""
+    mots = texte.split()
+    resultat = []
+    for mot in mots:
+        mot_clean = mot.lower().strip(".,!?;:'\"")
+        if mot_clean in ABREVIATIONS:
+            # Conserver la ponctuation de fin
+            ponctuation = mot[len(mot_clean):]
+            expansion = ABREVIATIONS[mot_clean]
+            # Conserver la casse si le mot original commence par une majuscule
+            if mot[0].isupper():
+                expansion = expansion.capitalize()
+            resultat.append(expansion + ponctuation)
+        else:
+            resultat.append(mot)
+    return " ".join(resultat)
+
+
+# ── Web Search via DuckDuckGo (sans clé API) ─────────────────────────────────
+
+def web_search_ddg(query: str, max_results: int = 4) -> list[dict]:
+    """
+    Recherche DuckDuckGo Instant Answer API + scraping léger.
+    Retourne une liste de {title, snippet, url}.
+    """
+    try:
+        # 1. DuckDuckGo Instant Answer API (JSON officiel, sans auth)
+        encoded = urllib.parse.quote_plus(query)
+        url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_redirect=1&no_html=1&skip_disambig=1"
+        resp = http_requests.get(url, timeout=6, headers={"User-Agent": "GetShift/1.0"})
+        data = resp.json()
+
+        results = []
+
+        # Abstract (meilleure réponse directe)
+        if data.get("AbstractText"):
+            results.append({
+                "title": data.get("Heading", query),
+                "snippet": data["AbstractText"][:400],
+                "url": data.get("AbstractURL", "")
+            })
+
+        # RelatedTopics
+        for topic in data.get("RelatedTopics", [])[:max_results]:
+            if isinstance(topic, dict) and topic.get("Text"):
+                results.append({
+                    "title": topic.get("Text", "")[:80],
+                    "snippet": topic.get("Text", "")[:300],
+                    "url": topic.get("FirstURL", "")
+                })
+
+        # 2. Fallback : DuckDuckGo HTML search (si pas assez de résultats)
+        if len(results) < 2:
+            html_url = f"https://html.duckduckgo.com/html/?q={encoded}"
+            html_resp = http_requests.get(html_url, timeout=6, headers={
+                "User-Agent": "Mozilla/5.0 (compatible; GetShift/1.0)"
+            })
+            from html.parser import HTMLParser
+
+            class DDGParser(HTMLParser):
+                def __init__(self):
+                    super().__init__()
+                    self.results = []
+                    self._in_result = False
+                    self._in_snippet = False
+                    self._current = {}
+                    self._capture = False
+                    self._data = []
+
+                def handle_starttag(self, tag, attrs):
+                    attrs_dict = dict(attrs)
+                    cls = attrs_dict.get("class", "")
+                    if "result__a" in cls:
+                        self._current = {"title": "", "snippet": "", "url": attrs_dict.get("href", "")}
+                        self._capture = True
+                        self._data = []
+                    elif "result__snippet" in cls:
+                        self._in_snippet = True
+                        self._data = []
+
+                def handle_endtag(self, tag):
+                    if self._capture and tag == "a":
+                        self._current["title"] = " ".join(self._data).strip()
+                        self._capture = False
+                    if self._in_snippet and tag == "a":
+                        self._current["snippet"] = " ".join(self._data).strip()
+                        self._in_snippet = False
+                        if self._current.get("title"):
+                            self.results.append(self._current)
+                            self._current = {}
+
+                def handle_data(self, data):
+                    if self._capture or self._in_snippet:
+                        self._data.append(data)
+
+            parser = DDGParser()
+            parser.feed(html_resp.text)
+            for r in parser.results[:max_results]:
+                if r not in results:
+                    results.append(r)
+
+        return results[:max_results]
+
+    except Exception as e:
+        print(f"[WebSearch] Erreur: {e}")
+        return []
+
+
+def formater_resultats_search(results: list[dict]) -> str:
+    """Formate les résultats pour le contexte du prompt IA."""
+    if not results:
+        return "Aucun résultat web trouvé."
+    lignes = ["RÉSULTATS WEB RÉCENTS :"]
+    for i, r in enumerate(results, 1):
+        lignes.append(f"\n[{i}] {r['title']}")
+        lignes.append(f"    {r['snippet'][:300]}")
+        if r.get("url"):
+            lignes.append(f"    Source : {r['url']}")
+    return "\n".join(lignes)
+
+
+# ── Détection d'intention ─────────────────────────────────────────────────────
+
+MOTS_SEARCH = [
+    "recherche", "cherche", "trouve", "google", "internet", "web",
+    "actualité", "news", "dernières nouvelles",
+    "qu'est-ce que", "qu est-ce",          # avec et sans apostrophe
+    "c'est quoi", "c est quoi",
+    "définition", "prix de", "météo",
+    "aujourd'hui", "aujourd hui",
+    "en ce moment", "récent", "2024", "2025", "2026", "dernièrement",
+    "c'est qui", "c est qui", "qui est", "combien coûte", "comment faire",
+]
+
+MOTS_ACTION_CREER = [
+    "crée", "créer", "ajoute", "ajouter", "nouvelle tâche",
+    "add task", "create task", "mets", "mettre",
+]
+
+MOTS_ACTION_TERMINER = [
+    "marque comme terminée", "termine la tâche", "complete",
+    "finis", "ferme la tâche", "tâche terminée", "mark done",
+    "valide la tâche", "coche",
+]
+
+MOTS_ACTION_PLANIFIER = [
+    "planifie", "planifier", "schedule", "programme",
+    "organise ma journée", "tomorrow builder", "génère un planning",
+]
+
+def detecter_intention(texte: str) -> str:
+    """
+    Retourne : 'search' | 'action_creer' | 'action_terminer' |
+               'action_planifier' | 'chat'
+    """
+    texte_low = texte.lower()
+    for mot in MOTS_ACTION_CREER:
+        if mot in texte_low:
+            return "action_creer"
+    for mot in MOTS_ACTION_TERMINER:
+        if mot in texte_low:
+            return "action_terminer"
+    for mot in MOTS_ACTION_PLANIFIER:
+        if mot in texte_low:
+            return "action_planifier"
+    for mot in MOTS_SEARCH:
+        if mot in texte_low:
+            return "search"
+    return "chat"
+
+
+# ── Extraction du titre de tâche depuis un prompt naturel ────────────────────
+
+def extraire_titre_tache(prompt: str, groq_client_local) -> str:
+    """Demande à l'IA d'extraire le titre de tâche voulu par l'utilisateur."""
+    try:
+        res = groq_client_local.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"Extrait uniquement le titre de la tâche à créer depuis cette phrase. "
+                    f"Réponds avec UNIQUEMENT le titre, rien d'autre, sans guillemets.\n\n"
+                    f"Phrase : {prompt}"
+                )
+            }],
+            max_tokens=60,
+            temperature=0.1
+        )
+        return res.choices[0].message.content.strip().strip('"\'')
+    except:
+        # Fallback : supprimer les mots déclencheurs
+        for mot in MOTS_ACTION_CREER:
+            prompt = prompt.lower().replace(mot, "").strip()
+        return prompt.strip().capitalize()[:120]
+
+
+# ── Route principale Sprint 8 ─────────────────────────────────────────────────
+
+@app.route('/ia/assistant', methods=['POST'])
+def assistant_augmente():
+    """
+    Assistant IA augmenté — Sprint 8.
+    Body JSON :
+      user_id      : int
+      message      : str   (prompt utilisateur)
+      modele       : str   (optionnel, défaut llama-3.3-70b-versatile)
+      historique   : list  (messages précédents [{role, content}])
+      tache_id     : int   (optionnel, tâche liée)
+      force_search : bool  (optionnel, forcer le web search)
+    """
+    try:
+        data = request.get_json()
+        user_id      = data.get('user_id')
+        message_raw  = data.get('message', '').strip()
+        modele       = data.get('modele', 'llama-3.3-70b-versatile')
+        historique   = data.get('historique', [])
+        tache_id     = data.get('tache_id')
+        force_search = data.get('force_search', False)
+
+        if not message_raw:
+            return jsonify({"erreur": "Message vide"}), 400
+
+        # 1. Expansion des abréviations
+        message = expand_abreviations(message_raw)
+        abrev_expandees = message != message_raw  # flag pour le frontend
+
+        # 2. Détection d'intention
+        intention = detecter_intention(message)
+        if force_search:
+            intention = "search"
+
+        # 3. Charger contexte utilisateur
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+
+        curseur.execute("SELECT nom, email, points, niveau, streak FROM users WHERE id=%s", (user_id,))
+        user_row = curseur.fetchone()
+        if not user_row:
+            db.close()
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+
+        curseur.execute("""
+            SELECT id, titre, priorite, deadline, terminee
+            FROM taches WHERE user_id=%s
+            ORDER BY terminee ASC, created_at DESC LIMIT 20
+        """, (user_id,))
+        taches = curseur.fetchall()
+        for t in taches:
+            if t.get('deadline'):
+                t['deadline'] = str(t['deadline'])
+
+        # ── Bloc ACTION DIRECTE : créer une tâche ────────────────────────────
+        if intention == "action_creer":
+            titre = extraire_titre_tache(message, groq_client)
+            curseur.execute(
+                "INSERT INTO taches (titre, priorite, user_id) VALUES (%s, 'moyenne', %s)",
+                (titre, user_id)
+            )
+            db.commit()
+            tache_creee_id = curseur.lastrowid
+            db.close()
+            return jsonify({
+                "reponse": f"## ✅ Tâche créée\n\n**\"{titre}\"** a été ajoutée à ta liste avec une priorité moyenne.\n\nTu peux modifier sa priorité et sa deadline depuis ton dashboard.",
+                "intention": "action_creer",
+                "action": {"type": "tache_creee", "id": tache_creee_id, "titre": titre},
+                "abrev_expandees": abrev_expandees,
+                "message_original": message_raw,
+                "modele": modele
+            })
+
+        # ── Bloc ACTION DIRECTE : marquer une tâche terminée ─────────────────
+        if intention == "action_terminer":
+            # Chercher quelle tâche l'utilisateur veut terminer
+            taches_actives = [t for t in taches if not t['terminee']]
+            tache_cible = None
+
+            if tache_id:
+                # Tâche explicitement liée dans l'interface
+                tache_cible = next((t for t in taches_actives if t['id'] == tache_id), None)
+            else:
+                # Chercher dans le texte
+                for t in taches_actives:
+                    mots_titre = set(t['titre'].lower().split())
+                    mots_message = set(message.lower().split())
+                    if len(mots_titre & mots_message) >= 2:
+                        tache_cible = t
+                        break
+
+            if tache_cible:
+                curseur.execute("UPDATE taches SET terminee=TRUE WHERE id=%s", (tache_cible['id'],))
+                db.commit()
+                db.close()
+                return jsonify({
+                    "reponse": f"## ✅ Tâche terminée !\n\n**\"{tache_cible['titre']}\"** est maintenant marquée comme complétée. 🎉\n\nBravo, continue sur cette lancée !",
+                    "intention": "action_terminer",
+                    "action": {"type": "tache_terminee", "id": tache_cible['id'], "titre": tache_cible['titre']},
+                    "abrev_expandees": abrev_expandees,
+                    "modele": modele
+                })
+            else:
+                # Pas trouvé — demander précision via chat normal
+                intention = "chat"
+
+        # ── Bloc ACTION DIRECTE : planifier (Tomorrow Builder) ───────────────
+        if intention == "action_planifier":
+            db.close()
+            return jsonify({
+                "reponse": "## 📅 Lancement du Tomorrow Builder\n\nJe génère ton planning optimal pour demain...",
+                "intention": "action_planifier",
+                "action": {"type": "redirect_tomorrow_builder"},
+                "abrev_expandees": abrev_expandees,
+                "modele": modele
+            })
+
+        # ── Bloc WEB SEARCH ──────────────────────────────────────────────────
+        contexte_web = ""
+        search_results = []
+        if intention == "search":
+            search_results = web_search_ddg(message, max_results=4)
+            contexte_web = formater_resultats_search(search_results)
+
+        db.close()
+
+        # 4. Construire le system prompt enrichi
+        terminees = sum(1 for t in taches if t['terminee'])
+        en_cours   = [t for t in taches if not t['terminee']]
+        en_retard  = [t for t in en_cours if t.get('deadline') and t['deadline'] < datetime.now().strftime('%Y-%m-%d')]
+        haute      = [t for t in en_cours if t['priorite'] == 'haute']
+
+        system_prompt = f"""Tu es l'assistant IA personnel de {user_row['nom']} sur GetShift, une app de productivité.
+
+PROFIL :
+- Niveau {user_row.get('niveau', 1)} · {user_row.get('points', 0)} points · Streak : {user_row.get('streak', 0)} jours
+- Tâches : {len(taches)} total · {terminees} terminées · {len(en_cours)} en cours · {len(en_retard)} en retard
+{f"- Haute priorité : {', '.join(t['titre'] for t in haute[:3])}" if haute else ""}
+
+TÂCHES EN COURS (top 8) :
+{chr(10).join(f"- [{t['priorite'].upper()}] {t['titre']}" + (f" · deadline {t['deadline'][:10]}" if t.get('deadline') else "") for t in en_cours[:8]) or "Aucune tâche en cours"}
+
+{f"CONTEXTE WEB :{chr(10)}{contexte_web}" if contexte_web else ""}
+
+INSTRUCTIONS :
+- Réponds en français (sauf si l'utilisateur écrit autrement)
+- Utilise le markdown : ## titres, **gras**, - listes, | tableaux |, ``` code ```
+- Pour les plannings/emplois du temps : utilise un tableau markdown avec colonnes Heure | Tâche | Durée | Priorité
+- Pour les comparaisons : utilise des tableaux markdown
+- Sois concis mais complet — évite le remplissage
+- Si tu utilises des infos web, indique la source brièvement
+- Tu connais {user_row['nom']} et son contexte — réfère-t'y naturellement
+- Donne des réponses actionnables et personnalisées"""
+
+        # 5. Construire l'historique de conversation
+        messages_api = [{"role": "system", "content": system_prompt}]
+        for h in historique[-14:]:
+            role = "assistant" if h.get('role') in ('ia', 'assistant') else "user"
+            messages_api.append({"role": role, "content": h.get('content', '')})
+        messages_api.append({"role": "user", "content": message})
+
+        # 6. Appel Groq
+        completion = groq_client.chat.completions.create(
+            model=modele,
+            messages=messages_api,
+            max_tokens=1500,
+            temperature=0.7
+        )
+        reponse = completion.choices[0].message.content.strip()
+
+        # 7. Sauvegarder en historique
+        try:
+            db2 = connecter()
+            cur2 = db2.cursor()
+            cur2.execute(
+                "INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s, %s, %s, %s, %s)",
+                (user_id, message_raw, reponse, modele, tache_id)
+            )
+            db2.commit()
+            cur2.close()
+            db2.close()
+        except Exception as e:
+            print(f"[Assistant] Erreur sauvegarde historique: {e}")
+
+        return jsonify({
+            "reponse": reponse,
+            "intention": intention,
+            "action": None,
+            "abrev_expandees": abrev_expandees,
+            "message_original": message_raw,
+            "message_expande": message if abrev_expandees else None,
+            "search_results": search_results if search_results else None,
+            "modele": modele
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"[Assistant S8] Erreur: {e}")
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
+
+# ── Route web search standalone (pour le frontend) ───────────────────────────
+
+@app.route('/ia/web-search', methods=['POST'])
+def route_web_search():
+    """
+    Recherche web indépendante — le frontend peut l'appeler directement.
+    Body : { "query": "...", "max_results": 4 }
+    """
+    try:
+        data = request.get_json()
+        query = data.get('query', '').strip()
+        max_r = data.get('max_results', 4)
+        if not query:
+            return jsonify({"erreur": "Query vide"}), 400
+        results = web_search_ddg(query, max_results=max_r)
+        return jsonify({"results": results, "query": query, "count": len(results)})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+# ── Route expand abréviations (utilitaire frontend) ───────────────────────────
+
+@app.route('/ia/expand-abreviations', methods=['POST'])
+def route_expand_abreviations():
+    """
+    Expose l'expansion d'abréviations pour debug/test.
+    Body : { "texte": "..." }
+    """
+    data = request.get_json()
+    texte = data.get('texte', '')
+    expande = expand_abreviations(texte)
+    return jsonify({
+        "original": texte,
+        "expande": expande,
+        "modifie": texte != expande
+    })
     
 # ============================================
 if __name__ == '__main__':
