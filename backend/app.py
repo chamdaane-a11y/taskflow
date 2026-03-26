@@ -3277,64 +3277,39 @@ def goal_reverse_importer():
         return jsonify({"error": str(e)}), 500
 
 
-        # ============================================
-# SPRINT 8 — ASSISTANT IA AUGMENTÉ
-# ============================================
-# Colle ce bloc dans app.py juste avant :
-#   # ============================================
-#   if __name__ == '__main__':
-# ============================================
 
+    
+# ============================================
+# SPRINT 8 v2 — ASSISTANT IA AUGMENTÉ
 import urllib.parse
 
-# ── Abréviations fréquentes → expansion automatique ──────────────────────────
+# ══════════════════════════════════════════════════════════════════════
+# ABRÉVIATIONS
+# ══════════════════════════════════════════════════════════════════════
+
 ABREVIATIONS = {
-    "rdv": "rendez-vous",
-    "pb": "problème",
-    "pbl": "problème",
-    "msg": "message",
-    "tj": "toujours",
-    "bcp": "beaucoup",
-    "tt": "tout",
-    "tjs": "toujours",
-    "pr": "pour",
-    "qd": "quand",
-    "dc": "donc",
-    "vs": "vous",
-    "ns": "nous",
-    "stp": "s'il te plaît",
-    "svp": "s'il vous plaît",
-    "asap": "dès que possible",
-    "fyi": "pour information",
-    "ok": "d'accord",
-    "mtn": "maintenant",
-    "ac": "avec",
-    "ss": "sans",
-    "dsl": "désolé",
-    "jsuis": "je suis",
-    "jvais": "je vais",
-    "jpe": "je peux",
-    "jsa": "je sais",
-    "cc": "salut",
-    "wsh": "salut",
-    "lgtm": "ça me semble bien",
-    "tldr": "en résumé",
-    "eta": "heure d'arrivée estimée",
-    "imo": "à mon avis",
+    "rdv": "rendez-vous", "pb": "problème", "pbl": "problème",
+    "msg": "message", "tj": "toujours", "bcp": "beaucoup",
+    "tt": "tout", "tjs": "toujours", "pr": "pour", "qd": "quand",
+    "dc": "donc", "stp": "s'il te plaît", "svp": "s'il vous plaît",
+    "asap": "dès que possible", "fyi": "pour information",
+    "mtn": "maintenant", "ac": "avec", "ss": "sans",
+    "dsl": "désolé", "jsuis": "je suis", "jvais": "je vais",
+    "jpe": "je peux", "jsa": "je sais", "cc": "salut",
+    "wsh": "salut", "lgtm": "c'est bon", "tldr": "en résumé",
+    "eta": "heure estimée", "imo": "à mon avis", "ok": "d'accord",
 }
 
 def expand_abreviations(texte: str) -> str:
-    """Remplace les abréviations connues dans le texte utilisateur."""
     mots = texte.split()
     resultat = []
     for mot in mots:
-        mot_clean = mot.lower().strip(".,!?;:'\"")
-        if mot_clean in ABREVIATIONS:
-            # Conserver la ponctuation de fin
-            ponctuation = mot[len(mot_clean):]
-            expansion = ABREVIATIONS[mot_clean]
-            # Conserver la casse si le mot original commence par une majuscule
-            if mot[0].isupper():
+        ponctuation = ""
+        mot_clean = mot.rstrip(".,!?;:'\"")
+        ponctuation = mot[len(mot_clean):]
+        if mot_clean.lower() in ABREVIATIONS:
+            expansion = ABREVIATIONS[mot_clean.lower()]
+            if mot_clean[0].isupper():
                 expansion = expansion.capitalize()
             resultat.append(expansion + ponctuation)
         else:
@@ -3342,44 +3317,227 @@ def expand_abreviations(texte: str) -> str:
     return " ".join(resultat)
 
 
-# ── Web Search via DuckDuckGo (sans clé API) ─────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════
+# MÉMOIRE UTILISATEUR
+# ══════════════════════════════════════════════════════════════════════
 
-def web_search_ddg(query: str, max_results: int = 4) -> list[dict]:
+def init_user_memory_table(curseur):
+    """Crée la table user_memory si elle n'existe pas."""
+    curseur.execute("""
+        CREATE TABLE IF NOT EXISTS user_memory (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            categorie VARCHAR(50) NOT NULL,
+            cle VARCHAR(100) NOT NULL,
+            valeur TEXT,
+            poids FLOAT DEFAULT 1.0,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_user_cle (user_id, categorie, cle),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+def sauvegarder_memoire(user_id: int, observations: list[dict]):
     """
-    Recherche DuckDuckGo Instant Answer API + scraping léger.
-    Retourne une liste de {title, snippet, url}.
+    Sauvegarde des observations en mémoire.
+    observations = [{"categorie": "...", "cle": "...", "valeur": "..."}]
     """
+    if not observations:
+        return
     try:
-        # 1. DuckDuckGo Instant Answer API (JSON officiel, sans auth)
-        encoded = urllib.parse.quote_plus(query)
-        url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_redirect=1&no_html=1&skip_disambig=1"
-        resp = http_requests.get(url, timeout=6, headers={"User-Agent": "GetShift/1.0"})
-        data = resp.json()
+        db = connecter()
+        cur = db.cursor()
+        init_user_memory_table(cur)
+        for obs in observations:
+            cur.execute("""
+                INSERT INTO user_memory (user_id, categorie, cle, valeur, poids)
+                VALUES (%s, %s, %s, %s, 1.0)
+                ON DUPLICATE KEY UPDATE
+                    valeur = VALUES(valeur),
+                    poids = poids + 0.1,
+                    updated_at = NOW()
+            """, (user_id, obs['categorie'], obs['cle'], obs['valeur']))
+        db.commit()
+        cur.close()
+        db.close()
+    except Exception as e:
+        print(f"[Mémoire] Erreur sauvegarde: {e}")
 
+def charger_memoire(user_id: int) -> dict:
+    """Charge la mémoire complète de l'utilisateur, triée par poids."""
+    try:
+        db = connecter()
+        cur = db.cursor(dictionary=True)
+        init_user_memory_table(cur)
+        cur.execute("""
+            SELECT categorie, cle, valeur, poids
+            FROM user_memory
+            WHERE user_id = %s
+            ORDER BY poids DESC, updated_at DESC
+            LIMIT 60
+        """, (user_id,))
+        rows = cur.fetchall()
+        cur.close()
+        db.close()
+
+        memoire = {}
+        for row in rows:
+            cat = row['categorie']
+            if cat not in memoire:
+                memoire[cat] = []
+            memoire[cat].append({"cle": row['cle'], "valeur": row['valeur'], "poids": row['poids']})
+        return memoire
+    except Exception as e:
+        print(f"[Mémoire] Erreur chargement: {e}")
+        return {}
+
+def extraire_et_sauvegarder_memoire(user_id: int, message: str, reponse: str):
+    """
+    Analyse la conversation pour extraire des éléments mémorisables
+    et les sauvegarde en arrière-plan.
+    """
+    observations = []
+
+    message_lower = message.lower()
+
+    # Préférences de travail
+    if any(w in message_lower for w in ['je préfère', 'j\'aime', 'j\'aime pas', 'je déteste', 'j\'utilise', 'mon outil']):
+        observations.append({"categorie": "preferences", "cle": f"pref_{len(message_lower)%100}", "valeur": message[:200]})
+
+    # Habitudes horaires
+    if any(w in message_lower for w in ['matin', 'soir', 'nuit', 'midi', 'le matin je', 'le soir je', 'après-midi']):
+        observations.append({"categorie": "habitudes", "cle": "horaires", "valeur": message[:200]})
+
+    # Domaine / contexte professionnel
+    if any(w in message_lower for w in ['développeur', 'étudiant', 'manager', 'freelance', 'entrepreneur', 'prof', 'ingénieur', 'designer']):
+        for mot in ['développeur', 'étudiant', 'manager', 'freelance', 'entrepreneur', 'prof', 'ingénieur', 'designer']:
+            if mot in message_lower:
+                observations.append({"categorie": "profil", "cle": "metier", "valeur": mot})
+                break
+
+    # Objectifs mentionnés
+    if any(w in message_lower for w in ['objectif', 'but', 'je veux', 'je dois', 'j\'ai besoin', 'mon projet']):
+        observations.append({"categorie": "objectifs", "cle": f"obj_{len(message)%50}", "valeur": message[:250]})
+
+    # Sujets récurrents
+    sujets = ['productivité', 'organisation', 'motivation', 'concentration', 'procrastination', 'stress', 'apprentissage', 'code', 'design']
+    for sujet in sujets:
+        if sujet in message_lower:
+            observations.append({"categorie": "sujets", "cle": sujet, "valeur": f"mentionne souvent: {sujet}"})
+
+    if observations:
+        threading.Thread(target=sauvegarder_memoire, args=(user_id, observations), daemon=True).start()
+
+def formater_memoire_pour_prompt(memoire: dict) -> str:
+    """Formate la mémoire pour l'injection dans le system prompt."""
+    if not memoire:
+        return ""
+
+    lignes = ["MÉMOIRE UTILISATEUR (apprentissage au fil des conversations) :"]
+
+    if "profil" in memoire:
+        vals = [m['valeur'] for m in memoire['profil'][:3]]
+        lignes.append(f"- Profil : {', '.join(vals)}")
+
+    if "preferences" in memoire:
+        vals = [m['valeur'][:80] for m in memoire['preferences'][:3]]
+        lignes.append(f"- Préférences : {' | '.join(vals)}")
+
+    if "habitudes" in memoire:
+        vals = [m['valeur'][:80] for m in memoire['habitudes'][:2]]
+        lignes.append(f"- Habitudes : {' | '.join(vals)}")
+
+    if "objectifs" in memoire:
+        vals = [m['valeur'][:100] for m in memoire['objectifs'][:2]]
+        lignes.append(f"- Objectifs récents : {' | '.join(vals)}")
+
+    if "sujets" in memoire:
+        vals = [m['cle'] for m in memoire['sujets'][:5]]
+        lignes.append(f"- Sujets fréquents : {', '.join(vals)}")
+
+    return "\n".join(lignes)
+
+
+# ══════════════════════════════════════════════════════════════════════
+# WEB SEARCH INTELLIGENT
+# ══════════════════════════════════════════════════════════════════════
+
+MOTS_SEARCH_OBLIGATOIRE = [
+    "recherche", "cherche", "google", "trouve sur internet",
+    "actualité", "news", "aujourd'hui", "en ce moment", "récent",
+    "2024", "2025", "2026", "dernièrement", "prix de", "météo",
+    "qu'est-ce que", "c'est quoi", "qui est", "combien coûte",
+]
+
+MOTS_SEARCH_CONTEXTUEL = [
+    "tendance", "populaire", "meilleur", "comparaison", "vs",
+    "outil", "app", "logiciel", "méthode", "technique", "framework",
+    "définition", "comment faire", "tutoriel", "guide",
+]
+
+def evaluer_besoin_search(message: str, historique: list) -> tuple[bool, str]:
+    """
+    Décide intelligemment si un web search est nécessaire.
+    Retourne (bool: faire_search, str: query_optimisée)
+    """
+    msg_lower = message.lower()
+
+    # Search obligatoire
+    for mot in MOTS_SEARCH_OBLIGATOIRE:
+        if mot in msg_lower:
+            query = message.replace("recherche", "").replace("cherche", "").strip()
+            query = query[:120] if len(query) > 120 else query
+            return True, query or message[:100]
+
+    # Search contextuel — si le sujet semble nécessiter des infos récentes
+    score = 0
+    for mot in MOTS_SEARCH_CONTEXTUEL:
+        if mot in msg_lower:
+            score += 1
+
+    # Si plusieurs mots contextuels ET message assez long
+    if score >= 2 and len(message) > 30:
+        return True, message[:100]
+
+    # Questions ouvertes sur des outils/tech
+    if msg_lower.startswith(("quel", "quels", "quelle", "quelles")) and score >= 1:
+        return True, message[:100]
+
+    return False, ""
+
+def web_search_ddg(query: str, max_results: int = 5) -> list[dict]:
+    """Recherche DuckDuckGo — Instant Answer + fallback HTML."""
+    try:
+        encoded = urllib.parse.quote_plus(query)
         results = []
 
-        # Abstract (meilleure réponse directe)
+        # 1. DuckDuckGo Instant Answer API
+        url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_redirect=1&no_html=1&skip_disambig=1"
+        resp = http_requests.get(url, timeout=6, headers={"User-Agent": "GetShift/2.0"})
+        data = resp.json()
+
         if data.get("AbstractText"):
             results.append({
                 "title": data.get("Heading", query),
-                "snippet": data["AbstractText"][:400],
-                "url": data.get("AbstractURL", "")
+                "snippet": data["AbstractText"][:500],
+                "url": data.get("AbstractURL", ""),
+                "source": "DuckDuckGo"
             })
 
-        # RelatedTopics
-        for topic in data.get("RelatedTopics", [])[:max_results]:
+        for topic in data.get("RelatedTopics", [])[:3]:
             if isinstance(topic, dict) and topic.get("Text"):
                 results.append({
                     "title": topic.get("Text", "")[:80],
-                    "snippet": topic.get("Text", "")[:300],
-                    "url": topic.get("FirstURL", "")
+                    "snippet": topic.get("Text", "")[:400],
+                    "url": topic.get("FirstURL", ""),
+                    "source": "DuckDuckGo"
                 })
 
-        # 2. Fallback : DuckDuckGo HTML search (si pas assez de résultats)
-        if len(results) < 2:
+        # 2. Fallback HTML si insuffisant
+        if len(results) < 3:
             html_url = f"https://html.duckduckgo.com/html/?q={encoded}"
             html_resp = http_requests.get(html_url, timeout=6, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; GetShift/1.0)"
+                "User-Agent": "Mozilla/5.0 (compatible; GetShift/2.0)"
             })
             from html.parser import HTMLParser
 
@@ -3387,37 +3545,31 @@ def web_search_ddg(query: str, max_results: int = 4) -> list[dict]:
                 def __init__(self):
                     super().__init__()
                     self.results = []
-                    self._in_result = False
-                    self._in_snippet = False
-                    self._current = {}
-                    self._capture = False
-                    self._data = []
+                    self._cur = {}
+                    self._mode = None
+                    self._buf = []
 
                 def handle_starttag(self, tag, attrs):
-                    attrs_dict = dict(attrs)
-                    cls = attrs_dict.get("class", "")
+                    d = dict(attrs)
+                    cls = d.get("class", "")
                     if "result__a" in cls:
-                        self._current = {"title": "", "snippet": "", "url": attrs_dict.get("href", "")}
-                        self._capture = True
-                        self._data = []
+                        self._cur = {"title": "", "snippet": "", "url": d.get("href", "")}
+                        self._mode = "title"; self._buf = []
                     elif "result__snippet" in cls:
-                        self._in_snippet = True
-                        self._data = []
+                        self._mode = "snippet"; self._buf = []
 
                 def handle_endtag(self, tag):
-                    if self._capture and tag == "a":
-                        self._current["title"] = " ".join(self._data).strip()
-                        self._capture = False
-                    if self._in_snippet and tag == "a":
-                        self._current["snippet"] = " ".join(self._data).strip()
-                        self._in_snippet = False
-                        if self._current.get("title"):
-                            self.results.append(self._current)
-                            self._current = {}
+                    if self._mode == "title" and tag == "a":
+                        self._cur["title"] = " ".join(self._buf).strip()
+                        self._mode = None
+                    elif self._mode == "snippet" and tag == "a":
+                        self._cur["snippet"] = " ".join(self._buf).strip()
+                        if self._cur.get("title"):
+                            self.results.append({**self._cur, "source": "Web"})
+                        self._mode = None
 
                 def handle_data(self, data):
-                    if self._capture or self._in_snippet:
-                        self._data.append(data)
+                    if self._mode: self._buf.append(data)
 
             parser = DDGParser()
             parser.feed(html_resp.text)
@@ -3431,109 +3583,139 @@ def web_search_ddg(query: str, max_results: int = 4) -> list[dict]:
         print(f"[WebSearch] Erreur: {e}")
         return []
 
-
-def formater_resultats_search(results: list[dict]) -> str:
-    """Formate les résultats pour le contexte du prompt IA."""
+def formater_search_pour_prompt(results: list[dict], query: str) -> str:
+    """Formate les résultats web pour le prompt IA."""
     if not results:
-        return "Aucun résultat web trouvé."
-    lignes = ["RÉSULTATS WEB RÉCENTS :"]
+        return f"[Recherche web pour '{query}' — aucun résultat trouvé]"
+    lignes = [f"INFORMATIONS WEB RÉCENTES (requête: \"{query}\") :"]
     for i, r in enumerate(results, 1):
-        lignes.append(f"\n[{i}] {r['title']}")
-        lignes.append(f"    {r['snippet'][:300]}")
-        if r.get("url"):
+        lignes.append(f"\n[{i}] {r.get('title', 'Sans titre')}")
+        if r.get('snippet'):
+            lignes.append(f"    {r['snippet'][:350]}")
+        if r.get('url'):
             lignes.append(f"    Source : {r['url']}")
+    lignes.append("\nIntègre ces informations naturellement dans ta réponse, cite les sources si pertinent.")
     return "\n".join(lignes)
 
 
-# ── Détection d'intention ─────────────────────────────────────────────────────
-
-MOTS_SEARCH = [
-    "recherche", "cherche", "trouve", "google", "internet", "web",
-    "actualité", "news", "dernières nouvelles",
-    "qu'est-ce que", "qu est-ce",          # avec et sans apostrophe
-    "c'est quoi", "c est quoi",
-    "définition", "prix de", "météo",
-    "aujourd'hui", "aujourd hui",
-    "en ce moment", "récent", "2024", "2025", "2026", "dernièrement",
-    "c'est qui", "c est qui", "qui est", "combien coûte", "comment faire",
-]
-
-MOTS_ACTION_CREER = [
-    "crée", "créer", "ajoute", "ajouter", "nouvelle tâche",
-    "add task", "create task", "mets", "mettre",
-]
-
-MOTS_ACTION_TERMINER = [
-    "marque comme terminée", "termine la tâche", "complete",
-    "finis", "ferme la tâche", "tâche terminée", "mark done",
-    "valide la tâche", "coche",
-]
-
-MOTS_ACTION_PLANIFIER = [
-    "planifie", "planifier", "schedule", "programme",
-    "organise ma journée", "tomorrow builder", "génère un planning",
-]
+# ══════════════════════════════════════════════════════════════════════
+# DÉTECTION D'INTENTION
+# ══════════════════════════════════════════════════════════════════════
 
 def detecter_intention(texte: str) -> str:
-    """
-    Retourne : 'search' | 'action_creer' | 'action_terminer' |
-               'action_planifier' | 'chat'
-    """
-    texte_low = texte.lower()
-    for mot in MOTS_ACTION_CREER:
-        if mot in texte_low:
-            return "action_creer"
-    for mot in MOTS_ACTION_TERMINER:
-        if mot in texte_low:
-            return "action_terminer"
-    for mot in MOTS_ACTION_PLANIFIER:
-        if mot in texte_low:
-            return "action_planifier"
-    for mot in MOTS_SEARCH:
-        if mot in texte_low:
-            return "search"
+    t = texte.lower()
+    if any(m in t for m in ["crée", "créer", "ajoute", "ajouter", "nouvelle tâche", "add task"]):
+        return "action_creer"
+    if any(m in t for m in ["marque comme terminée", "termine la tâche", "finis", "coche", "valide la tâche"]):
+        return "action_terminer"
+    if any(m in t for m in ["planifie", "planifier", "tomorrow builder", "organise ma journée"]):
+        return "action_planifier"
     return "chat"
 
-
-# ── Extraction du titre de tâche depuis un prompt naturel ────────────────────
-
 def extraire_titre_tache(prompt: str, groq_client_local) -> str:
-    """Demande à l'IA d'extraire le titre de tâche voulu par l'utilisateur."""
+    """Extrait intelligemment le titre de tâche via IA"""
     try:
         res = groq_client_local.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{
                 "role": "user",
                 "content": (
-                    f"Extrait uniquement le titre de la tâche à créer depuis cette phrase. "
-                    f"Réponds avec UNIQUEMENT le titre, rien d'autre, sans guillemets.\n\n"
+                    "Extrait uniquement le titre de la tâche (court et clair). "
+                    "Supprime les dates, priorités, et mots inutiles.\n\n"
                     f"Phrase : {prompt}"
                 )
             }],
-            max_tokens=60,
+            max_tokens=50,
             temperature=0.1
         )
-        return res.choices[0].message.content.strip().strip('"\'')
-    except:
-        # Fallback : supprimer les mots déclencheurs
-        for mot in MOTS_ACTION_CREER:
-            prompt = prompt.lower().replace(mot, "").strip()
-        return prompt.strip().capitalize()[:120]
+        titre = res.choices[0].message.content.strip().strip('"\'')
+        return titre[:100]
+
+    except Exception as e:
+        # fallback intelligent (ton ancienne logique améliorée)
+        prompt_clean = prompt.lower()
+        for mot in ["crée une tâche", "créer une tâche", "ajoute une tâche", "ajouter une tâche", "nouvelle tâche"]:
+            prompt_clean = prompt_clean.replace(mot, "")
+        return prompt_clean.strip().capitalize()[:120]
 
 
-# ── Route principale Sprint 8 ─────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════
+# SYSTEM PROMPT — NIVEAU GPT-4, SPÉCIALISTE GETSHIFT
+# ══════════════════════════════════════════════════════════════════════
+
+def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, contexte_web: str) -> str:
+    """
+    Construit un system prompt de niveau élite —
+    Spécialiste productivité GetShift, mémoire complète, contexte web.
+    """
+    terminees = sum(1 for t in taches if t.get('terminee'))
+    en_cours = [t for t in taches if not t.get('terminee')]
+    en_retard = [t for t in en_cours if t.get('deadline') and str(t['deadline']) < datetime.now().strftime('%Y-%m-%d')]
+    haute = [t for t in en_cours if t.get('priorite') == 'haute']
+    taux = round(terminees / max(len(taches), 1) * 100)
+
+    taches_str = "\n".join(
+        f"  • [{t.get('priorite','?').upper()}] {t['titre']}"
+        + (f" · deadline {str(t['deadline'])[:10]}" if t.get('deadline') else "")
+        for t in en_cours[:8]
+    ) or "  • Aucune tâche en cours"
+
+    memoire_str = formater_memoire_pour_prompt(memoire)
+
+    prompt = f"""Tu es SHIFT — l'assistant IA de GetShift, la plateforme de productivité personnelle de {user_row['nom']}.
+
+Tu n'es pas un assistant générique. Tu es le spécialiste absolu de la productivité, de l'organisation personnelle et de la gestion de tâches. Sur ton domaine, tu surpasses Notion AI, Todoist AI, et tous les assistants de productivité existants. Tu combines :
+- L'expertise d'un coach de productivité certifié (GTD, Deep Work, Atomic Habits, Zettelkasten)
+- La précision d'un analyste de données comportementales
+- L'empathie d'un mentor personnel qui connaît vraiment l'utilisateur
+- La capacité à fournir des informations temps réel grâce à la recherche web
+
+━━━ PROFIL UTILISATEUR ━━━
+Nom : {user_row['nom']}
+Niveau GetShift : {user_row.get('niveau', 1)} | Points : {user_row.get('points', 0)} | Streak : {user_row.get('streak', 0)} jours consécutifs
+Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours)} en cours | {len(en_retard)} en retard
+{f"Haute priorité urgente : {', '.join(t['titre'] for t in haute[:3])}" if haute else "Aucune tâche haute priorité en cours"}
+
+━━━ TÂCHES EN COURS ━━━
+{taches_str}
+
+{f"━━━ {memoire_str}" if memoire_str else ""}
+
+{f"━━━ DONNÉES WEB TEMPS RÉEL ━━━{chr(10)}{contexte_web}" if contexte_web else ""}
+
+━━━ TES RÈGLES D'OR ━━━
+1. PERSONNALISATION TOTALE — Tu connais {user_row['nom']}, son contexte, ses tâches. Chaque réponse doit le refléter. Jamais de réponse générique.
+2. FORMAT RICHE & LISIBLE — Utilise le markdown systématiquement :
+   - ## pour les sections, **gras** pour l'important
+   - Tableaux | col | pour les comparaisons et plannings
+   - Listes numérotées pour les étapes
+   - `code` pour les techniques/méthodes
+   - --- pour les séparations
+3. ACTIONNABLE AVANT TOUT — Chaque réponse doit se terminer par une action concrète que {user_row['nom']} peut faire dans les 5 prochaines minutes
+4. PROACTIVITÉ — Si tu détectes un problème (procrastination, surcharge, pattern négatif) dans ses données, mentionne-le
+5. SOURCES WEB — Si tu utilises des infos web, cite-les naturellement ("Selon [source]...")
+6. LANGUE — Français par défaut, adapte-toi si l'utilisateur change de langue
+7. LONGUEUR — Adapte : question simple = réponse courte et percutante. Question complexe = analyse complète structurée.
+8. MÉMOIRE — Tu te souviens des conversations précédentes. Utilise ces informations pour personnaliser encore plus.
+
+Tu es SHIFT. Tu es le meilleur assistant de productivité qui existe. Prouve-le à chaque réponse."""
+
+    return prompt
+
+
+# ══════════════════════════════════════════════════════════════════════
+# ROUTE PRINCIPALE — /ia/assistant v2
+# ══════════════════════════════════════════════════════════════════════
 
 @app.route('/ia/assistant', methods=['POST'])
 def assistant_augmente():
     """
-    Assistant IA augmenté — Sprint 8.
-    Body JSON :
-      user_id      : int
-      message      : str   (prompt utilisateur)
-      modele       : str   (optionnel, défaut llama-3.3-70b-versatile)
-      historique   : list  (messages précédents [{role, content}])
-      tache_id     : int   (optionnel, tâche liée)
-      force_search : bool  (optionnel, forcer le web search)
+    Assistant IA augmenté v2 — Sprint 8.
+    - Mémoire utilisateur persistante
+    - Web search intelligent (auto + forcé)
+    - System prompt élite spécialiste GetShift
+    - Actions directes
+    - Abréviations
     """
     try:
         data = request.get_json()
@@ -3547,16 +3729,11 @@ def assistant_augmente():
         if not message_raw:
             return jsonify({"erreur": "Message vide"}), 400
 
-        # 1. Expansion des abréviations
+        # 1. Expansion abréviations
         message = expand_abreviations(message_raw)
-        abrev_expandees = message != message_raw  # flag pour le frontend
+        abrev_expandees = message != message_raw
 
-        # 2. Détection d'intention
-        intention = detecter_intention(message)
-        if force_search:
-            intention = "search"
-
-        # 3. Charger contexte utilisateur
+        # 2. Charger contexte utilisateur
         db = connecter()
         curseur = db.cursor(dictionary=True)
 
@@ -3569,14 +3746,20 @@ def assistant_augmente():
         curseur.execute("""
             SELECT id, titre, priorite, deadline, terminee
             FROM taches WHERE user_id=%s
-            ORDER BY terminee ASC, created_at DESC LIMIT 20
+            ORDER BY terminee ASC, created_at DESC LIMIT 25
         """, (user_id,))
         taches = curseur.fetchall()
         for t in taches:
             if t.get('deadline'):
                 t['deadline'] = str(t['deadline'])
 
-        # ── Bloc ACTION DIRECTE : créer une tâche ────────────────────────────
+        # 3. Charger mémoire utilisateur
+        memoire = charger_memoire(user_id)
+
+        # 4. Détection intention
+        intention = detecter_intention(message)
+
+        # ── ACTION : Créer tâche ────────────────────────────────────────
         if intention == "action_creer":
             titre = extraire_titre_tache(message, groq_client)
             curseur.execute(
@@ -3586,8 +3769,13 @@ def assistant_augmente():
             db.commit()
             tache_creee_id = curseur.lastrowid
             db.close()
+            threading.Thread(
+                target=extraire_et_sauvegarder_memoire,
+                args=(user_id, message_raw, f"Tâche créée: {titre}"),
+                daemon=True
+            ).start()
             return jsonify({
-                "reponse": f"## ✅ Tâche créée\n\n**\"{titre}\"** a été ajoutée à ta liste avec une priorité moyenne.\n\nTu peux modifier sa priorité et sa deadline depuis ton dashboard.",
+                "reponse": f"## Tâche créée\n\n**\"{titre}\"** a été ajoutée à ta liste.\n\nPriorité par défaut : moyenne. Tu peux la modifier depuis ton dashboard.",
                 "intention": "action_creer",
                 "action": {"type": "tache_creee", "id": tache_creee_id, "titre": titre},
                 "abrev_expandees": abrev_expandees,
@@ -3595,171 +3783,146 @@ def assistant_augmente():
                 "modele": modele
             })
 
-        # ── Bloc ACTION DIRECTE : marquer une tâche terminée ─────────────────
+        # ── ACTION : Terminer tâche ─────────────────────────────────────
         if intention == "action_terminer":
-            # Chercher quelle tâche l'utilisateur veut terminer
             taches_actives = [t for t in taches if not t['terminee']]
             tache_cible = None
-
             if tache_id:
-                # Tâche explicitement liée dans l'interface
                 tache_cible = next((t for t in taches_actives if t['id'] == tache_id), None)
             else:
-                # Chercher dans le texte
                 for t in taches_actives:
                     mots_titre = set(t['titre'].lower().split())
-                    mots_message = set(message.lower().split())
-                    if len(mots_titre & mots_message) >= 2:
-                        tache_cible = t
-                        break
-
+                    mots_msg = set(message.lower().split())
+                    if len(mots_titre & mots_msg) >= 2:
+                        tache_cible = t; break
             if tache_cible:
                 curseur.execute("UPDATE taches SET terminee=TRUE WHERE id=%s", (tache_cible['id'],))
                 db.commit()
                 db.close()
                 return jsonify({
-                    "reponse": f"## ✅ Tâche terminée !\n\n**\"{tache_cible['titre']}\"** est maintenant marquée comme complétée. 🎉\n\nBravo, continue sur cette lancée !",
+                    "reponse": f"## Tâche terminée !\n\n**\"{tache_cible['titre']}\"** est complétée. Excellent travail !\n\nContinue sur cette lancée — quel est ton prochain objectif ?",
                     "intention": "action_terminer",
                     "action": {"type": "tache_terminee", "id": tache_cible['id'], "titre": tache_cible['titre']},
                     "abrev_expandees": abrev_expandees,
                     "modele": modele
                 })
-            else:
-                # Pas trouvé — demander précision via chat normal
-                intention = "chat"
+            intention = "chat"
 
-        # ── Bloc ACTION DIRECTE : planifier (Tomorrow Builder) ───────────────
+        # ── ACTION : Planifier ──────────────────────────────────────────
         if intention == "action_planifier":
             db.close()
             return jsonify({
-                "reponse": "## 📅 Lancement du Tomorrow Builder\n\nJe génère ton planning optimal pour demain...",
+                "reponse": "## Tomorrow Builder\n\nJe te redirige vers le planificateur intelligent...\n\nIl va analyser tes tâches et ton niveau d'énergie pour construire le planning optimal de demain.",
                 "intention": "action_planifier",
                 "action": {"type": "redirect_tomorrow_builder"},
                 "abrev_expandees": abrev_expandees,
                 "modele": modele
             })
 
-        # ── Bloc WEB SEARCH ──────────────────────────────────────────────────
-        contexte_web = ""
-        search_results = []
-        if intention == "search":
-            search_results = web_search_ddg(message, max_results=4)
-            contexte_web = formater_resultats_search(search_results)
-
         db.close()
 
-        # 4. Construire le system prompt enrichi
-        terminees = sum(1 for t in taches if t['terminee'])
-        en_cours   = [t for t in taches if not t['terminee']]
-        en_retard  = [t for t in en_cours if t.get('deadline') and t['deadline'] < datetime.now().strftime('%Y-%m-%d')]
-        haute      = [t for t in en_cours if t['priorite'] == 'haute']
+        # 5. Web search — intelligent + forcé
+        contexte_web = ""
+        search_results = []
+        faire_search, query_search = evaluer_besoin_search(message, historique)
 
-        system_prompt = f"""Tu es l'assistant IA personnel de {user_row['nom']} sur GetShift, une app de productivité.
+        if force_search or faire_search:
+            query = (message[:100] if force_search else query_search)
+            search_results = web_search_ddg(query, max_results=5)
+            contexte_web = formater_search_pour_prompt(search_results, query)
 
-PROFIL :
-- Niveau {user_row.get('niveau', 1)} · {user_row.get('points', 0)} points · Streak : {user_row.get('streak', 0)} jours
-- Tâches : {len(taches)} total · {terminees} terminées · {len(en_cours)} en cours · {len(en_retard)} en retard
-{f"- Haute priorité : {', '.join(t['titre'] for t in haute[:3])}" if haute else ""}
+        # 6. System prompt élite
+        system_prompt = build_elite_system_prompt(user_row, taches, memoire, contexte_web)
 
-TÂCHES EN COURS (top 8) :
-{chr(10).join(f"- [{t['priorite'].upper()}] {t['titre']}" + (f" · deadline {t['deadline'][:10]}" if t.get('deadline') else "") for t in en_cours[:8]) or "Aucune tâche en cours"}
-
-{f"CONTEXTE WEB :{chr(10)}{contexte_web}" if contexte_web else ""}
-
-INSTRUCTIONS :
-- Réponds en français (sauf si l'utilisateur écrit autrement)
-- Utilise le markdown : ## titres, **gras**, - listes, | tableaux |, ``` code ```
-- Pour les plannings/emplois du temps : utilise un tableau markdown avec colonnes Heure | Tâche | Durée | Priorité
-- Pour les comparaisons : utilise des tableaux markdown
-- Sois concis mais complet — évite le remplissage
-- Si tu utilises des infos web, indique la source brièvement
-- Tu connais {user_row['nom']} et son contexte — réfère-t'y naturellement
-- Donne des réponses actionnables et personnalisées"""
-
-        # 5. Construire l'historique de conversation
+        # 7. Construire messages API
         messages_api = [{"role": "system", "content": system_prompt}]
-        for h in historique[-14:]:
+        for h in historique[-16:]:
             role = "assistant" if h.get('role') in ('ia', 'assistant') else "user"
             messages_api.append({"role": role, "content": h.get('content', '')})
         messages_api.append({"role": "user", "content": message})
 
-        # 6. Appel Groq
+        # 8. Appel Groq
         completion = groq_client.chat.completions.create(
             model=modele,
             messages=messages_api,
-            max_tokens=1500,
-            temperature=0.7
+            max_tokens=2000,
+            temperature=0.72
         )
         reponse = completion.choices[0].message.content.strip()
 
-        # 7. Sauvegarder en historique
+        # 9. Sauvegarder historique + mémoire (en arrière-plan)
         try:
             db2 = connecter()
             cur2 = db2.cursor()
             cur2.execute(
-                "INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s, %s, %s, %s, %s)",
+                "INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s,%s,%s,%s,%s)",
                 (user_id, message_raw, reponse, modele, tache_id)
             )
-            db2.commit()
-            cur2.close()
-            db2.close()
+            db2.commit(); cur2.close(); db2.close()
         except Exception as e:
-            print(f"[Assistant] Erreur sauvegarde historique: {e}")
+            print(f"[Assistant] Erreur historique: {e}")
+
+        threading.Thread(
+            target=extraire_et_sauvegarder_memoire,
+            args=(user_id, message_raw, reponse),
+            daemon=True
+        ).start()
 
         return jsonify({
             "reponse": reponse,
-            "intention": intention,
+            "intention": "search" if (faire_search or force_search) else "chat",
             "action": None,
             "abrev_expandees": abrev_expandees,
             "message_original": message_raw,
             "message_expande": message if abrev_expandees else None,
             "search_results": search_results if search_results else None,
+            "web_searched": bool(search_results),
             "modele": modele
         })
 
     except Exception as e:
         import traceback
-        print(f"[Assistant S8] Erreur: {e}")
+        print(f"[Assistant v2] Erreur: {e}")
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
 
 
-# ── Route web search standalone (pour le frontend) ───────────────────────────
+# ── Routes utilitaires ────────────────────────────────────────────────
 
 @app.route('/ia/web-search', methods=['POST'])
 def route_web_search():
-    """
-    Recherche web indépendante — le frontend peut l'appeler directement.
-    Body : { "query": "...", "max_results": 4 }
-    """
+    data = request.get_json()
+    query = data.get('query', '').strip()
+    if not query:
+        return jsonify({"erreur": "Query vide"}), 400
+    results = web_search_ddg(query, max_results=5)
+    return jsonify({"results": results, "query": query, "count": len(results)})
+
+@app.route('/ia/memory/<int:user_id>', methods=['GET'])
+def get_user_memory(user_id):
+    """Retourne la mémoire complète d'un utilisateur."""
+    memoire = charger_memoire(user_id)
+    total = sum(len(v) for v in memoire.values())
+    return jsonify({"memoire": memoire, "total_entrees": total})
+
+@app.route('/ia/memory/<int:user_id>', methods=['DELETE'])
+def clear_user_memory(user_id):
+    """Efface la mémoire d'un utilisateur."""
     try:
-        data = request.get_json()
-        query = data.get('query', '').strip()
-        max_r = data.get('max_results', 4)
-        if not query:
-            return jsonify({"erreur": "Query vide"}), 400
-        results = web_search_ddg(query, max_results=max_r)
-        return jsonify({"results": results, "query": query, "count": len(results)})
+        db = connecter()
+        cur = db.cursor()
+        cur.execute("DELETE FROM user_memory WHERE user_id=%s", (user_id,))
+        db.commit(); cur.close(); db.close()
+        return jsonify({"message": "Mémoire effacée"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
-# ── Route expand abréviations (utilitaire frontend) ───────────────────────────
-
 @app.route('/ia/expand-abreviations', methods=['POST'])
 def route_expand_abreviations():
-    """
-    Expose l'expansion d'abréviations pour debug/test.
-    Body : { "texte": "..." }
-    """
     data = request.get_json()
     texte = data.get('texte', '')
     expande = expand_abreviations(texte)
-    return jsonify({
-        "original": texte,
-        "expande": expande,
-        "modifie": texte != expande
-    })
-    
+    return jsonify({"original": texte, "expande": expande, "modifie": texte != expande})
+
 # ============================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
