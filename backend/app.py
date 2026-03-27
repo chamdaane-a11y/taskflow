@@ -3277,16 +3277,12 @@ def goal_reverse_importer():
         return jsonify({"error": str(e)}), 500
 
 
-
-    
-# ============================================
-# SPRINT 8 v2 — ASSISTANT IA AUGMENTÉ
 import urllib.parse
-
+ 
 # ══════════════════════════════════════════════════════════════════════
 # ABRÉVIATIONS
 # ══════════════════════════════════════════════════════════════════════
-
+ 
 ABREVIATIONS = {
     "rdv": "rendez-vous", "pb": "problème", "pbl": "problème",
     "msg": "message", "tj": "toujours", "bcp": "beaucoup",
@@ -3299,7 +3295,7 @@ ABREVIATIONS = {
     "wsh": "salut", "lgtm": "c'est bon", "tldr": "en résumé",
     "eta": "heure estimée", "imo": "à mon avis", "ok": "d'accord",
 }
-
+ 
 def expand_abreviations(texte: str) -> str:
     mots = texte.split()
     resultat = []
@@ -3315,12 +3311,12 @@ def expand_abreviations(texte: str) -> str:
         else:
             resultat.append(mot)
     return " ".join(resultat)
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 # MÉMOIRE UTILISATEUR
 # ══════════════════════════════════════════════════════════════════════
-
+ 
 def init_user_memory_table(curseur):
     """Crée la table user_memory si elle n'existe pas."""
     curseur.execute("""
@@ -3336,7 +3332,7 @@ def init_user_memory_table(curseur):
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     """)
-
+ 
 def sauvegarder_memoire(user_id: int, observations: list[dict]):
     """
     Sauvegarde des observations en mémoire.
@@ -3362,7 +3358,7 @@ def sauvegarder_memoire(user_id: int, observations: list[dict]):
         db.close()
     except Exception as e:
         print(f"[Mémoire] Erreur sauvegarde: {e}")
-
+ 
 def charger_memoire(user_id: int) -> dict:
     """Charge la mémoire complète de l'utilisateur, triée par poids."""
     try:
@@ -3379,7 +3375,7 @@ def charger_memoire(user_id: int) -> dict:
         rows = cur.fetchall()
         cur.close()
         db.close()
-
+ 
         memoire = {}
         for row in rows:
             cat = row['categorie']
@@ -3390,218 +3386,215 @@ def charger_memoire(user_id: int) -> dict:
     except Exception as e:
         print(f"[Mémoire] Erreur chargement: {e}")
         return {}
-
+ 
 def extraire_et_sauvegarder_memoire(user_id: int, message: str, reponse: str):
     """
     Analyse la conversation pour extraire des éléments mémorisables
     et les sauvegarde en arrière-plan.
     """
     observations = []
-
+ 
     message_lower = message.lower()
-
+ 
     # Préférences de travail
     if any(w in message_lower for w in ['je préfère', 'j\'aime', 'j\'aime pas', 'je déteste', 'j\'utilise', 'mon outil']):
         observations.append({"categorie": "preferences", "cle": f"pref_{len(message_lower)%100}", "valeur": message[:200]})
-
+ 
     # Habitudes horaires
     if any(w in message_lower for w in ['matin', 'soir', 'nuit', 'midi', 'le matin je', 'le soir je', 'après-midi']):
         observations.append({"categorie": "habitudes", "cle": "horaires", "valeur": message[:200]})
-
+ 
     # Domaine / contexte professionnel
     if any(w in message_lower for w in ['développeur', 'étudiant', 'manager', 'freelance', 'entrepreneur', 'prof', 'ingénieur', 'designer']):
         for mot in ['développeur', 'étudiant', 'manager', 'freelance', 'entrepreneur', 'prof', 'ingénieur', 'designer']:
             if mot in message_lower:
                 observations.append({"categorie": "profil", "cle": "metier", "valeur": mot})
                 break
-
+ 
     # Objectifs mentionnés
     if any(w in message_lower for w in ['objectif', 'but', 'je veux', 'je dois', 'j\'ai besoin', 'mon projet']):
         observations.append({"categorie": "objectifs", "cle": f"obj_{len(message)%50}", "valeur": message[:250]})
-
+ 
     # Sujets récurrents
     sujets = ['productivité', 'organisation', 'motivation', 'concentration', 'procrastination', 'stress', 'apprentissage', 'code', 'design']
     for sujet in sujets:
         if sujet in message_lower:
             observations.append({"categorie": "sujets", "cle": sujet, "valeur": f"mentionne souvent: {sujet}"})
-
+ 
     if observations:
         threading.Thread(target=sauvegarder_memoire, args=(user_id, observations), daemon=True).start()
-
+ 
 def formater_memoire_pour_prompt(memoire: dict) -> str:
     """Formate la mémoire pour l'injection dans le system prompt."""
     if not memoire:
         return ""
-
+ 
     lignes = ["MÉMOIRE UTILISATEUR (apprentissage au fil des conversations) :"]
-
+ 
     if "profil" in memoire:
         vals = [m['valeur'] for m in memoire['profil'][:3]]
         lignes.append(f"- Profil : {', '.join(vals)}")
-
+ 
     if "preferences" in memoire:
         vals = [m['valeur'][:80] for m in memoire['preferences'][:3]]
         lignes.append(f"- Préférences : {' | '.join(vals)}")
-
+ 
     if "habitudes" in memoire:
         vals = [m['valeur'][:80] for m in memoire['habitudes'][:2]]
         lignes.append(f"- Habitudes : {' | '.join(vals)}")
-
+ 
     if "objectifs" in memoire:
         vals = [m['valeur'][:100] for m in memoire['objectifs'][:2]]
         lignes.append(f"- Objectifs récents : {' | '.join(vals)}")
-
+ 
     if "sujets" in memoire:
         vals = [m['cle'] for m in memoire['sujets'][:5]]
         lignes.append(f"- Sujets fréquents : {', '.join(vals)}")
-
+ 
     return "\n".join(lignes)
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 # WEB SEARCH INTELLIGENT
 # ══════════════════════════════════════════════════════════════════════
-
+ 
 MOTS_SEARCH_OBLIGATOIRE = [
     "recherche", "cherche", "google", "trouve sur internet",
     "actualité", "news", "aujourd'hui", "en ce moment", "récent",
     "2024", "2025", "2026", "dernièrement", "prix de", "météo",
     "qu'est-ce que", "c'est quoi", "qui est", "combien coûte",
 ]
-
+ 
 MOTS_SEARCH_CONTEXTUEL = [
     "tendance", "populaire", "meilleur", "comparaison", "vs",
     "outil", "app", "logiciel", "méthode", "technique", "framework",
     "définition", "comment faire", "tutoriel", "guide",
 ]
-
+ 
 def evaluer_besoin_search(message: str, historique: list) -> tuple[bool, str]:
     """
     Décide intelligemment si un web search est nécessaire.
     Retourne (bool: faire_search, str: query_optimisée)
     """
     msg_lower = message.lower()
-
+ 
     # Search obligatoire
     for mot in MOTS_SEARCH_OBLIGATOIRE:
         if mot in msg_lower:
             query = message.replace("recherche", "").replace("cherche", "").strip()
             query = query[:120] if len(query) > 120 else query
             return True, query or message[:100]
-
+ 
     # Search contextuel — si le sujet semble nécessiter des infos récentes
     score = 0
     for mot in MOTS_SEARCH_CONTEXTUEL:
         if mot in msg_lower:
             score += 1
-
+ 
     # Si plusieurs mots contextuels ET message assez long
     if score >= 2 and len(message) > 30:
         return True, message[:100]
-
+ 
     # Questions ouvertes sur des outils/tech
     if msg_lower.startswith(("quel", "quels", "quelle", "quelles")) and score >= 1:
         return True, message[:100]
-
+ 
     return False, ""
-
-def web_search_ddg(query: str, max_results: int = 5) -> list[dict]:
-    """Recherche DuckDuckGo — Instant Answer + fallback HTML."""
+ 
+def web_search_tavily(query: str, max_results: int = 5) -> list[dict]:
+    """
+    Recherche Tavily AI — optimisée pour les LLM.
+    Retourne des résultats propres avec contenu extrait.
+    """
     try:
-        encoded = urllib.parse.quote_plus(query)
-        results = []
-
-        # 1. DuckDuckGo Instant Answer API
-        url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_redirect=1&no_html=1&skip_disambig=1"
-        resp = http_requests.get(url, timeout=6, headers={"User-Agent": "GetShift/2.0"})
+        api_key = os.getenv("TAVILY_API_KEY", "")
+        if not api_key:
+            print("[Tavily] Clé API manquante")
+            return []
+ 
+        payload = {
+            "api_key":        api_key,
+            "query":          query,
+            "search_depth":   "advanced",   # advanced = contenu extrait complet
+            "max_results":    max_results,
+            "include_answer": True,          # réponse directe en plus des sources
+            "include_raw_content": False,
+        }
+ 
+        resp = http_requests.post(
+            "https://api.tavily.com/search",
+            json=payload,
+            timeout=8,
+            headers={"Content-Type": "application/json"}
+        )
+        resp.raise_for_status()
         data = resp.json()
-
-        if data.get("AbstractText"):
+ 
+        results = []
+ 
+        # Réponse directe Tavily (synthèse IA des résultats)
+        if data.get("answer"):
             results.append({
-                "title": data.get("Heading", query),
-                "snippet": data["AbstractText"][:500],
-                "url": data.get("AbstractURL", ""),
-                "source": "DuckDuckGo"
+                "title":   "Synthèse Tavily",
+                "snippet": data["answer"][:600],
+                "url":     "",
+                "source":  "Tavily AI",
+                "is_answer": True
             })
-
-        for topic in data.get("RelatedTopics", [])[:3]:
-            if isinstance(topic, dict) and topic.get("Text"):
-                results.append({
-                    "title": topic.get("Text", "")[:80],
-                    "snippet": topic.get("Text", "")[:400],
-                    "url": topic.get("FirstURL", ""),
-                    "source": "DuckDuckGo"
-                })
-
-        # 2. Fallback HTML si insuffisant
-        if len(results) < 3:
-            html_url = f"https://html.duckduckgo.com/html/?q={encoded}"
-            html_resp = http_requests.get(html_url, timeout=6, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; GetShift/2.0)"
+ 
+        # Sources individuelles
+        for r in data.get("results", [])[:max_results]:
+            results.append({
+                "title":   r.get("title", "")[:120],
+                "snippet": r.get("content", "")[:500],
+                "url":     r.get("url", ""),
+                "source":  r.get("url", "").split("/")[2] if r.get("url") else "Web",
+                "score":   r.get("score", 0),
+                "is_answer": False
             })
-            from html.parser import HTMLParser
-
-            class DDGParser(HTMLParser):
-                def __init__(self):
-                    super().__init__()
-                    self.results = []
-                    self._cur = {}
-                    self._mode = None
-                    self._buf = []
-
-                def handle_starttag(self, tag, attrs):
-                    d = dict(attrs)
-                    cls = d.get("class", "")
-                    if "result__a" in cls:
-                        self._cur = {"title": "", "snippet": "", "url": d.get("href", "")}
-                        self._mode = "title"; self._buf = []
-                    elif "result__snippet" in cls:
-                        self._mode = "snippet"; self._buf = []
-
-                def handle_endtag(self, tag):
-                    if self._mode == "title" and tag == "a":
-                        self._cur["title"] = " ".join(self._buf).strip()
-                        self._mode = None
-                    elif self._mode == "snippet" and tag == "a":
-                        self._cur["snippet"] = " ".join(self._buf).strip()
-                        if self._cur.get("title"):
-                            self.results.append({**self._cur, "source": "Web"})
-                        self._mode = None
-
-                def handle_data(self, data):
-                    if self._mode: self._buf.append(data)
-
-            parser = DDGParser()
-            parser.feed(html_resp.text)
-            for r in parser.results[:max_results]:
-                if r not in results:
-                    results.append(r)
-
-        return results[:max_results]
-
+ 
+        return results
+ 
     except Exception as e:
-        print(f"[WebSearch] Erreur: {e}")
+        print(f"[Tavily] Erreur: {e}")
         return []
-
+ 
+# Alias pour compatibilité
+def web_search_ddg(query: str, max_results: int = 5) -> list[dict]:
+    """Redirige vers Tavily."""
+    return web_search_tavily(query, max_results)
+ 
 def formater_search_pour_prompt(results: list[dict], query: str) -> str:
-    """Formate les résultats web pour le prompt IA."""
+    """Formate les résultats Tavily pour le prompt IA."""
     if not results:
         return f"[Recherche web pour '{query}' — aucun résultat trouvé]"
-    lignes = [f"INFORMATIONS WEB RÉCENTES (requête: \"{query}\") :"]
-    for i, r in enumerate(results, 1):
+ 
+    lignes = [f"DONNÉES WEB EN TEMPS RÉEL — requête : \"{query}\"", "Date actuelle : " + datetime.now().strftime('%d/%m/%Y'), ""]
+ 
+    # Réponse directe Tavily en premier
+    answers = [r for r in results if r.get('is_answer')]
+    sources = [r for r in results if not r.get('is_answer')]
+ 
+    if answers:
+        lignes.append(f"RÉPONSE DIRECTE : {answers[0]['snippet']}")
+        lignes.append("")
+ 
+    lignes.append("SOURCES :")
+    for i, r in enumerate(sources, 1):
         lignes.append(f"\n[{i}] {r.get('title', 'Sans titre')}")
         if r.get('snippet'):
-            lignes.append(f"    {r['snippet'][:350]}")
+            lignes.append(f"    {r['snippet'][:400]}")
         if r.get('url'):
-            lignes.append(f"    Source : {r['url']}")
-    lignes.append("\nIntègre ces informations naturellement dans ta réponse, cite les sources si pertinent.")
+            lignes.append(f"    URL : {r['url']}")
+ 
+    lignes.append("\nRÈGLE : Utilise ces données pour répondre avec les informations les plus récentes. Cite les sources naturellement.")
     return "\n".join(lignes)
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 # DÉTECTION D'INTENTION
 # ══════════════════════════════════════════════════════════════════════
-
+ 
 def detecter_intention(texte: str) -> str:
     t = texte.lower()
     if any(m in t for m in ["crée", "créer", "ajoute", "ajouter", "nouvelle tâche", "add task"]):
@@ -3611,38 +3604,18 @@ def detecter_intention(texte: str) -> str:
     if any(m in t for m in ["planifie", "planifier", "tomorrow builder", "organise ma journée"]):
         return "action_planifier"
     return "chat"
-
-def extraire_titre_tache(prompt: str, groq_client_local) -> str:
-    """Extrait intelligemment le titre de tâche via IA"""
-    try:
-        res = groq_client_local.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{
-                "role": "user",
-                "content": (
-                    "Extrait uniquement le titre de la tâche (court et clair). "
-                    "Supprime les dates, priorités, et mots inutiles.\n\n"
-                    f"Phrase : {prompt}"
-                )
-            }],
-            max_tokens=50,
-            temperature=0.1
-        )
-        titre = res.choices[0].message.content.strip().strip('"\'')
-        return titre[:100]
-
-    except Exception as e:
-        # fallback intelligent (ton ancienne logique améliorée)
-        prompt_clean = prompt.lower()
-        for mot in ["crée une tâche", "créer une tâche", "ajoute une tâche", "ajouter une tâche", "nouvelle tâche"]:
-            prompt_clean = prompt_clean.replace(mot, "")
-        return prompt_clean.strip().capitalize()[:120]
-
-
+ 
+def extraire_titre_tache(prompt: str) -> str:
+    for mot in ["crée une tâche", "créer une tâche", "ajoute une tâche", "ajouter une tâche", "nouvelle tâche"]:
+        if mot in prompt.lower():
+            return prompt.lower().replace(mot, "").strip().capitalize()[:120]
+    return prompt.strip().capitalize()[:120]
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 # SYSTEM PROMPT — NIVEAU GPT-4, SPÉCIALISTE GETSHIFT
 # ══════════════════════════════════════════════════════════════════════
-
+ 
 def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, contexte_web: str) -> str:
     """
     Construit un system prompt de niveau élite —
@@ -3653,36 +3626,36 @@ def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, conte
     en_retard = [t for t in en_cours if t.get('deadline') and str(t['deadline']) < datetime.now().strftime('%Y-%m-%d')]
     haute = [t for t in en_cours if t.get('priorite') == 'haute']
     taux = round(terminees / max(len(taches), 1) * 100)
-
+ 
     taches_str = "\n".join(
         f"  • [{t.get('priorite','?').upper()}] {t['titre']}"
         + (f" · deadline {str(t['deadline'])[:10]}" if t.get('deadline') else "")
         for t in en_cours[:8]
     ) or "  • Aucune tâche en cours"
-
+ 
     memoire_str = formater_memoire_pour_prompt(memoire)
-
+ 
     prompt = f"""Tu es SHIFT — l'assistant IA de GetShift, la plateforme de productivité personnelle de {user_row['nom']}.
-
+ 
 Tu n'es pas un assistant générique. Tu es le spécialiste absolu de la productivité, de l'organisation personnelle et de la gestion de tâches. Sur ton domaine, tu surpasses Notion AI, Todoist AI, et tous les assistants de productivité existants. Tu combines :
 - L'expertise d'un coach de productivité certifié (GTD, Deep Work, Atomic Habits, Zettelkasten)
 - La précision d'un analyste de données comportementales
 - L'empathie d'un mentor personnel qui connaît vraiment l'utilisateur
 - La capacité à fournir des informations temps réel grâce à la recherche web
-
+ 
 ━━━ PROFIL UTILISATEUR ━━━
 Nom : {user_row['nom']}
 Niveau GetShift : {user_row.get('niveau', 1)} | Points : {user_row.get('points', 0)} | Streak : {user_row.get('streak', 0)} jours consécutifs
 Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours)} en cours | {len(en_retard)} en retard
 {f"Haute priorité urgente : {', '.join(t['titre'] for t in haute[:3])}" if haute else "Aucune tâche haute priorité en cours"}
-
+ 
 ━━━ TÂCHES EN COURS ━━━
 {taches_str}
-
+ 
 {f"━━━ {memoire_str}" if memoire_str else ""}
-
+ 
 {f"━━━ DONNÉES WEB TEMPS RÉEL ━━━{chr(10)}{contexte_web}" if contexte_web else ""}
-
+ 
 ━━━ TES RÈGLES D'OR ━━━
 1. PERSONNALISATION TOTALE — Tu connais {user_row['nom']}, son contexte, ses tâches. Chaque réponse doit le refléter. Jamais de réponse générique.
 2. FORMAT RICHE & LISIBLE — Utilise le markdown systématiquement :
@@ -3697,16 +3670,16 @@ Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours
 6. LANGUE — Français par défaut, adapte-toi si l'utilisateur change de langue
 7. LONGUEUR — Adapte : question simple = réponse courte et percutante. Question complexe = analyse complète structurée.
 8. MÉMOIRE — Tu te souviens des conversations précédentes. Utilise ces informations pour personnaliser encore plus.
-
+ 
 Tu es SHIFT. Tu es le meilleur assistant de productivité qui existe. Prouve-le à chaque réponse."""
-
+ 
     return prompt
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 # ROUTE PRINCIPALE — /ia/assistant v2
 # ══════════════════════════════════════════════════════════════════════
-
+ 
 @app.route('/ia/assistant', methods=['POST'])
 def assistant_augmente():
     """
@@ -3725,24 +3698,24 @@ def assistant_augmente():
         historique   = data.get('historique', [])
         tache_id     = data.get('tache_id')
         force_search = data.get('force_search', False)
-
+ 
         if not message_raw:
             return jsonify({"erreur": "Message vide"}), 400
-
+ 
         # 1. Expansion abréviations
         message = expand_abreviations(message_raw)
         abrev_expandees = message != message_raw
-
+ 
         # 2. Charger contexte utilisateur
         db = connecter()
         curseur = db.cursor(dictionary=True)
-
+ 
         curseur.execute("SELECT nom, email, points, niveau, streak FROM users WHERE id=%s", (user_id,))
         user_row = curseur.fetchone()
         if not user_row:
             db.close()
             return jsonify({"erreur": "Utilisateur introuvable"}), 404
-
+ 
         curseur.execute("""
             SELECT id, titre, priorite, deadline, terminee
             FROM taches WHERE user_id=%s
@@ -3752,16 +3725,16 @@ def assistant_augmente():
         for t in taches:
             if t.get('deadline'):
                 t['deadline'] = str(t['deadline'])
-
+ 
         # 3. Charger mémoire utilisateur
         memoire = charger_memoire(user_id)
-
+ 
         # 4. Détection intention
         intention = detecter_intention(message)
-
+ 
         # ── ACTION : Créer tâche ────────────────────────────────────────
         if intention == "action_creer":
-            titre = extraire_titre_tache(message, groq_client)
+            titre = extraire_titre_tache(message)
             curseur.execute(
                 "INSERT INTO taches (titre, priorite, user_id) VALUES (%s, 'moyenne', %s)",
                 (titre, user_id)
@@ -3782,7 +3755,7 @@ def assistant_augmente():
                 "message_original": message_raw,
                 "modele": modele
             })
-
+ 
         # ── ACTION : Terminer tâche ─────────────────────────────────────
         if intention == "action_terminer":
             taches_actives = [t for t in taches if not t['terminee']]
@@ -3807,7 +3780,7 @@ def assistant_augmente():
                     "modele": modele
                 })
             intention = "chat"
-
+ 
         # ── ACTION : Planifier ──────────────────────────────────────────
         if intention == "action_planifier":
             db.close()
@@ -3818,29 +3791,29 @@ def assistant_augmente():
                 "abrev_expandees": abrev_expandees,
                 "modele": modele
             })
-
+ 
         db.close()
-
+ 
         # 5. Web search — intelligent + forcé
         contexte_web = ""
         search_results = []
         faire_search, query_search = evaluer_besoin_search(message, historique)
-
+ 
         if force_search or faire_search:
             query = (message[:100] if force_search else query_search)
             search_results = web_search_ddg(query, max_results=5)
             contexte_web = formater_search_pour_prompt(search_results, query)
-
+ 
         # 6. System prompt élite
         system_prompt = build_elite_system_prompt(user_row, taches, memoire, contexte_web)
-
+ 
         # 7. Construire messages API
         messages_api = [{"role": "system", "content": system_prompt}]
         for h in historique[-16:]:
             role = "assistant" if h.get('role') in ('ia', 'assistant') else "user"
             messages_api.append({"role": role, "content": h.get('content', '')})
         messages_api.append({"role": "user", "content": message})
-
+ 
         # 8. Appel Groq
         completion = groq_client.chat.completions.create(
             model=modele,
@@ -3849,7 +3822,7 @@ def assistant_augmente():
             temperature=0.72
         )
         reponse = completion.choices[0].message.content.strip()
-
+ 
         # 9. Sauvegarder historique + mémoire (en arrière-plan)
         try:
             db2 = connecter()
@@ -3861,13 +3834,13 @@ def assistant_augmente():
             db2.commit(); cur2.close(); db2.close()
         except Exception as e:
             print(f"[Assistant] Erreur historique: {e}")
-
+ 
         threading.Thread(
             target=extraire_et_sauvegarder_memoire,
             args=(user_id, message_raw, reponse),
             daemon=True
         ).start()
-
+ 
         return jsonify({
             "reponse": reponse,
             "intention": "search" if (faire_search or force_search) else "chat",
@@ -3879,15 +3852,15 @@ def assistant_augmente():
             "web_searched": bool(search_results),
             "modele": modele
         })
-
+ 
     except Exception as e:
         import traceback
         print(f"[Assistant v2] Erreur: {e}")
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
-
-
+ 
+ 
 # ── Routes utilitaires ────────────────────────────────────────────────
-
+ 
 @app.route('/ia/web-search', methods=['POST'])
 def route_web_search():
     data = request.get_json()
@@ -3896,14 +3869,14 @@ def route_web_search():
         return jsonify({"erreur": "Query vide"}), 400
     results = web_search_ddg(query, max_results=5)
     return jsonify({"results": results, "query": query, "count": len(results)})
-
+ 
 @app.route('/ia/memory/<int:user_id>', methods=['GET'])
 def get_user_memory(user_id):
     """Retourne la mémoire complète d'un utilisateur."""
     memoire = charger_memoire(user_id)
     total = sum(len(v) for v in memoire.values())
     return jsonify({"memoire": memoire, "total_entrees": total})
-
+ 
 @app.route('/ia/memory/<int:user_id>', methods=['DELETE'])
 def clear_user_memory(user_id):
     """Efface la mémoire d'un utilisateur."""
@@ -3915,7 +3888,7 @@ def clear_user_memory(user_id):
         return jsonify({"message": "Mémoire effacée"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
+ 
 @app.route('/ia/expand-abreviations', methods=['POST'])
 def route_expand_abreviations():
     data = request.get_json()
