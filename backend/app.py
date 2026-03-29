@@ -1,6 +1,7 @@
 import threading
 import schedule
 import time
+import urllib.parse
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies
@@ -29,7 +30,6 @@ sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'getshift_secret')
 
-# JWT
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'getshift_jwt_secret')
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_COOKIE_SECURE'] = True
@@ -38,18 +38,16 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
 
-# Rate Limiter
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
 CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 
-# ✅ VAPID : correction du format de la clé privée (sauts de ligne)
 VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
 VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # ============================================
-# 📧 HELPERS EMAIL & SLACK
+# HELPERS EMAIL & SLACK
 # ============================================
 
 def envoyer_notification_slack(webhook_url, message):
@@ -82,14 +80,11 @@ def envoyer_email_verification(email, nom, token):
             Verifier mon email
         </a>
         <p style="color:#888;font-size:12px;">Ce lien expire dans 24h.</p>
-        <div style="margin-top:24px;padding:14px;background:rgba(255,255,255,0.05);border-radius:8px;border-left:3px solid #6c63ff;">
-            <p style="color:#aaa;font-size:12px;margin:0;">Si vous ne trouvez pas cet email, verifiez votre dossier Spams et marquez-le comme Pas un spam pour recevoir nos prochains emails directement.</p>
-        </div>
     </div>"""
     threading.Thread(target=envoyer_email, args=(email, "Verifiez votre email GetShift", html)).start()
 
 # ============================================
-# 🔔 PUSH NOTIFICATIONS HELPERS
+# PUSH NOTIFICATIONS
 # ============================================
 
 def envoyer_push(subscription_json, titre, body, url="/dashboard"):
@@ -106,7 +101,7 @@ def envoyer_push(subscription_json, titre, body, url="/dashboard"):
         return False
 
 # ============================================
-# ⏰ JOBS AUTOMATIQUES (SCHEDULER)
+# JOBS AUTOMATIQUES (SCHEDULER)
 # ============================================
 
 def job_resume_matin():
@@ -158,10 +153,8 @@ def job_rappels_deadline():
         db = connecter()
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT t.id, t.titre, t.user_id
-            FROM taches t
-            WHERE t.terminee = FALSE
-            AND t.deadline = CURDATE()
+            SELECT t.id, t.titre, t.user_id FROM taches t
+            WHERE t.terminee = FALSE AND t.deadline = CURDATE()
             AND (t.rappel_envoye = FALSE OR t.rappel_envoye IS NULL)
         """)
         taches = cursor.fetchall()
@@ -169,14 +162,11 @@ def job_rappels_deadline():
             cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (tache['user_id'],))
             sub = cursor.fetchone()
             if sub:
-                envoyer_push(sub['subscription'],
-                    f"Deadline aujourd'hui : {tache['titre']}",
-                    "Cette tâche est à rendre aujourd'hui. Ne l'oubliez pas !")
+                envoyer_push(sub['subscription'], f"Deadline aujourd'hui : {tache['titre']}", "Cette tâche est à rendre aujourd'hui !")
                 cursor.execute("UPDATE taches SET rappel_envoye = TRUE WHERE id = %s", (tache['id'],))
         db.commit()
         cursor.close()
         db.close()
-        print(f"[Rappels deadline] {len(taches)} rappels envoyés")
     except Exception as e:
         print(f"[Rappels deadline] Erreur: {e}")
 
@@ -195,13 +185,9 @@ def job_taches_en_retard():
             cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (user['user_id'],))
             sub = cursor.fetchone()
             if sub:
-                nb = user['nb_retard']
-                envoyer_push(sub['subscription'],
-                    f"{nb} tâche(s) en retard",
-                    f"{user['nom']}, rattrapez vos tâches dépassées dès maintenant !")
+                envoyer_push(sub['subscription'], f"{user['nb_retard']} tâche(s) en retard", f"{user['nom']}, rattrapez vos tâches dépassées !")
         cursor.close()
         db.close()
-        print("[Tâches en retard] OK")
     except Exception as e:
         print(f"[Tâches en retard] Erreur: {e}")
 
@@ -212,18 +198,15 @@ def job_encouragements():
         cursor.execute("""
             SELECT u.id, u.nom,
                 COUNT(CASE WHEN t.terminee = TRUE AND DATE(t.updated_at) = CURDATE() THEN 1 END) as terminees_auj
-            FROM users u
-            LEFT JOIN taches t ON u.id = t.user_id
-            WHERE u.email_verifie = TRUE
-            GROUP BY u.id
-            HAVING terminees_auj > 0
+            FROM users u LEFT JOIN taches t ON u.id = t.user_id
+            WHERE u.email_verifie = TRUE GROUP BY u.id HAVING terminees_auj > 0
         """)
         users = cursor.fetchall()
         messages = [
-            (10, "Légendaire !", "10 tâches bouclées aujourd'hui. Vous êtes une machine GetShift !"),
-            (5,  "Exceptionnel !", "5 tâches terminées ! Vous êtes au sommet de votre productivité."),
-            (3,  "En feu !", "3 tâches terminées aujourd'hui. Vous êtes dans la zone !"),
-            (1,  "Belle journée !", "Vous avez terminé votre première tâche du jour. Continuez !"),
+            (10, "Légendaire !", "10 tâches bouclées aujourd'hui !"),
+            (5,  "Exceptionnel !", "5 tâches terminées !"),
+            (3,  "En feu !", "3 tâches terminées aujourd'hui !"),
+            (1,  "Belle journée !", "Première tâche du jour terminée !"),
         ]
         for user in users:
             cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id = %s", (user['id'],))
@@ -237,12 +220,11 @@ def job_encouragements():
                     break
         cursor.close()
         db.close()
-        print("[Encouragements] OK")
     except Exception as e:
         print(f"[Encouragements] Erreur: {e}")
 
 # ============================================
-# 📧 TEMPLATES HTML EMAILS
+# TEMPLATES HTML EMAILS
 # ============================================
 
 def _base_email(contenu_html, titre_preheader="GetShift"):
@@ -254,26 +236,12 @@ def _base_email(contenu_html, titre_preheader="GetShift"):
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#0c0c12;padding:40px 16px;">
   <tr><td align="center">
     <table width="100%" style="max-width:540px;background:#13131e;border-radius:20px;border:1px solid #ffffff0f;overflow:hidden;">
-      <!-- Header bande colorée -->
       <tr><td style="background:linear-gradient(135deg,#6c63ff,#a855f7);padding:28px 36px;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td>
-              <span style="font-size:20px;font-weight:800;color:white;letter-spacing:-0.5px;">GetShift</span>
-            </td>
-            <td align="right">
-              <span style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:500;letter-spacing:1px;">PRODUCTIVITÉ</span>
-            </td>
-          </tr>
-        </table>
+        <span style="font-size:20px;font-weight:800;color:white;">GetShift</span>
       </td></tr>
-      <!-- Contenu -->
-      <tr><td style="padding:36px;">
-        {contenu_html}
-      </td></tr>
-      <!-- Footer -->
+      <tr><td style="padding:36px;">{contenu_html}</td></tr>
       <tr><td style="padding:20px 36px 28px;border-top:1px solid #ffffff08;">
-        <p style="margin:0;font-size:11px;color:#44445a;text-align:center;line-height:1.7;">
+        <p style="margin:0;font-size:11px;color:#44445a;text-align:center;">
           Tu reçois cet email car tu as un compte GetShift.<br>
           <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff;text-decoration:none;">Ouvrir GetShift</a>
         </p>
@@ -287,296 +255,113 @@ def _html_rappel_veille(nom, taches):
     lignes = ""
     for t in taches:
         prio_color = {"haute": "#e05c5c", "moyenne": "#e08a3c", "basse": "#4caf82"}.get(t.get("priorite","moyenne"), "#e08a3c")
-        lignes += f"""
-        <tr>
-          <td style="padding:12px 14px;border-bottom:1px solid #ffffff08;">
-            <table width="100%" cellpadding="0" cellspacing="0"><tr>
-              <td><span style="font-size:13px;color:#e8e8f0;font-weight:600;">{t['titre']}</span></td>
-              <td align="right"><span style="font-size:11px;font-weight:700;color:{prio_color};background:{prio_color}18;padding:3px 9px;border-radius:99px;">{t.get('priorite','moyenne').upper()}</span></td>
-            </tr></table>
-          </td>
-        </tr>"""
-    contenu = f"""
-    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Rappel · Demain c'est deadline</h2>
-    <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, tu as <strong style="color:#6c63ff;">{len(taches)} tâche(s)</strong> à rendre demain. Ne laisse rien passer !</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #ffffff0a;margin-bottom:24px;overflow:hidden;">
-      {lignes}
-    </table>
-    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
-      Ouvrir le Dashboard →
-    </a>"""
+        lignes += f'<tr><td style="padding:12px 14px;border-bottom:1px solid #ffffff08;"><span style="color:#e8e8f0;font-weight:600;">{t["titre"]}</span><span style="color:{prio_color};margin-left:8px;">{t.get("priorite","moyenne").upper()}</span></td></tr>'
+    contenu = f"""<h2 style="color:#fff;">Rappel · Demain c'est deadline</h2>
+    <p style="color:#8888a8;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, tu as <strong style="color:#6c63ff;">{len(taches)} tâche(s)</strong> à rendre demain.</p>
+    <table width="100%" style="background:#0f0f18;border-radius:12px;border:1px solid #ffffff0a;margin-bottom:24px;">{lignes}</table>
+    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;">Ouvrir le Dashboard →</a>"""
     return _base_email(contenu, "Rappel deadline demain — GetShift")
 
 def _html_rappel_jour_j(nom, taches):
     lignes = ""
     for t in taches:
         prio_color = {"haute": "#e05c5c", "moyenne": "#e08a3c", "basse": "#4caf82"}.get(t.get("priorite","moyenne"), "#e08a3c")
-        lignes += f"""
-        <tr>
-          <td style="padding:12px 14px;border-bottom:1px solid #ffffff08;">
-            <table width="100%" cellpadding="0" cellspacing="0"><tr>
-              <td><span style="font-size:13px;color:#e8e8f0;font-weight:600;">{t['titre']}</span></td>
-              <td align="right"><span style="font-size:11px;font-weight:700;color:{prio_color};background:{prio_color}18;padding:3px 9px;border-radius:99px;">{t.get('priorite','moyenne').upper()}</span></td>
-            </tr></table>
-          </td>
-        </tr>"""
-    contenu = f"""
-    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Deadline aujourd'hui</h2>
-    <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, <strong style="color:#e05c5c;">{len(taches)} tâche(s)</strong> sont à rendre <strong style="color:#e05c5c;">aujourd'hui</strong>. C'est le moment d'agir !</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #e05c5c20;margin-bottom:24px;overflow:hidden;">
-      {lignes}
-    </table>
-    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#e08a3c);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
-      Terminer maintenant →
-    </a>"""
+        lignes += f'<tr><td style="padding:12px 14px;border-bottom:1px solid #ffffff08;"><span style="color:#e8e8f0;font-weight:600;">{t["titre"]}</span></td></tr>'
+    contenu = f"""<h2 style="color:#fff;">Deadline aujourd'hui</h2>
+    <p style="color:#8888a8;">Bonjour <strong>{nom}</strong>, <strong style="color:#e05c5c;">{len(taches)} tâche(s)</strong> sont à rendre aujourd'hui.</p>
+    <table width="100%" style="background:#0f0f18;border-radius:12px;margin-bottom:24px;">{lignes}</table>
+    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#e08a3c);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;">Terminer maintenant →</a>"""
     return _base_email(contenu, "Deadline aujourd'hui — GetShift")
 
 def _html_taches_retard(nom, taches):
     lignes = ""
     for t in taches:
         jours = t.get("jours_retard", 0)
-        lignes += f"""
-        <tr>
-          <td style="padding:12px 14px;border-bottom:1px solid #ffffff08;">
-            <table width="100%" cellpadding="0" cellspacing="0"><tr>
-              <td><span style="font-size:13px;color:#e8e8f0;font-weight:600;">{t['titre']}</span><br>
-                  <span style="font-size:11px;color:#e05c5c;">Deadline : {t.get('deadline_str','?')}</span></td>
-              <td align="right" style="white-space:nowrap;"><span style="font-size:11px;font-weight:700;color:#e05c5c;background:#e05c5c18;padding:3px 9px;border-radius:99px;">+{jours}j</span></td>
-            </tr></table>
-          </td>
-        </tr>"""
-    contenu = f"""
-    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Tâches en retard</h2>
-    <p style="margin:0 0 24px;font-size:13px;color:#8888a8;line-height:1.7;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, tu as <strong style="color:#e05c5c;">{len(taches)} tâche(s) en retard</strong>. Rattrape-les dès maintenant pour ne pas perdre le fil.</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f18;border-radius:12px;border:1px solid #e05c5c20;margin-bottom:24px;overflow:hidden;">
-      {lignes}
-    </table>
-    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;">
-      Rattraper le retard →
-    </a>"""
+        lignes += f'<tr><td style="padding:12px 14px;border-bottom:1px solid #ffffff08;"><span style="color:#e8e8f0;font-weight:600;">{t["titre"]}</span><span style="color:#e05c5c;margin-left:8px;">+{jours}j</span></td></tr>'
+    contenu = f"""<h2 style="color:#fff;">Tâches en retard</h2>
+    <p style="color:#8888a8;">Bonjour <strong>{nom}</strong>, tu as <strong style="color:#e05c5c;">{len(taches)} tâche(s) en retard</strong>.</p>
+    <table width="100%" style="background:#0f0f18;border-radius:12px;margin-bottom:24px;">{lignes}</table>
+    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;">Rattraper le retard →</a>"""
     return _base_email(contenu, "Tâches en retard — GetShift")
 
 def _html_resume_hebdo(nom, stats):
-    terminees       = stats.get("terminees", 0)
-    en_cours        = stats.get("en_cours", 0)
-    en_retard       = stats.get("en_retard", 0)
-    taux            = stats.get("taux", 0)
-    points          = stats.get("points", 0)
-    niveau          = stats.get("niveau", 1)
-    points_semaine  = stats.get("points_semaine", 0)
-    terminees_prec  = stats.get("terminees_prec", 0)
-    conseil_ia      = stats.get("conseil_ia", "")
-    taches_haute    = stats.get("taches_haute", [])
-    jours_actifs    = stats.get("jours_actifs", {})  # {"Lun":3,"Mar":0,...}
+    terminees = stats.get("terminees", 0)
+    en_cours = stats.get("en_cours", 0)
+    en_retard = stats.get("en_retard", 0)
+    taux = stats.get("taux", 0)
+    points = stats.get("points", 0)
+    niveau = stats.get("niveau", 1)
+    points_semaine = stats.get("points_semaine", 0)
+    terminees_prec = stats.get("terminees_prec", 0)
+    conseil_ia = stats.get("conseil_ia", "")
+    taches_haute = stats.get("taches_haute", [])
+    jours_actifs = stats.get("jours_actifs", {})
 
-    taux_color  = "#4caf82" if taux >= 70 else "#e08a3c" if taux >= 40 else "#e05c5c"
-    barre_w     = max(4, min(100, int(taux)))
-
-    # Comparaison semaine précédente
+    taux_color = "#4caf82" if taux >= 70 else "#e08a3c" if taux >= 40 else "#e05c5c"
+    barre_w = max(4, min(100, int(taux)))
     diff = terminees - terminees_prec
-    diff_color  = "#4caf82" if diff >= 0 else "#e05c5c"
-    diff_symbol = "▲" if diff >= 0 else "▼"
-    diff_label  = f"{diff_symbol} {abs(diff)} vs semaine précédente"
-
-    # Niveaux labels
+    diff_color = "#4caf82" if diff >= 0 else "#e05c5c"
+    diff_label = f"{'▲' if diff >= 0 else '▼'} {abs(diff)} vs semaine précédente"
     niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende"}
     niveau_label = niveaux_labels.get(niveau, f"Niveau {niveau}")
-    points_prochain = (niveau * 100) - points
-    niveau_pct = max(4, min(100, int((points % 100))))
-
-    # Graphique jours actifs (barres HTML)
-    jours_ordre = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
-    max_val = max(jours_actifs.values()) if jours_actifs and max(jours_actifs.values()) > 0 else 1
-    barres_html = ""
-    for j in jours_ordre:
-        val = jours_actifs.get(j, 0)
-        h = max(4, int((val / max_val) * 52))
-        bar_color = "#6c63ff" if val > 0 else "#ffffff0a"
-        barres_html += f"""
-        <td style="text-align:center;padding:0 3px;vertical-align:bottom;">
-          <div style="font-size:10px;color:#6c63ff;font-weight:700;margin-bottom:4px;">{val if val > 0 else ''}</div>
-          <div style="width:100%;height:{h}px;background:{bar_color};border-radius:4px 4px 0 0;min-width:28px;"></div>
-          <div style="font-size:10px;color:#44445a;margin-top:5px;">{j}</div>
-        </td>"""
-
-    # Tâches haute priorité non terminées
-    haute_html = ""
-    if taches_haute:
-        for t in taches_haute[:5]:
-            dl = f" · {t.get('deadline_str','')}" if t.get('deadline_str') else ""
-            haute_html += f"""
-            <tr>
-              <td style="padding:10px 14px;border-bottom:1px solid #ffffff06;">
-                <table width="100%" cellpadding="0" cellspacing="0"><tr>
-                  <td><span style="font-size:12px;color:#e8e8f0;font-weight:600;">{t['titre']}</span>
-                      <span style="font-size:10px;color:#44445a;">{dl}</span></td>
-                  <td align="right" style="white-space:nowrap;">
-                    <span style="font-size:10px;font-weight:700;color:#e05c5c;background:#e05c5c15;padding:2px 8px;border-radius:99px;">HAUTE</span>
-                  </td>
-                </tr></table>
-              </td>
-            </tr>"""
-    else:
-        haute_html = '<tr><td style="padding:14px;text-align:center;font-size:12px;color:#44445a;">Aucune tâche haute priorité en suspens —<br><span style="color:#4caf82;font-weight:700;">tout est sous contrôle.</span></td></tr>'
-
-    # Conseil IA
-    conseil_block = ""
-    if conseil_ia:
-        conseil_block = f"""
-        <!-- Conseil IA -->
-        <div style="background:linear-gradient(135deg,#a855f712,#6c63ff12);border:1px solid #a855f725;border-radius:14px;padding:20px;margin-bottom:20px;">
-          <table cellpadding="0" cellspacing="0"><tr>
-            <td style="padding-right:12px;vertical-align:top;">
-              <div style="width:32px;height:32px;background:linear-gradient(135deg,#6c63ff,#a855f7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;"><span style="font-size:13px;font-weight:800;color:white;">IA</span></div>
-            </td>
-            <td>
-              <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1px;margin-bottom:5px;">CONSEIL IA PERSONNALISÉ</div>
-              <div style="font-size:13px;color:#c8c8e8;line-height:1.7;">{conseil_ia}</div>
-            </td>
-          </tr></table>
-        </div>"""
 
     contenu = f"""
-    <!-- En-tête personnalisé -->
-    <div style="margin-bottom:28px;">
-      <div style="font-size:11px;font-weight:700;color:#6c63ff;letter-spacing:1.5px;margin-bottom:8px;">BILAN HEBDOMADAIRE</div>
-      <h2 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1.2;">
-        Bonjour {nom},<br>
-        <span style="color:#8888a8;font-size:18px;font-weight:600;">Voici ta semaine en un coup d'œil.</span>
-      </h2>
-    </div>
-
-    <!-- KPIs principaux -->
+    <h2 style="color:#fff;margin:0 0 20px;">Bonjour {nom}, voici ta semaine.</h2>
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
       <tr>
-        <td width="33%" style="padding:0 5px 0 0;">
-          <div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:14px;padding:18px 14px;text-align:center;">
-            <div style="font-size:32px;font-weight:800;color:#4caf82;letter-spacing:-1px;">{terminees}</div>
-            <div style="font-size:11px;color:#8888a8;margin-top:3px;font-weight:500;">Terminées</div>
-            <div style="font-size:10px;color:{diff_color};margin-top:5px;font-weight:700;">{diff_label}</div>
-          </div>
-        </td>
-        <td width="33%" style="padding:0 2px;">
-          <div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:18px 14px;text-align:center;">
-            <div style="font-size:32px;font-weight:800;color:#6c63ff;letter-spacing:-1px;">{en_cours}</div>
-            <div style="font-size:11px;color:#8888a8;margin-top:3px;font-weight:500;">En cours</div>
-            <div style="font-size:10px;color:#44445a;margin-top:5px;">À finir</div>
-          </div>
-        </td>
-        <td width="33%" style="padding:0 0 0 5px;">
-          <div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:18px 14px;text-align:center;">
-            <div style="font-size:32px;font-weight:800;color:#e05c5c;letter-spacing:-1px;">{en_retard}</div>
-            <div style="font-size:11px;color:#8888a8;margin-top:3px;font-weight:500;">En retard</div>
-            <div style="font-size:10px;color:#e05c5c;margin-top:5px;">· À traiter</div>
-          </div>
-        </td>
+        <td width="33%" style="padding:0 5px 0 0;"><div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:14px;padding:18px;text-align:center;">
+          <div style="font-size:32px;font-weight:800;color:#4caf82;">{terminees}</div>
+          <div style="font-size:11px;color:#8888a8;">Terminées</div>
+          <div style="font-size:10px;color:{diff_color};">{diff_label}</div>
+        </div></td>
+        <td width="33%" style="padding:0 2px;"><div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:18px;text-align:center;">
+          <div style="font-size:32px;font-weight:800;color:#6c63ff;">{en_cours}</div>
+          <div style="font-size:11px;color:#8888a8;">En cours</div>
+        </div></td>
+        <td width="33%" style="padding:0 0 0 5px;"><div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:18px;text-align:center;">
+          <div style="font-size:32px;font-weight:800;color:#e05c5c;">{en_retard}</div>
+          <div style="font-size:11px;color:#8888a8;">En retard</div>
+        </div></td>
       </tr>
     </table>
-
-    <!-- Taux complétion + barre -->
-    <div style="background:#0f0f18;border:1px solid #ffffff0a;border-radius:14px;padding:18px 20px;margin-bottom:16px;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
-        <tr>
-          <td>
-            <span style="font-size:12px;color:#8888a8;font-weight:600;letter-spacing:0.5px;">TAUX DE COMPLÉTION</span>
-          </td>
-          <td align="right">
-            <span style="font-size:20px;font-weight:800;color:{taux_color};">{taux}%</span>
-          </td>
-        </tr>
-      </table>
-      <div style="height:8px;background:#ffffff08;border-radius:99px;overflow:hidden;">
-        <div style="height:8px;width:{barre_w}%;background:linear-gradient(90deg,{taux_color},{taux_color}aa);border-radius:99px;"></div>
+    <div style="background:#0f0f18;border-radius:14px;padding:18px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+        <span style="color:#8888a8;">TAUX DE COMPLÉTION</span>
+        <span style="font-size:20px;font-weight:800;color:{taux_color};">{taux}%</span>
       </div>
-      <div style="margin-top:10px;font-size:11px;color:#44445a;">
-        {"Excellente semaine — continue sur cette lancée." if taux >= 70 else "Bonne progression — encore un effort la semaine prochaine." if taux >= 40 else "Semaine difficile — recentre-toi sur l'essentiel."}
+      <div style="height:8px;background:#ffffff08;border-radius:99px;">
+        <div style="height:8px;width:{barre_w}%;background:{taux_color};border-radius:99px;"></div>
       </div>
     </div>
-
-    <!-- Graphique jours actifs -->
-    <div style="background:#0f0f18;border:1px solid #ffffff0a;border-radius:14px;padding:18px 20px;margin-bottom:16px;">
-      <div style="font-size:12px;color:#8888a8;font-weight:600;letter-spacing:0.5px;margin-bottom:16px;">ACTIVITÉ PAR JOUR</div>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-        <tr style="vertical-align:bottom;">
-          {barres_html}
-        </tr>
-      </table>
-    </div>
-
-    <!-- Badge niveau + points -->
-    <div style="background:linear-gradient(135deg,#1a1230,#120f1e);border:1px solid #6c63ff25;border-radius:14px;padding:20px;margin-bottom:16px;">
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="vertical-align:middle;">
-            <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1px;margin-bottom:4px;">TON NIVEAU</div>
-            <div style="font-size:20px;font-weight:800;color:#fff;">{niveau_label}</div>
-            <div style="font-size:11px;color:#44445a;margin-top:4px;">{points_prochain} pts pour le niveau suivant</div>
-          </td>
-          <td align="right" style="vertical-align:middle;">
-            <div style="text-align:right;">
-              <div style="font-size:11px;color:#8888a8;margin-bottom:2px;">Cette semaine</div>
-              <div style="font-size:24px;font-weight:800;color:#6c63ff;">+{points_semaine}</div>
-              <div style="font-size:10px;color:#44445a;">points gagnés</div>
-            </div>
-          </td>
-        </tr>
-      </table>
-      <div style="margin-top:14px;height:5px;background:#ffffff08;border-radius:99px;overflow:hidden;">
-        <div style="height:5px;width:{niveau_pct}%;background:linear-gradient(90deg,#6c63ff,#a855f7);border-radius:99px;"></div>
-      </div>
-    </div>
-
-    <!-- Tâches haute priorité non terminées -->
-    <div style="background:#0f0f18;border:1px solid #e05c5c18;border-radius:14px;overflow:hidden;margin-bottom:16px;">
-      <div style="padding:14px 18px;border-bottom:1px solid #ffffff06;">
-        <span style="font-size:12px;font-weight:700;color:#e05c5c;letter-spacing:0.5px;">PRIORITÉ HAUTE — NON TERMINÉES</span>
-      </div>
-      <table width="100%" cellpadding="0" cellspacing="0">
-        {haute_html}
-      </table>
-    </div>
-
-    {conseil_block}
-
-    <!-- CTA -->
+    {"<div style='background:linear-gradient(135deg,#a855f712,#6c63ff12);border:1px solid #a855f725;border-radius:14px;padding:20px;margin-bottom:16px;'><div style='font-size:11px;font-weight:700;color:#a855f7;margin-bottom:5px;'>CONSEIL IA</div><div style='font-size:13px;color:#c8c8e8;'>" + conseil_ia + "</div></div>" if conseil_ia else ""}
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="padding:0 6px 0 0;" width="50%">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 20px;border-radius:11px;text-decoration:none;font-weight:700;font-size:13px;">
-            Dashboard →
-          </a>
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px;border-radius:11px;text-decoration:none;font-weight:700;">Dashboard →</a>
         </td>
         <td style="padding:0 0 0 6px;" width="50%">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/analytics" style="display:block;text-align:center;background:#1a1a28;color:#8888a8;padding:13px 20px;border-radius:11px;text-decoration:none;font-weight:600;font-size:13px;border:1px solid #ffffff0f;">
-            Analytics →
-          </a>
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/analytics" style="display:block;text-align:center;background:#1a1a28;color:#8888a8;padding:13px;border-radius:11px;text-decoration:none;font-weight:600;border:1px solid #ffffff0f;">Analytics →</a>
         </td>
       </tr>
     </table>"""
     return _base_email(contenu, "Bilan hebdomadaire — GetShift")
 
 # ============================================
-# 📧 JOBS EMAIL
+# JOBS EMAIL
 # ============================================
 
 def job_email_rappel_veille():
-    """Envoie un email J-1 à chaque user qui a des deadlines demain."""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT u.id, u.nom, u.email,
-                   t.titre, t.priorite
-            FROM taches t
-            JOIN users u ON t.user_id = u.id
-            WHERE t.terminee = FALSE
-              AND t.deadline = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-              AND u.email_verifie = TRUE
+            SELECT u.id, u.nom, u.email, t.titre, t.priorite
+            FROM taches t JOIN users u ON t.user_id = u.id
+            WHERE t.terminee = FALSE AND t.deadline = DATE_ADD(CURDATE(), INTERVAL 1 DAY) AND u.email_verifie = TRUE
             ORDER BY u.id, t.priorite DESC
         """)
         rows = cursor.fetchall()
         cursor.close(); db.close()
-        # Grouper par user
         from itertools import groupby
         rows.sort(key=lambda r: r['id'])
         for user_id, taches_iter in groupby(rows, key=lambda r: r['id']):
@@ -584,23 +369,17 @@ def job_email_rappel_veille():
             u = taches[0]
             html = _html_rappel_veille(u['nom'], taches)
             threading.Thread(target=envoyer_email, args=(u['email'], f"Rappel · Deadline demain : {len(taches)} tâche(s) — GetShift", html)).start()
-        print(f"[Email J-1] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email J-1] Erreur: {e}")
 
 def job_email_rappel_jour_j():
-    """Envoie un email jour J à chaque user qui a des deadlines aujourd'hui."""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT u.id, u.nom, u.email,
-                   t.titre, t.priorite
-            FROM taches t
-            JOIN users u ON t.user_id = u.id
-            WHERE t.terminee = FALSE
-              AND t.deadline = CURDATE()
-              AND u.email_verifie = TRUE
+            SELECT u.id, u.nom, u.email, t.titre, t.priorite
+            FROM taches t JOIN users u ON t.user_id = u.id
+            WHERE t.terminee = FALSE AND t.deadline = CURDATE() AND u.email_verifie = TRUE
             ORDER BY u.id, t.priorite DESC
         """)
         rows = cursor.fetchall()
@@ -612,26 +391,17 @@ def job_email_rappel_jour_j():
             u = taches[0]
             html = _html_rappel_jour_j(u['nom'], taches)
             threading.Thread(target=envoyer_email, args=(u['email'], f"Deadline aujourd'hui : {len(taches)} tâche(s) — GetShift", html)).start()
-        print(f"[Email Jour J] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email Jour J] Erreur: {e}")
 
 def job_email_taches_retard():
-    """Envoie un email aux users qui ont des tâches en retard."""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT u.id, u.nom, u.email,
-                   t.titre,
-                   t.deadline,
-                   DATEDIFF(CURDATE(), t.deadline) as jours_retard
-            FROM taches t
-            JOIN users u ON t.user_id = u.id
-            WHERE t.terminee = FALSE
-              AND t.deadline < CURDATE()
-              AND t.deadline IS NOT NULL
-              AND u.email_verifie = TRUE
+            SELECT u.id, u.nom, u.email, t.titre, t.deadline, DATEDIFF(CURDATE(), t.deadline) as jours_retard
+            FROM taches t JOIN users u ON t.user_id = u.id
+            WHERE t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL AND u.email_verifie = TRUE
             ORDER BY u.id, t.deadline ASC
         """)
         rows = cursor.fetchall()
@@ -646,125 +416,63 @@ def job_email_taches_retard():
                     t['deadline_str'] = t['deadline'].strftime('%d/%m/%Y') if hasattr(t['deadline'], 'strftime') else str(t['deadline'])
             html = _html_taches_retard(u['nom'], taches)
             threading.Thread(target=envoyer_email, args=(u['email'], f"{len(taches)} tâche(s) en retard — GetShift", html)).start()
-        print(f"[Email Retard] {len(rows)} emails envoyés")
     except Exception as e:
         print(f"[Email Retard] Erreur: {e}")
 
 def job_email_resume_hebdo():
-    """Envoie le bilan hebdo enrichi chaque vendredi soir."""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
-
-        # Stats globales par user
         cursor.execute("""
             SELECT u.id, u.nom, u.email, u.points, u.niveau,
                 COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
-                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
-                           AND t.updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
+                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND t.updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
                 COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as en_cours,
                 COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
                 COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) * 10 as points_semaine,
                 COUNT(t.id) as total
-            FROM users u
-            LEFT JOIN taches t ON u.id = t.user_id
-            WHERE u.email_verifie = TRUE
-            GROUP BY u.id
+            FROM users u LEFT JOIN taches t ON u.id = t.user_id
+            WHERE u.email_verifie = TRUE GROUP BY u.id
         """)
         users = cursor.fetchall()
-
         for u in users:
             if u['total'] == 0:
                 continue
-
             user_id = u['id']
             taux = round((u['terminees'] / max(u['total'], 1)) * 100, 0) if u['terminees'] else 0
-
-            # Activité par jour de la semaine (lun→dim)
-            cursor.execute("""
-                SELECT DAYOFWEEK(updated_at) as dow, COUNT(*) as cnt
-                FROM taches
-                WHERE user_id = %s AND terminee = TRUE
-                  AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                GROUP BY DAYOFWEEK(updated_at)
-            """, (user_id,))
-            dow_map = {r['dow']: r['cnt'] for r in cursor.fetchall()}
-            # MySQL: 1=dim, 2=lun, ..., 7=sam
-            jours_actifs = {
-                "Lun": dow_map.get(2, 0),
-                "Mar": dow_map.get(3, 0),
-                "Mer": dow_map.get(4, 0),
-                "Jeu": dow_map.get(5, 0),
-                "Ven": dow_map.get(6, 0),
-                "Sam": dow_map.get(7, 0),
-                "Dim": dow_map.get(1, 0),
-            }
-
-            # Tâches haute priorité non terminées
-            cursor.execute("""
-                SELECT titre, deadline FROM taches
-                WHERE user_id = %s AND terminee = FALSE AND priorite = 'haute'
-                ORDER BY deadline ASC LIMIT 5
-            """, (user_id,))
-            taches_haute_raw = cursor.fetchall()
-            taches_haute = []
-            for t in taches_haute_raw:
-                dl_str = t['deadline'].strftime('%d/%m') if t.get('deadline') and hasattr(t['deadline'], 'strftime') else ""
-                taches_haute.append({"titre": t['titre'], "deadline_str": dl_str})
-
-            # Conseil IA généré par Groq
             conseil_ia = ""
             try:
-                contexte = f"Utilisateur: {u['nom']}. Cette semaine: {u['terminees']} tâches terminées, {u['en_cours']} en cours, {u['en_retard']} en retard. Taux de complétion: {int(taux)}%. Semaine précédente: {u['terminees_prec']} terminées."
+                contexte = f"Utilisateur: {u['nom']}. Cette semaine: {u['terminees']} tâches terminées, {u['en_cours']} en cours, {u['en_retard']} en retard. Taux: {int(taux)}%."
                 completion = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=[{
-                        "role": "user",
-                        "content": f"{contexte}\n\nDonne un conseil de productivité personnalisé en 2 phrases maximum, bienveillant et actionnable. Réponds uniquement le conseil, sans introduction."
-                    }],
+                    messages=[{"role": "user", "content": f"{contexte}\n\nDonne un conseil de productivité personnalisé en 2 phrases max, bienveillant et actionnable."}],
                     max_tokens=120, temperature=0.7
                 )
                 conseil_ia = completion.choices[0].message.content.strip()
             except Exception:
-                conseil_ia = "Continue sur ta lancée et concentre-toi sur tes tâches prioritaires la semaine prochaine."
-
+                conseil_ia = "Continue sur ta lancée et concentre-toi sur tes tâches prioritaires."
             stats = {
-                "terminees":      u['terminees']      or 0,
-                "terminees_prec": u['terminees_prec'] or 0,
-                "en_cours":       u['en_cours']       or 0,
-                "en_retard":      u['en_retard']      or 0,
-                "taux":           int(taux),
-                "points":         u['points']         or 0,
-                "niveau":         u['niveau']         or 1,
-                "points_semaine": u['points_semaine'] or 0,
-                "jours_actifs":   jours_actifs,
-                "taches_haute":   taches_haute,
-                "conseil_ia":     conseil_ia,
+                "terminees": u['terminees'] or 0, "terminees_prec": u['terminees_prec'] or 0,
+                "en_cours": u['en_cours'] or 0, "en_retard": u['en_retard'] or 0,
+                "taux": int(taux), "points": u['points'] or 0, "niveau": u['niveau'] or 1,
+                "points_semaine": u['points_semaine'] or 0, "conseil_ia": conseil_ia,
+                "jours_actifs": {}, "taches_haute": []
             }
-
             html = _html_resume_hebdo(u['nom'], stats)
-            threading.Thread(target=envoyer_email, args=(
-                u['email'],
-                f"Bilan · semaine du {datetime.now().strftime('%d/%m')} — GetShift",
-                html
-            )).start()
-
+            threading.Thread(target=envoyer_email, args=(u['email'], f"Bilan · semaine du {datetime.now().strftime('%d/%m')} — GetShift", html)).start()
         cursor.close(); db.close()
-        print(f"[Email Hebdo] {len(users)} emails envoyés")
     except Exception as e:
         print(f"[Email Hebdo] Erreur: {e}")
 
 def demarrer_scheduler():
-    # Push notifications existantes
     schedule.every().day.at("08:00").do(job_resume_matin)
     schedule.every().hour.do(job_rappels_deadline)
     schedule.every().day.at("09:00").do(job_taches_en_retard)
     schedule.every(2).hours.do(job_encouragements)
-    # Emails notifications
-    schedule.every().day.at("09:00").do(job_email_rappel_veille)   # J-1 chaque matin 9h
-    schedule.every().day.at("08:00").do(job_email_rappel_jour_j)   # Jour J chaque matin 8h
-    schedule.every().day.at("10:00").do(job_email_taches_retard)   # Retard chaque matin 10h
-    schedule.every().friday.at("18:00").do(job_email_resume_hebdo) # Résumé vendredi 18h
+    schedule.every().day.at("09:00").do(job_email_rappel_veille)
+    schedule.every().day.at("08:00").do(job_email_rappel_jour_j)
+    schedule.every().day.at("10:00").do(job_email_taches_retard)
+    schedule.every().friday.at("18:00").do(job_email_resume_hebdo)
     print("[Scheduler] Démarré ✅")
     while True:
         schedule.run_pending()
@@ -773,7 +481,7 @@ def demarrer_scheduler():
 threading.Thread(target=demarrer_scheduler, daemon=True).start()
 
 # ============================================
-# 🔐 AUTHENTIFICATION
+# AUTHENTIFICATION
 # ============================================
 
 GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleusercontent.com'
@@ -781,78 +489,42 @@ GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleuse
 @app.route('/auth/google', methods=['POST'])
 @limiter.limit("20 per minute")
 def auth_google():
-    """Connexion / inscription via Google OAuth — crée le compte si inexistant."""
     try:
-        # Flow implicit — google_id envoyé directement depuis userinfo Google
         google_id_direct = request.json.get('google_id')
         credential       = request.json.get('credential')
-
         if google_id_direct:
             google_id  = google_id_direct
             email      = request.json.get('email', '')
             nom        = request.json.get('nom', email.split('@')[0])
             avatar_url = request.json.get('avatar', '')
         elif credential:
-            # Flow credential (id_token)
-            idinfo = id_token.verify_oauth2_token(
-                credential,
-                google_requests.Request(),
-                GOOGLE_CLIENT_ID
-            )
+            idinfo = id_token.verify_oauth2_token(credential, google_requests.Request(), GOOGLE_CLIENT_ID)
             google_id  = idinfo['sub']
             email      = idinfo['email']
             nom        = idinfo.get('name', email.split('@')[0])
             avatar_url = idinfo.get('picture', '')
         else:
             return jsonify({"erreur": "Token Google manquant"}), 400
-
         db = connecter()
         cursor = db.cursor(dictionary=True)
-
-        # Chercher user existant par google_id ou email
         cursor.execute("SELECT * FROM users WHERE google_id = %s OR email = %s LIMIT 1", (google_id, email))
         user = cursor.fetchone()
-
         if user:
-            # Mettre à jour google_id si connexion email existante
             if not user.get('google_id'):
                 cursor.execute("UPDATE users SET google_id = %s, email_verifie = TRUE WHERE id = %s", (google_id, user['id']))
                 db.commit()
-            user_id = user['id']
-            nom_final = user['nom']
-            niveau = user.get('niveau', 1)
-            points = user.get('points', 0)
-            theme  = user.get('theme', 'dark')
+            user_id = user['id']; nom_final = user['nom']
+            niveau = user.get('niveau', 1); points = user.get('points', 0); theme = user.get('theme', 'dark')
         else:
-            # Créer nouveau compte Google
-            cursor.execute("""
-                INSERT INTO users (nom, email, password, google_id, email_verifie, points, niveau, theme)
-                VALUES (%s, %s, %s, %s, TRUE, 0, 1, 'dark')
-            """, (nom, email, secrets.token_hex(32), google_id))
+            cursor.execute("INSERT INTO users (nom, email, password, google_id, email_verifie, points, niveau, theme) VALUES (%s, %s, %s, %s, TRUE, 0, 1, 'dark')", (nom, email, secrets.token_hex(32), google_id))
             db.commit()
-            user_id   = cursor.lastrowid
-            nom_final = nom
-            niveau    = 1
-            points    = 0
-            theme     = 'dark'
-
-        cursor.close()
-        db.close()
-
-        # Générer JWT
+            user_id = cursor.lastrowid; nom_final = nom; niveau = 1; points = 0; theme = 'dark'
+        cursor.close(); db.close()
         access_token = create_access_token(identity=str(user_id))
-        response = make_response(jsonify({
-            "message": "Connexion Google réussie",
-            "user": {
-                "id": user_id, "nom": nom_final, "email": email,
-                "niveau": niveau, "points": points, "theme": theme,
-                "avatar": avatar_url
-            }
-        }))
+        response = make_response(jsonify({"message": "Connexion Google réussie", "user": {"id": user_id, "nom": nom_final, "email": email, "niveau": niveau, "points": points, "theme": theme, "avatar": avatar_url}}))
         set_access_cookies(response, access_token)
         return response, 200
-
-    except ValueError as e:
+    except ValueError:
         return jsonify({"erreur": "Token Google invalide"}), 401
     except Exception as e:
         print(f"[Google OAuth] Erreur: {e}")
@@ -878,13 +550,10 @@ def register():
         if curseur.fetchone():
             curseur.close(); db.close()
             return jsonify({"erreur": "Email déjà utilisé !"}), 400
-        curseur.execute(
-            "INSERT INTO users (nom, email, password, verification_token, email_verifie) VALUES (%s, %s, %s, %s, FALSE)",
-            (nom, email, password_hash, verification_token)
-        )
+        curseur.execute("INSERT INTO users (nom, email, password, verification_token, email_verifie) VALUES (%s, %s, %s, %s, FALSE)", (nom, email, password_hash, verification_token))
         db.commit(); curseur.close(); db.close()
         threading.Thread(target=envoyer_email_verification, args=(email, nom, verification_token)).start()
-        return jsonify({"message": "Compte créé ! Vérifiez votre email pour activer votre compte."})
+        return jsonify({"message": "Compte créé ! Vérifiez votre email."})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
@@ -906,9 +575,7 @@ def verify_email(token):
         return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
             <h1 style="color:#6c63ff">Email vérifié !</h1>
             <p>Votre compte GetShift est maintenant actif.</p>
-            <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">
-                Se connecter →
-            </a>
+            <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">Se connecter →</a>
         </body></html>"""
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -925,10 +592,7 @@ def login():
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute(
-            "SELECT id, nom, email, email_verifie, theme FROM users WHERE email = %s AND password = %s",
-            (email, password_hash)
-        )
+        curseur.execute("SELECT id, nom, email, email_verifie, theme FROM users WHERE email = %s AND password = %s", (email, password_hash))
         user = curseur.fetchone()
         curseur.close(); db.close()
         if not user:
@@ -936,10 +600,7 @@ def login():
         if not user.get('email_verifie'):
             return jsonify({"erreur": "Veuillez vérifier votre email avant de vous connecter !", "non_verifie": True}), 403
         access_token = create_access_token(identity=str(user['id']))
-        response = make_response(jsonify({
-            "message": "Connecté !",
-            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'dark')}
-        }))
+        response = make_response(jsonify({"message": "Connecté !", "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'dark')}}))
         set_access_cookies(response, access_token)
         return response
     except Exception as e:
@@ -962,11 +623,9 @@ def resend_verification():
         curseur.execute("SELECT id, nom, email_verifie FROM users WHERE email=%s", (email,))
         user = curseur.fetchone()
         if not user:
-            db.close()
-            return jsonify({"erreur": "Email introuvable"}), 404
+            db.close(); return jsonify({"erreur": "Email introuvable"}), 404
         if user['email_verifie']:
-            db.close()
-            return jsonify({"erreur": "Email déjà vérifié"}), 400
+            db.close(); return jsonify({"erreur": "Email déjà vérifié"}), 400
         new_token = secrets.token_urlsafe(32)
         curseur.execute("UPDATE users SET verification_token=%s WHERE email=%s", (new_token, email))
         db.commit(); db.close()
@@ -986,23 +645,19 @@ def forgot_password():
         curseur.execute("SELECT id, nom FROM users WHERE email=%s", (email,))
         user = curseur.fetchone()
         if not user:
-            db.close()
-            return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
+            db.close(); return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
         reset_token = secrets.token_urlsafe(32)
         expiry = datetime.now() + timedelta(hours=1)
         curseur.execute("UPDATE users SET reset_token=%s, reset_token_expiry=%s WHERE id=%s", (reset_token, expiry, user['id']))
         db.commit(); db.close()
         lien = f"https://chamdaane-a11y.github.io/taskflow/#/reset-password/{reset_token}"
         html = f"""<div style="font-family:Arial;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
-            <h1 style="color:#6c63ff;">GetShift</h1>
-            <h2>Bonjour {user['nom']} !</h2>
-            <p>Cliquez ci-dessous pour reinitialiser votre mot de passe :</p>
-            <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
-                Reinitialiser mon mot de passe
-            </a>
+            <h1 style="color:#6c63ff;">GetShift</h1><h2>Bonjour {user['nom']} !</h2>
+            <p>Cliquez ci-dessous pour réinitialiser votre mot de passe :</p>
+            <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">Réinitialiser mon mot de passe</a>
             <p style="color:#888;font-size:12px;">Ce lien expire dans 1h.</p>
         </div>"""
-        threading.Thread(target=envoyer_email, args=(email, "Reinitialisation mot de passe GetShift", html)).start()
+        threading.Thread(target=envoyer_email, args=(email, "Réinitialisation mot de passe GetShift", html)).start()
         return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -1020,11 +675,9 @@ def reset_password():
         curseur.execute("SELECT id, reset_token_expiry FROM users WHERE reset_token=%s", (token,))
         user = curseur.fetchone()
         if not user:
-            db.close()
-            return jsonify({"erreur": "Lien invalide ou expiré"}), 400
+            db.close(); return jsonify({"erreur": "Lien invalide ou expiré"}), 400
         if user['reset_token_expiry'] and datetime.now() > user['reset_token_expiry']:
-            db.close()
-            return jsonify({"erreur": "Lien expiré, demandez un nouveau"}), 400
+            db.close(); return jsonify({"erreur": "Lien expiré, demandez un nouveau"}), 400
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
         curseur.execute("UPDATE users SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE id=%s", (password_hash, user['id']))
         db.commit(); db.close()
@@ -1033,7 +686,7 @@ def reset_password():
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 👤 UTILISATEURS
+# UTILISATEURS
 # ============================================
 
 @app.route('/users/<int:id>', methods=['GET'])
@@ -1076,8 +729,7 @@ def update_password(id):
         curseur = db.cursor(dictionary=True)
         curseur.execute("SELECT id FROM users WHERE id=%s AND password=%s", (id, ancien_hash))
         if not curseur.fetchone():
-            db.close()
-            return jsonify({"erreur": "Mot de passe actuel incorrect"}), 400
+            db.close(); return jsonify({"erreur": "Mot de passe actuel incorrect"}), 400
         curseur.execute("UPDATE users SET password=%s WHERE id=%s", (nouveau_hash, id))
         db.commit(); db.close()
         return jsonify({"message": "Mot de passe modifié avec succès !"})
@@ -1099,12 +751,8 @@ def update_points(id):
     pts = data['points']
     db = connecter()
     curseur = db.cursor(dictionary=True)
-
-    # Ajouter les points
     curseur.execute("UPDATE users SET points=points+%s WHERE id=%s", (pts, id))
     db.commit()
-
-    # Recalculer le niveau (paliers fixes)
     curseur.execute("SELECT points FROM users WHERE id=%s", (id,))
     user = curseur.fetchone()
     total_pts = user['points']
@@ -1112,8 +760,6 @@ def update_points(id):
     nouveau_niveau = max([n for n, m in paliers if total_pts >= m])
     curseur.execute("UPDATE users SET niveau=%s WHERE id=%s", (nouveau_niveau, id))
     db.commit()
-
-    # Mettre à jour le streak
     curseur.execute("SELECT streak, derniere_activite FROM users WHERE id=%s", (id,))
     u = curseur.fetchone()
     from datetime import date, timedelta
@@ -1124,46 +770,37 @@ def update_points(id):
         streak = 1
     elif derniere == aujourd_hui - timedelta(days=1):
         streak += 1
-    # Si déjà aujourd'hui, streak inchangé
     curseur.execute("UPDATE users SET streak=%s, derniere_activite=%s WHERE id=%s", (streak, aujourd_hui, id))
     db.commit()
-
-    # Vérifier et attribuer les badges
     curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=TRUE", (id,))
     nb_terminees = curseur.fetchone()['nb']
     nouveaux_badges = verifier_badges(curseur, db, id, nb_terminees, total_pts, streak)
-    db.commit()
-    db.close()
+    db.commit(); db.close()
     return jsonify({"points": total_pts, "niveau": nouveau_niveau, "streak": streak, "nouveaux_badges": nouveaux_badges})
 
 # ============================================
-# 🏆 BADGES
+# BADGES
 # ============================================
 
 REGLES_BADGES = [
-    # Performance
-    {"id": "first_task",     "nom": "Premier pas",       "icon": "🌱", "description": "Première tâche terminée",          "condition": lambda t, p, s: t >= 1},
-    {"id": "five_tasks",     "nom": "En rythme",         "icon": "🔥", "description": "5 tâches terminées",               "condition": lambda t, p, s: t >= 5},
-    {"id": "ten_tasks",      "nom": "Productif",         "icon": "⚡", "description": "10 tâches terminées",              "condition": lambda t, p, s: t >= 10},
-    {"id": "fifty_tasks",    "nom": "Machine",           "icon": "🤖", "description": "50 tâches terminées",              "condition": lambda t, p, s: t >= 50},
-    {"id": "century",        "nom": "Centurion",         "icon": "💯", "description": "100 tâches terminées",             "condition": lambda t, p, s: t >= 100},
-    # Points
-    {"id": "pts_100",        "nom": "Débutant",          "icon": "🥉", "description": "100 points gagnés",               "condition": lambda t, p, s: p >= 100},
-    {"id": "pts_500",        "nom": "Confirmé",          "icon": "🥈", "description": "500 points gagnés",               "condition": lambda t, p, s: p >= 500},
-    {"id": "pts_1000",       "nom": "Expert",            "icon": "🥇", "description": "1000 points gagnés",              "condition": lambda t, p, s: p >= 1000},
-    {"id": "pts_5000",       "nom": "Maître",            "icon": "👑", "description": "5000 points gagnés",              "condition": lambda t, p, s: p >= 5000},
-    # Streak
-    {"id": "streak_3",       "nom": "3 jours de suite",  "icon": "🔥", "description": "Actif 3 jours consécutifs",       "condition": lambda t, p, s: s >= 3},
-    {"id": "streak_7",       "nom": "Semaine parfaite",  "icon": "📅", "description": "Actif 7 jours consécutifs",       "condition": lambda t, p, s: s >= 7},
-    {"id": "streak_30",      "nom": "Mois de feu",       "icon": "🌟", "description": "Actif 30 jours consécutifs",      "condition": lambda t, p, s: s >= 30},
-    # Spéciaux
-    {"id": "early_bird",     "nom": "Lève-tôt",          "icon": "🌅", "description": "Tâche terminée avant 8h",        "condition": lambda t, p, s: False},  # Géré séparément
-    {"id": "night_owl",      "nom": "Noctambule",        "icon": "🦉", "description": "Tâche terminée après 23h",       "condition": lambda t, p, s: False},  # Géré séparément
-    {"id": "speedster",      "nom": "Fulgurant",         "icon": "⚡", "description": "5 tâches terminées en 1 jour",   "condition": lambda t, p, s: False},  # Géré séparément
+    {"id": "first_task",  "nom": "Premier pas",      "icon": "🌱", "description": "Première tâche terminée",        "condition": lambda t, p, s: t >= 1},
+    {"id": "five_tasks",  "nom": "En rythme",        "icon": "🔥", "description": "5 tâches terminées",             "condition": lambda t, p, s: t >= 5},
+    {"id": "ten_tasks",   "nom": "Productif",        "icon": "⚡", "description": "10 tâches terminées",            "condition": lambda t, p, s: t >= 10},
+    {"id": "fifty_tasks", "nom": "Machine",          "icon": "🤖", "description": "50 tâches terminées",            "condition": lambda t, p, s: t >= 50},
+    {"id": "century",     "nom": "Centurion",        "icon": "💯", "description": "100 tâches terminées",           "condition": lambda t, p, s: t >= 100},
+    {"id": "pts_100",     "nom": "Débutant",         "icon": "🥉", "description": "100 points gagnés",             "condition": lambda t, p, s: p >= 100},
+    {"id": "pts_500",     "nom": "Confirmé",         "icon": "🥈", "description": "500 points gagnés",             "condition": lambda t, p, s: p >= 500},
+    {"id": "pts_1000",    "nom": "Expert",           "icon": "🥇", "description": "1000 points gagnés",            "condition": lambda t, p, s: p >= 1000},
+    {"id": "pts_5000",    "nom": "Maître",           "icon": "👑", "description": "5000 points gagnés",            "condition": lambda t, p, s: p >= 5000},
+    {"id": "streak_3",    "nom": "3 jours de suite", "icon": "🔥", "description": "Actif 3 jours consécutifs",     "condition": lambda t, p, s: s >= 3},
+    {"id": "streak_7",    "nom": "Semaine parfaite", "icon": "📅", "description": "Actif 7 jours consécutifs",     "condition": lambda t, p, s: s >= 7},
+    {"id": "streak_30",   "nom": "Mois de feu",      "icon": "🌟", "description": "Actif 30 jours consécutifs",    "condition": lambda t, p, s: s >= 30},
+    {"id": "early_bird",  "nom": "Lève-tôt",         "icon": "🌅", "description": "Tâche terminée avant 8h",      "condition": lambda t, p, s: False},
+    {"id": "night_owl",   "nom": "Noctambule",       "icon": "🦉", "description": "Tâche terminée après 23h",     "condition": lambda t, p, s: False},
+    {"id": "speedster",   "nom": "Fulgurant",        "icon": "⚡", "description": "5 tâches terminées en 1 jour", "condition": lambda t, p, s: False},
 ]
 
 def verifier_badges(curseur, db, user_id, nb_terminees, points_total, streak):
-    """Vérifie et attribue les badges manquants. Retourne la liste des nouveaux badges."""
     curseur.execute("SELECT badge_id FROM badges_utilisateurs WHERE user_id=%s", (user_id,))
     deja_obtenus = {r['badge_id'] for r in curseur.fetchall()}
     nouveaux = []
@@ -1171,16 +808,12 @@ def verifier_badges(curseur, db, user_id, nb_terminees, points_total, streak):
         if regle['id'] in deja_obtenus:
             continue
         if regle['condition'](nb_terminees, points_total, streak):
-            curseur.execute(
-                "INSERT INTO badges_utilisateurs (user_id, badge_id) VALUES (%s, %s)",
-                (user_id, regle['id'])
-            )
+            curseur.execute("INSERT INTO badges_utilisateurs (user_id, badge_id) VALUES (%s, %s)", (user_id, regle['id']))
             nouveaux.append({"id": regle['id'], "nom": regle['nom'], "icon": regle['icon'], "description": regle['description']})
     return nouveaux
 
 @app.route('/users/<int:id>/badges', methods=['GET'])
 def get_badges(id):
-    """Retourne tous les badges avec statut obtenu/non obtenu."""
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
@@ -1191,18 +824,8 @@ def get_badges(id):
         db.close()
         result = []
         for b in REGLES_BADGES:
-            result.append({
-                "id": b['id'], "nom": b['nom'], "icon": b['icon'],
-                "description": b['description'],
-                "obtenu": b['id'] in obtenus,
-                "obtenu_le": str(obtenus[b['id']]) if b['id'] in obtenus else None
-            })
-        return jsonify({
-            "badges": result,
-            "streak": user['streak'] if user else 0,
-            "nb_obtenus": len(obtenus),
-            "nb_total": len(REGLES_BADGES)
-        })
+            result.append({"id": b['id'], "nom": b['nom'], "icon": b['icon'], "description": b['description'], "obtenu": b['id'] in obtenus, "obtenu_le": str(obtenus[b['id']]) if b['id'] in obtenus else None})
+        return jsonify({"badges": result, "streak": user['streak'] if user else 0, "nb_obtenus": len(obtenus), "nb_total": len(REGLES_BADGES)})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
@@ -1218,10 +841,8 @@ def get_streak(id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
-
 # ============================================
-# 📂 CATEGORIES
+# CATEGORIES
 # ============================================
 
 @app.route('/categories/<int:user_id>', methods=['GET'])
@@ -1251,7 +872,7 @@ def supprimer_categorie(id):
     return jsonify({"message": "Catégorie supprimée !"})
 
 # ============================================
-# ✅ TACHES
+# TACHES
 # ============================================
 
 @app.route('/taches/<int:user_id>', methods=['GET'])
@@ -1280,9 +901,7 @@ def ajouter_tache():
         data = request.get_json()
         db = connecter()
         curseur = db.cursor()
-        curseur.execute("""
-            INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id) VALUES (%s, %s, %s, %s, %s)
-        """, (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), data['user_id'], data.get('categorie_id')))
+        curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id) VALUES (%s, %s, %s, %s, %s)", (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), data['user_id'], data.get('categorie_id')))
         db.commit()
         tache_id = curseur.lastrowid
         curseur2 = db.cursor(dictionary=True)
@@ -1292,8 +911,7 @@ def ajouter_tache():
             config = json.loads(row['config'])
             webhook_url = config.get('webhook_url')
             if webhook_url:
-                deadline_str = f" (deadline: {data['deadline']})" if data.get('deadline') else ""
-                envoyer_notification_slack(webhook_url, f"Nouvelle tâche GetShift : *{data['titre']}*{deadline_str} — Priorité: {data.get('priorite', 'moyenne')}")
+                envoyer_notification_slack(webhook_url, f"Nouvelle tâche GetShift : *{data['titre']}* — Priorité: {data.get('priorite', 'moyenne')}")
         db.close()
         return jsonify({"message": "Tâche ajoutée !", "id": tache_id})
     except Exception as e:
@@ -1305,13 +923,9 @@ def terminer_tache(id):
     db = connecter()
     curseur = db.cursor(dictionary=True)
     if data.get('terminee'):
-        curseur.execute("""
-            SELECT COUNT(*) as nb_bloquantes FROM dependances d
-            JOIN taches t ON d.depend_de_id = t.id WHERE d.tache_id = %s AND t.terminee = FALSE
-        """, (id,))
+        curseur.execute("SELECT COUNT(*) as nb_bloquantes FROM dependances d JOIN taches t ON d.depend_de_id = t.id WHERE d.tache_id = %s AND t.terminee = FALSE", (id,))
         if curseur.fetchone()['nb_bloquantes'] > 0:
-            db.close()
-            return jsonify({"erreur": "Cette tâche est bloquée par des dépendances non terminées"}), 400
+            db.close(); return jsonify({"erreur": "Cette tâche est bloquée par des dépendances non terminées"}), 400
     curseur.execute("UPDATE taches SET terminee=%s WHERE id=%s", (data['terminee'], id))
     db.commit(); db.close()
     return jsonify({"message": "Tâche mise à jour !"})
@@ -1354,7 +968,7 @@ def get_rappels(user_id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 🔗 DEPENDANCES
+# DEPENDANCES
 # ============================================
 
 @app.route('/taches/<int:tache_id>/dependances', methods=['GET'])
@@ -1362,10 +976,7 @@ def get_dependances(tache_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT d.id, d.depend_de_id, t.titre as titre_prerequis, t.terminee
-            FROM dependances d JOIN taches t ON d.depend_de_id = t.id WHERE d.tache_id = %s
-        """, (tache_id,))
+        curseur.execute("SELECT d.id, d.depend_de_id, t.titre as titre_prerequis, t.terminee FROM dependances d JOIN taches t ON d.depend_de_id = t.id WHERE d.tache_id = %s", (tache_id,))
         dependances = curseur.fetchall()
         db.close()
         return jsonify(dependances)
@@ -1405,7 +1016,7 @@ def supprimer_dependance(id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 🤖 IA
+# IA — ROUTES EXISTANTES (S1-S7)
 # ============================================
 
 @app.route('/ia/executer', methods=['POST'])
@@ -1438,11 +1049,7 @@ def executer_ia():
 def get_historique(user_id):
     db = connecter()
     curseur = db.cursor(dictionary=True)
-    curseur.execute("""
-        SELECT h.*, t.titre as tache_titre FROM historique_ia h
-        LEFT JOIN taches t ON h.tache_id = t.id WHERE h.user_id = %s
-        ORDER BY h.created_at DESC LIMIT 50
-    """, (user_id,))
+    curseur.execute("SELECT h.*, t.titre as tache_titre FROM historique_ia h LEFT JOIN taches t ON h.tache_id = t.id WHERE h.user_id = %s ORDER BY h.created_at DESC LIMIT 50", (user_id,))
     historique = curseur.fetchall()
     db.close()
     return jsonify(historique)
@@ -1452,38 +1059,28 @@ def sauvegarder_historique():
     data = request.get_json()
     db = connecter()
     curseur = db.cursor()
-    curseur.execute("""
-        INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s, %s, %s, %s, %s)
-    """, (data['user_id'], data['prompt'], data['reponse'], data['modele'], data.get('tache_id')))
+    curseur.execute("INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s, %s, %s, %s, %s)", (data['user_id'], data['prompt'], data['reponse'], data['modele'], data.get('tache_id')))
     db.commit(); db.close()
     return jsonify({"message": "Historique sauvegarde !"})
 
 @app.route('/ia/sous-taches-contextuelles', methods=['POST'])
 def generer_sous_taches_contextuelles():
-    """Génère des sous-tâches contextuelles à partir du titre d'une tâche."""
     try:
         data = request.get_json(force=True)
         titre = data.get('titre', '').strip()
         if not titre:
             return jsonify({"erreur": "Titre requis"}), 400
-        prompt = f"""Tu es un assistant de productivité expert.
-Analyse cette tâche : "{titre}"
+        prompt = f"""Tu es un assistant de productivité expert. Analyse cette tâche : "{titre}"
 Génère entre 4 et 6 sous-tâches concrètes, actionnables et ordonnées logiquement.
-Détecte le type parmi : entretien, voyage, projet, événement, habitude, apprentissage, autre.
-Réponds UNIQUEMENT en JSON valide, sans texte autour, sans backticks :
-{{"type": "le type détecté", "sous_taches": [{{"titre": "sous-tâche concrète", "priorite": "haute|moyenne|basse"}}], "conseil": "Un conseil court et motivant en 1 phrase"}}"""
-        completion = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=600, temperature=0.4
-        )
+Réponds UNIQUEMENT en JSON valide :
+{{"type": "le type détecté", "sous_taches": [{{"titre": "sous-tâche", "priorite": "haute|moyenne|basse"}}], "conseil": "conseil court"}}"""
+        completion = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], max_tokens=600, temperature=0.4)
         reponse = completion.choices[0].message.content.strip()
         reponse = re.sub(r'```json|```', '', reponse).strip()
         match = re.search(r'\{.*\}', reponse, re.S)
         if not match:
             raise ValueError("Réponse IA invalide")
-        result = json.loads(match.group())
-        return jsonify(result)
+        return jsonify(json.loads(match.group()))
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
@@ -1493,11 +1090,7 @@ def generer_taches():
         data = request.get_json(force=True)
         if not data or 'objectif' not in data or 'user_id' not in data:
             return jsonify({"erreur": "objectif et user_id requis"}), 400
-        completion = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": f'Objectif : "{data["objectif"]}". Génère exactement 5 tâches concrètes. Réponds UNIQUEMENT en JSON : ["tache 1","tache 2","tache 3","tache 4","tache 5"]'}],
-            max_tokens=300, temperature=0.4
-        )
+        completion = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": f'Objectif : "{data["objectif"]}". Génère exactement 5 tâches concrètes. Réponds UNIQUEMENT en JSON : ["tache 1","tache 2","tache 3","tache 4","tache 5"]'}], max_tokens=300, temperature=0.4)
         reponse = completion.choices[0].message.content.strip()
         match = re.search(r'\[.*\]', reponse, re.S)
         if not match: raise ValueError("Réponse IA non JSON")
@@ -1521,18 +1114,11 @@ def planifier_semaine():
         heures_dispo_par_jour = data.get('heures_dispo', 8)
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT id, titre, priorite, deadline, temps_estime, DATEDIFF(deadline, CURDATE()) AS jours_restants
-            FROM taches WHERE user_id=%s AND terminee=FALSE ORDER BY deadline ASC, priorite DESC
-        """, (user_id,))
+        curseur.execute("SELECT id, titre, priorite, deadline, temps_estime, DATEDIFF(deadline, CURDATE()) AS jours_restants FROM taches WHERE user_id=%s AND terminee=FALSE ORDER BY deadline ASC, priorite DESC", (user_id,))
         taches = curseur.fetchall()
         if not taches: return jsonify({"erreur": "Aucune tache a planifier"}), 400
         taches_str = "\n".join([f"- {t['titre']} (priorite: {t['priorite']}, deadline: {t['deadline']}, temps: {t['temps_estime'] or 30} min)" for t in taches])
-        completion = groq_client.chat.completions.create(
-            model='llama-3.3-70b-versatile',
-            messages=[{"role": "user", "content": f'Planifie ces taches sur 7 jours ({heures_dispo_par_jour}h/jour):\n{taches_str}\nReponds UNIQUEMENT en JSON: {{"planification": [{{"titre": "...", "date": "YYYY-MM-DD", "heure_debut": "HH:MM", "heure_fin": "HH:MM", "raison": "..."}}], "conseil": "..."}}'}],
-            max_tokens=1500, temperature=0.3
-        )
+        completion = groq_client.chat.completions.create(model='llama-3.3-70b-versatile', messages=[{"role": "user", "content": f'Planifie ces taches sur 7 jours ({heures_dispo_par_jour}h/jour):\n{taches_str}\nReponds UNIQUEMENT en JSON: {{"planification": [{{"titre": "...", "date": "YYYY-MM-DD", "heure_debut": "HH:MM", "heure_fin": "HH:MM", "raison": "..."}}], "conseil": "..."}}'}], max_tokens=1500, temperature=0.3)
         reponse = completion.choices[0].message.content.strip()
         match = re.search(r'\{.*\}', reponse, re.S)
         if not match: raise ValueError("Reponse IA invalide")
@@ -1540,17 +1126,14 @@ def planifier_semaine():
         for item in plan.get('planification', []):
             tache = next((t for t in taches if t['titre'] == item['titre']), None)
             if tache:
-                curseur.execute("""
-                    INSERT INTO planification (user_id, tache_id, date_planifiee, heure_debut, heure_fin, charge_minutes, genere_par_ia)
-                    VALUES (%s, %s, %s, %s, %s, %s, TRUE)
-                """, (user_id, tache['id'], item['date'], item['heure_debut'], item['heure_fin'], tache.get('temps_estime', 30)))
+                curseur.execute("INSERT INTO planification (user_id, tache_id, date_planifiee, heure_debut, heure_fin, charge_minutes, genere_par_ia) VALUES (%s, %s, %s, %s, %s, %s, TRUE)", (user_id, tache['id'], item['date'], item['heure_debut'], item['heure_fin'], tache.get('temps_estime', 30)))
         db.commit(); db.close()
         return jsonify({"planification": plan['planification'], "conseil": plan.get('conseil', ''), "message": f"{len(plan['planification'])} taches planifiees !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 📋 SOUS-TACHES
+# SOUS-TACHES
 # ============================================
 
 @app.route('/taches/<int:tache_id>/sous-taches', methods=['GET'])
@@ -1601,7 +1184,7 @@ def supprimer_sous_tache(id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# ⏱️ TEMPS
+# TEMPS
 # ============================================
 
 @app.route('/taches/<int:id>/temps', methods=['PUT'])
@@ -1617,7 +1200,7 @@ def update_temps(id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 📅 PLANIFICATION
+# PLANIFICATION
 # ============================================
 
 @app.route('/planification/<int:user_id>', methods=['GET'])
@@ -1625,11 +1208,7 @@ def get_planification(user_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT p.*, t.titre, t.priorite, t.temps_estime, t.statut FROM planification p
-            JOIN taches t ON p.tache_id = t.id WHERE p.user_id = %s AND p.date_planifiee >= CURDATE()
-            ORDER BY p.date_planifiee ASC, p.heure_debut ASC
-        """, (user_id,))
+        curseur.execute("SELECT p.*, t.titre, t.priorite, t.temps_estime, t.statut FROM planification p JOIN taches t ON p.tache_id = t.id WHERE p.user_id = %s AND p.date_planifiee >= CURDATE() ORDER BY p.date_planifiee ASC, p.heure_debut ASC", (user_id,))
         planification = curseur.fetchall()
         db.close()
         for row in planification:
@@ -1646,17 +1225,14 @@ def ajouter_planification():
         data = request.get_json()
         db = connecter()
         curseur = db.cursor()
-        curseur.execute("""
-            INSERT INTO planification (user_id, tache_id, date_planifiee, heure_debut, heure_fin, charge_minutes, genere_par_ia)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (data['user_id'], data['tache_id'], data['date_planifiee'], data.get('heure_debut'), data.get('heure_fin'), data.get('charge_minutes', 0), data.get('genere_par_ia', False)))
+        curseur.execute("INSERT INTO planification (user_id, tache_id, date_planifiee, heure_debut, heure_fin, charge_minutes, genere_par_ia) VALUES (%s, %s, %s, %s, %s, %s, %s)", (data['user_id'], data['tache_id'], data['date_planifiee'], data.get('heure_debut'), data.get('heure_fin'), data.get('charge_minutes', 0), data.get('genere_par_ia', False)))
         db.commit(); db.close()
         return jsonify({"message": "Planification ajoutee !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 🧠 PRIORITE INTELLIGENTE
+# PRIORITE INTELLIGENTE
 # ============================================
 
 @app.route('/taches/<int:user_id>/priorite-intelligente', methods=['GET'])
@@ -1664,10 +1240,7 @@ def priorite_intelligente(user_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT id, titre, priorite, deadline, temps_estime, statut, DATEDIFF(deadline, CURDATE()) AS jours_restants
-            FROM taches WHERE user_id=%s AND terminee=FALSE AND deadline IS NOT NULL ORDER BY deadline ASC
-        """, (user_id,))
+        curseur.execute("SELECT id, titre, priorite, deadline, temps_estime, statut, DATEDIFF(deadline, CURDATE()) AS jours_restants FROM taches WHERE user_id=%s AND terminee=FALSE AND deadline IS NOT NULL ORDER BY deadline ASC", (user_id,))
         taches = curseur.fetchall()
         for t in taches:
             jours = t['jours_restants'] or 99
@@ -1682,7 +1255,7 @@ def priorite_intelligente(user_id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 📊 ANALYTICS
+# ANALYTICS
 # ============================================
 
 @app.route('/charge/<int:user_id>', methods=['GET'])
@@ -1690,12 +1263,7 @@ def get_charge(user_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT date_planifiee, SUM(charge_minutes) as total_minutes, COUNT(*) as nb_taches
-            FROM planification WHERE user_id=%s
-            AND date_planifiee BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-            GROUP BY date_planifiee ORDER BY date_planifiee ASC
-        """, (user_id,))
+        curseur.execute("SELECT date_planifiee, SUM(charge_minutes) as total_minutes, COUNT(*) as nb_taches FROM planification WHERE user_id=%s AND date_planifiee BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) GROUP BY date_planifiee ORDER BY date_planifiee ASC", (user_id,))
         charge = curseur.fetchall()
         db.close()
         return jsonify(charge)
@@ -1715,68 +1283,36 @@ def get_analytics(user_id):
         taux = round((terminees / total * 100), 1) if total > 0 else 0
         curseur.execute("SELECT priorite, COUNT(*) as count FROM taches WHERE user_id=%s GROUP BY priorite", (user_id,))
         priorites = {r['priorite']: r['count'] for r in curseur.fetchall()}
-        curseur.execute("""
-            SELECT DATE(updated_at) as jour, COUNT(*) as count FROM taches
-            WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-            GROUP BY DATE(updated_at) ORDER BY jour ASC
-        """, (user_id, jours))
+        curseur.execute("SELECT DATE(updated_at) as jour, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY) GROUP BY DATE(updated_at) ORDER BY jour ASC", (user_id, jours))
         par_jour = curseur.fetchall()
-        curseur.execute("""
-            SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE
-            AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-        """, (user_id,))
+        curseur.execute("SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)", (user_id,))
         cette_semaine = curseur.fetchone()['count']
-        curseur.execute("""
-            SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE
-            AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-            AND updated_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-        """, (user_id,))
+        curseur.execute("SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND updated_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY)", (user_id,))
         semaine_precedente = curseur.fetchone()['count']
-        curseur.execute("""
-            SELECT HOUR(updated_at) as heure, COUNT(*) as count FROM taches
-            WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-            GROUP BY HOUR(updated_at) ORDER BY heure
-        """, (user_id,))
+        curseur.execute("SELECT HOUR(updated_at) as heure, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) GROUP BY HOUR(updated_at) ORDER BY heure", (user_id,))
         par_heure = [0] * 24
         for row in curseur.fetchall():
             if row['heure'] is not None: par_heure[row['heure']] = row['count']
-        curseur.execute("""
-            SELECT DATE(created_at) as jour, COUNT(*) as count FROM historique_ia
-            WHERE user_id=%s AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-            GROUP BY DATE(created_at) ORDER BY jour ASC
-        """, (user_id,))
+        curseur.execute("SELECT DATE(created_at) as jour, COUNT(*) as count FROM historique_ia WHERE user_id=%s AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) GROUP BY DATE(created_at) ORDER BY jour ASC", (user_id,))
         ia_par_jour = curseur.fetchall()
         evolution = round(((cette_semaine - semaine_precedente) / max(semaine_precedente, 1)) * 100, 1)
         db.close()
-        return jsonify({
-            "total": total, "terminees": terminees, "taux_completion": taux,
-            "priorites": priorites, "par_jour": par_jour,
-            "cette_semaine": cette_semaine, "semaine_precedente": semaine_precedente,
-            "ia_par_jour": ia_par_jour, "par_heure": par_heure, "evolution": evolution
-        })
+        return jsonify({"total": total, "terminees": terminees, "taux_completion": taux, "priorites": priorites, "par_jour": par_jour, "cette_semaine": cette_semaine, "semaine_precedente": semaine_precedente, "ia_par_jour": ia_par_jour, "par_heure": par_heure, "evolution": evolution})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 👥 COLLABORATION
-# ============================================
-
-# ============================================
-# EQUIPES — NOUVEAU SYSTEME COLLABORATION
+# COLLABORATION
 # ============================================
 
 @app.route('/equipes', methods=['POST'])
 def creer_equipe():
     try:
         data = request.get_json()
-        import secrets
         code = secrets.token_urlsafe(16)
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute(
-            "INSERT INTO equipes (nom, description, code_invitation, createur_id) VALUES (%s, %s, %s, %s)",
-            (data['nom'], data.get('description', ''), code, data['user_id'])
-        )
+        curseur.execute("INSERT INTO equipes (nom, description, code_invitation, createur_id) VALUES (%s, %s, %s, %s)", (data['nom'], data.get('description', ''), code, data['user_id']))
         equipe_id = curseur.lastrowid
         curseur.execute("INSERT INTO equipe_membres (equipe_id, user_id, role) VALUES (%s, %s, 'admin')", (equipe_id, data['user_id']))
         db.commit()
@@ -1801,8 +1337,7 @@ def rejoindre_equipe():
         if curseur.fetchone():
             return jsonify({"erreur": "Deja membre", "equipe": equipe}), 200
         curseur.execute("INSERT INTO equipe_membres (equipe_id, user_id, role) VALUES (%s, %s, 'membre')", (equipe['id'], data['user_id']))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": f"Vous avez rejoint {equipe['nom']} !", "equipe": equipe})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -1831,11 +1366,7 @@ def get_membres_equipe(equipe_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT u.id, u.nom, u.email, em.role, em.rejoint_le
-            FROM equipe_membres em JOIN users u ON em.user_id=u.id
-            WHERE em.equipe_id=%s ORDER BY em.rejoint_le ASC
-        """, (equipe_id,))
+        curseur.execute("SELECT u.id, u.nom, u.email, em.role, em.rejoint_le FROM equipe_membres em JOIN users u ON em.user_id=u.id WHERE em.equipe_id=%s ORDER BY em.rejoint_le ASC", (equipe_id,))
         membres = curseur.fetchall()
         db.close()
         return jsonify(membres)
@@ -1865,17 +1396,10 @@ def creer_tache_equipe():
         data = request.get_json()
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            INSERT INTO taches_equipe (equipe_id, titre, description, priorite, assignee_id, createur_id, deadline)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (data['equipe_id'], data['titre'], data.get('description',''), data.get('priorite','moyenne'), data.get('assignee_id'), data['createur_id'], data.get('deadline')))
+        curseur.execute("INSERT INTO taches_equipe (equipe_id, titre, description, priorite, assignee_id, createur_id, deadline) VALUES (%s, %s, %s, %s, %s, %s, %s)", (data['equipe_id'], data['titre'], data.get('description',''), data.get('priorite','moyenne'), data.get('assignee_id'), data['createur_id'], data.get('deadline')))
         tache_id = curseur.lastrowid
         db.commit()
-        curseur.execute("""
-            SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom
-            FROM taches_equipe te JOIN users u1 ON te.createur_id=u1.id LEFT JOIN users u2 ON te.assignee_id=u2.id
-            WHERE te.id=%s
-        """, (tache_id,))
+        curseur.execute("SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom FROM taches_equipe te JOIN users u1 ON te.createur_id=u1.id LEFT JOIN users u2 ON te.assignee_id=u2.id WHERE te.id=%s", (tache_id,))
         tache = curseur.fetchone()
         db.close()
         return jsonify(tache)
@@ -1907,10 +1431,7 @@ def get_commentaires_equipe(tache_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT c.*, u.nom FROM commentaires_tache c JOIN users u ON c.user_id=u.id
-            WHERE c.tache_id=%s ORDER BY c.created_at ASC
-        """, (tache_id,))
+        curseur.execute("SELECT c.*, u.nom FROM commentaires_tache c JOIN users u ON c.user_id=u.id WHERE c.tache_id=%s ORDER BY c.created_at ASC", (tache_id,))
         commentaires = curseur.fetchall()
         db.close()
         return jsonify(commentaires)
@@ -1924,8 +1445,7 @@ def ajouter_commentaire_equipe():
         db = connecter()
         curseur = db.cursor()
         curseur.execute("INSERT INTO commentaires_tache (tache_id, user_id, contenu) VALUES (%s, %s, %s)", (data['tache_id'], data['user_id'], data['contenu']))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Commentaire ajoute"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -1941,15 +1461,10 @@ def supprimer_equipe(equipe_id):
         if not equipe or equipe['createur_id'] != data['user_id']:
             return jsonify({"erreur": "Non autorise"}), 403
         curseur.execute("DELETE FROM equipes WHERE id=%s", (equipe_id,))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Equipe supprimee"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
-# ============================================
-# ANCIEN SYSTEME (conserve pour compatibilite)
-# ============================================
 
 @app.route('/collaboration/inviter', methods=['POST'])
 def inviter_collaborateur():
@@ -1974,11 +1489,7 @@ def get_invitations(user_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT c.*, t.titre as tache_titre, u.nom as owner_nom
-            FROM collaborations c JOIN taches t ON c.tache_id = t.id JOIN users u ON c.owner_id = u.id
-            WHERE c.collaborateur_id=%s ORDER BY c.created_at DESC
-        """, (user_id,))
+        curseur.execute("SELECT c.*, t.titre as tache_titre, u.nom as owner_nom FROM collaborations c JOIN taches t ON c.tache_id = t.id JOIN users u ON c.owner_id = u.id WHERE c.collaborateur_id=%s ORDER BY c.created_at DESC", (user_id,))
         invitations = curseur.fetchall()
         db.close()
         return jsonify(invitations)
@@ -2002,11 +1513,7 @@ def get_taches_partagees(user_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT t.*, u.nom as owner_nom, c.statut as collab_statut, c.id as collab_id
-            FROM collaborations c JOIN taches t ON c.tache_id = t.id JOIN users u ON c.owner_id = u.id
-            WHERE c.collaborateur_id=%s AND c.statut='accepte' ORDER BY t.created_at DESC
-        """, (user_id,))
+        curseur.execute("SELECT t.*, u.nom as owner_nom, c.statut as collab_statut, c.id as collab_id FROM collaborations c JOIN taches t ON c.tache_id = t.id JOIN users u ON c.owner_id = u.id WHERE c.collaborateur_id=%s AND c.statut='accepte' ORDER BY t.created_at DESC", (user_id,))
         taches = curseur.fetchall()
         db.close()
         return jsonify(taches)
@@ -2018,10 +1525,7 @@ def get_membres(tache_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT c.*, u.nom, u.email FROM collaborations c
-            JOIN users u ON c.collaborateur_id = u.id WHERE c.tache_id=%s
-        """, (tache_id,))
+        curseur.execute("SELECT c.*, u.nom, u.email FROM collaborations c JOIN users u ON c.collaborateur_id = u.id WHERE c.tache_id=%s", (tache_id,))
         membres = curseur.fetchall()
         db.close()
         return jsonify(membres)
@@ -2029,7 +1533,7 @@ def get_membres(tache_id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 💬 COMMENTAIRES
+# COMMENTAIRES
 # ============================================
 
 @app.route('/commentaires/<int:tache_id>', methods=['GET'])
@@ -2037,10 +1541,7 @@ def get_commentaires(tache_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT c.*, u.nom FROM commentaires c
-            JOIN users u ON c.user_id = u.id WHERE c.tache_id=%s ORDER BY c.created_at ASC
-        """, (tache_id,))
+        curseur.execute("SELECT c.*, u.nom FROM commentaires c JOIN users u ON c.user_id = u.id WHERE c.tache_id=%s ORDER BY c.created_at ASC", (tache_id,))
         commentaires = curseur.fetchall()
         db.close()
         return jsonify(commentaires)
@@ -2060,7 +1561,7 @@ def ajouter_commentaire():
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 🔔 PUSH NOTIFICATIONS ROUTES
+# PUSH NOTIFICATIONS ROUTES
 # ============================================
 
 @app.route('/push/vapid-public-key', methods=['GET'])
@@ -2086,11 +1587,7 @@ def send_rappels():
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT t.titre, t.deadline, t.user_id, DATEDIFF(t.deadline, CURDATE()) AS jours_restants
-            FROM taches t WHERE t.terminee = FALSE AND t.deadline IS NOT NULL
-            AND t.deadline <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
-        """)
+        cursor.execute("SELECT t.titre, t.deadline, t.user_id, DATEDIFF(t.deadline, CURDATE()) AS jours_restants FROM taches t WHERE t.terminee = FALSE AND t.deadline IS NOT NULL AND t.deadline <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)")
         taches = cursor.fetchall()
         sent = 0
         for tache in taches:
@@ -2098,9 +1595,7 @@ def send_rappels():
             sub = cursor.fetchone()
             if sub:
                 jours = tache['jours_restants']
-                if envoyer_push(sub['subscription'],
-                    f"Deadline : {tache['titre']}",
-                    "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"):
+                if envoyer_push(sub['subscription'], f"Deadline : {tache['titre']}", "Aujourd'hui !" if jours == 0 else f"Dans {jours} jour(s)"):
                     sent += 1
         cursor.close(); db.close()
         return jsonify({"message": f"{sent} notifications envoyées"})
@@ -2123,7 +1618,7 @@ def trigger_encouragements():
     return jsonify({"message": "Encouragements déclenchés !"})
 
 # ============================================
-# 📧 ROUTES EMAIL — DÉCLENCHEMENT MANUEL
+# ROUTES EMAIL
 # ============================================
 
 @app.route('/email/rappel-veille', methods=['POST'])
@@ -2148,7 +1643,6 @@ def trigger_email_resume_hebdo():
 
 @app.route('/email/test/<int:user_id>', methods=['POST'])
 def test_email_user(user_id):
-    """Envoie un email de test résumé hebdo à un user spécifique."""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -2157,17 +1651,11 @@ def test_email_user(user_id):
         cursor.close(); db.close()
         if not u:
             return jsonify({"erreur": "User introuvable"}), 404
-        # Stats fictives réalistes pour le test
         stats = {
             "terminees": 7, "terminees_prec": 4, "en_cours": 3, "en_retard": 1,
             "taux": 70, "points": u['points'] or 0, "niveau": u['niveau'] or 1,
-            "points_semaine": 70,
-            "jours_actifs": {"Lun": 2, "Mar": 3, "Mer": 1, "Jeu": 0, "Ven": 1, "Sam": 0, "Dim": 0},
-            "taches_haute": [
-                {"titre": "Finir le rapport client", "deadline_str": "15/03"},
-                {"titre": "Revoir la présentation", "deadline_str": "18/03"},
-            ],
-            "conseil_ia": "Tu as bien progressé cette semaine avec 7 tâches terminées ! Pour la semaine prochaine, essaie de travailler en blocs de 90 minutes sur tes tâches haute priorité dès le matin."
+            "points_semaine": 70, "jours_actifs": {}, "taches_haute": [],
+            "conseil_ia": "Continue sur ta lancée ! Pour la semaine prochaine, essaie de travailler en blocs de 90 minutes sur tes tâches haute priorité dès le matin."
         }
         html = _html_resume_hebdo(u['nom'], stats)
         envoyer_email(u['email'], "Bilan hebdomadaire [TEST] — GetShift", html)
@@ -2176,7 +1664,7 @@ def test_email_user(user_id):
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# 🔗 INTÉGRATIONS
+# INTEGRATIONS
 # ============================================
 
 @app.route('/integrations/slack', methods=['GET'])
@@ -2211,164 +1699,63 @@ def save_slack_integration():
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# SPRINT 3 — TEMPLATES COMMUNAUTAIRES
+# SPRINT 3 — TEMPLATES
 # ============================================
 
 @app.route('/templates/init', methods=['POST'])
 def init_templates():
-    """Créer la table templates si elle n'existe pas"""
     try:
         db = connecter()
         curseur = db.cursor()
         curseur.execute("""
             CREATE TABLE IF NOT EXISTS templates (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                titre VARCHAR(200) NOT NULL,
-                description TEXT,
-                categorie VARCHAR(50) DEFAULT 'autre',
-                icone VARCHAR(10) DEFAULT '📋',
-                utilisations INT DEFAULT 0,
-                cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        """)
+                id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL,
+                titre VARCHAR(200) NOT NULL, description TEXT,
+                categorie VARCHAR(50) DEFAULT 'autre', icone VARCHAR(10) DEFAULT '📋',
+                utilisations INT DEFAULT 0, cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)""")
         curseur.execute("""
             CREATE TABLE IF NOT EXISTS template_taches (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                template_id INT NOT NULL,
-                titre VARCHAR(200) NOT NULL,
-                priorite VARCHAR(20) DEFAULT 'moyenne',
-                deadline_jours INT DEFAULT NULL,
-                ordre INT DEFAULT 0,
-                FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
-            )
-        """)
+                id INT AUTO_INCREMENT PRIMARY KEY, template_id INT NOT NULL,
+                titre VARCHAR(200) NOT NULL, priorite VARCHAR(20) DEFAULT 'moyenne',
+                deadline_jours INT DEFAULT NULL, ordre INT DEFAULT 0,
+                FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE)""")
         curseur.execute("""
             CREATE TABLE IF NOT EXISTS template_sous_taches (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                template_tache_id INT NOT NULL,
-                titre VARCHAR(200) NOT NULL,
-                ordre INT DEFAULT 0,
-                FOREIGN KEY (template_tache_id) REFERENCES template_taches(id) ON DELETE CASCADE
-            )
-        """)
+                id INT AUTO_INCREMENT PRIMARY KEY, template_tache_id INT NOT NULL,
+                titre VARCHAR(200) NOT NULL, ordre INT DEFAULT 0,
+                FOREIGN KEY (template_tache_id) REFERENCES template_taches(id) ON DELETE CASCADE)""")
         db.commit()
-
-        # Insérer templates par défaut si table vide
         curseur.execute("SELECT COUNT(*) FROM templates")
-        count = curseur.fetchone()[0]
-        if count == 0:
+        if curseur.fetchone()[0] == 0:
             templates_defaut = [
-                {
-                    "user_id": 1,
-                    "titre": "Lancer un projet",
-                    "description": "Toutes les étapes pour démarrer un nouveau projet de A à Z",
-                    "categorie": "projet",
-                    "icone": "🚀",
-                    "taches": [
-                        {"titre": "Définir les objectifs du projet", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Rédiger le cahier des charges", "Identifier les parties prenantes"]},
-                        {"titre": "Constituer l'équipe", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Lister les compétences nécessaires", "Assigner les rôles"]},
-                        {"titre": "Planifier le budget", "priorite": "moyenne", "deadline_jours": 5, "sous_taches": ["Estimer les coûts", "Obtenir les validations"]},
-                        {"titre": "Créer le planning", "priorite": "moyenne", "deadline_jours": 7, "sous_taches": ["Définir les jalons", "Répartir les tâches"]},
-                        {"titre": "Lancer le kick-off", "priorite": "haute", "deadline_jours": 10, "sous_taches": ["Préparer la présentation", "Inviter les parties prenantes"]},
-                    ]
-                },
-                {
-                    "user_id": 1,
-                    "titre": "Préparer un voyage",
-                    "description": "Checklist complète pour organiser votre prochain voyage",
-                    "categorie": "voyage",
-                    "icone": "✈️",
-                    "taches": [
-                        {"titre": "Réserver les billets", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Comparer les prix", "Choisir les dates"]},
-                        {"titre": "Réserver l'hébergement", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Rechercher les hôtels", "Lire les avis"]},
-                        {"titre": "Préparer les documents", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["Vérifier passeport", "Demander visa si nécessaire"]},
-                        {"titre": "Faire la valise", "priorite": "moyenne", "deadline_jours": 14, "sous_taches": ["Liste vêtements", "Médicaments et trousse"]},
-                        {"titre": "Organiser le transport local", "priorite": "basse", "deadline_jours": 7, "sous_taches": ["Location voiture", "Transports en commun"]},
-                    ]
-                },
-                {
-                    "user_id": 1,
-                    "titre": "Routine matinale",
-                    "description": "Démarrez chaque journée avec productivité et énergie",
-                    "categorie": "habitude",
-                    "icone": "🌅",
-                    "taches": [
-                        {"titre": "Sport / Exercice", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Échauffement 5 min", "Séance 20 min"]},
-                        {"titre": "Méditation", "priorite": "moyenne", "deadline_jours": 1, "sous_taches": ["Respiration profonde", "Visualisation"]},
-                        {"titre": "Petit-déjeuner sain", "priorite": "moyenne", "deadline_jours": 1, "sous_taches": ["Préparer les ingrédients", "Manger sans écrans"]},
-                        {"titre": "Planifier sa journée", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Lister les 3 priorités", "Vérifier le calendrier"]},
-                    ]
-                },
-                {
-                    "user_id": 1,
-                    "titre": "Apprendre une compétence",
-                    "description": "Plan structuré pour acquérir une nouvelle compétence en 30 jours",
-                    "categorie": "apprentissage",
-                    "icone": "📚",
-                    "taches": [
-                        {"titre": "Définir l'objectif d'apprentissage", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Niveau cible", "Ressources nécessaires"]},
-                        {"titre": "Trouver les ressources", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Livres / cours en ligne", "Mentors / communautés"]},
-                        {"titre": "Créer un planning d'étude", "priorite": "moyenne", "deadline_jours": 5, "sous_taches": ["Sessions quotidiennes", "Révisions hebdomadaires"]},
-                        {"titre": "Pratiquer chaque jour", "priorite": "haute", "deadline_jours": 7, "sous_taches": ["Exercices pratiques", "Projets personnels"]},
-                        {"titre": "Évaluer les progrès", "priorite": "moyenne", "deadline_jours": 30, "sous_taches": ["Test de niveau", "Ajuster le plan"]},
-                    ]
-                },
-                {
-                    "user_id": 1,
-                    "titre": "Organiser un événement",
-                    "description": "Checklist pour organiser une réunion, fête ou conférence",
-                    "categorie": "evenement",
-                    "icone": "🎉",
-                    "taches": [
-                        {"titre": "Définir le concept", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Thème", "Nombre d'invités"]},
-                        {"titre": "Choisir la date et le lieu", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["Disponibilités", "Réserver le lieu"]},
-                        {"titre": "Envoyer les invitations", "priorite": "moyenne", "deadline_jours": 7, "sous_taches": ["Créer les invitations", "Gérer les RSVP"]},
-                        {"titre": "Préparer la logistique", "priorite": "moyenne", "deadline_jours": 10, "sous_taches": ["Traiteur / nourriture", "Décoration"]},
-                        {"titre": "Jour J — coordination", "priorite": "haute", "deadline_jours": 14, "sous_taches": ["Arrivée anticipée", "Accueil des invités"]},
-                    ]
-                },
-                {
-                    "user_id": 1,
-                    "titre": "Recherche d'emploi",
-                    "description": "Plan complet pour trouver et décrocher votre prochain emploi",
-                    "categorie": "projet",
-                    "icone": "💼",
-                    "taches": [
-                        {"titre": "Mettre à jour le CV", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Expériences récentes", "Compétences clés"]},
-                        {"titre": "Rédiger une lettre de motivation type", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Version générique", "Versions personnalisées"]},
-                        {"titre": "Identifier les offres cibles", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["LinkedIn", "Sites spécialisés"]},
-                        {"titre": "Préparer les entretiens", "priorite": "haute", "deadline_jours": 7, "sous_taches": ["Questions fréquentes", "Recherche sur les entreprises"]},
-                        {"titre": "Relances et suivi", "priorite": "moyenne", "deadline_jours": 14, "sous_taches": ["Tableau de suivi", "Emails de relance"]},
-                    ]
-                },
+                {"user_id": 1, "titre": "Lancer un projet", "description": "Toutes les étapes pour démarrer un projet de A à Z", "categorie": "projet", "icone": "🚀", "taches": [
+                    {"titre": "Définir les objectifs", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Rédiger le cahier des charges", "Identifier les parties prenantes"]},
+                    {"titre": "Constituer l'équipe", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Lister les compétences", "Assigner les rôles"]},
+                    {"titre": "Créer le planning", "priorite": "moyenne", "deadline_jours": 7, "sous_taches": ["Définir les jalons", "Répartir les tâches"]},
+                ]},
+                {"user_id": 1, "titre": "Préparer un voyage", "description": "Checklist pour organiser votre voyage", "categorie": "voyage", "icone": "✈️", "taches": [
+                    {"titre": "Réserver les billets", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Comparer les prix", "Choisir les dates"]},
+                    {"titre": "Préparer les documents", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["Vérifier passeport", "Demander visa si nécessaire"]},
+                ]},
+                {"user_id": 1, "titre": "Routine matinale", "description": "Démarrez chaque journée avec productivité", "categorie": "habitude", "icone": "🌅", "taches": [
+                    {"titre": "Sport / Exercice", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Échauffement 5 min", "Séance 20 min"]},
+                    {"titre": "Planifier sa journée", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Lister les 3 priorités", "Vérifier le calendrier"]},
+                ]},
             ]
-
             for tmpl in templates_defaut:
-                curseur.execute(
-                    "INSERT INTO templates (user_id, titre, description, categorie, icone) VALUES (%s, %s, %s, %s, %s)",
-                    (tmpl['user_id'], tmpl['titre'], tmpl['description'], tmpl['categorie'], tmpl['icone'])
-                )
+                curseur.execute("INSERT INTO templates (user_id, titre, description, categorie, icone) VALUES (%s, %s, %s, %s, %s)", (tmpl['user_id'], tmpl['titre'], tmpl['description'], tmpl['categorie'], tmpl['icone']))
                 template_id = curseur.lastrowid
                 for t in tmpl['taches']:
-                    curseur.execute(
-                        "INSERT INTO template_taches (template_id, titre, priorite, deadline_jours, ordre) VALUES (%s, %s, %s, %s, %s)",
-                        (template_id, t['titre'], t['priorite'], t['deadline_jours'], tmpl['taches'].index(t))
-                    )
+                    curseur.execute("INSERT INTO template_taches (template_id, titre, priorite, deadline_jours, ordre) VALUES (%s, %s, %s, %s, %s)", (template_id, t['titre'], t['priorite'], t['deadline_jours'], tmpl['taches'].index(t)))
                     tache_id = curseur.lastrowid
                     for j, st in enumerate(t.get('sous_taches', [])):
-                        curseur.execute(
-                            "INSERT INTO template_sous_taches (template_tache_id, titre, ordre) VALUES (%s, %s, %s)",
-                            (tache_id, st, j)
-                        )
+                        curseur.execute("INSERT INTO template_sous_taches (template_tache_id, titre, ordre) VALUES (%s, %s, %s)", (tache_id, st, j))
             db.commit()
-
         db.close()
         return jsonify({"message": "Tables templates créées avec succès"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
 
 @app.route('/templates', methods=['GET'])
 def get_templates():
@@ -2388,7 +1775,6 @@ def get_templates():
                 curseur.execute("SELECT * FROM template_sous_taches WHERE template_tache_id=%s ORDER BY ordre", (tache['id'],))
                 tache['sous_taches'] = curseur.fetchall()
             tmpl['taches'] = taches
-            # Auteur
             curseur.execute("SELECT nom FROM users WHERE id=%s", (tmpl['user_id'],))
             auteur = curseur.fetchone()
             tmpl['auteur'] = auteur['nom'] if auteur else 'Anonyme'
@@ -2397,83 +1783,53 @@ def get_templates():
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
 @app.route('/templates', methods=['POST'])
 def creer_template():
     try:
         data = request.get_json()
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute(
-            "INSERT INTO templates (user_id, titre, description, categorie, icone) VALUES (%s, %s, %s, %s, %s)",
-            (data['user_id'], data['titre'], data.get('description', ''), data.get('categorie', 'autre'), data.get('icone', '📋'))
-        )
+        curseur.execute("INSERT INTO templates (user_id, titre, description, categorie, icone) VALUES (%s, %s, %s, %s, %s)", (data['user_id'], data['titre'], data.get('description', ''), data.get('categorie', 'autre'), data.get('icone', '📋')))
         template_id = curseur.lastrowid
         for i, tache in enumerate(data.get('taches', [])):
-            curseur.execute(
-                "INSERT INTO template_taches (template_id, titre, priorite, deadline_jours, ordre) VALUES (%s, %s, %s, %s, %s)",
-                (template_id, tache['titre'], tache.get('priorite', 'moyenne'), tache.get('deadline_jours'), i)
-            )
+            curseur.execute("INSERT INTO template_taches (template_id, titre, priorite, deadline_jours, ordre) VALUES (%s, %s, %s, %s, %s)", (template_id, tache['titre'], tache.get('priorite', 'moyenne'), tache.get('deadline_jours'), i))
             tache_id = curseur.lastrowid
             for j, st in enumerate(tache.get('sous_taches', [])):
-                curseur.execute(
-                    "INSERT INTO template_sous_taches (template_tache_id, titre, ordre) VALUES (%s, %s, %s)",
-                    (tache_id, st['titre'] if isinstance(st, dict) else st, j)
-                )
-        db.commit()
-        db.close()
+                curseur.execute("INSERT INTO template_sous_taches (template_tache_id, titre, ordre) VALUES (%s, %s, %s)", (tache_id, st['titre'] if isinstance(st, dict) else st, j))
+        db.commit(); db.close()
         return jsonify({"message": "Template créé", "id": template_id})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
 
 @app.route('/templates/<int:template_id>/utiliser', methods=['POST'])
 def utiliser_template(template_id):
     try:
         data = request.get_json()
         user_id = data['user_id']
-        date_debut = data.get('date_debut')  # ISO string
+        date_debut = data.get('date_debut')
         db = connecter()
         curseur = db.cursor(dictionary=True)
-
-        # Charger le template
         curseur.execute("SELECT * FROM templates WHERE id=%s", (template_id,))
         tmpl = curseur.fetchone()
         if not tmpl:
             return jsonify({"erreur": "Template introuvable"}), 404
-
         curseur.execute("SELECT * FROM template_taches WHERE template_id=%s ORDER BY ordre", (template_id,))
         taches = curseur.fetchall()
-
         taches_creees = []
-        from datetime import datetime, timedelta
         debut = datetime.fromisoformat(date_debut) if date_debut else datetime.now()
-
         for tache in taches:
             deadline = debut + timedelta(days=tache['deadline_jours'] or 7)
-            curseur.execute(
-                "INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)",
-                (tache['titre'], tache['priorite'], deadline.strftime('%Y-%m-%d %H:%M'), user_id)
-            )
+            curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)", (tache['titre'], tache['priorite'], deadline.strftime('%Y-%m-%d %H:%M'), user_id))
             tache_id = curseur.lastrowid
-
             curseur.execute("SELECT * FROM template_sous_taches WHERE template_tache_id=%s ORDER BY ordre", (tache['id'],))
-            sous_taches = curseur.fetchall()
-            for j, st in enumerate(sous_taches):
-                curseur.execute(
-                    "INSERT INTO sous_taches (tache_id, titre, ordre) VALUES (%s, %s, %s)",
-                    (tache_id, st['titre'], j)
-                )
+            for j, st in enumerate(curseur.fetchall()):
+                curseur.execute("INSERT INTO sous_taches (tache_id, titre, ordre) VALUES (%s, %s, %s)", (tache_id, st['titre'], j))
             taches_creees.append(tache_id)
-
-        # Incrémenter le compteur d'utilisations
         curseur.execute("UPDATE templates SET utilisations=utilisations+1 WHERE id=%s", (template_id,))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": f"{len(taches_creees)} tâches créées depuis le template", "taches_ids": taches_creees})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
-
 
 @app.route('/templates/<int:template_id>', methods=['DELETE'])
 def supprimer_template(template_id):
@@ -2486,249 +1842,95 @@ def supprimer_template(template_id):
         if not tmpl or tmpl['user_id'] != data['user_id']:
             return jsonify({"erreur": "Non autorisé"}), 403
         curseur.execute("DELETE FROM templates WHERE id=%s", (template_id,))
-        db.commit()
-        db.close()
+        db.commit(); db.close()
         return jsonify({"message": "Template supprimé"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
-# SPRINT 4 — TOMORROW BUILDER + SMART PLANNING
+# SPRINT 4 — TOMORROW BUILDER
 # ============================================
 
 def calculer_score_energie(user_id, db_cursor):
-    """Calcule un score d'énergie 0-100 basé sur l'activité récente"""
     try:
-        # Tâches complétées aujourd'hui
-        db_cursor.execute("""
-            SELECT COUNT(*) as nb FROM taches
-            WHERE user_id=%s AND terminee=1
-            AND DATE(updated_at) = CURDATE()
-        """, (user_id,))
-        row = db_cursor.fetchone()
-        taches_aujourd_hui = row['nb'] if row else 0
-
-        # Streak
+        db_cursor.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND DATE(updated_at) = CURDATE()", (user_id,))
+        taches_aujourd_hui = (db_cursor.fetchone() or {}).get('nb', 0)
         db_cursor.execute("SELECT streak FROM users WHERE id=%s", (user_id,))
-        row = db_cursor.fetchone()
-        streak = row['streak'] if row else 0
-
-        # Tâches en retard (drainent l'énergie)
-        db_cursor.execute("""
-            SELECT COUNT(*) as nb FROM taches
-            WHERE user_id=%s AND terminee=0
-            AND deadline < NOW()
-        """, (user_id,))
-        row = db_cursor.fetchone()
-        en_retard = row['nb'] if row else 0
-
-        # Score : base 60 + bonus streak + bonus tâches jour - malus retard
-        score = 60
-        score += min(streak * 3, 20)
-        score += min(taches_aujourd_hui * 5, 15)
-        score -= min(en_retard * 5, 30)
+        streak = (db_cursor.fetchone() or {}).get('streak', 0)
+        db_cursor.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=0 AND deadline < NOW()", (user_id,))
+        en_retard = (db_cursor.fetchone() or {}).get('nb', 0)
+        score = 60 + min(streak * 3, 20) + min(taches_aujourd_hui * 5, 15) - min(en_retard * 5, 30)
         return max(10, min(100, score))
     except:
         return 60
 
 def estimer_duree_tache(titre, priorite):
-    """Estime la durée d'une tâche en minutes selon son titre et priorité"""
     titre_lower = titre.lower()
-    # Mots-clés indiquant des tâches longues
     mots_longs = ['rédiger', 'analyser', 'concevoir', 'développer', 'coder', 'créer', 'préparer', 'planifier', 'rechercher']
     mots_courts = ['appeler', 'email', 'envoyer', 'vérifier', 'lire', 'répondre', 'noter', 'checker']
     mots_moyens = ['réunion', 'meeting', 'réviser', 'corriger', 'mettre à jour', 'organiser']
-
-    duree_base = 45  # défaut
+    duree_base = 45
     for mot in mots_longs:
-        if mot in titre_lower:
-            duree_base = 90
-            break
+        if mot in titre_lower: duree_base = 90; break
     for mot in mots_courts:
-        if mot in titre_lower:
-            duree_base = 20
-            break
+        if mot in titre_lower: duree_base = 20; break
     for mot in mots_moyens:
-        if mot in titre_lower:
-            duree_base = 60
-            break
-
-    # Ajustement par priorité
-    if priorite == 'haute':
-        duree_base = int(duree_base * 1.3)
-    elif priorite == 'basse':
-        duree_base = int(duree_base * 0.8)
-
+        if mot in titre_lower: duree_base = 60; break
+    if priorite == 'haute': duree_base = int(duree_base * 1.3)
+    elif priorite == 'basse': duree_base = int(duree_base * 0.8)
     return duree_base
 
 def detecter_heure_productive(user_id, db_cursor):
-    """Détecte l'heure de pointe productive de l'utilisateur"""
     try:
-        db_cursor.execute("""
-            SELECT HOUR(updated_at) as heure, COUNT(*) as nb
-            FROM taches
-            WHERE user_id=%s AND terminee=1
-            AND updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            GROUP BY HOUR(updated_at)
-            ORDER BY nb DESC
-            LIMIT 1
-        """, (user_id,))
+        db_cursor.execute("SELECT HOUR(updated_at) as heure, COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY HOUR(updated_at) ORDER BY nb DESC LIMIT 1", (user_id,))
         row = db_cursor.fetchone()
-        if row:
-            return row['heure']
+        if row: return row['heure']
     except:
         pass
-    return 9  # défaut : 9h du matin
+    return 9
 
 @app.route('/ia/tomorrow-builder/<int:user_id>', methods=['GET'])
 def tomorrow_builder(user_id):
-    """Génère le planning optimal du lendemain avec l'IA"""
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-
-        # 1. Récupérer les tâches actives
-        curseur.execute("""
-            SELECT id, titre, priorite, deadline
-            FROM taches
-            WHERE user_id=%s AND terminee=0
-            ORDER BY
-                CASE priorite WHEN 'haute' THEN 1 WHEN 'moyenne' THEN 2 ELSE 3 END,
-                deadline ASC
-            LIMIT 15
-        """, (user_id,))
+        curseur.execute("SELECT id, titre, priorite, deadline FROM taches WHERE user_id=%s AND terminee=0 ORDER BY CASE priorite WHEN 'haute' THEN 1 WHEN 'moyenne' THEN 2 ELSE 3 END, deadline ASC LIMIT 15", (user_id,))
         taches = curseur.fetchall()
-
         if not taches:
             return jsonify({"erreur": "Aucune tâche active"}), 404
-
-        # 2. Calculer métriques utilisateur
         score_energie = calculer_score_energie(user_id, curseur)
         heure_productive = detecter_heure_productive(user_id, curseur)
-
-        # 3. Enrichir les tâches avec durée estimée
         for t in taches:
             t['duree_estimee'] = estimer_duree_tache(t['titre'], t['priorite'])
-            if t['deadline']:
-                t['deadline'] = str(t['deadline'])
-
-        # 4. Appel IA pour générer le planning
-        from groq import Groq
-        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
-
+            if t['deadline']: t['deadline'] = str(t['deadline'])
         niveau_energie = "élevé" if score_energie >= 70 else "moyen" if score_energie >= 40 else "faible"
         demain = (datetime.now() + timedelta(days=1)).strftime('%A %d %B %Y')
-
-        prompt_taches = "\n".join([
-            f"- [{t['priorite'].upper()}] {t['titre']} | Durée estimée: {t['duree_estimee']}min | Deadline: {t.get('deadline', 'non définie')}"
-            for t in taches[:10]
-        ])
-
-        prompt = f"""Tu es un expert en productivité et planification. Tu dois créer le planning optimal pour demain ({demain}).
-
-PROFIL UTILISATEUR:
-- Score d'énergie: {score_energie}/100 (niveau {niveau_energie})
-- Heure de pointe productive détectée: {heure_productive}h
-- Nombre de tâches actives: {len(taches)}
-
-TÂCHES À PLANIFIER:
-{prompt_taches}
-
-RÈGLES DE PLANIFICATION:
-- Commencer par les tâches haute priorité pendant l'heure de pointe ({heure_productive}h-{heure_productive+2}h)
-- Maximum 6h de travail effectif planifié
-- Intercaler des pauses (pause 15min après chaque 90min de travail)
-- Si énergie faible: maximum 4h, tâches légères en priorité
-- Les quick wins (< 20min) en début ou fin de journée
-- Éviter de planifier plus de 3 tâches haute priorité par jour
-
-Réponds UNIQUEMENT en JSON valide avec cette structure exacte:
-{{
-  "score_energie": {score_energie},
-  "niveau_energie": "{niveau_energie}",
-  "heure_productive": {heure_productive},
-  "duree_totale_planifiee": <nombre en minutes>,
-  "conseil_journee": "<conseil personnalisé en 1-2 phrases>",
-  "alerte_burnout": <true ou false>,
-  "message_alerte": "<message si alerte_burnout=true, sinon null>",
-  "planning": [
-    {{
-      "ordre": 1,
-      "heure_debut": "<ex: 09:00>",
-      "heure_fin": "<ex: 10:30>",
-      "type": "tache" ou "pause",
-      "titre": "<titre de la tâche ou 'Pause'>",
-      "priorite": "<haute/moyenne/basse>",
-      "duree_minutes": <nombre>,
-      "raison_placement": "<pourquoi cette tâche à cette heure>",
-      "energie_requise": "<faible/moyenne/élevée>",
-      "tips": "<conseil spécifique pour cette tâche>"
-    }}
-  ],
-  "taches_reportees": [
-    {{
-      "titre": "<titre>",
-      "raison": "<pourquoi reportée>"
-    }}
-  ],
-  "resume_global": "<résumé du planning en 2-3 phrases motivantes>"
-}}"""
-
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=2000,
-            temperature=0.7
-        )
-
+        prompt_taches = "\n".join([f"- [{t['priorite'].upper()}] {t['titre']} | {t['duree_estimee']}min | {t.get('deadline', 'non définie')}" for t in taches[:10]])
+        prompt = f"""Crée le planning optimal pour demain ({demain}).
+Score énergie: {score_energie}/100 ({niveau_energie}), heure productive: {heure_productive}h
+Tâches: {prompt_taches}
+Réponds UNIQUEMENT en JSON: {{"score_energie": {score_energie}, "niveau_energie": "{niveau_energie}", "heure_productive": {heure_productive}, "duree_totale_planifiee": 0, "conseil_journee": "", "alerte_burnout": false, "message_alerte": null, "planning": [{{"ordre": 1, "heure_debut": "09:00", "heure_fin": "10:00", "type": "tache", "titre": "", "priorite": "haute", "duree_minutes": 60, "raison_placement": "", "energie_requise": "élevée", "tips": ""}}], "taches_reportees": [], "resume_global": ""}}"""
+        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], max_tokens=2000, temperature=0.7)
         contenu = response.choices[0].message.content.strip()
-        # Nettoyer le JSON
-        if '```json' in contenu:
-            contenu = contenu.split('```json')[1].split('```')[0].strip()
-        elif '```' in contenu:
-            contenu = contenu.split('```')[1].split('```')[0].strip()
-
+        if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
+        elif '```' in contenu: contenu = contenu.split('```')[1].split('```')[0].strip()
         planning_data = json.loads(contenu)
-
-        # 5. Sauvegarder le planning en base
-        curseur.execute("""
-            CREATE TABLE IF NOT EXISTS tomorrow_plans (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                planning_json LONGTEXT,
-                score_energie INT,
-                cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
-                date_planifiee DATE,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        """)
+        curseur.execute("CREATE TABLE IF NOT EXISTS tomorrow_plans (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, planning_json LONGTEXT, score_energie INT, cree_le DATETIME DEFAULT CURRENT_TIMESTAMP, date_planifiee DATE, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
         demain_date = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
         curseur.execute("DELETE FROM tomorrow_plans WHERE user_id=%s AND date_planifiee=%s", (user_id, demain_date))
-        curseur.execute(
-            "INSERT INTO tomorrow_plans (user_id, planning_json, score_energie, date_planifiee) VALUES (%s, %s, %s, %s)",
-            (user_id, json.dumps(planning_data), score_energie, demain_date)
-        )
-        db.commit()
-        db.close()
-
+        curseur.execute("INSERT INTO tomorrow_plans (user_id, planning_json, score_energie, date_planifiee) VALUES (%s, %s, %s, %s)", (user_id, json.dumps(planning_data), score_energie, demain_date))
+        db.commit(); db.close()
         return jsonify(planning_data)
-
     except Exception as e:
         import traceback
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
 
-
 @app.route('/ia/tomorrow-builder/<int:user_id>/saved', methods=['GET'])
 def get_saved_planning(user_id):
-    """Récupère le dernier planning sauvegardé"""
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT * FROM tomorrow_plans
-            WHERE user_id=%s
-            ORDER BY cree_le DESC LIMIT 1
-        """, (user_id,))
+        curseur.execute("SELECT * FROM tomorrow_plans WHERE user_id=%s ORDER BY cree_le DESC LIMIT 1", (user_id,))
         row = curseur.fetchone()
         db.close()
         if row:
@@ -2737,14 +1939,12 @@ def get_saved_planning(user_id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
 # ============================================
 # SPRINT 5 — TASK DNA
 # ============================================
 
 @app.route('/ia/task-dna', methods=['POST'])
 def analyser_task_dna():
-    """Analyse le DNA d'une tache et predit son succes/abandon"""
     try:
         data = request.get_json()
         titre = data.get('titre', '')
@@ -2752,84 +1952,34 @@ def analyser_task_dna():
         user_id = data.get('user_id')
         if not titre.strip():
             return jsonify({"erreur": "Titre requis"}), 400
-
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute(
-            "SELECT titre, priorite, terminee FROM taches WHERE user_id=%s ORDER BY created_at DESC LIMIT 50",
-            (user_id,)
-        )
+        curseur.execute("SELECT titre, priorite, terminee FROM taches WHERE user_id=%s ORDER BY created_at DESC LIMIT 50", (user_id,))
         historique = curseur.fetchall()
-
         total = len(historique)
         terminees = sum(1 for t in historique if t['terminee'])
         taux_global = round((terminees / total * 100)) if total > 0 else 50
         h_p = [t for t in historique if t['priorite'] == priorite]
         taux_priorite = round(sum(1 for t in h_p if t['terminee']) / len(h_p) * 100) if h_p else taux_global
         duree_estimee = estimer_duree_tache(titre, priorite)
-
-        from groq import Groq
-        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
-
         dernieres = ', '.join([t['titre'][:25] for t in historique[:5]])
-        prompt = (
-            "Tu es un expert en productivite. Analyse cette tache et genere son Task DNA.\n\n"
-            f"TACHE: \"{titre}\" | Priorite: {priorite} | Duree estimee: {duree_estimee}min\n"
-            f"HISTORIQUE: Taux completion global: {taux_global}% | Priorite {priorite!r}: {taux_priorite}%\n"
-            f"Dernieres taches: {dernieres}\n\n"
-            "Reponds UNIQUEMENT en JSON valide:\n"
-            "{\n"
-            '  \"score_viabilite\": <0-100>,\n'
-            '  \"prediction\": \"succes\" ou \"abandon\" ou \"risque\",\n'
-            '  \"categorie\": \"<deep_work|communication|routine|projet|quick_win|apprentissage|administratif>\",\n'
-            '  \"emoji_categorie\": \"<emoji>\",\n'
-            '  \"label_categorie\": \"<nom francais>\",\n'
-            f'  \"duree_estimee\": {duree_estimee},\n'
-            '  \"duree_label\": \"<ex: 45 min>\",\n'
-            '  \"facteurs_succes\": [\"<f1>\", \"<f2>\"],\n'
-            '  \"facteurs_risque\": [\"<r1>\", \"<r2>\"],\n'
-            '  \"conseil_principal\": \"<conseil 1-2 phrases>\",\n'
-            '  \"conseil_reformulation\": \"<titre ameliore ou null>\",\n'
-            '  \"niveau_complexite\": \"faible\" ou \"moyenne\" ou \"elevee\",\n'
-            '  \"meilleur_moment\": \"<matin|apres-midi|soir>\",\n'
-            '  \"explication_score\": \"<explication 1 phrase>\"\n'
-            "}"
-        )
-
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=800, temperature=0.6
-        )
+        prompt = f"""Analyse cette tache et genere son Task DNA.
+TACHE: "{titre}" | Priorite: {priorite} | Duree: {duree_estimee}min
+HISTORIQUE: Taux global: {taux_global}% | Priorite {priorite}: {taux_priorite}%
+Dernieres taches: {dernieres}
+Reponds UNIQUEMENT en JSON: {{"score_viabilite": 0, "prediction": "succes", "categorie": "deep_work", "emoji_categorie": "💡", "label_categorie": "Travail profond", "duree_estimee": {duree_estimee}, "duree_label": "{duree_estimee} min", "facteurs_succes": [], "facteurs_risque": [], "conseil_principal": "", "conseil_reformulation": null, "niveau_complexite": "moyenne", "meilleur_moment": "matin", "explication_score": ""}}"""
+        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], max_tokens=800, temperature=0.6)
         contenu = response.choices[0].message.content.strip()
-        if '```json' in contenu:
-            contenu = contenu.split('```json')[1].split('```')[0].strip()
-        elif '```' in contenu:
-            contenu = contenu.split('```')[1].split('```')[0].strip()
+        if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
+        elif '```' in contenu: contenu = contenu.split('```')[1].split('```')[0].strip()
         dna = json.loads(contenu)
-
-        sql_create = (
-            "CREATE TABLE IF NOT EXISTS task_dna_analyses ("
-            "id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, "
-            "titre_tache VARCHAR(200), score_viabilite INT, prediction VARCHAR(20), "
-            "categorie VARCHAR(50), dna_json LONGTEXT, "
-            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
-            "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)"
-        )
-        curseur.execute(sql_create)
-        curseur.execute(
-            "INSERT INTO task_dna_analyses (user_id, titre_tache, score_viabilite, prediction, categorie, dna_json) VALUES (%s,%s,%s,%s,%s,%s)",
-            (user_id, titre, dna.get('score_viabilite'), dna.get('prediction'), dna.get('categorie'), json.dumps(dna))
-        )
-        db.commit()
-        db.close()
+        curseur.execute("CREATE TABLE IF NOT EXISTS task_dna_analyses (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, titre_tache VARCHAR(200), score_viabilite INT, prediction VARCHAR(20), categorie VARCHAR(50), dna_json LONGTEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
+        curseur.execute("INSERT INTO task_dna_analyses (user_id, titre_tache, score_viabilite, prediction, categorie, dna_json) VALUES (%s,%s,%s,%s,%s,%s)", (user_id, titre, dna.get('score_viabilite'), dna.get('prediction'), dna.get('categorie'), json.dumps(dna)))
+        db.commit(); db.close()
         return jsonify(dna)
     except Exception as e:
         import traceback
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
-
-
-
 
 @app.route('/ia/task-dna/stats/<int:user_id>', methods=['GET'])
 def get_dna_stats(user_id):
@@ -2845,112 +1995,60 @@ def get_dna_stats(user_id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
 @app.route('/ia/procrastination/<int:user_id>', methods=['GET'])
 def analyser_procrastination(user_id):
-    """Détecte les tâches procrastinées et génère des alertes"""
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT id, titre, priorite, deadline, created_at, updated_at
-            FROM taches
-            WHERE user_id=%s AND terminee=0
-        """, (user_id,))
+        curseur.execute("SELECT id, titre, priorite, deadline, created_at, updated_at FROM taches WHERE user_id=%s AND terminee=0", (user_id,))
         taches = curseur.fetchall()
         db.close()
-
         alertes = []
         for t in taches:
             if not t['updated_at'] or not t['deadline']:
                 continue
             updated_at = t['updated_at']
-            if updated_at and not isinstance(updated_at, datetime):
+            if not isinstance(updated_at, datetime):
                 updated_at = datetime.combine(updated_at, datetime.min.time())
             deadline_dt = t['deadline']
-            if deadline_dt and not isinstance(deadline_dt, datetime):
+            if not isinstance(deadline_dt, datetime):
                 deadline_dt = datetime.combine(deadline_dt, datetime.min.time())
             jours_sans_action = (datetime.now() - updated_at).days if updated_at else 0
             jours_avant_deadline = (deadline_dt - datetime.now()).days if deadline_dt else 999
-
             score = 0
-            if jours_sans_action > 3 and t['priorite'] == 'haute':
-                score = 90
-            elif jours_sans_action > 5 and t['priorite'] == 'moyenne':
-                score = 70
-            elif jours_sans_action > 7:
-                score = 50
-
+            if jours_sans_action > 3 and t['priorite'] == 'haute': score = 90
+            elif jours_sans_action > 5 and t['priorite'] == 'moyenne': score = 70
+            elif jours_sans_action > 7: score = 50
             if score > 0:
-                alertes.append({
-                    "tache_id": t['id'],
-                    "titre": t['titre'],
-                    "priorite": t['priorite'],
-                    "jours_sans_action": jours_sans_action,
-                    "jours_avant_deadline": jours_avant_deadline,
-                    "score_procrastination": score,
-                    "niveau": "critique" if score >= 80 else "modere"
-                })
-
+                alertes.append({"tache_id": t['id'], "titre": t['titre'], "priorite": t['priorite'], "jours_sans_action": jours_sans_action, "jours_avant_deadline": jours_avant_deadline, "score_procrastination": score, "niveau": "critique" if score >= 80 else "modere"})
         alertes.sort(key=lambda x: x['score_procrastination'], reverse=True)
         return jsonify({"alertes": alertes, "total": len(alertes)})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
 @app.route('/ia/smart-planning/trigger', methods=['POST'])
 def trigger_tomorrow_builder_notif():
-    """Déclenché par cron à 19h — envoie notif push Tomorrow Builder"""
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
         curseur.execute("SELECT id FROM users")
         users = curseur.fetchall()
         db.close()
-
-        envoyes = 0
-        for u in users:
-            try:
-                # Générer le planning (appel interne)
-                import requests as req
-                req.get(f"http://localhost:{os.environ.get('PORT', 5000)}/ia/tomorrow-builder/{u['id']}", timeout=30)
-                envoyes += 1
-            except:
-                pass
-
-        return jsonify({"message": f"Tomorrow Builder déclenché pour {envoyes} utilisateurs"})
+        return jsonify({"message": f"Tomorrow Builder déclenché pour {len(users)} utilisateurs"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-
 # ============================================
-# SPRINT 6 — ACCOUNTABILITY PARTNER AI (COACH)
+# SPRINT 6 — COACH IA
 # ============================================
 
 COACH_STYLES = {
-    "bienveillant": {
-        "nom": "Alex",
-        "emoji": "🤗",
-        "description": "Doux, encourageant, toujours positif",
-        "persona": "Tu es Alex, un coach bienveillant et empathique. Tu encourages toujours, tu celebres chaque petite victoire, tu utilises un langage chaleureux et positif. Tu ne juges jamais. Tu poses des questions douces pour comprendre les blocages."
-    },
-    "motivateur": {
-        "nom": "Max",
-        "emoji": "🔥",
-        "description": "Energique, challengeant, pousse à se dépasser",
-        "persona": "Tu es Max, un coach motivateur et dynamique. Tu challenges l'utilisateur, tu utilises un langage energique et direct. Tu crois fermement en son potentiel et tu le pousses a se depasser. Tu utilises des metaphores sportives et des appels a l'action forts."
-    },
-    "analytique": {
-        "nom": "Nova",
-        "emoji": "📊",
-        "description": "Précis, basé sur les données, factuel",
-        "persona": "Tu es Nova, un coach analytique et precis. Tu bases tes conseils sur les donnees et les faits. Tu identifies des patterns, tu proposes des strategies concretes et mesurables. Tu es neutre emotionnellement mais tres efficace."
-    }
+    "bienveillant": {"nom": "Alex", "emoji": "🤗", "description": "Doux, encourageant, toujours positif", "persona": "Tu es Alex, un coach bienveillant et empathique. Tu encourages toujours, tu celebres chaque petite victoire, tu utilises un langage chaleureux et positif."},
+    "motivateur":   {"nom": "Max",  "emoji": "🔥", "description": "Energique, challengeant, pousse à se dépasser", "persona": "Tu es Max, un coach motivateur et dynamique. Tu challenges l'utilisateur, tu utilises un langage energique et direct."},
+    "analytique":   {"nom": "Nova", "emoji": "📊", "description": "Précis, basé sur les données, factuel", "persona": "Tu es Nova, un coach analytique et precis. Tu bases tes conseils sur les donnees et les faits."},
 }
 
 def get_coach_context(user_id, curseur):
-    """Construit le contexte complet de l'utilisateur pour le coach"""
-    # Tâches
     curseur.execute("SELECT COUNT(*) as total FROM taches WHERE user_id=%s", (user_id,))
     total = curseur.fetchone()['total']
     curseur.execute("SELECT COUNT(*) as done FROM taches WHERE user_id=%s AND terminee=1", (user_id,))
@@ -2959,204 +2057,90 @@ def get_coach_context(user_id, curseur):
     retard = curseur.fetchone()['retard']
     curseur.execute("SELECT COUNT(*) as actives FROM taches WHERE user_id=%s AND terminee=0", (user_id,))
     actives = curseur.fetchone()['actives']
-    # Streak
     curseur.execute("SELECT streak, nom FROM users WHERE id=%s", (user_id,))
     user_row = curseur.fetchone()
     streak = user_row['streak'] if user_row else 0
     prenom = user_row['nom'] if user_row else 'Utilisateur'
     taux = round(done / total * 100) if total > 0 else 0
-
-    return {
-        "prenom": prenom,
-        "total_taches": total,
-        "taches_terminees": done,
-        "taches_actives": actives,
-        "taches_en_retard": retard,
-        "taux_completion": taux,
-        "streak": streak
-    }
+    return {"prenom": prenom, "total_taches": total, "taches_terminees": done, "taches_actives": actives, "taches_en_retard": retard, "taux_completion": taux, "streak": streak}
 
 @app.route('/ia/coach/styles', methods=['GET'])
 def get_coach_styles():
-    styles = []
-    for key, val in COACH_STYLES.items():
-        styles.append({"id": key, "nom": val["nom"], "emoji": val["emoji"], "description": val["description"]})
-    return jsonify({"styles": styles})
+    return jsonify({"styles": [{"id": k, "nom": v["nom"], "emoji": v["emoji"], "description": v["description"]} for k, v in COACH_STYLES.items()]})
 
 @app.route('/ia/coach/chat', methods=['POST'])
 def coach_chat():
-    """Chat interactif avec le coach IA"""
     try:
         data = request.get_json()
         user_id = data.get('user_id')
         message = data.get('message', '')
         style = data.get('style', 'bienveillant')
         historique = data.get('historique', [])
-
         if not message.strip():
             return jsonify({"erreur": "Message vide"}), 400
-
         coach = COACH_STYLES.get(style, COACH_STYLES['bienveillant'])
-
         db = connecter()
         curseur = db.cursor(dictionary=True)
         ctx = get_coach_context(user_id, curseur)
-
-        # Sauvegarder message user
-        curseur.execute("""
-            CREATE TABLE IF NOT EXISTS coach_messages (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                role VARCHAR(10),
-                contenu TEXT,
-                style_coach VARCHAR(30),
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        """)
-        curseur.execute(
-            "INSERT INTO coach_messages (user_id, role, contenu, style_coach) VALUES (%s, %s, %s, %s)",
-            (user_id, 'user', message, style)
-        )
-
-        from groq import Groq
-        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
-
-        system_prompt = (
-            coach['persona'] + "\n\n"
-            f"PROFIL DE {ctx['prenom'].upper()}:\n"
-            f"- Taches actives: {ctx['taches_actives']} | Terminees: {ctx['taches_terminees']} | En retard: {ctx['taches_en_retard']}\n"
-            f"- Taux de completion: {ctx['taux_completion']}%\n"
-            f"- Streak actuel: {ctx['streak']} jours\n\n"
-            "Reponds en francais, de facon concise (3-5 phrases max). "
-            "Tu connais le profil de l'utilisateur et tu t'y referes naturellement. "
-            "Ne repete pas les donnees chiffrees a chaque fois, integre-les naturellement."
-        )
-
+        curseur.execute("CREATE TABLE IF NOT EXISTS coach_messages (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, role VARCHAR(10), contenu TEXT, style_coach VARCHAR(30), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
+        curseur.execute("INSERT INTO coach_messages (user_id, role, contenu, style_coach) VALUES (%s, %s, %s, %s)", (user_id, 'user', message, style))
+        system_prompt = coach['persona'] + f"\n\nPROFIL DE {ctx['prenom'].upper()}:\n- Taches: {ctx['taches_actives']} actives | {ctx['taches_terminees']} terminées | {ctx['taches_en_retard']} en retard\n- Taux: {ctx['taux_completion']}% | Streak: {ctx['streak']} jours\nReponds en francais, 3-5 phrases max."
         messages = [{"role": "system", "content": system_prompt}]
         for h in historique[-6:]:
             messages.append({"role": h['role'], "content": h['contenu']})
         messages.append({"role": "user", "content": message})
-
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            max_tokens=400,
-            temperature=0.8
-        )
+        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, max_tokens=400, temperature=0.8)
         reponse = response.choices[0].message.content.strip()
-
-        curseur.execute(
-            "INSERT INTO coach_messages (user_id, role, contenu, style_coach) VALUES (%s, %s, %s, %s)",
-            (user_id, 'assistant', reponse, style)
-        )
-        db.commit()
-        db.close()
-
+        curseur.execute("INSERT INTO coach_messages (user_id, role, contenu, style_coach) VALUES (%s, %s, %s, %s)", (user_id, 'assistant', reponse, style))
+        db.commit(); db.close()
         return jsonify({"reponse": reponse, "coach": {"nom": coach['nom'], "emoji": coach['emoji']}})
-
     except Exception as e:
         import traceback
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
-
 
 @app.route('/ia/coach/rapport/<int:user_id>', methods=['GET'])
 def coach_rapport(user_id):
-    """Génère un rapport automatique hebdomadaire du coach"""
     try:
         style = request.args.get('style', 'bienveillant')
         coach = COACH_STYLES.get(style, COACH_STYLES['bienveillant'])
-
         db = connecter()
         curseur = db.cursor(dictionary=True)
         ctx = get_coach_context(user_id, curseur)
-
-        # Tâches complétées cette semaine
-        curseur.execute("""
-            SELECT COUNT(*) as nb FROM taches
-            WHERE user_id=%s AND terminee=1
-            AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        """, (user_id,))
+        curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", (user_id,))
         terminees_semaine = curseur.fetchone()['nb']
-
-        # Tâches créées cette semaine
-        curseur.execute("""
-            SELECT COUNT(*) as nb FROM taches
-            WHERE user_id=%s AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        """, (user_id,))
+        curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", (user_id,))
         creees_semaine = curseur.fetchone()['nb']
-
-        from groq import Groq
-        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
-
-        prompt = (
-            coach['persona'] + "\n\n"
-            f"Genere un rapport de coaching hebdomadaire pour {ctx['prenom']}.\n\n"
-            f"DONNEES DE LA SEMAINE:\n"
-            f"- Taches completees: {terminees_semaine}\n"
-            f"- Taches creees: {creees_semaine}\n"
-            f"- Taches en retard: {ctx['taches_en_retard']}\n"
-            f"- Taux completion global: {ctx['taux_completion']}%\n"
-            f"- Streak: {ctx['streak']} jours\n\n"
-            "Reponds en JSON valide:\n"
-            '{"titre": "<titre motivant>", '
-            '"note_semaine": <1-10>, '
-            '"resume": "<resume 2-3 phrases>", '
-            '"point_fort": "<meilleur point de la semaine>", '
-            '"point_amelioration": "<un axe d amelioration>", '
-            '"defi_semaine_prochaine": "<un defi concret et mesurable>", '
-            '"message_coach": "<message personnalise 2-3 phrases dans le style du coach>"}'
-        )
-
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=600, temperature=0.75
-        )
+        prompt = coach['persona'] + f"\n\nRapport coaching pour {ctx['prenom']}:\n- Complétées: {terminees_semaine} | Créées: {creees_semaine} | En retard: {ctx['taches_en_retard']}\n- Taux: {ctx['taux_completion']}% | Streak: {ctx['streak']} jours\nJSON: {{\"titre\": \"\", \"note_semaine\": 7, \"resume\": \"\", \"point_fort\": \"\", \"point_amelioration\": \"\", \"defi_semaine_prochaine\": \"\", \"message_coach\": \"\"}}"
+        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], max_tokens=600, temperature=0.75)
         contenu = response.choices[0].message.content.strip()
-        if '```json' in contenu:
-            contenu = contenu.split('```json')[1].split('```')[0].strip()
-        elif '```' in contenu:
-            contenu = contenu.split('```')[1].split('```')[0].strip()
-
+        if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
+        elif '```' in contenu: contenu = contenu.split('```')[1].split('```')[0].strip()
         rapport = json.loads(contenu)
         rapport['coach'] = {"nom": coach['nom'], "emoji": coach['emoji'], "style": style}
-        rapport['stats'] = {
-            "terminees_semaine": terminees_semaine,
-            "creees_semaine": creees_semaine,
-            "taux_completion": ctx['taux_completion'],
-            "streak": ctx['streak']
-        }
-
+        rapport['stats'] = {"terminees_semaine": terminees_semaine, "creees_semaine": creees_semaine, "taux_completion": ctx['taux_completion'], "streak": ctx['streak']}
         db.close()
         return jsonify(rapport)
-
     except Exception as e:
         import traceback
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
 
-
 @app.route('/ia/coach/historique/<int:user_id>', methods=['GET'])
 def get_coach_historique(user_id):
-    """Récupère l'historique des messages coach"""
     try:
         style = request.args.get('style', 'bienveillant')
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("""
-            SELECT role, contenu, created_at FROM coach_messages
-            WHERE user_id=%s AND style_coach=%s
-            ORDER BY created_at DESC LIMIT 20
-        """, (user_id, style))
+        curseur.execute("SELECT role, contenu, created_at FROM coach_messages WHERE user_id=%s AND style_coach=%s ORDER BY created_at DESC LIMIT 20", (user_id, style))
         messages = curseur.fetchall()
         db.close()
-        for m in messages:
-            m['created_at'] = str(m['created_at'])
+        for m in messages: m['created_at'] = str(m['created_at'])
         return jsonify({"messages": list(reversed(messages))})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-# ===== SPRINT 7 — GOAL REVERSE ENGINEERING =====
+# ============================================
+# SPRINT 7 — GOAL REVERSE ENGINEERING
+# ============================================
 
 @app.route('/ia/goal-reverse', methods=['POST'])
 def goal_reverse():
@@ -3166,123 +2150,53 @@ def goal_reverse():
     deadline = data.get('deadline')
     niveau = data.get('niveau', 'realiste')
     aujourd_hui = datetime.now().strftime('%Y-%m-%d')
+    prompt = f"""Tu es un expert en productivité et planification stratégique.
+Fais du Goal Reverse Engineering : pars de l'objectif final et reconstruis le chemin étape par étape.
 
-    prompt = f"""Tu es un expert en productivité, planification stratégique et coaching pour débutants.
-Ton rôle est de faire du Goal Reverse Engineering :
-tu pars d'un objectif final et tu reconstruis le chemin étape par étape, de manière logique, réaliste et actionnable.
+CONTEXTE : Objectif : {objectif} | Deadline : {deadline} | Niveau : {niveau} | Aujourd'hui : {aujourd_hui}
 
-⚠️ IMPORTANT :
-L'utilisateur est débutant. Tu dois :
-- simplifier au maximum
-- éviter le jargon
-- proposer des actions concrètes
-- détailler suffisamment sans être confus
-
-🎯 CONTEXTE UTILISATEUR :
-Objectif : {objectif}
-Deadline : {deadline}
-Niveau : {niveau} (realiste, ambitieux, extreme)
-Date d'aujourd'hui : {aujourd_hui}
-
-🧠 INSTRUCTIONS :
-1. Analyse l'objectif et estime sa complexité, les compétences nécessaires, les étapes clés
-2. Crée un plan en remontant depuis l'objectif final, découpé en jalons par semaine
-3. Pour chaque jalon : titre clair, semaine, date de fin, difficulté (faible/moyenne/élevée)
-4. Pour chaque jalon, créer des tâches concrètes faisables en moins de 1h :
-   - titre, durée estimée (minutes), priorité (faible/moyenne/haute), deadline cohérente
-5. Adapter selon le niveau :
-   - realiste → rythme lent, marge de sécurité
-   - ambitieux → rythme soutenu
-   - extreme → intensité élevée, peu de marge
-6. Calculer durée totale en semaines et score de faisabilité (0 à 100)
-7. Identifier les risques (manque de temps, compétences, motivation)
-8. Donner un conseil global personnalisé
-
-📦 FORMAT DE SORTIE JSON STRICT — aucun texte en dehors :
+FORMAT JSON STRICT :
 {{
-  "duree_semaines": <number>,
-  "score_faisabilite": <number>,
-  "conseil_global": "<string>",
+  "duree_semaines": <number>, "score_faisabilite": <number>, "conseil_global": "<string>",
   "risques": ["<string>"],
-  "jalons": [
-    {{
-      "semaine": <number>,
-      "titre": "<string>",
-      "date_fin": "YYYY-MM-DD",
-      "difficulte": "faible | moyenne | élevée",
-      "taches": [
-        {{
-          "titre": "<string>",
-          "duree_estimee": <number>,
-          "priorite": "faible | moyenne | haute",
-          "deadline": "YYYY-MM-DD"
-        }}
-      ]
-    }}
-  ]
+  "jalons": [{{
+    "semaine": <number>, "titre": "<string>", "date_fin": "YYYY-MM-DD", "difficulte": "faible|moyenne|élevée",
+    "taches": [{{"titre": "<string>", "duree_estimee": <number>, "priorite": "faible|moyenne|haute", "deadline": "YYYY-MM-DD"}}]
+  }}]
 }}
-
-⚠️ RÈGLES STRICTES :
-- JSON uniquement, aucun texte en dehors, pas de balises markdown
-- Dates cohérentes entre {aujourd_hui} et {deadline}
-- Maximum 8 jalons, maximum 4 tâches par jalon
-- Tâches simples, concrètes, logique progressive
-- Adapte la densité : realiste=léger, ambitieux=dense, extreme=très dense"""
-
+Dates entre {aujourd_hui} et {deadline}. Max 8 jalons, 4 tâches par jalon. JSON uniquement."""
     try:
-        response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=2500
-        )
+        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], temperature=0.7, max_tokens=2500)
         raw = response.choices[0].message.content.strip()
         if raw.startswith('```'):
             raw = raw.split('```')[1]
-            if raw.startswith('json'):
-                raw = raw[4:]
+            if raw.startswith('json'): raw = raw[4:]
         result = json.loads(raw)
         return jsonify(result)
     except Exception as e:
-        print(f"Erreur goal-reverse: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/ia/goal-reverse/importer', methods=['POST'])
 def goal_reverse_importer():
     data = request.json
     user_id = data.get('user_id')
     taches = data.get('taches', [])
-    
     ids_crees = []
     try:
         conn = connecter()
         cursor = conn.cursor()
         for t in taches:
-            cursor.execute(
-                """INSERT INTO taches (titre, priorite, deadline, user_id)
-                   VALUES (%s, %s, %s, %s)""",
-                (t['titre'], t['priorite'], t['deadline'], user_id)
-            )
+            cursor.execute("INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)", (t['titre'], t['priorite'], t['deadline'], user_id))
             ids_crees.append(cursor.lastrowid)
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return jsonify({
-            "message": f"{len(ids_crees)} tâches importées avec succès",
-            "ids": ids_crees
-        })
+        conn.commit(); cursor.close(); conn.close()
+        return jsonify({"message": f"{len(ids_crees)} tâches importées avec succès", "ids": ids_crees})
     except Exception as e:
-        print(f"Erreur import goal: {e}")
         return jsonify({"error": str(e)}), 500
 
+# ============================================
+# SPRINT 8 — GETSHIFT AI AUGMENTÉ
+# ============================================
 
-import urllib.parse
- 
-# ══════════════════════════════════════════════════════════════════════
-# ABRÉVIATIONS
-# ══════════════════════════════════════════════════════════════════════
- 
 ABREVIATIONS = {
     "rdv": "rendez-vous", "pb": "problème", "pbl": "problème",
     "msg": "message", "tj": "toujours", "bcp": "beaucoup",
@@ -3295,30 +2209,23 @@ ABREVIATIONS = {
     "wsh": "salut", "lgtm": "c'est bon", "tldr": "en résumé",
     "eta": "heure estimée", "imo": "à mon avis", "ok": "d'accord",
 }
- 
+
 def expand_abreviations(texte: str) -> str:
     mots = texte.split()
     resultat = []
     for mot in mots:
-        ponctuation = ""
         mot_clean = mot.rstrip(".,!?;:'\"")
         ponctuation = mot[len(mot_clean):]
         if mot_clean.lower() in ABREVIATIONS:
             expansion = ABREVIATIONS[mot_clean.lower()]
-            if mot_clean[0].isupper():
+            if mot_clean and mot_clean[0].isupper():
                 expansion = expansion.capitalize()
             resultat.append(expansion + ponctuation)
         else:
             resultat.append(mot)
     return " ".join(resultat)
- 
- 
-# ══════════════════════════════════════════════════════════════════════
-# MÉMOIRE UTILISATEUR
-# ══════════════════════════════════════════════════════════════════════
- 
+
 def init_user_memory_table(curseur):
-    """Crée la table user_memory si elle n'existe pas."""
     curseur.execute("""
         CREATE TABLE IF NOT EXISTS user_memory (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -3332,12 +2239,8 @@ def init_user_memory_table(curseur):
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     """)
- 
-def sauvegarder_memoire(user_id: int, observations: list[dict]):
-    """
-    Sauvegarde des observations en mémoire.
-    observations = [{"categorie": "...", "cle": "...", "valeur": "..."}]
-    """
+
+def sauvegarder_memoire(user_id: int, observations: list):
     if not observations:
         return
     try:
@@ -3348,253 +2251,120 @@ def sauvegarder_memoire(user_id: int, observations: list[dict]):
             cur.execute("""
                 INSERT INTO user_memory (user_id, categorie, cle, valeur, poids)
                 VALUES (%s, %s, %s, %s, 1.0)
-                ON DUPLICATE KEY UPDATE
-                    valeur = VALUES(valeur),
-                    poids = poids + 0.1,
-                    updated_at = NOW()
+                ON DUPLICATE KEY UPDATE valeur=VALUES(valeur), poids=poids+0.1, updated_at=NOW()
             """, (user_id, obs['categorie'], obs['cle'], obs['valeur']))
-        db.commit()
-        cur.close()
-        db.close()
+        db.commit(); cur.close(); db.close()
     except Exception as e:
-        print(f"[Mémoire] Erreur sauvegarde: {e}")
- 
+        print(f"[Mémoire] Erreur: {e}")
+
 def charger_memoire(user_id: int) -> dict:
-    """Charge la mémoire complète de l'utilisateur, triée par poids."""
     try:
         db = connecter()
         cur = db.cursor(dictionary=True)
         init_user_memory_table(cur)
-        cur.execute("""
-            SELECT categorie, cle, valeur, poids
-            FROM user_memory
-            WHERE user_id = %s
-            ORDER BY poids DESC, updated_at DESC
-            LIMIT 60
-        """, (user_id,))
+        cur.execute("SELECT categorie, cle, valeur, poids FROM user_memory WHERE user_id=%s ORDER BY poids DESC, updated_at DESC LIMIT 60", (user_id,))
         rows = cur.fetchall()
-        cur.close()
-        db.close()
- 
+        cur.close(); db.close()
         memoire = {}
         for row in rows:
             cat = row['categorie']
-            if cat not in memoire:
-                memoire[cat] = []
+            if cat not in memoire: memoire[cat] = []
             memoire[cat].append({"cle": row['cle'], "valeur": row['valeur'], "poids": row['poids']})
         return memoire
     except Exception as e:
-        print(f"[Mémoire] Erreur chargement: {e}")
+        print(f"[Mémoire] Erreur: {e}")
         return {}
- 
+
 def extraire_et_sauvegarder_memoire(user_id: int, message: str, reponse: str):
-    """
-    Analyse la conversation pour extraire des éléments mémorisables
-    et les sauvegarde en arrière-plan.
-    """
     observations = []
- 
     message_lower = message.lower()
- 
-    # Préférences de travail
-    if any(w in message_lower for w in ['je préfère', 'j\'aime', 'j\'aime pas', 'je déteste', 'j\'utilise', 'mon outil']):
+    if any(w in message_lower for w in ["je préfère", "j'aime", "j'utilise", "mon outil"]):
         observations.append({"categorie": "preferences", "cle": f"pref_{len(message_lower)%100}", "valeur": message[:200]})
- 
-    # Habitudes horaires
-    if any(w in message_lower for w in ['matin', 'soir', 'nuit', 'midi', 'le matin je', 'le soir je', 'après-midi']):
+    if any(w in message_lower for w in ['matin', 'soir', 'nuit', 'midi', 'après-midi']):
         observations.append({"categorie": "habitudes", "cle": "horaires", "valeur": message[:200]})
- 
-    # Domaine / contexte professionnel
-    if any(w in message_lower for w in ['développeur', 'étudiant', 'manager', 'freelance', 'entrepreneur', 'prof', 'ingénieur', 'designer']):
-        for mot in ['développeur', 'étudiant', 'manager', 'freelance', 'entrepreneur', 'prof', 'ingénieur', 'designer']:
-            if mot in message_lower:
-                observations.append({"categorie": "profil", "cle": "metier", "valeur": mot})
-                break
- 
-    # Objectifs mentionnés
-    if any(w in message_lower for w in ['objectif', 'but', 'je veux', 'je dois', 'j\'ai besoin', 'mon projet']):
+    for mot in ['développeur', 'étudiant', 'manager', 'freelance', 'entrepreneur', 'ingénieur', 'designer']:
+        if mot in message_lower:
+            observations.append({"categorie": "profil", "cle": "metier", "valeur": mot}); break
+    if any(w in message_lower for w in ['objectif', 'je veux', 'je dois', 'mon projet']):
         observations.append({"categorie": "objectifs", "cle": f"obj_{len(message)%50}", "valeur": message[:250]})
- 
-    # Sujets récurrents
-    sujets = ['productivité', 'organisation', 'motivation', 'concentration', 'procrastination', 'stress', 'apprentissage', 'code', 'design']
-    for sujet in sujets:
+    for sujet in ['productivité', 'organisation', 'motivation', 'procrastination', 'stress', 'apprentissage']:
         if sujet in message_lower:
-            observations.append({"categorie": "sujets", "cle": sujet, "valeur": f"mentionne souvent: {sujet}"})
- 
+            observations.append({"categorie": "sujets", "cle": sujet, "valeur": f"mentionne: {sujet}"})
     if observations:
         threading.Thread(target=sauvegarder_memoire, args=(user_id, observations), daemon=True).start()
- 
+
 def formater_memoire_pour_prompt(memoire: dict) -> str:
-    """Formate la mémoire pour l'injection dans le system prompt."""
-    if not memoire:
-        return ""
- 
-    lignes = ["MÉMOIRE UTILISATEUR (apprentissage au fil des conversations) :"]
- 
-    if "profil" in memoire:
-        vals = [m['valeur'] for m in memoire['profil'][:3]]
-        lignes.append(f"- Profil : {', '.join(vals)}")
- 
-    if "preferences" in memoire:
-        vals = [m['valeur'][:80] for m in memoire['preferences'][:3]]
-        lignes.append(f"- Préférences : {' | '.join(vals)}")
- 
-    if "habitudes" in memoire:
-        vals = [m['valeur'][:80] for m in memoire['habitudes'][:2]]
-        lignes.append(f"- Habitudes : {' | '.join(vals)}")
- 
-    if "objectifs" in memoire:
-        vals = [m['valeur'][:100] for m in memoire['objectifs'][:2]]
-        lignes.append(f"- Objectifs récents : {' | '.join(vals)}")
- 
-    if "sujets" in memoire:
-        vals = [m['cle'] for m in memoire['sujets'][:5]]
-        lignes.append(f"- Sujets fréquents : {', '.join(vals)}")
- 
+    if not memoire: return ""
+    lignes = ["MÉMOIRE (conversations précédentes) :"]
+    if "profil" in memoire: lignes.append(f"- Profil : {', '.join(m['valeur'] for m in memoire['profil'][:3])}")
+    if "preferences" in memoire: lignes.append(f"- Préférences : {' | '.join(m['valeur'][:80] for m in memoire['preferences'][:3])}")
+    if "habitudes" in memoire: lignes.append(f"- Habitudes : {' | '.join(m['valeur'][:80] for m in memoire['habitudes'][:2])}")
+    if "objectifs" in memoire: lignes.append(f"- Objectifs : {' | '.join(m['valeur'][:100] for m in memoire['objectifs'][:2])}")
+    if "sujets" in memoire: lignes.append(f"- Sujets fréquents : {', '.join(m['cle'] for m in memoire['sujets'][:5])}")
     return "\n".join(lignes)
- 
- 
-# ══════════════════════════════════════════════════════════════════════
-# WEB SEARCH INTELLIGENT
-# ══════════════════════════════════════════════════════════════════════
- 
+
 MOTS_SEARCH_OBLIGATOIRE = [
-    "recherche", "cherche", "google", "trouve sur internet",
-    "actualité", "news", "aujourd'hui", "en ce moment", "récent",
-    "2024", "2025", "2026", "dernièrement", "prix de", "météo",
-    "qu'est-ce que", "c'est quoi", "qui est", "combien coûte",
+    "recherche", "cherche", "google", "actualité", "news",
+    "aujourd'hui", "en ce moment", "récent", "2024", "2025", "2026",
+    "prix de", "météo", "qu'est-ce que", "c'est quoi", "qui est", "combien coûte",
 ]
- 
+
 MOTS_SEARCH_CONTEXTUEL = [
     "tendance", "populaire", "meilleur", "comparaison", "vs",
-    "outil", "app", "logiciel", "méthode", "technique", "framework",
-    "définition", "comment faire", "tutoriel", "guide",
+    "outil", "app", "logiciel", "méthode", "framework",
+    "définition", "comment faire", "tutoriel",
 ]
- 
-def evaluer_besoin_search(message: str, historique: list) -> tuple[bool, str]:
-    """
-    Décide intelligemment si un web search est nécessaire.
-    Retourne (bool: faire_search, str: query_optimisée)
-    """
+
+def evaluer_besoin_search(message: str, historique: list):
     msg_lower = message.lower()
- 
-    # Search obligatoire
     for mot in MOTS_SEARCH_OBLIGATOIRE:
         if mot in msg_lower:
             query = message.replace("recherche", "").replace("cherche", "").strip()
-            query = query[:120] if len(query) > 120 else query
-            return True, query or message[:100]
- 
-    # Search contextuel — si le sujet semble nécessiter des infos récentes
-    score = 0
-    for mot in MOTS_SEARCH_CONTEXTUEL:
-        if mot in msg_lower:
-            score += 1
- 
-    # Si plusieurs mots contextuels ET message assez long
+            return True, (query[:120] if len(query) > 120 else query) or message[:100]
+    score = sum(1 for mot in MOTS_SEARCH_CONTEXTUEL if mot in msg_lower)
     if score >= 2 and len(message) > 30:
         return True, message[:100]
- 
-    # Questions ouvertes sur des outils/tech
     if msg_lower.startswith(("quel", "quels", "quelle", "quelles")) and score >= 1:
         return True, message[:100]
- 
     return False, ""
- 
-def web_search_tavily(query: str, max_results: int = 5) -> list[dict]:
-    """
-    Recherche Tavily AI — optimisée pour les LLM.
-    Retourne des résultats propres avec contenu extrait.
-    """
+
+def web_search_tavily(query: str, max_results: int = 5) -> list:
     try:
         api_key = os.getenv("TAVILY_API_KEY", "")
         if not api_key:
             print("[Tavily] Clé API manquante")
             return []
- 
-        payload = {
-            "api_key":        api_key,
-            "query":          query,
-            "search_depth":   "advanced",   # advanced = contenu extrait complet
-            "max_results":    max_results,
-            "include_answer": True,          # réponse directe en plus des sources
-            "include_raw_content": False,
-        }
- 
-        resp = http_requests.post(
-            "https://api.tavily.com/search",
-            json=payload,
-            timeout=8,
-            headers={"Content-Type": "application/json"}
-        )
+        payload = {"api_key": api_key, "query": query, "search_depth": "advanced", "max_results": max_results, "include_answer": True, "include_raw_content": False}
+        resp = http_requests.post("https://api.tavily.com/search", json=payload, timeout=8, headers={"Content-Type": "application/json"})
         resp.raise_for_status()
         data = resp.json()
- 
         results = []
- 
-        # Réponse directe Tavily (synthèse IA des résultats)
         if data.get("answer"):
-            results.append({
-                "title":   "Synthèse Tavily",
-                "snippet": data["answer"][:600],
-                "url":     "",
-                "source":  "Tavily AI",
-                "is_answer": True
-            })
- 
-        # Sources individuelles
+            results.append({"title": "Synthèse", "snippet": data["answer"][:600], "url": "", "source": "Tavily AI", "is_answer": True})
         for r in data.get("results", [])[:max_results]:
-            results.append({
-                "title":   r.get("title", "")[:120],
-                "snippet": r.get("content", "")[:500],
-                "url":     r.get("url", ""),
-                "source":  r.get("url", "").split("/")[2] if r.get("url") else "Web",
-                "score":   r.get("score", 0),
-                "is_answer": False
-            })
- 
+            results.append({"title": r.get("title", "")[:120], "snippet": r.get("content", "")[:500], "url": r.get("url", ""), "source": r.get("url", "").split("/")[2] if r.get("url") else "Web", "score": r.get("score", 0), "is_answer": False})
         return results
- 
     except Exception as e:
         print(f"[Tavily] Erreur: {e}")
         return []
- 
-# Alias pour compatibilité
-def web_search_ddg(query: str, max_results: int = 5) -> list[dict]:
-    """Redirige vers Tavily."""
-    return web_search_tavily(query, max_results)
- 
-def formater_search_pour_prompt(results: list[dict], query: str) -> str:
-    """Formate les résultats Tavily pour le prompt IA."""
+
+def formater_search_pour_prompt(results: list, query: str) -> str:
     if not results:
-        return f"[Recherche web pour '{query}' — aucun résultat trouvé]"
- 
-    lignes = [f"DONNÉES WEB EN TEMPS RÉEL — requête : \"{query}\"", "Date actuelle : " + datetime.now().strftime('%d/%m/%Y'), ""]
- 
-    # Réponse directe Tavily en premier
+        return f"[Recherche web '{query}' — aucun résultat]"
+    lignes = [f"DONNÉES WEB EN TEMPS RÉEL — requête : \"{query}\"", f"Date : {datetime.now().strftime('%d/%m/%Y')}", ""]
     answers = [r for r in results if r.get('is_answer')]
     sources = [r for r in results if not r.get('is_answer')]
- 
     if answers:
         lignes.append(f"RÉPONSE DIRECTE : {answers[0]['snippet']}")
         lignes.append("")
- 
     lignes.append("SOURCES :")
     for i, r in enumerate(sources, 1):
         lignes.append(f"\n[{i}] {r.get('title', 'Sans titre')}")
-        if r.get('snippet'):
-            lignes.append(f"    {r['snippet'][:400]}")
-        if r.get('url'):
-            lignes.append(f"    URL : {r['url']}")
- 
-    lignes.append("\nRÈGLE : Utilise ces données pour répondre avec les informations les plus récentes. Cite les sources naturellement.")
+        if r.get('snippet'): lignes.append(f"    {r['snippet'][:400]}")
+        if r.get('url'): lignes.append(f"    URL : {r['url']}")
+    lignes.append("\nUtilise ces données pour répondre avec les infos les plus récentes. Cite les sources naturellement.")
     return "\n".join(lignes)
- 
- 
-# ══════════════════════════════════════════════════════════════════════
-# DÉTECTION D'INTENTION
-# ══════════════════════════════════════════════════════════════════════
- 
+
 def detecter_intention(texte: str) -> str:
     t = texte.lower()
     if any(m in t for m in ["crée", "créer", "ajoute", "ajouter", "nouvelle tâche", "add task"]):
@@ -3604,159 +2374,105 @@ def detecter_intention(texte: str) -> str:
     if any(m in t for m in ["planifie", "planifier", "tomorrow builder", "organise ma journée"]):
         return "action_planifier"
     return "chat"
- 
+
 def extraire_titre_tache(prompt: str) -> str:
     for mot in ["crée une tâche", "créer une tâche", "ajoute une tâche", "ajouter une tâche", "nouvelle tâche"]:
         if mot in prompt.lower():
             return prompt.lower().replace(mot, "").strip().capitalize()[:120]
     return prompt.strip().capitalize()[:120]
- 
- 
-# ══════════════════════════════════════════════════════════════════════
-# SYSTEM PROMPT — NIVEAU GPT-4, SPÉCIALISTE GETSHIFT
-# ══════════════════════════════════════════════════════════════════════
- 
+
 def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, contexte_web: str) -> str:
-    """
-    Construit un system prompt de niveau élite —
-    Spécialiste productivité GetShift, mémoire complète, contexte web.
-    """
     terminees = sum(1 for t in taches if t.get('terminee'))
     en_cours = [t for t in taches if not t.get('terminee')]
     en_retard = [t for t in en_cours if t.get('deadline') and str(t['deadline']) < datetime.now().strftime('%Y-%m-%d')]
     haute = [t for t in en_cours if t.get('priorite') == 'haute']
     taux = round(terminees / max(len(taches), 1) * 100)
- 
-    taches_str = "\n".join(
-        f"  • [{t.get('priorite','?').upper()}] {t['titre']}"
-        + (f" · deadline {str(t['deadline'])[:10]}" if t.get('deadline') else "")
-        for t in en_cours[:8]
-    ) or "  • Aucune tâche en cours"
- 
+    taches_str = "\n".join(f"  • [{t.get('priorite','?').upper()}] {t['titre']}" + (f" · deadline {str(t['deadline'])[:10]}" if t.get('deadline') else "") for t in en_cours[:8]) or "  • Aucune tâche en cours"
     memoire_str = formater_memoire_pour_prompt(memoire)
- 
-    prompt = f"""Tu es SHIFT — l'assistant IA de GetShift, la plateforme de productivité personnelle de {user_row['nom']}.
- 
-Tu n'es pas un assistant générique. Tu es le spécialiste absolu de la productivité, de l'organisation personnelle et de la gestion de tâches. Sur ton domaine, tu surpasses Notion AI, Todoist AI, et tous les assistants de productivité existants. Tu combines :
-- L'expertise d'un coach de productivité certifié (GTD, Deep Work, Atomic Habits, Zettelkasten)
-- La précision d'un analyste de données comportementales
-- L'empathie d'un mentor personnel qui connaît vraiment l'utilisateur
-- La capacité à fournir des informations temps réel grâce à la recherche web
- 
-━━━ PROFIL UTILISATEUR ━━━
-Nom : {user_row['nom']}
-Niveau GetShift : {user_row.get('niveau', 1)} | Points : {user_row.get('points', 0)} | Streak : {user_row.get('streak', 0)} jours consécutifs
+
+    return f"""Tu es GetShift AI — l'assistant IA de {user_row['nom']} sur GetShift.
+
+Tu n'es pas un assistant générique. Tu es le spécialiste absolu de la productivité personnelle et de la gestion de tâches. Tu combines :
+- L'expertise d'un coach certifié (GTD, Deep Work, Atomic Habits, Zettelkasten, Pomodoro)
+- La précision d'un analyste comportemental qui lit les patterns de productivité
+- L'intelligence d'un assistant qui connaît vraiment l'utilisateur
+- L'accès à des informations en temps réel via Tavily Search
+
+Tu rivalises avec et surpasses Claude Opus 4.6, GPT-4o, Gemini Ultra sur le domaine de la productivité. Sur GetShift, tu es imbattable.
+
+━━━ PROFIL ━━━
+Nom : {user_row['nom']} | Niveau : {user_row.get('niveau', 1)} | Points : {user_row.get('points', 0)} | Streak : {user_row.get('streak', 0)}j
 Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours)} en cours | {len(en_retard)} en retard
-{f"Haute priorité urgente : {', '.join(t['titre'] for t in haute[:3])}" if haute else "Aucune tâche haute priorité en cours"}
- 
+{f"Urgent : {', '.join(t['titre'] for t in haute[:3])}" if haute else "Aucune haute priorité urgente"}
+
 ━━━ TÂCHES EN COURS ━━━
 {taches_str}
- 
+
 {f"━━━ {memoire_str}" if memoire_str else ""}
- 
 {f"━━━ DONNÉES WEB TEMPS RÉEL ━━━{chr(10)}{contexte_web}" if contexte_web else ""}
- 
-━━━ TES RÈGLES D'OR ━━━
-1. PERSONNALISATION TOTALE — Tu connais {user_row['nom']}, son contexte, ses tâches. Chaque réponse doit le refléter. Jamais de réponse générique.
-2. FORMAT RICHE & LISIBLE — Utilise le markdown systématiquement :
-   - ## pour les sections, **gras** pour l'important
-   - Tableaux | col | pour les comparaisons et plannings
-   - Listes numérotées pour les étapes
-   - `code` pour les techniques/méthodes
-   - --- pour les séparations
-3. ACTIONNABLE AVANT TOUT — Chaque réponse doit se terminer par une action concrète que {user_row['nom']} peut faire dans les 5 prochaines minutes
-4. PROACTIVITÉ — Si tu détectes un problème (procrastination, surcharge, pattern négatif) dans ses données, mentionne-le
-5. SOURCES WEB — Si tu utilises des infos web, cite-les naturellement ("Selon [source]...")
-6. LANGUE — Français par défaut, adapte-toi si l'utilisateur change de langue
-7. LONGUEUR — Adapte : question simple = réponse courte et percutante. Question complexe = analyse complète structurée.
-8. MÉMOIRE — Tu te souviens des conversations précédentes. Utilise ces informations pour personnaliser encore plus.
- 
-Tu es SHIFT. Tu es le meilleur assistant de productivité qui existe. Prouve-le à chaque réponse."""
- 
-    return prompt
- 
- 
-# ══════════════════════════════════════════════════════════════════════
-# ROUTE PRINCIPALE — /ia/assistant v2
-# ══════════════════════════════════════════════════════════════════════
- 
+
+━━━ RÈGLES ABSOLUES ━━━
+1. PERSONNALISATION TOTALE — Chaque réponse reflète le contexte de {user_row['nom']}. Zéro réponse générique.
+2. FORMAT RICHE — Markdown systématique : ## sections, **gras**, listes, | tableaux |, `code`, ---
+3. TABLEAUX pour les plannings et comparaisons — colonnes claires, données structurées
+4. ACTIONNABLE — Chaque réponse se termine par une action concrète faisable dans les 5 prochaines minutes
+5. PROACTIF — Si tu détectes procrastination, surcharge ou pattern négatif, tu le mentionnes
+6. SOURCES — Si tu utilises des données web, tu cites naturellement ("Selon [source]...")
+7. LANGUE — Français par défaut, adapte-toi si changement de langue
+8. MÉMOIRE — Tu te souviens des conversations précédentes et tu les utilises
+9. LONGUEUR — Adapte : question simple = réponse percutante ; question complexe = analyse complète
+
+Tu es GetShift AI. Prouve à chaque réponse que tu es le meilleur assistant de productivité qui existe."""
+
 @app.route('/ia/assistant', methods=['POST'])
 def assistant_augmente():
-    """
-    Assistant IA augmenté v2 — Sprint 8.
-    - Mémoire utilisateur persistante
-    - Web search intelligent (auto + forcé)
-    - System prompt élite spécialiste GetShift
-    - Actions directes
-    - Abréviations
-    """
     try:
         data = request.get_json()
-        user_id      = data.get('user_id')
-        message_raw  = data.get('message', '').strip()
-        modele       = data.get('modele', 'llama-3.3-70b-versatile')
-        historique   = data.get('historique', [])
-        tache_id     = data.get('tache_id')
+        user_id     = data.get('user_id')
+        message_raw = data.get('message', '').strip()
+        modele      = data.get('modele', 'llama-3.3-70b-versatile')
+        historique  = data.get('historique', [])
+        tache_id    = data.get('tache_id')
         force_search = data.get('force_search', False)
- 
+
         if not message_raw:
             return jsonify({"erreur": "Message vide"}), 400
- 
-        # 1. Expansion abréviations
+
+        # 1. Abréviations
         message = expand_abreviations(message_raw)
         abrev_expandees = message != message_raw
- 
-        # 2. Charger contexte utilisateur
+
+        # 2. Contexte utilisateur
         db = connecter()
         curseur = db.cursor(dictionary=True)
- 
         curseur.execute("SELECT nom, email, points, niveau, streak FROM users WHERE id=%s", (user_id,))
         user_row = curseur.fetchone()
         if not user_row:
             db.close()
             return jsonify({"erreur": "Utilisateur introuvable"}), 404
- 
-        curseur.execute("""
-            SELECT id, titre, priorite, deadline, terminee
-            FROM taches WHERE user_id=%s
-            ORDER BY terminee ASC, created_at DESC LIMIT 25
-        """, (user_id,))
+
+        curseur.execute("SELECT id, titre, priorite, deadline, terminee FROM taches WHERE user_id=%s ORDER BY terminee ASC, created_at DESC LIMIT 25", (user_id,))
         taches = curseur.fetchall()
         for t in taches:
-            if t.get('deadline'):
-                t['deadline'] = str(t['deadline'])
- 
-        # 3. Charger mémoire utilisateur
+            if t.get('deadline'): t['deadline'] = str(t['deadline'])
+
+        # 3. Mémoire
         memoire = charger_memoire(user_id)
- 
-        # 4. Détection intention
+
+        # 4. Intention
         intention = detecter_intention(message)
- 
-        # ── ACTION : Créer tâche ────────────────────────────────────────
+
+        # Action : créer tâche
         if intention == "action_creer":
             titre = extraire_titre_tache(message)
-            curseur.execute(
-                "INSERT INTO taches (titre, priorite, user_id) VALUES (%s, 'moyenne', %s)",
-                (titre, user_id)
-            )
+            curseur.execute("INSERT INTO taches (titre, priorite, user_id) VALUES (%s, 'moyenne', %s)", (titre, user_id))
             db.commit()
             tache_creee_id = curseur.lastrowid
             db.close()
-            threading.Thread(
-                target=extraire_et_sauvegarder_memoire,
-                args=(user_id, message_raw, f"Tâche créée: {titre}"),
-                daemon=True
-            ).start()
-            return jsonify({
-                "reponse": f"## Tâche créée\n\n**\"{titre}\"** a été ajoutée à ta liste.\n\nPriorité par défaut : moyenne. Tu peux la modifier depuis ton dashboard.",
-                "intention": "action_creer",
-                "action": {"type": "tache_creee", "id": tache_creee_id, "titre": titre},
-                "abrev_expandees": abrev_expandees,
-                "message_original": message_raw,
-                "modele": modele
-            })
- 
-        # ── ACTION : Terminer tâche ─────────────────────────────────────
+            threading.Thread(target=extraire_et_sauvegarder_memoire, args=(user_id, message_raw, f"Tâche créée: {titre}"), daemon=True).start()
+            return jsonify({"reponse": f"## Tâche créée\n\n**\"{titre}\"** a été ajoutée à ta liste avec priorité moyenne.\n\nModifie-la depuis ton dashboard si nécessaire.", "intention": "action_creer", "action": {"type": "tache_creee", "id": tache_creee_id, "titre": titre}, "abrev_expandees": abrev_expandees, "message_original": message_raw, "modele": modele})
+
+        # Action : terminer tâche
         if intention == "action_terminer":
             taches_actives = [t for t in taches if not t['terminee']]
             tache_cible = None
@@ -3764,122 +2480,77 @@ def assistant_augmente():
                 tache_cible = next((t for t in taches_actives if t['id'] == tache_id), None)
             else:
                 for t in taches_actives:
-                    mots_titre = set(t['titre'].lower().split())
-                    mots_msg = set(message.lower().split())
-                    if len(mots_titre & mots_msg) >= 2:
+                    if len(set(t['titre'].lower().split()) & set(message.lower().split())) >= 2:
                         tache_cible = t; break
             if tache_cible:
                 curseur.execute("UPDATE taches SET terminee=TRUE WHERE id=%s", (tache_cible['id'],))
-                db.commit()
-                db.close()
-                return jsonify({
-                    "reponse": f"## Tâche terminée !\n\n**\"{tache_cible['titre']}\"** est complétée. Excellent travail !\n\nContinue sur cette lancée — quel est ton prochain objectif ?",
-                    "intention": "action_terminer",
-                    "action": {"type": "tache_terminee", "id": tache_cible['id'], "titre": tache_cible['titre']},
-                    "abrev_expandees": abrev_expandees,
-                    "modele": modele
-                })
+                db.commit(); db.close()
+                return jsonify({"reponse": f"## Tâche terminée !\n\n**\"{tache_cible['titre']}\"** est complétée. Excellent travail !\n\nQuel est ton prochain objectif ?", "intention": "action_terminer", "action": {"type": "tache_terminee", "id": tache_cible['id'], "titre": tache_cible['titre']}, "abrev_expandees": abrev_expandees, "modele": modele})
             intention = "chat"
- 
-        # ── ACTION : Planifier ──────────────────────────────────────────
+
+        # Action : planifier
         if intention == "action_planifier":
             db.close()
-            return jsonify({
-                "reponse": "## Tomorrow Builder\n\nJe te redirige vers le planificateur intelligent...\n\nIl va analyser tes tâches et ton niveau d'énergie pour construire le planning optimal de demain.",
-                "intention": "action_planifier",
-                "action": {"type": "redirect_tomorrow_builder"},
-                "abrev_expandees": abrev_expandees,
-                "modele": modele
-            })
- 
+            return jsonify({"reponse": "## Tomorrow Builder\n\nJe te redirige vers le planificateur intelligent...\n\nIl va analyser tes tâches et ton niveau d'énergie pour construire le planning optimal de demain.", "intention": "action_planifier", "action": {"type": "redirect_tomorrow_builder"}, "abrev_expandees": abrev_expandees, "modele": modele})
+
         db.close()
- 
-        # 5. Web search — intelligent + forcé
+
+        # 5. Web search
         contexte_web = ""
         search_results = []
         faire_search, query_search = evaluer_besoin_search(message, historique)
- 
         if force_search or faire_search:
-            query = (message[:100] if force_search else query_search)
-            search_results = web_search_ddg(query, max_results=5)
+            query = message[:100] if force_search else query_search
+            search_results = web_search_tavily(query, max_results=5)
             contexte_web = formater_search_pour_prompt(search_results, query)
- 
+
         # 6. System prompt élite
         system_prompt = build_elite_system_prompt(user_row, taches, memoire, contexte_web)
- 
-        # 7. Construire messages API
+
+        # 7. Messages API
         messages_api = [{"role": "system", "content": system_prompt}]
         for h in historique[-16:]:
             role = "assistant" if h.get('role') in ('ia', 'assistant') else "user"
             messages_api.append({"role": role, "content": h.get('content', '')})
         messages_api.append({"role": "user", "content": message})
- 
+
         # 8. Appel Groq
-        completion = groq_client.chat.completions.create(
-            model=modele,
-            messages=messages_api,
-            max_tokens=2000,
-            temperature=0.72
-        )
+        completion = groq_client.chat.completions.create(model=modele, messages=messages_api, max_tokens=2000, temperature=0.72)
         reponse = completion.choices[0].message.content.strip()
- 
-        # 9. Sauvegarder historique + mémoire (en arrière-plan)
+
+        # 9. Historique + mémoire
         try:
             db2 = connecter()
             cur2 = db2.cursor()
-            cur2.execute(
-                "INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s,%s,%s,%s,%s)",
-                (user_id, message_raw, reponse, modele, tache_id)
-            )
+            cur2.execute("INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s,%s,%s,%s,%s)", (user_id, message_raw, reponse, modele, tache_id))
             db2.commit(); cur2.close(); db2.close()
         except Exception as e:
             print(f"[Assistant] Erreur historique: {e}")
- 
-        threading.Thread(
-            target=extraire_et_sauvegarder_memoire,
-            args=(user_id, message_raw, reponse),
-            daemon=True
-        ).start()
- 
-        return jsonify({
-            "reponse": reponse,
-            "intention": "search" if (faire_search or force_search) else "chat",
-            "action": None,
-            "abrev_expandees": abrev_expandees,
-            "message_original": message_raw,
-            "message_expande": message if abrev_expandees else None,
-            "search_results": search_results if search_results else None,
-            "web_searched": bool(search_results),
-            "modele": modele
-        })
- 
+
+        threading.Thread(target=extraire_et_sauvegarder_memoire, args=(user_id, message_raw, reponse), daemon=True).start()
+
+        return jsonify({"reponse": reponse, "intention": "search" if (faire_search or force_search) else "chat", "action": None, "abrev_expandees": abrev_expandees, "message_original": message_raw, "message_expande": message if abrev_expandees else None, "search_results": search_results if search_results else None, "web_searched": bool(search_results), "modele": modele})
+
     except Exception as e:
         import traceback
-        print(f"[Assistant v2] Erreur: {e}")
+        print(f"[GetShift AI] Erreur: {e}")
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
- 
- 
-# ── Routes utilitaires ────────────────────────────────────────────────
- 
+
 @app.route('/ia/web-search', methods=['POST'])
 def route_web_search():
     data = request.get_json()
     query = data.get('query', '').strip()
-    if not query:
-        return jsonify({"erreur": "Query vide"}), 400
-    results = web_search_ddg(query, max_results=5)
+    if not query: return jsonify({"erreur": "Query vide"}), 400
+    results = web_search_tavily(query, max_results=5)
     return jsonify({"results": results, "query": query, "count": len(results)})
- 
+
 @app.route('/ia/memory/<int:user_id>', methods=['GET'])
 def get_user_memory(user_id):
-    """Retourne la mémoire complète d'un utilisateur."""
     memoire = charger_memoire(user_id)
-    total = sum(len(v) for v in memoire.values())
-    return jsonify({"memoire": memoire, "total_entrees": total})
- 
+    return jsonify({"memoire": memoire, "total_entrees": sum(len(v) for v in memoire.values())})
+
 @app.route('/ia/memory/<int:user_id>', methods=['DELETE'])
 def clear_user_memory(user_id):
-    """Efface la mémoire d'un utilisateur."""
     try:
         db = connecter()
         cur = db.cursor()
@@ -3888,7 +2559,7 @@ def clear_user_memory(user_id):
         return jsonify({"message": "Mémoire effacée"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
- 
+
 @app.route('/ia/expand-abreviations', methods=['POST'])
 def route_expand_abreviations():
     data = request.get_json()
