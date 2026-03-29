@@ -473,6 +473,7 @@ def demarrer_scheduler():
     schedule.every().day.at("08:00").do(job_email_rappel_jour_j)
     schedule.every().day.at("10:00").do(job_email_taches_retard)
     schedule.every().friday.at("18:00").do(job_email_resume_hebdo)
+    schedule.every().day.at("00:00").do(job_backup_quotidien)
     print("[Scheduler] Démarré ✅")
     while True:
         schedule.run_pending()
@@ -2566,6 +2567,326 @@ def route_expand_abreviations():
     texte = data.get('texte', '')
     expande = expand_abreviations(texte)
     return jsonify({"original": texte, "expande": expande, "modifie": texte != expande})
+
+
+# ============================================
+# BACKUP AUTOMATIQUE QUOTIDIEN — MINUIT
+
+def job_backup_quotidien():
+    """
+    Backup quotidien à minuit :
+    1. Dump SQL complet de toutes les tables
+    2. Stockage dans la table backups (Aiven)
+    3. Envoi par email à l'admin
+    """
+    debut = datetime.now()
+    print(f"[Backup] Démarrage à {debut.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+
+        # ── Créer la table de stockage des backups si elle n'existe pas ──
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS backups_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nom VARCHAR(200) NOT NULL,
+                taille_ko INT DEFAULT 0,
+                nb_tables INT DEFAULT 0,
+                nb_lignes_total INT DEFAULT 0,
+                statut VARCHAR(20) DEFAULT 'succes',
+                erreur TEXT,
+                duree_secondes FLOAT DEFAULT 0,
+                cree_le DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS backups_data (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                backup_log_id INT NOT NULL,
+                contenu LONGTEXT,
+                cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (backup_log_id) REFERENCES backups_log(id) ON DELETE CASCADE
+            )
+        """)
+        db.commit()
+
+        # ── Récupérer la liste de toutes les tables ──
+        curseur.execute("SHOW TABLES")
+        tables = [list(row.values())[0] for row in curseur.fetchall()]
+
+        # Tables à exclure du backup (optionnel)
+        tables_exclure = ['backups_data']  # éviter backup récursif
+        tables = [t for t in tables if t not in tables_exclure]
+
+        dump_lines = []
+        nb_lignes_total = 0
+
+        dump_lines.append(f"-- GetShift Database Backup")
+        dump_lines.append(f"-- Date : {debut.strftime('%Y-%m-%d %H:%M:%S')}")
+        dump_lines.append(f"-- Tables : {len(tables)}")
+        dump_lines.append(f"-- ============================================")
+        dump_lines.append("")
+        dump_lines.append("SET FOREIGN_KEY_CHECKS=0;")
+        dump_lines.append("")
+
+        for table in tables:
+            try:
+                # Structure de la table
+                curseur.execute(f"SHOW CREATE TABLE `{table}`")
+                create_result = curseur.fetchone()
+                create_sql = list(create_result.values())[1]
+
+                dump_lines.append(f"-- Table : {table}")
+                dump_lines.append(f"DROP TABLE IF EXISTS `{table}`;")
+                dump_lines.append(f"{create_sql};")
+                dump_lines.append("")
+
+                # Données
+                curseur.execute(f"SELECT * FROM `{table}`")
+                rows = curseur.fetchall()
+                nb_lignes_total += len(rows)
+
+                if rows:
+                    colonnes = list(rows[0].keys())
+                    cols_str = ", ".join(f"`{c}`" for c in colonnes)
+
+                    for row in rows:
+                        vals = []
+                        for val in row.values():
+                            if val is None:
+                                vals.append("NULL")
+                            elif isinstance(val, (int, float)):
+                                vals.append(str(val))
+                            elif isinstance(val, datetime):
+                                vals.append(f"'{val.strftime('%Y-%m-%d %H:%M:%S')}'")
+                            elif hasattr(val, 'strftime'):
+                                vals.append(f"'{val.strftime('%Y-%m-%d')}'")
+                            else:
+                                # Échapper les quotes
+                                escaped = str(val).replace("\\", "\\\\").replace("'", "\\'")
+                                vals.append(f"'{escaped}'")
+                        vals_str = ", ".join(vals)
+                        dump_lines.append(f"INSERT INTO `{table}` ({cols_str}) VALUES ({vals_str});")
+
+                dump_lines.append("")
+
+            except Exception as e:
+                dump_lines.append(f"-- ERREUR table {table}: {e}")
+                dump_lines.append("")
+
+        dump_lines.append("SET FOREIGN_KEY_CHECKS=1;")
+        dump_lines.append("")
+        dump_lines.append(f"-- Fin du backup — {nb_lignes_total} lignes exportées")
+
+        contenu_sql = "\n".join(dump_lines)
+        taille_ko = len(contenu_sql.encode('utf-8')) // 1024
+        duree = (datetime.now() - debut).total_seconds()
+        nom_backup = f"getshift_backup_{debut.strftime('%Y%m%d_%H%M%S')}.sql"
+
+        # ── Stocker dans Aiven (backups_log + backups_data) ──
+        curseur.execute("""
+            INSERT INTO backups_log (nom, taille_ko, nb_tables, nb_lignes_total, statut, duree_secondes)
+            VALUES (%s, %s, %s, %s, 'succes', %s)
+        """, (nom_backup, taille_ko, len(tables), nb_lignes_total, round(duree, 2)))
+        backup_id = curseur.lastrowid
+
+        curseur.execute("""
+            INSERT INTO backups_data (backup_log_id, contenu)
+            VALUES (%s, %s)
+        """, (backup_id, contenu_sql))
+        db.commit()
+
+        # Garder seulement les 7 derniers backups dans Aiven (éviter surcharge)
+        curseur.execute("""
+            DELETE bd FROM backups_data bd
+            JOIN backups_log bl ON bd.backup_log_id = bl.id
+            WHERE bl.id NOT IN (
+                SELECT id FROM (
+                    SELECT id FROM backups_log ORDER BY cree_le DESC LIMIT 7
+                ) AS recent
+            )
+        """)
+        curseur.execute("""
+            DELETE FROM backups_log
+            WHERE id NOT IN (
+                SELECT id FROM (
+                    SELECT id FROM backups_log ORDER BY cree_le DESC LIMIT 7
+                ) AS recent
+            )
+        """)
+        db.commit()
+        curseur.close()
+        db.close()
+
+        print(f"[Backup] Stocké dans Aiven — {taille_ko} Ko, {nb_lignes_total} lignes, {len(tables)} tables")
+
+        # ── Envoyer par email ──
+        _envoyer_backup_email(nom_backup, contenu_sql, taille_ko, nb_lignes_total, len(tables), round(duree, 2))
+
+    except Exception as e:
+        import traceback
+        print(f"[Backup] ERREUR: {e}\n{traceback.format_exc()}")
+        # Notifier l'admin de l'échec
+        try:
+            html_erreur = f"""
+            <div style="font-family:Arial;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
+                <h1 style="color:#e05c5c;">Backup GetShift — ÉCHEC</h1>
+                <p>Le backup quotidien a échoué le {datetime.now().strftime('%d/%m/%Y à %H:%M')}.</p>
+                <div style="background:#1a0a0a;border:1px solid #e05c5c33;border-radius:8px;padding:16px;font-family:monospace;font-size:12px;color:#ff8080;">
+                    {str(e)}
+                </div>
+                <p style="color:#888;font-size:12px;margin-top:20px;">Vérifiez les logs Render pour plus de détails.</p>
+            </div>"""
+            envoyer_email('chamdaane@gmail.com', f"ALERTE — Backup GetShift échoué {datetime.now().strftime('%d/%m/%Y')}", html_erreur)
+        except:
+            pass
+
+
+def _envoyer_backup_email(nom, contenu_sql, taille_ko, nb_lignes, nb_tables, duree):
+    """Envoie le backup par email avec le fichier SQL en pièce jointe simulée."""
+    try:
+        import base64
+        from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+
+        date_str = datetime.now().strftime('%d/%m/%Y à %H:%M')
+
+        # HTML du corps
+        html = f"""
+        <div style="font-family:Arial;max-width:540px;margin:auto;background:#0c0c12;color:#f0f0f5;padding:0;border-radius:20px;overflow:hidden;border:1px solid #ffffff0f;">
+            <div style="background:linear-gradient(135deg,#6c63ff,#a855f7);padding:28px 36px;">
+                <span style="font-size:20px;font-weight:800;color:white;">GetShift</span>
+                <span style="float:right;font-size:11px;color:rgba(255,255,255,0.7);font-weight:500;letter-spacing:1px;">BACKUP QUOTIDIEN</span>
+            </div>
+            <div style="padding:36px;">
+                <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;">Backup réussi</h2>
+                <p style="margin:0 0 24px;font-size:13px;color:#8888a8;">{date_str}</p>
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                    <tr>
+                        <td style="padding:0 5px 0 0;" width="25%">
+                            <div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:12px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:800;color:#6c63ff;">{nb_tables}</div>
+                                <div style="font-size:10px;color:#8888a8;margin-top:2px;">Tables</div>
+                            </div>
+                        </td>
+                        <td style="padding:0 5px;" width="25%">
+                            <div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:12px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:800;color:#4caf82;">{nb_lignes}</div>
+                                <div style="font-size:10px;color:#8888a8;margin-top:2px;">Lignes</div>
+                            </div>
+                        </td>
+                        <td style="padding:0 5px;" width="25%">
+                            <div style="background:#0f0f18;border:1px solid #e08a3c22;border-radius:12px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:800;color:#e08a3c;">{taille_ko}</div>
+                                <div style="font-size:10px;color:#8888a8;margin-top:2px;">Ko</div>
+                            </div>
+                        </td>
+                        <td style="padding:0 0 0 5px;" width="25%">
+                            <div style="background:#0f0f18;border:1px solid #a855f722;border-radius:12px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:800;color:#a855f7;">{duree}s</div>
+                                <div style="font-size:10px;color:#8888a8;margin-top:2px;">Durée</div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="background:#0f0f18;border:1px solid #ffffff0a;border-radius:12px;padding:16px;margin-bottom:20px;">
+                    <div style="font-size:11px;color:#8888a8;margin-bottom:6px;font-weight:600;">FICHIER</div>
+                    <div style="font-size:13px;color:#e8e8f0;font-family:monospace;">{nom}</div>
+                    <div style="font-size:11px;color:#44445a;margin-top:4px;">Le fichier SQL complet est en pièce jointe.</div>
+                </div>
+
+                <div style="font-size:12px;color:#44445a;border-top:1px solid #ffffff08;padding-top:16px;">
+                    Backup stocké dans Aiven (7 derniers conservés) + envoyé par email.<br>
+                    Prochain backup : demain à minuit.
+                </div>
+            </div>
+        </div>"""
+
+        # Créer l'email avec pièce jointe
+        message = Mail(
+            from_email=os.getenv('MAIL_DEFAULT_SENDER', 'chamdaane@gmail.com'),
+            to_emails='chamdaane@gmail.com',
+            subject=f"Backup GetShift — {datetime.now().strftime('%d/%m/%Y')} ✅",
+            html_content=html
+        )
+
+        # Pièce jointe SQL (encodée en base64)
+        sql_bytes = contenu_sql.encode('utf-8')
+        encoded = base64.b64encode(sql_bytes).decode()
+
+        attachment = Attachment(
+            file_content=FileContent(encoded),
+            file_name=FileName(nom),
+            file_type=FileType('application/sql'),
+            disposition=Disposition('attachment')
+        )
+        message.attachment = attachment
+
+        sg.send(message)
+        print(f"[Backup] Email envoyé à chamdaane@gmail.com ({taille_ko} Ko)")
+
+    except Exception as e:
+        print(f"[Backup] Erreur email: {e}")
+
+
+@app.route('/backup/trigger', methods=['POST'])
+def trigger_backup():
+    """Déclenche un backup manuel immédiatement."""
+    threading.Thread(target=job_backup_quotidien, daemon=True).start()
+    return jsonify({"message": "Backup déclenché ! Vous recevrez un email dans quelques secondes."})
+
+
+@app.route('/backup/historique', methods=['GET'])
+def get_backup_historique():
+    """Retourne l'historique des backups."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT id, nom, taille_ko, nb_tables, nb_lignes_total,
+                   statut, duree_secondes, cree_le
+            FROM backups_log
+            ORDER BY cree_le DESC LIMIT 30
+        """)
+        backups = curseur.fetchall()
+        db.close()
+        for b in backups:
+            b['cree_le'] = str(b['cree_le'])
+        return jsonify({"backups": backups, "total": len(backups)})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/backup/restaurer/<int:backup_id>', methods=['GET'])
+def telecharger_backup(backup_id):
+    """Retourne le contenu SQL d'un backup pour restauration."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT bl.nom, bd.contenu, bl.cree_le
+            FROM backups_data bd
+            JOIN backups_log bl ON bd.backup_log_id = bl.id
+            WHERE bl.id = %s
+        """, (backup_id,))
+        backup = curseur.fetchone()
+        db.close()
+        if not backup:
+            return jsonify({"erreur": "Backup introuvable"}), 404
+        from flask import Response
+        return Response(
+            backup['contenu'],
+            mimetype='application/sql',
+            headers={'Content-Disposition': f'attachment; filename={backup["nom"]}'}
+        )
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+
+
 
 # ============================================
 if __name__ == '__main__':
