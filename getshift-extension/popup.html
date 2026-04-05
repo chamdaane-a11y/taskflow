@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GetShift</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 340px;
+      min-height: 480px;
+      background: #0c0c14;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.03);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6c63ff, #a855f7);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px; color: white;
+    }
+    .logo-text { font-size: 15px; font-weight: 700; }
+    .logo-sub  { font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; font-weight: 600; }
+
+    .open-app {
+      font-size: 11px;
+      padding: 5px 10px;
+      background: rgba(108,99,255,0.15);
+      border: 1px solid rgba(108,99,255,0.3);
+      border-radius: 7px;
+      color: #a855f7;
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .open-app:hover { background: rgba(108,99,255,0.25); }
+
+    /* ── Section ── */
+    .section { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .section-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
+    }
+
+    /* ── Contexte détecté ── */
+    .context-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .context-icon { font-size: 20px; flex-shrink: 0; }
+    .context-info { flex: 1; min-width: 0; }
+    .context-titre {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .context-type { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    .btn-context {
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    /* ── Ajout rapide ── */
+    .input-row { display: flex; gap: 7px; }
+    .task-input {
+      flex: 1;
+      padding: 9px 11px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 9px;
+      color: #fff;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .task-input:focus { border-color: rgba(108,99,255,0.5); }
+    .task-input::placeholder { color: rgba(255,255,255,0.25); }
+
+    .btn-add {
+      padding: 9px 13px;
+      background: linear-gradient(135deg, #6c63ff, #a855f7);
+      border: none;
+      border-radius: 9px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform 0.15s;
+    }
+    .btn-add:hover { transform: scale(1.03); }
+
+    .priority-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .btn-priority {
+      flex: 1;
+      padding: 5px 0;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.4);
+      transition: all 0.15s;
+    }
+    .btn-priority.active { font-weight: 700; }
+    .btn-priority[data-p="haute"].active    { background: rgba(224,92,92,0.15);   border-color: #e05c5c; color: #e05c5c; }
+    .btn-priority[data-p="moyenne"].active  { background: rgba(224,138,60,0.15);  border-color: #e08a3c; color: #e08a3c; }
+    .btn-priority[data-p="basse"].active    { background: rgba(76,175,130,0.15);  border-color: #4caf82; color: #4caf82; }
+
+    /* ── Stats ── */
+    .stats-row { display: flex; gap: 8px; }
+    .stat-card {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 9px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .stat-val  { font-size: 20px; font-weight: 800; }
+    .stat-label{ font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+    /* ── Connexion requise ── */
+    .login-card {
+      margin: 16px;
+      padding: 20px;
+      background: rgba(108,99,255,0.08);
+      border: 1px solid rgba(108,99,255,0.2);
+      border-radius: 12px;
+      text-align: center;
+    }
+    .login-card p { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 14px; line-height: 1.5; }
+    .btn-login {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #6c63ff, #a855f7);
+      border: none;
+      border-radius: 9px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 12px; left: 50%;
+      transform: translateX(-50%);
+      background: #10b981;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ── Empty ── */
+    .empty {
+      text-align: center;
+      padding: 16px 0;
+      color: rgba(255,255,255,0.2);
+      font-size: 12px;
+    }
+
+    .no-context {
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px dashed rgba(255,255,255,0.08);
+      border-radius: 9px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">G</div>
+    <div>
+      <div class="logo-text">GetShift</div>
+      <div class="logo-sub">ASSISTANT IA</div>
+    </div>
+  </div>
+  <a class="open-app" href="https://chamdaane-a11y.github.io/taskflow/" target="_blank">
+    Ouvrir l'app →
+  </a>
+</div>
+
+<!-- Contenu dynamique -->
+<div id="main-content">
+  <div class="section">
+    <div class="section-label">CHARGEMENT...</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">Tâche créée ✓</div>
+
+<script>
+const API = 'https://getshift-backend.onrender.com'
+
+let user = null
+let prioriteSelectionnee = 'moyenne'
+let stats = { total: 0, terminees: 0, enCours: 0 }
+let contextes = []
+
+async function init() {
+  // Récupérer l'utilisateur
+  const stored = await chrome.storage.local.get('getshift_user')
+  user = stored.getshift_user || null
+
+  if (!user) {
+    // Essayer de lire depuis le localStorage de l'app GetShift
+    const tabs = await chrome.tabs.query({ url: 'https://chamdaane-a11y.github.io/taskflow/*' })
+    if (tabs.length > 0) {
+      try {
+        const result = await chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          func: () => {
+            try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
+          }
+        })
+        if (result?.[0]?.result) {
+          user = result[0].result
+          await chrome.storage.local.set({ getshift_user: user })
+        }
+      } catch {}
+    }
+  }
+
+  if (!user) {
+    afficherLogin()
+    return
+  }
+
+  // Récupérer les contextes détectés
+  const ctxStored = await chrome.storage.local.get('contextes_detectes')
+  contextes = ctxStored.contextes_detectes || []
+
+  // Récupérer les stats
+  await chargerStats()
+
+  afficherApp()
+}
+
+async function chargerStats() {
+  try {
+    const res = await fetch(`${API}/taches/${user.id}`)
+    const taches = await res.json()
+    stats.total = taches.length
+    stats.terminees = taches.filter(t => t.terminee).length
+    stats.enCours = taches.filter(t => !t.terminee).length
+  } catch {}
+}
+
+function afficherLogin() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="login-card">
+      <div style="font-size:32px;margin-bottom:12px;">🔐</div>
+      <p>Connecte-toi à GetShift pour créer des tâches depuis tes onglets.</p>
+      <button class="btn-login" onclick="window.open('https://chamdaane-a11y.github.io/taskflow/','_blank')">
+        Ouvrir GetShift
+      </button>
+    </div>
+  `
+}
+
+function afficherApp() {
+  const hasContextes = contextes.length > 0
+  const contexteRecent = contextes[0]
+
+  document.getElementById('main-content').innerHTML = `
+    <!-- Stats -->
+    <div class="section">
+      <div class="section-label">TON AVANCEMENT</div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-val" style="color:#6c63ff;">${stats.total}</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:#4caf82;">${stats.terminees}</div>
+          <div class="stat-label">Terminées</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:#e08a3c;">${stats.enCours}</div>
+          <div class="stat-label">En cours</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contexte détecté -->
+    <div class="section">
+      <div class="section-label">PAGE ACTUELLE DÉTECTÉE</div>
+      ${hasContextes ? `
+        <div class="context-card">
+          <div class="context-icon">${contexteRecent.icon}</div>
+          <div class="context-info">
+            <div class="context-titre">${escapeHtml(contexteRecent.titre)}</div>
+            <div class="context-type">${contexteRecent.type} · ${new Date(contexteRecent.timestamp).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
+          </div>
+          <button class="btn-context" onclick="creerDepuisContexte()"
+            style="background:${contexteRecent.color}20;border:1px solid ${contexteRecent.color}40;color:${contexteRecent.color};">
+            + Tâche
+          </button>
+        </div>
+        ${contextes.length > 1 ? `<div style="font-size:10px;color:rgba(255,255,255,0.25);text-align:right;margin-top:4px;">${contextes.length - 1} autre(s) détecté(s)</div>` : ''}
+      ` : `
+        <div class="no-context">
+          Navigue sur Zoom, Google Meet, Notion ou Drive<br/>
+          pour que l'extension détecte le contexte.
+        </div>
+      `}
+    </div>
+
+    <!-- Ajout rapide -->
+    <div class="section">
+      <div class="section-label">AJOUT RAPIDE</div>
+      <div class="input-row">
+        <input class="task-input" id="task-input" placeholder="Que dois-tu faire ?" />
+        <button class="btn-add" onclick="ajouterTache()">+ Ajouter</button>
+      </div>
+      <div class="priority-row">
+        <button class="btn-priority ${prioriteSelectionnee === 'haute' ? 'active' : ''}" data-p="haute" onclick="selectPriorite('haute')">🔴 Haute</button>
+        <button class="btn-priority ${prioriteSelectionnee === 'moyenne' ? 'active' : ''}" data-p="moyenne" onclick="selectPriorite('moyenne')">🟠 Moyenne</button>
+        <button class="btn-priority ${prioriteSelectionnee === 'basse' ? 'active' : ''}" data-p="basse" onclick="selectPriorite('basse')">🟢 Basse</button>
+      </div>
+    </div>
+
+    <!-- Salut user -->
+    <div style="padding:12px 16px;text-align:center;border-top:1px solid rgba(255,255,255,0.05);">
+      <div style="font-size:11px;color:rgba(255,255,255,0.2);">
+        Connecté en tant que <strong style="color:rgba(255,255,255,0.4);">${escapeHtml(user.nom)}</strong>
+      </div>
+    </div>
+  `
+
+  // Enter sur l'input
+  const input = document.getElementById('task-input')
+  if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') ajouterTache() })
+}
+
+function selectPriorite(p) {
+  prioriteSelectionnee = p
+  document.querySelectorAll('.btn-priority').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.p === p)
+  })
+}
+
+async function ajouterTache() {
+  const input = document.getElementById('task-input')
+  const titre = input?.value?.trim()
+  if (!titre || !user?.id) return
+
+  input.value = ''
+  input.disabled = true
+
+  const result = await chrome.runtime.sendMessage({
+    type: 'CREER_TACHE',
+    data: { titre, priorite: prioriteSelectionnee, user_id: user.id, source_url: '', source_type: 'extension' },
+  })
+
+  input.disabled = false
+
+  if (result?.ok) {
+    stats.total++; stats.enCours++
+    afficherToast('Tâche créée ✓')
+    afficherApp()
+  } else {
+    afficherToast('Erreur — réessaie', true)
+  }
+}
+
+async function creerDepuisContexte() {
+  if (!contextes.length || !user?.id) return
+  const ctx = contextes[0]
+  const titre = `Traiter : ${ctx.titre.substring(0, 80)}`
+
+  const result = await chrome.runtime.sendMessage({
+    type: 'CREER_TACHE',
+    data: { titre, priorite: 'haute', user_id: user.id, source_url: ctx.url, source_type: ctx.type },
+  })
+
+  if (result?.ok) {
+    stats.total++; stats.enCours++
+    afficherToast('Tâche créée depuis le contexte ✓')
+    // Retirer ce contexte de la liste
+    contextes.shift()
+    await chrome.storage.local.set({ contextes_detectes: contextes })
+    afficherApp()
+  }
+}
+
+function afficherToast(msg, isError = false) {
+  const toast = document.getElementById('toast')
+  toast.textContent = msg
+  toast.style.background = isError ? '#e05c5c' : '#10b981'
+  toast.classList.add('show')
+  setTimeout(() => toast.classList.remove('show'), 2500)
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+// Lancer
+init()
+</script>
+</body>
+</html>
