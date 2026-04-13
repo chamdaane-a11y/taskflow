@@ -1700,6 +1700,75 @@ def save_slack_integration():
         return jsonify({"erreur": str(e)}), 500
 
 # ============================================
+# OAUTH INTEGRATIONS (Calendar, Drive, Zoom, Notion, Discord)
+# ============================================
+
+@app.route('/auth/google/calendar')
+def auth_google_calendar():
+    user_id = request.args.get('user_id')
+    # TODO : implémenter le vrai flow OAuth Google Calendar
+    # Pour l'instant, retourne le postMessage de succès
+    return """<script>
+        window.opener.postMessage({type:'oauth_success',integration:'google_calendar'},'*');
+        window.close();
+    </script>"""
+
+@app.route('/auth/google/drive')
+def auth_google_drive():
+    user_id = request.args.get('user_id')
+    return """<script>
+        window.opener.postMessage({type:'oauth_success',integration:'google_drive'},'*');
+        window.close();
+    </script>"""
+
+@app.route('/auth/zoom')
+def auth_zoom():
+    user_id = request.args.get('user_id')
+    return """<script>
+        window.opener.postMessage({type:'oauth_success',integration:'zoom'},'*');
+        window.close();
+    </script>"""
+
+@app.route('/auth/notion')
+def auth_notion():
+    user_id = request.args.get('user_id')
+    return """<script>
+        window.opener.postMessage({type:'oauth_success',integration:'notion'},'*');
+        window.close();
+    </script>"""
+
+@app.route('/auth/slack/oauth')
+def auth_slack_oauth():
+    user_id = request.args.get('user_id')
+    return """<script>
+        window.opener.postMessage({type:'oauth_success',integration:'slack'},'*');
+        window.close();
+    </script>"""
+
+@app.route('/auth/discord')
+def auth_discord():
+    user_id = request.args.get('user_id')
+    return """<script>
+        window.opener.postMessage({type:'oauth_success',integration:'discord'},'*');
+        window.close();
+    </script>"""
+
+@app.route('/auth/disconnect/<integration_id>', methods=['DELETE'])
+def disconnect_integration(integration_id):
+    try:
+        user_id = request.args.get('user_id')
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute(
+            "DELETE FROM integrations WHERE user_id=%s AND type=%s",
+            (user_id, integration_id)
+        )
+        db.commit(); db.close()
+        return jsonify({"message": f"{integration_id} déconnecté"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+# ============================================
 # SPRINT 3 — TEMPLATES
 # ============================================
 

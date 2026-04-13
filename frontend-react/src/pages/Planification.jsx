@@ -2,7 +2,7 @@
 // Planification.jsx — Main orchestrator (thin shell, delegates to sub-components)
 // Architecture: state → hooks → sub-components → utils
 // ══════════════════════════════════════════════════════════════════════
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
@@ -11,7 +11,9 @@ import { useMediaQuery } from '../useMediaQuery'
 import {
   LayoutDashboard, Bot, BarChart2, Calendar, LogOut, Layers, Sparkles,
   Menu, HelpCircle, Columns, BarChart, CheckSquare, Zap, Target, X,
-  TrendingUp, AlertTriangle, Brain,
+  TrendingUp, AlertTriangle, Brain, PanelLeftClose, PanelLeftOpen,
+  ChevronRight, ChevronUp, Settings, User, Star, Flame, Flag, Users,
+  Plus, Trash2, Copy, Link2, Crown, Share2, UserPlus, MoreHorizontal, MessageCircle
 } from 'lucide-react'
 
 import CalendarGrid from './CalendarGrid'
@@ -23,6 +25,24 @@ import {
 } from './calendarUtils'
 
 const API = 'https://getshift-backend.onrender.com'
+
+const NAV_ITEMS = [
+  { icon: LayoutDashboard, label: 'Tableau de bord',  path: '/dashboard'     },
+  { icon: Bot,             label: 'Assistant IA',     path: '/ia'            },
+  { icon: Sparkles,        label: 'Tomorrow Builder', path: '/tomorrow'      },
+  { icon: Flag,            label: 'Goal Reverse',     path: '/goal'          },
+  { icon: BarChart2,       label: 'Analytiques',      path: '/analytics'     },
+  { icon: Calendar,        label: 'Planification',    path: '/planification' },
+  { icon: Users,           label: 'Collaboration',    path: '/collaboration' },
+  { icon: HelpCircle,      label: 'Aide',             path: '/help'          },
+]
+
+// IconLock personnalisé (comme dans Dashboard)
+const IconLock = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>
+)
 
 // ══════════════════════════════════════════════════════════════════════
 // KANBAN CONFIG
@@ -42,6 +62,33 @@ export default function Planification() {
   const isMobile = useMediaQuery('(max-width: 768px)')
   const user = JSON.parse(localStorage.getItem('user'))
 
+  // Sidebar toggle persistant (comme Dashboard)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('planification_sidebar_open') !== 'false' }
+    catch { return true }
+  })
+
+  const toggleSidebar = () => {
+    const next = !sidebarOpen
+    setSidebarOpen(next)
+    localStorage.setItem('planification_sidebar_open', String(next))
+  }
+
+  // Profile menu state
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const profileMenuRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   // ── Core state ─────────────────────────────────────────────────────
   const [taches, setTaches] = useState([])
   const [planification, setPlanification] = useState([])
@@ -53,7 +100,6 @@ export default function Planification() {
 
   // ── UI state ───────────────────────────────────────────────────────
   const [vue, setVue] = useState('kanban')
-  const [showSidebar, setShowSidebar] = useState(false)
   const [showEstimer, setShowEstimer] = useState(null)
   const [loadingEstime, setLoadingEstime] = useState(false)
   const [semaineOffset, setSemaineOffset] = useState(0)
@@ -62,6 +108,24 @@ export default function Planification() {
   // ── Kanban drag state ──────────────────────────────────────────────
   const [kanbanDrag, setKanbanDrag] = useState(null)
   const [kanbanDragOver, setKanbanDragOver] = useState(null)
+
+  // Filtres (inutilisés dans planification mais présents pour la sidebar identique)
+  const [filtre, setFiltre] = useState('toutes')
+  const bloquees = 0
+
+  // Mock user data for profile
+  const userData = { nom: user?.nom || 'Utilisateur', email: user?.email || 'user@example.com' }
+  const points = 1250
+  const niveau = 3
+  const niveauActuel = { label: 'Productif' }
+  const pctNiveau = 42
+  const streak = 5
+
+  const SIDEBAR_W = 248
+  const sidebarLeft = isMobile
+    ? (sidebarOpen ? 0 : '-100%')
+    : (sidebarOpen ? 0 : -SIDEBAR_W)
+  const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
 
   // ── Load data ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -334,14 +398,6 @@ export default function Planification() {
     { label: 'Planifiées', value: planification.length, color: '#8b5cf6', Icon: Calendar },
   ]), [taches, planification])
 
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Bot, label: 'Assistant IA', path: '/ia' },
-    { icon: BarChart2, label: 'Analytiques', path: '/analytics' },
-    { icon: Calendar, label: 'Planification', path: '/planification' },
-    { icon: HelpCircle, label: 'Aide', path: '/help' },
-  ]
-
   // ── Loading state ──────────────────────────────────────────────────
   if (loading) return (
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -366,43 +422,72 @@ export default function Planification() {
         }
       `}</style>
 
-      {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
-      <aside style={{
-        width: 256, background: T.bg2, borderRight: `1px solid ${T.border}`,
-        display: 'flex', flexDirection: 'column', padding: '20px 14px',
-        position: 'fixed', top: 0,
-        left: isMobile ? (showSidebar ? 0 : '-100%') : 0,
-        transition: 'left 0.3s ease', zIndex: 100,
-        height: '100vh', overflowY: 'auto',
-      }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '0 6px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px ${T.accent}40` }}>
-            <Layers size={15} color="#fff" strokeWidth={2.5} />
+      {/* ══════════════════════════════════════════════════════════════
+          SIDEBAR — IDENTIQUE AU DASHBOARD
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.aside
+        animate={{ left: sidebarLeft, width: SIDEBAR_W }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ width: SIDEBAR_W, background: T.bg2, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', padding: 'clamp(16px,3vh,24px) clamp(12px,2vw,16px)', position: 'fixed', top: 0, height: '100vh', zIndex: 150, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 80 }}>
+
+        {/* Logo + bouton fermer */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(24px,4vh,32px)', padding: '0 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Layers size={16} color={T.bg} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 16, fontWeight: 700, color: T.text, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>GetShift</span>
           </div>
-          <span style={{ fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: '-0.4px' }}>GetShift</span>
+          {!isMobile && (
+            <motion.button onClick={toggleSidebar}
+              style={{ width: 28, height: 28, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              whileHover={{ color: T.accent, borderColor: T.accent }}
+              title="Réduire la sidebar">
+              <PanelLeftClose size={14} />
+            </motion.button>
+          )}
         </div>
 
-        {/* Nav */}
-        <p style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 2, marginBottom: 6, padding: '0 6px', opacity: 0.6 }}>NAVIGATION</p>
-        {navItems.map(item => {
+        {/* Navigation */}
+        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
+        {NAV_ITEMS.map(item => {
           const Icon = item.icon
           const active = item.path === '/planification'
           return (
             <motion.button key={item.path}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', borderRadius: 9, color: active ? T.accent : T.text2, background: active ? `${T.accent}12` : 'transparent', border: active ? `1px solid ${T.accent}20` : '1px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
-              onClick={() => { navigate(item.path); if (isMobile) setShowSidebar(false) }}
-              whileHover={{ x: 3 }}>
-              <Icon size={15} strokeWidth={active ? 2.5 : 1.8} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-              {active && <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: T.accent }} />}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, color: active ? T.accent : T.text2, background: active ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
+              onClick={() => { navigate(item.path); if (isMobile) setSidebarOpen(false) }}
+              whileHover={{ x: 2, color: T.accent }}>
+              <Icon size={16} strokeWidth={active ? 2.5 : 1.8} />
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
             </motion.button>
           )
         })}
 
         <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
 
-        {/* IA Planner */}
+        {/* FILTRES (exactement comme dans Dashboard) */}
+        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
+        {[
+          { val: 'toutes',   label: 'Toutes les tâches' },
+          { val: 'haute',    label: 'Priorité haute' },
+          { val: 'bloquee',  label: `Bloquées${bloquees > 0 ? ` (${bloquees})` : ''}` },
+          { val: 'terminee', label: 'Terminées' },
+        ].map(f => (
+          <motion.button key={f.val}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 10, color: filtre === f.val ? T.accent : T.text2, background: filtre === f.val ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: filtre === f.val ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
+            onClick={() => { setFiltre(f.val); if (isMobile) setSidebarOpen(false) }} whileHover={{ x: 2 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {f.val === 'bloquee' && <IconLock size={12} color={filtre === f.val ? T.accent : T.text2} />}
+              {f.label}
+            </span>
+            {filtre === f.val && <ChevronRight size={14} />}
+          </motion.button>
+        ))}
+
+        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
+
+        {/* IA Planner (contenu original de la sidebar de planification) */}
         <div style={{ background: `linear-gradient(135deg, ${T.accent}12, ${T.accent2 || '#a855f7'}08)`, border: `1px solid ${T.accent}20`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
             <Brain size={13} color={T.accent} />
@@ -461,24 +546,107 @@ export default function Planification() {
           </>
         )}
 
-        <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', borderRadius: 9, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 12 }} onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ color: '#ef4444' }}>
-            <LogOut size={13} strokeWidth={1.8} />Déconnexion
+        {/* Avatar avec menu déroulant (comme Dashboard) */}
+        <div style={{ position: 'relative', marginTop: 'auto', paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+          <motion.button onClick={() => setShowProfileMenu(p => !p)}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 12, background: showProfileMenu ? `${T.accent}15` : T.bg3, border: `1.5px solid ${showProfileMenu ? T.accent + '60' : T.border}`, cursor: 'pointer', textAlign: 'left' }}
+            whileHover={{ background: `${T.accent}12` }}>
+            <div style={{ width: 34, height: 34, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, color: T.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>
+              {userData.nom?.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userData.nom}</div>
+              <div style={{ fontSize: 11, color: T.text2, marginTop: 1 }}>Niveau {niveau} · {points} pts</div>
+            </div>
+            <ChevronUp size={14} color={T.accent} style={{ transform: showProfileMenu ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s', flexShrink: 0 }} />
           </motion.button>
-        </div>
-      </aside>
 
-      {isMobile && (
-        <motion.button style={{ position: 'fixed', top: 16, left: 16, zIndex: 200, width: 38, height: 38, borderRadius: 9, background: T.bg2, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowSidebar(s => !s)}>
-          <Menu size={18} />
-        </motion.button>
-      )}
-      {isMobile && showSidebar && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 99, backdropFilter: 'blur(4px)' }} onClick={() => setShowSidebar(false)} />
-      )}
+          <AnimatePresence>
+            {showProfileMenu && (
+              <>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowProfileMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 200 }} />
+                <motion.div ref={profileMenuRef} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.15 }}
+                  style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, right: 0, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, boxShadow: '0 -8px 40px rgba(0,0,0,0.25)', zIndex: 300, overflow: 'hidden' }}>
+                  <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <div style={{ width: 38, height: 38, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, color: T.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }}>
+                        {userData.nom?.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>{userData.nom}</div>
+                        <div style={{ fontSize: 11, color: T.text2 }}>{userData.email}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.text2, marginBottom: 5 }}>
+                      <span>Niveau {niveau} — {niveauActuel.label}</span>
+                      <span style={{ color: T.accent, fontWeight: 600 }}>{points} pts</span>
+                    </div>
+                    <div style={{ height: 3, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ width: `${pctNiveau}%`, height: '100%', background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: 99 }} />
+                    </div>
+                    {streak > 0 && <div style={{ fontSize: 10, color: '#e08a3c', fontWeight: 600, marginTop: 6 }}>🔥 {streak} jour{streak > 1 ? 's' : ''} de streak</div>}
+                  </div>
+                  <div style={{ padding: '6px' }}>
+                    {[
+                      { label: 'Mon profil', icon: User, onClick: () => { navigate('/profile'); setShowProfileMenu(false) } },
+                      { label: 'Paramètres', icon: Settings, onClick: () => { setShowSettings(true); setShowProfileMenu(false) }, shortcut: '⌘ ,' },
+                    ].map(({ label, icon: Icon, onClick, shortcut }) => (
+                      <motion.button key={label} onClick={onClick}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.text, cursor: 'pointer', fontSize: 13, textAlign: 'left' }}
+                        whileHover={{ background: `${T.accent}10` }}>
+                        <Icon size={15} color={T.text2} strokeWidth={1.8} />
+                        <span style={{ flex: 1 }}>{label}</span>
+                        {shortcut && <span style={{ fontSize: 10, color: T.text2, background: T.bg3, padding: '1px 6px', borderRadius: 5 }}>{shortcut}</span>}
+                      </motion.button>
+                    ))}
+                  </div>
+                  <div style={{ height: 1, background: T.border }} />
+                  <div style={{ padding: '6px' }}>
+                    <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.accent, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                      whileHover={{ background: `${T.accent}10` }}>
+                      <Star size={15} strokeWidth={1.8} />Passer à Pro — 4,99€/mois
+                    </motion.button>
+                  </div>
+                  <div style={{ height: 1, background: T.border }} />
+                  <div style={{ padding: '6px' }}>
+                    <motion.button onClick={() => { localStorage.removeItem('user'); navigate('/') }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: '#e05c5c', cursor: 'pointer', fontSize: 13 }}
+                      whileHover={{ background: 'rgba(224,92,92,0.08)' }}>
+                      <LogOut size={15} strokeWidth={1.8} />Se déconnecter
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.aside>
+
+      {/* Overlay mobile sidebar */}
+      <AnimatePresence>
+        {isMobile && sidebarOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 140 }}
+            onClick={() => setSidebarOpen(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Bouton toggle sidebar flottant */}
+      <motion.button
+        onClick={toggleSidebar}
+        animate={{ left: !isMobile && sidebarOpen ? SIDEBAR_W + 12 : 12 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ position: 'fixed', top: 14, zIndex: 200, width: 36, height: 36, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+        whileHover={{ color: T.accent, borderColor: T.accent }}
+        title={sidebarOpen ? 'Fermer la sidebar' : 'Ouvrir la sidebar'}>
+        {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+      </motion.button>
 
       {/* ── MAIN ──────────────────────────────────────────────────── */}
-      <main style={{ marginLeft: isMobile ? 0 : 256, flex: 1, padding: 'clamp(16px, 3vw, 32px)', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <motion.main
+        animate={{ marginLeft: mainMargin }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ flex: 1, padding: 'clamp(16px, 3vw, 32px)', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12, paddingTop: isMobile ? 52 : 0 }}>
@@ -641,7 +809,7 @@ export default function Planification() {
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
+      </motion.main>
 
       {/* ── MODAL ESTIMATION ────────────────────────────────────────── */}
       <AnimatePresence>
@@ -692,6 +860,46 @@ export default function Planification() {
               </motion.button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER PARAMÈTRES */}
+      <AnimatePresence>
+        {showSettings && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050, backdropFilter: 'blur(3px)' }} />
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 1051, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
+              <div style={{ padding: '20px 24px 0', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Settings size={18} color={T.accent} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Paramètres</h2>
+                      <p style={{ fontSize: 12, color: T.text2, margin: 0, marginTop: 2 }}>{userData.nom}</p>
+                    </div>
+                  </div>
+                  <motion.button onClick={() => setShowSettings(false)}
+                    style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}>
+                    <X size={16} />
+                  </motion.button>
+                </div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+                <p style={{ fontSize: 13, color: T.text2 }}>Paramètres généraux à venir...</p>
+              </div>
+              <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                  onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
+                  <LogOut size={16} strokeWidth={1.8} />Se déconnecter
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

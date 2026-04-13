@@ -7,10 +7,23 @@ import { useMediaQuery } from '../useMediaQuery'
 import {
   Users, Plus, Copy, Check, X, Send, MessageCircle,
   LayoutDashboard, Bot, BarChart2, Calendar, HelpCircle, Layers,
-  LogOut, Menu, Crown, Share2, Link2, UserPlus, MoreHorizontal, Clock
+  LogOut, Menu, Crown, Share2, Link2, UserPlus, MoreHorizontal, Clock,
+  PanelLeftClose, PanelLeftOpen, ChevronRight, ChevronUp, Star, Settings, User,
+  Sparkles, Flag, Target, CheckSquare, AlertTriangle
 } from 'lucide-react'
 
 const API = 'https://getshift-backend.onrender.com'
+
+const NAV_ITEMS = [
+  { icon: LayoutDashboard, label: 'Tableau de bord',  path: '/dashboard'     },
+  { icon: Bot,             label: 'Assistant IA',     path: '/ia'            },
+  { icon: Sparkles,        label: 'Tomorrow Builder', path: '/tomorrow'      },
+  { icon: Flag,            label: 'Goal Reverse',     path: '/goal'          },
+  { icon: BarChart2,       label: 'Analytiques',      path: '/analytics'     },
+  { icon: Calendar,        label: 'Planification',    path: '/planification' },
+  { icon: Users,           label: 'Collaboration',    path: '/collaboration' },
+  { icon: HelpCircle,      label: 'Aide',             path: '/help'          },
+]
 
 const COLONNES = [
   { id: 'todo',     label: 'À faire',   couleur: '#6c63ff', bg: '#6c63ff12' },
@@ -81,7 +94,6 @@ function ModalePartage({ T, equipe, onFermer }) {
           </motion.button>
         </div>
 
-        {/* Onglets */}
         <div style={{ display: 'flex', gap: 4, padding: '16px 24px 0' }}>
           {[{ id: 'lien', label: 'Lien' }, { id: 'qr', label: 'QR Code' }, { id: 'reseaux', label: 'Réseaux' }].map(o => (
             <motion.button key={o.id}
@@ -341,7 +353,24 @@ export default function Collaboration() {
   const { T } = useTheme()
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
-  const [showSidebar, setShowSidebar] = useState(false)
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+
+  // Sidebar toggle persistant (comme Dashboard)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('collab_sidebar_open') !== 'false' }
+    catch { return true }
+  })
+
+  const toggleSidebar = () => {
+    const next = !sidebarOpen
+    setSidebarOpen(next)
+    localStorage.setItem('collab_sidebar_open', String(next))
+    if (isMobile) setShowMobileSidebar(next)
+  }
+
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(showMobileSidebar)
+  }, [showMobileSidebar, isMobile])
 
   const [equipes, setEquipes] = useState([])
   const [equipeActive, setEquipeActive] = useState(null)
@@ -361,20 +390,29 @@ export default function Collaboration() {
   const [erreur, setErreur] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/dashboard' },
-    { icon: Bot, label: 'Assistant IA', path: '/ia' },
-    { icon: BarChart2, label: 'Analytiques', path: '/analytics' },
-    { icon: Calendar, label: 'Planification', path: '/planification' },
-    { icon: Users, label: 'Collaboration', path: '/collaboration' },
-    { icon: HelpCircle, label: 'Aide', path: '/help' },
-  ]
+  // Profile menu state
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const profileMenuRef = useRef(null)
+
+  // Filtres (inutilisés dans collaboration mais présents pour la sidebar identique)
+  const [filtre, setFiltre] = useState('toutes')
+  const bloquees = 0
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
     chargerEquipes()
     
-    // Récupère le code depuis l'URL (QR code ou lien partagé)
     const params = new URLSearchParams(window.location.hash.split('?')[1] || '')
     const codeUrl = params.get('code')
     if (codeUrl) {
@@ -424,8 +462,28 @@ export default function Collaboration() {
 
   const tachesCol = (statut) => taches.filter(t => t.statut === statut)
 
+  const SIDEBAR_W = 248
+  const sidebarLeft = isMobile
+    ? (sidebarOpen ? 0 : '-100%')
+    : (sidebarOpen ? 0 : -SIDEBAR_W)
+  const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
+
+  // Mock user data for profile
+  const userData = { nom: user?.nom || 'Utilisateur', email: user?.email || 'user@example.com' }
+  const points = 1250
+  const niveau = 3
+  const niveauActuel = { label: 'Productif' }
+  const pctNiveau = 42
+  const streak = 5
+
+  const IconLock = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>
+)
+
   return (
-    <div style={{ display: 'flex', height: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif", overflow: 'hidden' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif", overflow: 'hidden' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
         * { box-sizing: border-box; }
@@ -434,38 +492,80 @@ export default function Collaboration() {
         select option { background: ${T.bg2}; }
       `}</style>
 
-      {/* SIDEBAR */}
-      <aside style={{ width: 'min(260px,85%)', background: T.bg2, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', padding: '20px 14px', position: 'fixed', top: 0, left: isMobile ? (showSidebar ? 0 : '-100%') : 0, height: '100vh', transition: 'left 0.3s ease', zIndex: 100, overflowY: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '0 6px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2||'#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Layers size={16} color={T.bg} strokeWidth={2.5} />
+      {/* ══════════════════════════════════════════════════════════════
+          SIDEBAR — IDENTIQUE AU DASHBOARD (avec filtres)
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.aside
+        animate={{ left: sidebarLeft, width: SIDEBAR_W }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ width: SIDEBAR_W, background: T.bg2, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', padding: 'clamp(16px,3vh,24px) clamp(12px,2vw,16px)', position: 'fixed', top: 0, height: '100vh', zIndex: 150, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 80 }}>
+
+        {/* Logo + bouton fermer */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(24px,4vh,32px)', padding: '0 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Layers size={16} color={T.bg} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 16, fontWeight: 700, color: T.text, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>GetShift</span>
           </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif" }}>GetShift</span>
+          {!isMobile && (
+            <motion.button onClick={toggleSidebar}
+              style={{ width: 28, height: 28, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              whileHover={{ color: T.accent, borderColor: T.accent }}
+              title="Réduire la sidebar">
+              <PanelLeftClose size={14} />
+            </motion.button>
+          )}
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 6px' }}>NAVIGATION</p>
-        {navItems.map(item => {
-          const Icon = item.icon; const active = item.path === '/collaboration'
+        {/* Navigation */}
+        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
+        {NAV_ITEMS.map(item => {
+          const Icon = item.icon
+          const active = window.location.pathname === item.path || (item.path === '/collaboration' && window.location.pathname.includes('collaboration'))
           return (
             <motion.button key={item.path}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', borderRadius: 9, color: active ? T.accent : T.text2, background: active ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
-              onClick={() => { navigate(item.path); if (isMobile) setShowSidebar(false) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, color: active ? T.accent : T.text2, background: active ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
+              onClick={() => { navigate(item.path); if (isMobile) setSidebarOpen(false) }}
               whileHover={{ x: 2, color: T.accent }}>
-              <Icon size={15} strokeWidth={active ? 2.5 : 1.8} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+              <Icon size={16} strokeWidth={active ? 2.5 : 1.8} />
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
             </motion.button>
           )
         })}
 
+        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
+
+        {/* FILTRES (exactement comme dans Dashboard) */}
+        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
+        {[
+          { val: 'toutes',   label: 'Toutes les tâches' },
+          { val: 'haute',    label: 'Priorité haute' },
+          { val: 'bloquee',  label: `Bloquées${bloquees > 0 ? ` (${bloquees})` : ''}` },
+          { val: 'terminee', label: 'Terminées' },
+        ].map(f => (
+          <motion.button key={f.val}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 10, color: filtre === f.val ? T.accent : T.text2, background: filtre === f.val ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: filtre === f.val ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
+            onClick={() => { setFiltre(f.val); if (isMobile) setSidebarOpen(false) }} whileHover={{ x: 2 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {f.val === 'bloquee' && <IconLock size={12} color={filtre === f.val ? T.accent : T.text2} />}
+              {f.label}
+            </span>
+            {filtre === f.val && <ChevronRight size={14} />}
+          </motion.button>
+        ))}
+
+        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
+
+        {/* Mes équipes */}
         {equipes.length > 0 && (
           <>
-            <div style={{ height: 1, background: T.border, margin: '14px 0 10px' }} />
-            <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 6px' }}>MES ÉQUIPES</p>
+            <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>MES ÉQUIPES</p>
             {equipes.map(eq => (
               <motion.button key={eq.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 9, background: equipeActive?.id === eq.id ? `${T.accent}12` : 'transparent', border: `1px solid ${equipeActive?.id === eq.id ? T.accent+'30' : 'transparent'}`, cursor: 'pointer', textAlign: 'left', marginBottom: 2 }}
-                onClick={() => { setEquipeActive(eq); if (isMobile) setShowSidebar(false) }} whileHover={{ x: 2 }}>
-                <div style={{ width: 26, height: 26, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2||'#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 9, background: equipeActive?.id === eq.id ? `${T.accent}12` : 'transparent', border: `1px solid ${equipeActive?.id === eq.id ? T.accent + '30' : 'transparent'}`, cursor: 'pointer', textAlign: 'left', marginBottom: 2 }}
+                onClick={() => { setEquipeActive(eq); if (isMobile) setSidebarOpen(false) }} whileHover={{ x: 2 }}>
+                <div style={{ width: 26, height: 26, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white', flexShrink: 0 }}>
                   {eq.nom.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -478,35 +578,122 @@ export default function Collaboration() {
           </>
         )}
 
-        <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: `1px solid ${T.border}` }}>
-          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', borderRadius: 9, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 12 }}
-            onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ color: '#e05c5c' }}>
-            <LogOut size={14} strokeWidth={1.8} /> Déconnexion
+        {/* Avatar avec menu déroulant (comme Dashboard) */}
+        <div style={{ position: 'relative', marginTop: 'auto', paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+          <motion.button onClick={() => setShowProfileMenu(p => !p)}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 12, background: showProfileMenu ? `${T.accent}15` : T.bg3, border: `1.5px solid ${showProfileMenu ? T.accent + '60' : T.border}`, cursor: 'pointer', textAlign: 'left' }}
+            whileHover={{ background: `${T.accent}12` }}>
+            <div style={{ width: 34, height: 34, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, color: T.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>
+              {userData.nom?.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userData.nom}</div>
+              <div style={{ fontSize: 11, color: T.text2, marginTop: 1 }}>Niveau {niveau} · {points} pts</div>
+            </div>
+            <ChevronUp size={14} color={T.accent} style={{ transform: showProfileMenu ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s', flexShrink: 0 }} />
           </motion.button>
-        </div>
-      </aside>
 
-      {isMobile && <motion.button style={{ position: 'fixed', top: 14, left: 14, zIndex: 200, width: 38, height: 38, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowSidebar(!showSidebar)}><Menu size={18} /></motion.button>}
-      {isMobile && showSidebar && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }} onClick={() => setShowSidebar(false)} />}
+          <AnimatePresence>
+            {showProfileMenu && (
+              <>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowProfileMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 200 }} />
+                <motion.div ref={profileMenuRef} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.15 }}
+                  style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, right: 0, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, boxShadow: '0 -8px 40px rgba(0,0,0,0.25)', zIndex: 300, overflow: 'hidden' }}>
+                  <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <div style={{ width: 38, height: 38, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, color: T.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }}>
+                        {userData.nom?.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>{userData.nom}</div>
+                        <div style={{ fontSize: 11, color: T.text2 }}>{userData.email}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.text2, marginBottom: 5 }}>
+                      <span>Niveau {niveau} — {niveauActuel.label}</span>
+                      <span style={{ color: T.accent, fontWeight: 600 }}>{points} pts</span>
+                    </div>
+                    <div style={{ height: 3, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ width: `${pctNiveau}%`, height: '100%', background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: 99 }} />
+                    </div>
+                    {streak > 0 && <div style={{ fontSize: 10, color: '#e08a3c', fontWeight: 600, marginTop: 6 }}>🔥 {streak} jour{streak > 1 ? 's' : ''} de streak</div>}
+                  </div>
+                  <div style={{ padding: '6px' }}>
+                    {[
+                      { label: 'Mon profil', icon: User, onClick: () => { navigate('/profile'); setShowProfileMenu(false) } },
+                      { label: 'Paramètres', icon: Settings, onClick: () => { setShowSettings(true); setShowProfileMenu(false) }, shortcut: '⌘ ,' },
+                    ].map(({ label, icon: Icon, onClick, shortcut }) => (
+                      <motion.button key={label} onClick={onClick}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.text, cursor: 'pointer', fontSize: 13, textAlign: 'left' }}
+                        whileHover={{ background: `${T.accent}10` }}>
+                        <Icon size={15} color={T.text2} strokeWidth={1.8} />
+                        <span style={{ flex: 1 }}>{label}</span>
+                        {shortcut && <span style={{ fontSize: 10, color: T.text2, background: T.bg3, padding: '1px 6px', borderRadius: 5 }}>{shortcut}</span>}
+                      </motion.button>
+                    ))}
+                  </div>
+                  <div style={{ height: 1, background: T.border }} />
+                  <div style={{ padding: '6px' }}>
+                    <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.accent, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                      whileHover={{ background: `${T.accent}10` }}>
+                      <Star size={15} strokeWidth={1.8} />Passer à Pro — 4,99€/mois
+                    </motion.button>
+                  </div>
+                  <div style={{ height: 1, background: T.border }} />
+                  <div style={{ padding: '6px' }}>
+                    <motion.button onClick={() => { localStorage.removeItem('user'); navigate('/') }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: '#e05c5c', cursor: 'pointer', fontSize: 13 }}
+                      whileHover={{ background: 'rgba(224,92,92,0.08)' }}>
+                      <LogOut size={15} strokeWidth={1.8} />Se déconnecter
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.aside>
+
+      {/* Overlay mobile sidebar */}
+      <AnimatePresence>
+        {isMobile && sidebarOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 140 }}
+            onClick={() => { setSidebarOpen(false); setShowMobileSidebar(false) }} />
+        )}
+      </AnimatePresence>
+
+      {/* Bouton toggle sidebar flottant */}
+      <motion.button
+        onClick={toggleSidebar}
+        animate={{ left: !isMobile && sidebarOpen ? SIDEBAR_W + 12 : 12 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ position: 'fixed', top: 14, zIndex: 200, width: 36, height: 36, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+        whileHover={{ color: T.accent, borderColor: T.accent }}
+        title={sidebarOpen ? 'Fermer la sidebar' : 'Ouvrir la sidebar'}>
+        {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+      </motion.button>
 
       {/* MAIN */}
-      <div style={{ marginLeft: isMobile ? 0 : 260, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <motion.main
+        animate={{ marginLeft: mainMargin }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
         {/* HEADER */}
         <div style={{ padding: '13px clamp(14px,3vw,24px)', borderBottom: `1px solid ${T.border}`, background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
           {equipeActive ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2||'#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0 }}>
                 {equipeActive.nom.charAt(0).toUpperCase()}
               </div>
               <div style={{ minWidth: 0 }}>
                 <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{equipeActive.nom}</h1>
                 <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{membres.length} membre{membres.length !== 1 ? 's' : ''} · {taches.length} tâche{taches.length !== 1 ? 's' : ''}</p>
               </div>
-              {/* Avatars */}
               <div style={{ display: 'flex', marginLeft: 2 }}>
                 {membres.slice(0, 5).map((m, i) => (
-                  <div key={m.id} title={m.nom} style={{ width: 26, height: 26, borderRadius: '50%', background: `linear-gradient(135deg, ${T.accent}bb, ${T.accent2||'#4caf82'}bb)`, border: `2px solid ${T.bg2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
+                  <div key={m.id} title={m.nom} style={{ width: 26, height: 26, borderRadius: '50%', background: `linear-gradient(135deg, ${T.accent}bb, ${T.accent2 || '#4caf82'}bb)`, border: `2px solid ${T.bg2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
                     {m.nom.charAt(0).toUpperCase()}
                   </div>
                 ))}
@@ -611,7 +798,7 @@ export default function Collaboration() {
             </div>
           </div>
         )}
-      </div>
+      </motion.main>
 
       {/* MODALES */}
       <AnimatePresence>
@@ -671,6 +858,46 @@ export default function Collaboration() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER PARAMÈTRES */}
+      <AnimatePresence>
+        {showSettings && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050, backdropFilter: 'blur(3px)' }} />
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 1051, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
+              <div style={{ padding: '20px 24px 0', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Settings size={18} color={T.accent} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Paramètres</h2>
+                      <p style={{ fontSize: 12, color: T.text2, margin: 0, marginTop: 2 }}>{userData.nom}</p>
+                    </div>
+                  </div>
+                  <motion.button onClick={() => setShowSettings(false)}
+                    style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}>
+                    <X size={16} />
+                  </motion.button>
+                </div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+                <p style={{ fontSize: 13, color: T.text2 }}>Paramètres généraux à venir...</p>
+              </div>
+              <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                  onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
+                  <LogOut size={16} strokeWidth={1.8} />Se déconnecter
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
