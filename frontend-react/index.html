@@ -1,53 +1,85 @@
 <!doctype html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- ===== PWA MANIFEST ===== -->
-    <link rel="manifest" href="/taskflow/manifest.json" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- ===== THEME & COULEURS ===== -->
-    <meta name="theme-color" content="#6c63ff" />
-    <meta name="background-color" content="#0f1117" />
+  <!-- ===== PWA MANIFEST ===== -->
+  <link rel="manifest" href="/taskflow/manifest.json" />
 
-    <!-- ===== iOS PWA ===== -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="GetShift" />
-    <link rel="apple-touch-icon" href="/taskflow/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/taskflow/icons/icon-152.png" />
-    <link rel="apple-touch-icon" sizes="144x144" href="/taskflow/icons/icon-144.png" />
-    <link rel="apple-touch-icon" sizes="128x128" href="/taskflow/icons/icon-128.png" />
+  <!-- ===== THEME & COULEURS ===== -->
+  <meta name="theme-color" content="#6c63ff" />
+  <meta name="background-color" content="#0f1117" />
 
-    <!-- ===== WINDOWS / MICROSOFT ===== -->
-    <meta name="msapplication-TileImage" content="/taskflow/icons/icon-144.png" />
-    <meta name="msapplication-TileColor" content="#6c63ff" />
-    <meta name="msapplication-tap-highlight" content="no" />
+  <!-- ===== iOS PWA ===== -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GetShift" />
+  <link rel="apple-touch-icon" href="/taskflow/taskflow/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/taskflow/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/taskflow/icons/icon-144.png" />
+  <link rel="apple-touch-icon" sizes="128x128" href="/taskflow/icons/icon-128.png" />
 
-    <!-- ===== SEO & META ===== -->
-    <meta name="description" content="GetShift - Gérez vos tâches avec l'IA, gamification et collaboration en temps réel" />
-    <meta name="keywords" content="tâches, productivité, IA, gestion de projet, GetShift" />
-    <meta name="author" content="GetShift" />
-    <meta name="robots" content="index, follow" />
+  <!-- ===== WINDOWS / MICROSOFT ===== -->
+  <meta name="msapplication-TileImage" content="/taskflow/icons/icon-144.png" />
+  <meta name="msapplication-TileColor" content="#6c63ff" />
+  <meta name="msapplication-tap-highlight" content="no" />
 
-    <!-- ===== OPEN GRAPH ===== -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="GetShift - Gestionnaire de tâches intelligent" />
-    <meta property="og:description" content="Gérez vos tâches avec l'IA, gamification et collaboration" />
-    <meta property="og:image" content="/taskflow/icons/icon-512.png" />
-    <meta property="og:url" content="https://chamdaane-a11y.github.io/taskflow/" />
+  <!-- ===== SEO & META ===== -->
+  <meta name="description"
+    content="GetShift - Gérez vos tâches avec l'IA, gamification et collaboration en temps réel" />
+  <meta name="keywords" content="tâches, productivité, IA, gestion de projet, GetShift" />
+  <meta name="author" content="GetShift" />
+  <meta name="robots" content="index, follow" />
 
-    <!-- ===== ICÔNES ===== -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/taskflow/icons/icon-96.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/taskflow/icons/icon-72.png" />
+  <!-- ===== OPEN GRAPH ===== -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="GetShift - Gestionnaire de tâches intelligent" />
+  <meta property="og:description" content="Gérez vos tâches avec l'IA, gamification et collaboration" />
+  <meta property="og:image" content="/taskflow/icons/icon-512.png" />
+  <meta property="og:url" content="https://chamdaane-a11y.github.io/taskflow/" />
 
-    <title>GetShift</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+  <!-- ===== ICÔNES ===== -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/taskflow/icons/icon-96.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/taskflow/icons/icon-72.png" />
+
+  <title>GetShift</title>
+  <!-- ═══════════════════════════════════════════════════════════
+       GitHub Pages SPA fix — coller dans <head> de index.html
+       juste avant </head>
+  ═══════════════════════════════════════════════════════════ -->
+  <script>
+    (function () {
+      var redirect = sessionStorage.redirect;
+      delete sessionStorage.redirect;
+      if (redirect && redirect !== location.href) {
+        history.replaceState(null, null, redirect);
+      }
+      // Restaure le path depuis ?p=
+      var search = window.location.search;
+      if (search) {
+        var params = search.slice(1).split('&').reduce(function (o, s) {
+          var pair = s.split('=');
+          o[decodeURIComponent(pair[0])] = decodeURIComponent(pair.slice(1).join('='));
+          return o;
+        }, {});
+        if (params.p) {
+          window.history.replaceState(
+            null, null,
+            '/' + params.p + (params.q ? '?' + params.q : '') + window.location.hash
+          );
+        }
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

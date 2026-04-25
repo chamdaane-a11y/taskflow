@@ -421,16 +421,79 @@ export function useDashboard() {
   }, [])
 
   // ── Coach ──────────────────────────────────────────────────────────
-  const envoyerMessageCoach = useCallback(async () => {
-    if (!coachInput.trim() || coachLoading) return
-    const msg = coachInput.trim(); setCoachInput('')
-    setCoachMessages(p => [...p, { role: 'user', contenu: msg }]); setCoachLoading(true)
+  const envoyerMessageCoach = useCallback(async (texte) => {
+    if (!texte?.trim() || coachLoading) return
+
+    const messageUser = { role: 'user', content: texte.trim() }
+    setCoachMessages(prev => [...prev, messageUser])
+    setCoachInput('')
+    setCoachLoading(true)
+
+    const contexte = {
+      total: taches.length,
+      terminees: taches.filter(t => t.terminee).length,
+      haute: taches.filter(t => t.priorite === 'haute' && !t.terminee).length,
+      bloquees: taches.filter(t => t.bloquee && !t.terminee).length,
+      streak,
+      points,
+      niveau,
+      coachStyle,
+      tachesUrgentes: taches
+        .filter(t => t.priorite === 'haute' && !t.terminee)
+        .slice(0, 3)
+        .map(t => t.titre),
+    }
+
+    const stylePrompt = {
+      bienveillant: 'Tu es Alex, un coach bienveillant et encourageant. Réponds avec empathie, en valorisant les efforts. Sois chaleureux et positif.',
+      motivateur: 'Tu es Max, un coach énergique et challengeant. Réponds avec dynamisme, pousse à l\'action, sois direct et motivant.',
+      analytique: 'Tu es Nova, un coach analytique et précis. Réponds avec des données factuelles, des recommandations concrètes et mesurables.',
+    }
+
+    const systemPrompt = `${stylePrompt[coachStyle] || stylePrompt.bienveillant}
+
+Contexte GetShift de l'utilisateur :
+- ${contexte.total} tâches au total, ${contexte.terminees} terminées
+- ${contexte.haute} tâches haute priorité en cours
+- ${contexte.bloquees} tâches bloquées
+- Streak actuel : ${contexte.streak} jours
+- Points : ${contexte.points} | Niveau ${contexte.niveau}
+${contexte.tachesUrgentes.length > 0 ? `- Tâches urgentes : ${contexte.tachesUrgentes.join(', ')}` : ''}
+
+Réponds en français, de manière concise (2-4 phrases max). Ne répète pas le contexte, donne directement un conseil actionnable ou réponds à la question.`
+
     try {
-      const res = await axios.post(`${API}/ia/coach/chat`, { user_id: user.id, message: msg, style: coachStyle, historique: coachMessages.slice(-6) })
-      setCoachMessages(p => [...p, { role: 'assistant', contenu: res.data.reponse }])
-    } catch { setCoachMessages(p => [...p, { role: 'assistant', contenu: "Désolé, une erreur est survenue !" }]) }
+      const historique = coachMessages.slice(-6).map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.content,
+      }))
+
+      const response = await fetch(`${API}/coach/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          messages: [
+            ...historique,
+            { role: 'user', content: texte.trim() }
+          ],
+          system: systemPrompt,
+          user_id: user?.id,
+        }),
+      })
+
+      const data = await response.json()
+      const reponse = data.message || data.response || 'Je suis là pour t\'aider !'
+      setCoachMessages(prev => [...prev, { role: 'coach', content: reponse }])
+    } catch {
+      setCoachMessages(prev => [...prev, {
+        role: 'coach',
+        content: 'Je rencontre une difficulté de connexion. Réessaie dans un instant.',
+      }])
+    }
+
     setCoachLoading(false)
-  }, [coachInput, coachLoading, user?.id, coachStyle, coachMessages])
+  }, [coachLoading, coachMessages, coachStyle, taches, streak, points, niveau, user])
 
   const chargerRapportCoach = useCallback(async () => {
     setCoachRapportLoading(true)
@@ -446,9 +509,9 @@ export function useDashboard() {
   const ouvrirCoach = useCallback(async () => {
     setShowCoach(true)
     if (coachMessages.length === 0) {
-      try { const res = await axios.get(`${API}/ia/coach/historique/${user.id}?style=${coachStyle}`); setCoachMessages(res.data.messages || []) } catch {}
+      await envoyerMessageCoach('Analyse mon tableau de bord et donne-moi un conseil personnalisé.')
     }
-  }, [user?.id, coachStyle, coachMessages.length])
+  }, [coachMessages.length, envoyerMessageCoach])
 
   // ── Templates ──────────────────────────────────────────────────────
   const ouvrirTemplates = useCallback(() => {

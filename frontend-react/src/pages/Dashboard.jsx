@@ -9,9 +9,9 @@ import fr from 'date-fns/locale/fr'
 import {
   LayoutDashboard, CheckSquare, Clock, AlertTriangle,
   ChevronRight, Trash2, Plus, LogOut, Bot, BarChart2,
-  Calendar, Layers, Bell, Award, Palette, Sparkles, Target, Users, Menu, Settings, HelpCircle,
-  ChevronDown, ChevronUp, ExternalLink, User, Download, BookOpen, X, Search,
-  Flame, Brain, Trophy, Star, Heart, BarChart,
+  Calendar, Layers, Bell, Award, Palette, Sparkles, Target, Users, Settings, HelpCircle,
+  ChevronDown, ChevronUp, ExternalLink, User, Download, BookOpen, X,
+  Flame, Star, Heart, BarChart,
   CheckCircle2, Flag, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Link2,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
@@ -21,7 +21,8 @@ import { useDashboard } from './useDashboard'
 import React from 'react'
 import axios from 'axios'
 import OutilsIntegrations from './OutilsIntegrations'
-
+import TemplateIconBox from './CustomIcons'
+import CommandBar from './CommandBar'
 
 registerLocale('fr', fr)
 
@@ -967,59 +968,196 @@ export default function Dashboard() {
                   <CarteTacheMobile key={tache.id} tache={tache} d={d} T={T} pColor={pColor} pBg={pBg} />
                 )
               }
-              // Desktop — carte originale complète
+              // ══════════════════════════════════════════════════════════════
+              // CARTE TÂCHE DESKTOP RÉNOVÉE
+              // Remplace le bloc "Desktop — carte originale complète" dans le .map()
+              // C'est le bloc qui commence par :
+              //   // Desktop — carte originale complète
+              //   const pts = tache.priorite === ...
+              // et se termine avant le }) du .map()
+              // ══════════════════════════════════════════════════════════════
+
               const pts = tache.priorite === 'haute' ? 30 : tache.priorite === 'moyenne' ? 20 : 10
               const isExpanded = d.expandedTaches[tache.id]
               const currentMode = d.expandMode[tache.id]
               const isBloquee = tache.bloquee && !tache.terminee
+
               return (
                 <motion.div key={tache.id}
-                  style={{ background: T.bg2, border: `1px solid ${isBloquee ? 'rgba(224,92,92,0.3)' : T.border}`, borderRadius: 12, padding: 14, marginBottom: 8, opacity: tache.terminee ? 0.5 : 1, position: 'relative' }}
-                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: tache.terminee ? 0.5 : 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }} transition={{ delay: i * 0.04 }}
-                  whileHover={{ borderColor: isBloquee ? 'rgba(224,92,92,0.5)' : T.accent + '40' }}>
-                  {isBloquee && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,#e05c5c,#e08a3c)', borderRadius: '12px 0 0 12px' }} />}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', paddingLeft: isBloquee ? 8 : 0 }}>
+                  layout
+                  style={{
+                    background: T.bg2,
+                    border: `1px solid ${isBloquee ? 'rgba(224,92,92,0.25)' : tache.terminee ? T.border : T.border}`,
+                    borderRadius: 14,
+                    marginBottom: 8,
+                    overflow: 'hidden',
+                    opacity: tache.terminee ? 0.55 : 1,
+                    position: 'relative',
+                  }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: tache.terminee ? 0.55 : 1, y: 0 }}
+                  exit={{ opacity: 0, x: 30, scale: 0.97 }}
+                  transition={{ delay: i * 0.03 }}
+                  whileHover={{ borderColor: isBloquee ? 'rgba(224,92,92,0.45)' : `${T.accent}50` }}>
+
+                  {/* Bande couleur priorité gauche */}
+                  <div style={{
+                    position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+                    background: tache.terminee ? T.border : pColor(tache.priorite),
+                    borderRadius: '14px 0 0 14px',
+                    opacity: tache.terminee ? 0.3 : 1,
+                  }} />
+
+                  {/* Ligne principale */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px 13px 20px' }}>
+
+                    {/* Checkbox */}
                     {isBloquee ? (
-                      <motion.div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid rgba(224,92,92,0.4)', background: 'rgba(224,92,92,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'not-allowed' }}
-                        animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 2, repeat: Infinity }}>
+                      <motion.div
+                        animate={{ scale: [1, 1.06, 1] }}
+                        transition={{ duration: 2.5, repeat: Infinity }}
+                        style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid rgba(224,92,92,0.4)', background: 'rgba(224,92,92,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'not-allowed' }}>
                         <IconLock size={10} color="#e05c5c" />
                       </motion.div>
                     ) : (
-                      <motion.button style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${tache.terminee ? '#4caf82' : T.border}`, background: tache.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
-                        {tache.terminee && <CheckSquare size={10} color="white" strokeWidth={3} />}
+                      <motion.button
+                        onClick={() => d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)}
+                        style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${tache.terminee ? '#4caf82' : T.border}`, background: tache.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        whileHover={{ scale: 1.15, borderColor: '#4caf82' }}
+                        whileTap={{ scale: 0.9 }}>
+                        {tache.terminee && (
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                            <CheckSquare size={11} color="white" strokeWidth={3} />
+                          </motion.div>
+                        )}
                       </motion.button>
                     )}
-                    <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: tache.terminee ? T.text2 : isBloquee ? T.text2 : T.text, textDecoration: tache.terminee ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{tache.titre}</span>
-                      <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-                        {tache.deadline && <span style={{ fontSize: 11, color: T.text2 }}>{new Date(tache.deadline).toLocaleDateString('fr-FR')}</span>}
-                        {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: T.accent }}>+{pts} pts</span>}
+
+                    {/* Titre + meta */}
+                    <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                      <span style={{
+                        fontSize: 13.5, fontWeight: tache.terminee ? 400 : 500,
+                        color: tache.terminee ? T.text2 : isBloquee ? T.text2 : T.text,
+                        textDecoration: tache.terminee ? 'line-through' : 'none',
+                        overflow: 'hidden', textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap', display: 'block',
+                        letterSpacing: '-0.01em',
+                      }}>
+                        {tache.titre}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                        {tache.deadline && (
+                          <span style={{ fontSize: 11, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <Calendar size={10} strokeWidth={1.8} />
+                            {new Date(tache.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                            {' · '}
+                            {new Date(tache.deadline).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                        {!tache.terminee && !isBloquee && (
+                          <span style={{ fontSize: 11, color: T.accent, fontWeight: 600 }}>+{pts} pts</span>
+                        )}
+                        {isBloquee && (
+                          <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: 'rgba(224,92,92,0.1)', color: '#e05c5c', fontWeight: 600 }}>
+                            Bloquée
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: pBg(tache.priorite), color: pColor(tache.priorite), flexShrink: 0 }}>{tache.priorite}</span>
-                    <motion.button style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', background: isExpanded && currentMode === 'dependances' ? `${T.accent}15` : 'transparent', border: `1px solid ${isExpanded && currentMode === 'dependances' ? T.accent : T.border}`, borderRadius: 8, color: isExpanded && currentMode === 'dependances' ? T.accent : T.text2, fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
-                      onClick={() => d.toggleExpand(tache.id, 'dependances')} whileHover={{ borderColor: T.accent }}>
-                      <IconLink size={12} color="currentColor" />Prérequis
-                    </motion.button>
-                    <motion.button style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', background: isExpanded && currentMode === 'sousTaches' ? `${T.accent}15` : 'transparent', border: `1px solid ${isExpanded && currentMode === 'sousTaches' ? T.accent : T.border}`, borderRadius: 8, color: isExpanded && currentMode === 'sousTaches' ? T.accent : T.text2, fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
-                      onClick={() => d.toggleExpand(tache.id, 'sousTaches')} whileHover={{ borderColor: T.accent }}>
-                      {isExpanded && currentMode === 'sousTaches' ? <ChevronUp size={12} /> : <ChevronDown size={12} />}Sous-tâches
-                    </motion.button>
-                    <motion.button style={{ padding: '4px 10px', background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, borderRadius: 8, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
-                      onClick={() => !isBloquee && d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)}
-                      whileHover={!isBloquee ? { borderColor: '#4caf82', color: '#4caf82' } : {}}>
-                      {tache.terminee ? 'Rouvrir' : isBloquee ? 'Bloquée' : 'Terminer'}
-                    </motion.button>
-                    <motion.button style={{ padding: '4px 8px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, cursor: 'pointer', color: T.text2, display: 'flex', flexShrink: 0 }}
-                      onClick={() => d.supprimerTache(tache.id)} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
-                      <Trash2 size={14} strokeWidth={1.8} />
-                    </motion.button>
+
+                    {/* Badge priorité */}
+                    <span style={{
+                      padding: '3px 10px', borderRadius: 99,
+                      fontSize: 10, fontWeight: 700, flexShrink: 0,
+                      background: pBg(tache.priorite),
+                      color: pColor(tache.priorite),
+                      letterSpacing: '0.03em',
+                      textTransform: 'uppercase',
+                    }}>
+                      {tache.priorite}
+                    </span>
+
+                    {/* Actions groupées */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+
+                      {/* Prérequis */}
+                      <motion.button
+                        onClick={() => d.toggleExpand(tache.id, 'dependances')}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '5px 10px', borderRadius: 8, fontSize: 11,
+                          background: isExpanded && currentMode === 'dependances' ? `${T.accent}15` : 'transparent',
+                          border: `1px solid ${isExpanded && currentMode === 'dependances' ? T.accent : T.border}`,
+                          color: isExpanded && currentMode === 'dependances' ? T.accent : T.text2,
+                          cursor: 'pointer',
+                        }}
+                        whileHover={{ borderColor: T.accent, color: T.accent }}>
+                        <IconLink size={12} color="currentColor" />
+                        Prérequis
+                      </motion.button>
+
+                      {/* Sous-tâches */}
+                      <motion.button
+                        onClick={() => d.toggleExpand(tache.id, 'sousTaches')}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '5px 10px', borderRadius: 8, fontSize: 11,
+                          background: isExpanded && currentMode === 'sousTaches' ? `${T.accent}15` : 'transparent',
+                          border: `1px solid ${isExpanded && currentMode === 'sousTaches' ? T.accent : T.border}`,
+                          color: isExpanded && currentMode === 'sousTaches' ? T.accent : T.text2,
+                          cursor: 'pointer',
+                        }}
+                        whileHover={{ borderColor: T.accent, color: T.accent }}>
+                        {isExpanded && currentMode === 'sousTaches'
+                          ? <ChevronUp size={11} strokeWidth={2} />
+                          : <ChevronDown size={11} strokeWidth={2} />
+                        }
+                        Sous-tâches
+                      </motion.button>
+
+                      {/* Export Calendar */}
+                      {tache.deadline && !tache.terminee && (
+                        <motion.button
+                          onClick={() => d.exporterGoogleCalendar(tache)}
+                          style={{ padding: '5px 8px', borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          whileHover={{ borderColor: '#1a73e8', color: '#1a73e8' }}
+                          title="Exporter Google Calendar">
+                          <Calendar size={13} strokeWidth={1.8} />
+                        </motion.button>
+                      )}
+
+                      {/* Terminer / Rouvrir */}
+                      <motion.button
+                        onClick={() => !isBloquee && d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)}
+                        style={{
+                          padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                          background: tache.terminee ? 'transparent' : isBloquee ? 'transparent' : `${T.accent}12`,
+                          border: `1px solid ${tache.terminee ? T.border : isBloquee ? 'rgba(224,92,92,0.2)' : `${T.accent}30`}`,
+                          color: tache.terminee ? T.text2 : isBloquee ? 'rgba(224,92,92,0.5)' : T.accent,
+                          cursor: isBloquee ? 'not-allowed' : 'pointer',
+                        }}
+                        whileHover={!isBloquee ? { background: `${T.accent}20` } : {}}>
+                        {tache.terminee ? 'Rouvrir' : isBloquee ? 'Bloquée' : 'Terminer'}
+                      </motion.button>
+
+                      {/* Supprimer */}
+                      <motion.button
+                        onClick={() => d.supprimerTache(tache.id)}
+                        style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        whileHover={{ borderColor: '#e05c5c', color: '#e05c5c', background: 'rgba(224,92,92,0.06)' }}>
+                        <Trash2 size={13} strokeWidth={1.8} />
+                      </motion.button>
+                    </div>
                   </div>
+
+                  {/* Section expandable */}
                   <AnimatePresence>
                     {isExpanded && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        style={{ overflow: 'hidden', borderTop: `1px solid ${T.border}`, paddingLeft: 20, paddingRight: 16, paddingBottom: 14 }}>
                         {currentMode === 'sousTaches' && <SousTaches tache={tache} T={T} />}
                         {currentMode === 'dependances' && <Dependances tache={tache} toutesLesTaches={d.taches} T={T} onUpdate={d.chargerTaches} />}
                       </motion.div>
@@ -1280,6 +1418,205 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
+      {/* ══════════════════════════════════════════════════════════════
+          DRAWER TEMPLATES — coller juste avant {/* ── TASK DNA POPUP ── */}
+
+      <AnimatePresence>
+        {d.showTemplates && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => d.setShowTemplates(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1060, backdropFilter: 'blur(3px)' }}
+            />
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(480px,100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 1061, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
+
+              {/* Header */}
+              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <BookOpen size={18} color={T.accent} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Templates</h2>
+                      <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 2 }}>Projets prêts à l'emploi</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <motion.button
+                      onClick={() => { d.setShowTemplates(false); d.setShowCreerTemplate(true) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', background: `${T.accent}15`, border: `1px solid ${T.accent}30`, borderRadius: 8, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                      <Plus size={13} strokeWidth={2.5} />
+                      Créer
+                    </motion.button>
+                    <motion.button
+                      onClick={() => d.setShowTemplates(false)}
+                      style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}>
+                      <X size={16} />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Filtres catégorie */}
+                <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
+                  {['tous', 'projet', 'voyage', 'habitude', 'etude', 'autre'].map(cat => (
+                    <motion.button key={cat}
+                      onClick={() => d.setTemplateCategorie(cat)}
+                      whileTap={{ scale: 0.97 }}
+                      style={{ padding: '4px 12px', borderRadius: 99, flexShrink: 0, fontSize: 11, fontWeight: d.templateCategorie === cat ? 600 : 400, background: d.templateCategorie === cat ? `${T.accent}15` : 'transparent', border: `1px solid ${d.templateCategorie === cat ? T.accent : T.border}`, color: d.templateCategorie === cat ? T.accent : T.text2, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      {cat === 'tous' ? 'Tous' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Corps */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+                {d.templatesLoading ? (
+                  <div style={{ textAlign: 'center', padding: '48px 0', color: T.text2 }}>
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}>
+                      <Target size={28} color={T.accent} />
+                    </motion.div>
+                    <p style={{ fontSize: 13, marginTop: 12 }}>Chargement...</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {(d.templateCategorie === 'tous'
+                      ? d.templates
+                      : d.templates.filter(t => t.categorie === d.templateCategorie)
+                    ).map((tmpl, i) => {
+                      const isSelected = d.templateSelectionne?.id === tmpl.id
+                      return (
+                        <motion.div key={tmpl.id}
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                          style={{ background: isSelected ? `${T.accent}08` : T.bg3, border: `1.5px solid ${isSelected ? T.accent : T.border}`, borderRadius: 14, padding: '14px 16px', cursor: 'pointer' }}
+                          onClick={() => d.setTemplateSelectionne(isSelected ? null : tmpl)}
+                          whileHover={{ borderColor: T.accent + '50' }}>
+
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                            {/* Icône Lucide avec background-color via TemplateIconBox */}
+                            <TemplateIconBox categorie={tmpl.categorie} size={18} boxSize={40} />
+
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                <span style={{ fontSize: 13.5, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {tmpl.titre}
+                                </span>
+                                <span style={{ fontSize: 10, color: T.text2, background: T.bg2, padding: '2px 7px', borderRadius: 99, border: `1px solid ${T.border}`, flexShrink: 0 }}>
+                                  {tmpl.taches?.length || 0} tâches
+                                </span>
+                              </div>
+                              {tmpl.description && (
+                                <p style={{ fontSize: 11.5, color: T.text2, margin: '3px 0 0', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                  {tmpl.description}
+                                </p>
+                              )}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
+                                <span style={{ fontSize: 10, color: T.text2 }}>par {tmpl.auteur || 'GetShift'}</span>
+                                {tmpl.utilisations > 0 && (
+                                  <span style={{ fontSize: 10, color: '#4caf82', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                    <CheckCircle2 size={10} strokeWidth={2.5} color="#4caf82" />
+                                    {tmpl.utilisations}× utilisé
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div style={{ flexShrink: 0, color: T.text2, marginTop: 2 }}>
+                              {isSelected ? <ChevronUp size={16} strokeWidth={1.8} /> : <ChevronRight size={16} strokeWidth={1.8} />}
+                            </div>
+                          </div>
+
+                          {/* Section expandable */}
+                          <AnimatePresence>
+                            {isSelected && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                                style={{ overflow: 'hidden', marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.border}` }}>
+
+                                <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 0.8, marginBottom: 8, textTransform: 'uppercase' }}>
+                                  Tâches incluses
+                                </p>
+                                {tmpl.taches?.slice(0, 5).map((t, ti) => (
+                                  <div key={ti} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: `1px solid ${T.border}30` }}>
+                                    <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${T.border}`, flexShrink: 0 }} />
+                                    <span style={{ fontSize: 12, color: T.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
+                                    <span style={{ fontSize: 10, fontWeight: 600, flexShrink: 0, color: t.priorite === 'haute' ? '#e05c5c' : t.priorite === 'moyenne' ? '#e08a3c' : '#4caf82' }}>
+                                      {t.priorite}
+                                    </span>
+                                  </div>
+                                ))}
+                                {tmpl.taches?.length > 5 && (
+                                  <p style={{ fontSize: 11, color: T.text2, marginTop: 6 }}>+{tmpl.taches.length - 5} autres tâches</p>
+                                )}
+
+                                {/* Date de début */}
+                                <div style={{ marginTop: 14 }}>
+                                  <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase' }}>
+                                    Date de début *
+                                  </p>
+                                  <DatePicker
+                                    selected={d.templateDateDebut}
+                                    onChange={d.setTemplateDateDebut}
+                                    locale="fr" dateFormat="dd/MM/yyyy"
+                                    minDate={new Date()} placeholderText="Choisir une date de début"
+                                    customInput={
+                                      <input style={{ width: '100%', padding: '9px 12px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }} />
+                                    }
+                                  />
+                                </div>
+
+                                {/* Bouton utiliser */}
+                                <motion.button
+                                  onClick={(e) => { e.stopPropagation(); d.utiliserTemplate(tmpl) }}
+                                  disabled={d.templateImporting || !d.templateDateDebut}
+                                  style={{ width: '100%', marginTop: 12, padding: '11px', background: d.templateDateDebut ? T.accent : T.bg3, border: `1px solid ${d.templateDateDebut ? T.accent : T.border}`, borderRadius: 10, color: d.templateDateDebut ? T.bg : T.text2, fontSize: 13, fontWeight: 600, cursor: d.templateImporting || !d.templateDateDebut ? 'not-allowed' : 'pointer', opacity: !d.templateDateDebut ? 0.55 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'all 0.15s' }}
+                                  whileHover={d.templateDateDebut && !d.templateImporting ? { scale: 1.02 } : {}}
+                                  whileTap={{ scale: 0.98 }}>
+                                  {d.templateImporting ? (
+                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}>
+                                      <Target size={14} strokeWidth={2} />
+                                    </motion.div>
+                                  ) : (
+                                    <Sparkles size={14} strokeWidth={2} />
+                                  )}
+                                  {d.templateImporting ? 'Import en cours...' : 'Utiliser ce template'}
+                                </motion.button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      )
+                    })}
+
+                    {/* État vide */}
+                    {d.templates.length === 0 && !d.templatesLoading && (
+                      <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                        <BookOpen size={36} color={T.border} strokeWidth={1} style={{ margin: '0 auto 12px', display: 'block' }} />
+                        <p style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 6 }}>Aucun template disponible</p>
+                        <p style={{ fontSize: 12, color: T.text2, marginBottom: 16 }}>Crée le premier template pour démarrer</p>
+                        <motion.button
+                          onClick={() => { d.setShowTemplates(false); d.setShowCreerTemplate(true) }}
+                          style={{ padding: '9px 18px', background: T.accent, border: 'none', borderRadius: 10, color: T.bg, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          Créer un template
+                        </motion.button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* ── TASK DNA POPUP ── */}
       <AnimatePresence>
         {(d.dnaLoading || d.showDnaPopup) && (
@@ -1347,6 +1684,213 @@ export default function Dashboard() {
               Annuler
             </motion.button>
           </motion.div>
+        )}
+      </AnimatePresence>
+      <CommandBar T={T} userId={d.user?.id} onTacheCreee={d.chargerTaches} />
+
+      {/* ══════════════════════════════════════════════════════════════
+          DRAWER COACH IA — CHAT COMPLET
+          Coller juste avant le </div> fermant final du Dashboard
+          (après le bloc TOAST UNDO)
+
+          Pas d'import supplémentaire — tout est déjà dans Dashboard.jsx
+      ══════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {d.showCoach && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => d.setShowCoach(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1080, backdropFilter: 'blur(4px)' }}
+            />
+
+            {/* Panel — drawer latéral sur desktop, bottom sheet sur mobile */}
+            <motion.div
+              initial={isMobile ? { y: '100%' } : { x: '100%' }}
+              animate={isMobile ? { y: 0 } : { x: 0 }}
+              exit={isMobile ? { y: '100%' } : { x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              style={{
+                position: 'fixed',
+                ...(isMobile
+                  ? { bottom: 0, left: 0, right: 0, borderRadius: '20px 20px 0 0', maxHeight: '88vh' }
+                  : { top: 0, right: 0, bottom: 0, width: 'min(400px, 100vw)', borderLeft: `1px solid ${T.border}` }
+                ),
+                zIndex: 1081,
+                background: T.bg2,
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: isMobile ? '0 -8px 40px rgba(0,0,0,0.25)' : '-8px 0 40px rgba(0,0,0,0.2)',
+              }}>
+
+              {/* Handle mobile */}
+              {isMobile && (
+                <div style={{ width: 36, height: 4, background: T.border, borderRadius: 99, margin: '12px auto 0', flexShrink: 0 }} />
+              )}
+
+              {/* Header */}
+              <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${T.accent}40` }}>
+                      <CoachIcon style={coachStyleObj} size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{coachStyleObj?.nom || 'Coach'}</div>
+                      <div style={{ fontSize: 11, color: T.accent, fontWeight: 500 }}>{coachStyleObj?.desc}</div>
+                    </div>
+                  </div>
+                  <motion.button onClick={() => d.setShowCoach(false)}
+                    style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}>
+                    <X size={16} />
+                  </motion.button>
+                </div>
+
+                {/* Sélecteur style coach */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {COACH_STYLES_LIST.map(style => (
+                    <motion.button key={style.id}
+                      onClick={() => d.setCoachStyle(style.id)}
+                      whileTap={{ scale: 0.96 }}
+                      style={{ flex: 1, padding: '7px 4px', borderRadius: 10, background: d.coachStyle === style.id ? `${T.accent}15` : T.bg3, border: `1.5px solid ${d.coachStyle === style.id ? T.accent : T.border}`, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: 7, background: d.coachStyle === style.id ? `${T.accent}20` : T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CoachIcon style={style} size={14} />
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: d.coachStyle === style.id ? 700 : 400, color: d.coachStyle === style.id ? T.accent : T.text2 }}>{style.nom}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Messages chat */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                {/* Stats contextuelles */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 4 }}>
+                  {[
+                    { label: 'Tâches', val: total, color: T.accent },
+                    { label: 'Faites', val: terminees, color: '#4caf82' },
+                    { label: 'Streak', val: `${d.streak}j`, color: '#e08a3c' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
+                      <div style={{ fontSize: 9, color: T.text2, marginTop: 3, fontWeight: 500 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Historique messages */}
+                {(d.coachMessages || []).map((msg, i) => (
+                  <motion.div key={i}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    style={{ display: 'flex', gap: 8, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
+
+                    {/* Avatar */}
+                    {msg.role === 'coach' && (
+                      <div style={{ width: 28, height: 28, borderRadius: 8, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginBottom: 2 }}>
+                        <CoachIcon style={coachStyleObj} size={14} />
+                      </div>
+                    )}
+
+                    {/* Bulle */}
+                    <div style={{
+                      maxWidth: '78%',
+                      padding: '10px 13px',
+                      borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                      background: msg.role === 'user' ? T.accent : T.bg3,
+                      border: msg.role === 'user' ? 'none' : `1px solid ${T.border}`,
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                      color: msg.role === 'user' ? T.bg : T.text,
+                      wordBreak: 'break-word',
+                    }}>
+                      {msg.content}
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* Message initial si aucun historique */}
+                {(!d.coachMessages || d.coachMessages.length === 0) && (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CoachIcon style={coachStyleObj} size={14} />
+                    </div>
+                    <div style={{ maxWidth: '78%', padding: '10px 13px', borderRadius: '14px 14px 14px 4px', background: T.bg3, border: `1px solid ${T.border}`, fontSize: 13, lineHeight: 1.6, color: T.text }}>
+                      {coachStyleObj?.id === 'bienveillant'
+                        ? `Bonjour ! Je suis là pour t'accompagner. Tu as ${total} tâches, dont ${terminees} terminées. Comment je peux t'aider aujourd'hui ?`
+                        : coachStyleObj?.id === 'motivateur'
+                        ? `Allez, on est là pour performer ! ${total - terminees} tâches restantes — qu'est-ce qui te bloque ?`
+                        : `Analyse en cours : ${pct}% de complétion, ${d.bloquees} tâche(s) bloquée(s). Que veux-tu optimiser ?`
+                      }
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Indicateur "en train d'écrire" */}
+                {d.coachLoading && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CoachIcon style={coachStyleObj} size={14} />
+                    </div>
+                    <div style={{ padding: '10px 14px', borderRadius: '14px 14px 14px 4px', background: T.bg3, border: `1px solid ${T.border}`, display: 'flex', gap: 4, alignItems: 'center' }}>
+                      {[0, 1, 2].map(i => (
+                        <motion.div key={i}
+                          animate={{ y: [0, -4, 0] }}
+                          transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
+                          style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent }} />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Input chat */}
+              <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+                {/* Suggestions rapides */}
+                {(!d.coachMessages || d.coachMessages.length === 0) && (
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                    {[
+                      'Quelles tâches prioriser ?',
+                      'Aide-moi à débloquer',
+                      'Analyse ma semaine',
+                    ].map(suggestion => (
+                      <motion.button key={suggestion}
+                        onClick={() => d.envoyerMessageCoach?.(suggestion)}
+                        whileTap={{ scale: 0.96 }}
+                        style={{ padding: '5px 11px', borderRadius: 99, fontSize: 11, fontWeight: 500, background: `${T.accent}10`, border: `1px solid ${T.accent}25`, color: T.accent, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {suggestion}
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={d.coachInput || ''}
+                    onChange={e => d.setCoachInput?.(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); d.envoyerMessageCoach?.(d.coachInput) } }}
+                    placeholder={`Parle à ${coachStyleObj?.nom || 'ton coach'}...`}
+                    style={{ flex: 1, padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
+                  />
+                  <motion.button
+                    onClick={() => d.envoyerMessageCoach?.(d.coachInput)}
+                    disabled={!d.coachInput?.trim() || d.coachLoading}
+                    style={{ width: 40, height: 40, borderRadius: 10, background: d.coachInput?.trim() ? T.accent : T.bg3, border: `1px solid ${d.coachInput?.trim() ? T.accent : T.border}`, color: d.coachInput?.trim() ? T.bg : T.text2, cursor: d.coachInput?.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    whileHover={d.coachInput?.trim() ? { scale: 1.05 } : {}}
+                    whileTap={{ scale: 0.95 }}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
