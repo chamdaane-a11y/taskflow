@@ -15,10 +15,9 @@
   <!-- ===== iOS PWA ===== -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="GetShift" />
-  <link rel="apple-touch-icon" href="/taskflow/taskflow/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/taskflow/icons/icon-192.png" />
   <link rel="apple-touch-icon" sizes="152x152" href="/taskflow/icons/icon-152.png" />
   <link rel="apple-touch-icon" sizes="144x144" href="/taskflow/icons/icon-144.png" />
   <link rel="apple-touch-icon" sizes="128x128" href="/taskflow/icons/icon-128.png" />
@@ -29,8 +28,7 @@
   <meta name="msapplication-tap-highlight" content="no" />
 
   <!-- ===== SEO & META ===== -->
-  <meta name="description"
-    content="GetShift - Gérez vos tâches avec l'IA, gamification et collaboration en temps réel" />
+  <meta name="description" content="GetShift - Gérez vos tâches avec l'IA, gamification et collaboration en temps réel" />
   <meta name="keywords" content="tâches, productivité, IA, gestion de projet, GetShift" />
   <meta name="author" content="GetShift" />
   <meta name="robots" content="index, follow" />
@@ -47,31 +45,39 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/taskflow/icons/icon-72.png" />
 
   <title>GetShift</title>
+
   <!-- ═══════════════════════════════════════════════════════════
-       GitHub Pages SPA fix — coller dans <head> de index.html
-       juste avant </head>
+       GitHub Pages SPA fix — synchronisé avec 404.html
+       Ton 404.html encode : ?p=/dashboard&q=...
+       Ce script restaure : /taskflow/dashboard
   ═══════════════════════════════════════════════════════════ -->
   <script>
     (function () {
-      var redirect = sessionStorage.redirect;
-      delete sessionStorage.redirect;
-      if (redirect && redirect !== location.href) {
-        history.replaceState(null, null, redirect);
-      }
-      // Restaure le path depuis ?p=
+      var BASE = '/taskflow';
       var search = window.location.search;
-      if (search) {
-        var params = search.slice(1).split('&').reduce(function (o, s) {
-          var pair = s.split('=');
-          o[decodeURIComponent(pair[0])] = decodeURIComponent(pair.slice(1).join('='));
-          return o;
-        }, {});
-        if (params.p) {
-          window.history.replaceState(
-            null, null,
-            '/' + params.p + (params.q ? '?' + params.q : '') + window.location.hash
-          );
-        }
+      if (!search) return;
+
+      var params = {};
+      search.slice(1).split('&').forEach(function (pair) {
+        var idx = pair.indexOf('=');
+        if (idx === -1) return;
+        var key = decodeURIComponent(pair.slice(0, idx));
+        var val = decodeURIComponent(pair.slice(idx + 1)).replace(/~and~/g, '&');
+        params[key] = val;
+      });
+
+      if (params.p !== undefined) {
+        // params.p vaut ex: "/dashboard" ou "dashboard"
+        // On s'assure qu'il commence par /
+        var path = params.p;
+        if (path && path[0] !== '/') path = '/' + path;
+
+        var query = params.q ? '?' + params.q.replace(/~and~/g, '&') : '';
+        var hash = window.location.hash;
+
+        // Reconstruit l'URL complète avec le base /taskflow
+        var newUrl = BASE + path + query + hash;
+        window.history.replaceState(null, null, newUrl);
       }
     })();
   </script>
