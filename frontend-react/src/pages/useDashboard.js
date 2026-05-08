@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════════
-// useDashboard.js — Extrait tout l'état et la logique du Dashboard
+// useDashboard.js — Corrigé : chargement parallèle + template fix
 // ══════════════════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -15,6 +15,9 @@ import {
 import { useOffline } from '../useOffline'
 
 const API = 'https://getshift-backend.onrender.com'
+
+// Axios avec timeout 8s pour éviter le spinner infini sur cold start
+const api = axios.create({ baseURL: API, timeout: 8000 })
 
 export function useDashboard() {
   const navigate = useNavigate()
@@ -67,7 +70,7 @@ export function useDashboard() {
   const [slackSaving,  setSlackSaving]  = useState(false)
   const [slackSaved,   setSlackSaved]   = useState(false)
 
-  // ── IA Sous-tâches ─────────────────────────────────────────────────
+  // ── IA ─────────────────────────────────────────────────────────────
   const [iaLoading,    setIaLoading]    = useState(false)
   const [iaPanel,      setIaPanel]      = useState(false)
   const [iaSousTaches, setIaSousTaches] = useState([])
@@ -85,12 +88,12 @@ export function useDashboard() {
   const [undoToast, setUndoToast] = useState(null)
 
   // ── Coach ──────────────────────────────────────────────────────────
-  const [showCoach,           setShowCoach]           = useState(false)
-  const [coachStyle,          setCoachStyle]          = useState('bienveillant')
-  const [coachMessages,       setCoachMessages]       = useState([])
-  const [coachInput,          setCoachInput]          = useState('')
-  const [coachLoading,        setCoachLoading]        = useState(false)
-  const [coachTab,            setCoachTab]            = useState('chat')
+  const [showCoach,     setShowCoach]     = useState(false)
+  const [coachStyle,    setCoachStyle]    = useState('bienveillant')
+  const [coachMessages, setCoachMessages] = useState([])
+  const [coachInput,    setCoachInput]    = useState('')
+  const [coachLoading,  setCoachLoading]  = useState(false)
+  const [coachTab,      setCoachTab]      = useState('chat')
   const [coachRapport,        setCoachRapport]        = useState(null)
   const [coachRapportLoading, setCoachRapportLoading] = useState(false)
 
@@ -100,13 +103,14 @@ export function useDashboard() {
   const [appInstalled,      setAppInstalled]      = useState(false)
 
   // ── Templates ──────────────────────────────────────────────────────
-  const [templates,             setTemplates]             = useState([])
-  const [templatesLoading,      setTemplatesLoading]      = useState(false)
-  const [templateCategorie,     setTemplateCategorie]     = useState('tous')
-  const [templateSearch,        setTemplateSearch]        = useState('')
-  const [templateSelectionne,   setTemplateSelectionne]   = useState(null)
-  const [templateDateDebut,     setTemplateDateDebut]     = useState(null)
-  const [templateImporting,     setTemplateImporting]     = useState(false)
+  const [templates,           setTemplates]           = useState([])
+  const [templatesLoading,    setTemplatesLoading]    = useState(false)
+  const [templateCategorie,   setTemplateCategorie]   = useState('tous')
+  const [templateSearch,      setTemplateSearch]      = useState('')
+  const [templateSelectionne, setTemplateSelectionne] = useState(null)
+  const [templateDateDebut,   setTemplateDateDebut]   = useState(null)
+  const [templateImporting,   setTemplateImporting]   = useState(false)
+  const [templateSucces,      setTemplateSucces]      = useState(null) // ← NEW : message succès sans fermer
   const [nouveauTemplate,       setNouveauTemplate]       = useState({ titre: '', description: '', categorie: 'projet', icone: '📋', taches: [] })
   const [nouvelleTacheTemplate, setNouvelleTacheTemplate] = useState({ titre: '', priorite: 'moyenne', deadline_jours: 7, sous_taches: [] })
 
@@ -125,25 +129,22 @@ export function useDashboard() {
   }), [taches, filtre])
 
   const statsTaches = useMemo(() => {
-    const total    = taches.length
+    const total     = taches.length
     const terminees = taches.filter(t => t.terminee).length
-    const haute    = taches.filter(t => t.priorite === 'haute' && !t.terminee).length
-    const enCours  = total - terminees
-    const pct      = total > 0 ? Math.round((terminees / total) * 100) : 0
+    const haute     = taches.filter(t => t.priorite === 'haute' && !t.terminee).length
+    const enCours   = total - terminees
+    const pct       = total > 0 ? Math.round((terminees / total) * 100) : 0
     return { total, terminees, haute, enCours, pct }
   }, [taches])
 
-  const bloquees = useMemo(
-    () => taches.filter(t => t.bloquee && !t.terminee).length,
-    [taches]
-  )
+  const bloquees = useMemo(() => taches.filter(t => t.bloquee && !t.terminee).length, [taches])
 
   const NIVEAUX = [
-    { niveau: 1, label: 'Débutant', min: 0 },
-    { niveau: 2, label: 'Apprenti', min: 100 },
-    { niveau: 3, label: 'Confirmé', min: 250 },
-    { niveau: 4, label: 'Expert',   min: 500 },
-    { niveau: 5, label: 'Maître',   min: 1000 },
+    { niveau: 1, label: 'Débutant',  min: 0 },
+    { niveau: 2, label: 'Apprenti',  min: 100 },
+    { niveau: 3, label: 'Confirmé',  min: 250 },
+    { niveau: 4, label: 'Expert',    min: 500 },
+    { niveau: 5, label: 'Maître',    min: 1000 },
   ]
   const niveauActuel  = NIVEAUX.find(n => n.niveau === niveau) || NIVEAUX[0]
   const niveauSuivant = NIVEAUX.find(n => n.niveau === niveau + 1)
@@ -154,13 +155,22 @@ export function useDashboard() {
   const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir'
 
   // ══════════════════════════════════════════════════════════════════
-  // INIT
+  // INIT — chargements PARALLÈLES pour éviter le spinner long
   // ══════════════════════════════════════════════════════════════════
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    chargerProfil(); chargerTaches(); chargerRappels()
-    chargerSlackWebhook(); activerNotifications(); chargerBadges()
+
+    // Tout en parallèle — on n'attend plus séquentiellement
+    Promise.allSettled([
+      chargerProfil(),
+      chargerTaches(),
+      chargerRappels(),
+      chargerBadges(),
+      chargerSlackWebhook(),
+    ]).finally(() => {
+      activerNotifications()
+    })
   }, [])
 
   useEffect(() => {
@@ -172,50 +182,69 @@ export function useDashboard() {
   }, [])
 
   // ══════════════════════════════════════════════════════════════════
-  // DATA LOADERS
+  // DATA LOADERS — avec fallback localStorage immédiat
   // ══════════════════════════════════════════════════════════════════
 
   const chargerBadges = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/users/${user.id}/badges`)
+      const res = await api.get(`/users/${user.id}/badges`)
       setBadgesObtenus(res.data.badges.filter(b => b.obtenu))
       setStreak(res.data.streak || 0)
     } catch {}
   }, [user?.id])
 
   const chargerProfil = useCallback(async () => {
+    // Afficher immédiatement les données localStorage en attendant l'API
+    const local = await lireProfilLocalement(user.id)
+    if (local) {
+      setPoints(local.points || 0)
+      setNiveau(local.niveau || 1)
+      const lt = local.theme || 'dark'
+      setTheme(lt)
+      localStorage.setItem('theme', lt)
+    }
     try {
-      const res = await axios.get(`${API}/users/${user.id}`)
-      setPoints(res.data.points || 0); setNiveau(res.data.niveau || 1)
-      const t = res.data.theme || 'dark'; setTheme(t); localStorage.setItem('theme', t)
+      const res = await api.get(`/users/${user.id}`)
+      setPoints(res.data.points || 0)
+      setNiveau(res.data.niveau || 1)
+      const t = res.data.theme || 'dark'
+      setTheme(t)
+      localStorage.setItem('theme', t)
       await sauvegarderProfilLocalement(res.data)
     } catch {
-      const p = await lireProfilLocalement(user.id)
-      if (p) { setPoints(p.points || 0); setNiveau(p.niveau || 1); setTheme(p.theme || 'dark') }
+      // déjà géré par le fallback local ci-dessus
     }
   }, [user?.id])
 
   const chargerTaches = useCallback(async () => {
-    setLoading(true)
+    // Afficher immédiatement les données localStorage
+    const local = await lireTachesLocalement(user.id)
+    if (local?.length) {
+      setTaches(local)
+      setLoading(false) // stoppe le spinner dès qu'on a du local
+    } else {
+      setLoading(true)
+    }
     try {
-      const res = await axios.get(`${API}/taches/${user.id}`)
-      setTaches(res.data); await sauvegarderTachesLocalement(res.data)
+      const res = await api.get(`/taches/${user.id}`)
+      setTaches(res.data)
+      await sauvegarderTachesLocalement(res.data)
     } catch {
-      const local = await lireTachesLocalement(user.id); setTaches(local)
+      if (!local?.length) setTaches([])
     }
     setLoading(false)
   }, [user?.id])
 
   const chargerRappels = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/taches/rappels/${user.id}`)
+      const res = await api.get(`/taches/rappels/${user.id}`)
       if (res.data.rappels) setRappels(res.data.rappels)
     } catch {}
   }, [user?.id])
 
   const chargerSlackWebhook = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/integrations/slack?user_id=${user.id}`)
+      const res = await api.get(`/integrations/slack?user_id=${user.id}`)
       if (res.data.webhook_url) setSlackWebhook(res.data.webhook_url)
     } catch {}
   }, [user?.id])
@@ -223,8 +252,8 @@ export function useDashboard() {
   const chargerTemplates = useCallback(async () => {
     setTemplatesLoading(true)
     try {
-      await axios.post(`${API}/templates/init`)
-      const res = await axios.get(`${API}/templates`)
+      await api.post(`/templates/init`)
+      const res = await api.get(`/templates`)
       setTemplates(res.data)
     } catch {}
     setTemplatesLoading(false)
@@ -242,17 +271,20 @@ export function useDashboard() {
   const changerTheme = useCallback(async (t) => {
     setTheme(t); setShowSettings(false)
     localStorage.setItem('theme', t)
-    await axios.put(`${API}/users/${user.id}/theme`, { theme: t })
+    await api.put(`/users/${user.id}/theme`, { theme: t })
   }, [user?.id])
 
-  const ajouterTache = useCallback(async () => {
-    if (!titre.trim()) return
-    if (!deadline) { setErreurForm("La date et l'heure sont obligatoires."); return }
-    const data = { titre, priorite, deadline: deadline.toISOString().slice(0, 16), user_id: user.id }
+  const ajouterTache = useCallback(async (override = {}) => {
+    const finalTitre = override.titre ?? titre
+    const finalPriorite = override.priorite ?? priorite
+    const finalDeadline = override.deadline ?? deadline
+    if (!finalTitre.trim()) return
+    if (!finalDeadline) { setErreurForm("La date et l'heure sont obligatoires."); return }
+    const data = { titre: finalTitre, priorite: finalPriorite, deadline: finalDeadline.toISOString().slice(0, 16), user_id: user.id }
     if (isOnline) {
       setDnaLoading(true)
       try {
-        const dnaRes = await axios.post(`${API}/ia/task-dna`, { titre, priorite, user_id: user.id })
+        const dnaRes = await api.post(`/ia/task-dna`, { titre, priorite, user_id: user.id })
         setDnaResult(dnaRes.data); setDnaPendingData(data); setShowDnaPopup(true)
         setDnaLoading(false); return
       } catch { setDnaLoading(false) }
@@ -262,16 +294,16 @@ export function useDashboard() {
       const tl = await ajouterTacheLocalement({ ...data, bloquee: false, terminee: false })
       await ajouterActionSync({ type: 'AJOUTER_TACHE', data: { ...data, id_temp: tl.id } })
       await chargerPendingCount(); setTaches(p => [tl, ...p])
-      afficherNotification('Tâche sauvegardée offline ⚡'); return
+      afficherNotification('Tâche sauvegardée offline'); return
     }
-    await axios.post(`${API}/taches`, data)
+    await api.post(`/taches`, data)
     afficherNotification('Tâche ajoutée avec succès'); chargerTaches()
-  }, [titre, priorite, deadline, user?.id, isOnline, afficherNotification, chargerTaches, chargerPendingCount])
+  }, [titre, priorite, deadline, user?.id, isOnline, afficherNotification, chargerTaches, chargerPendingCount, setErreurForm])
 
   const confirmerCreationApresDNA = useCallback(async () => {
     if (!dnaPendingData) return
     setShowDnaPopup(false); setTitre(''); setDeadline(null); setErreurForm('')
-    await axios.post(`${API}/taches`, dnaPendingData)
+    await api.post(`/taches`, dnaPendingData)
     afficherNotification('Tâche créée avec succès'); chargerTaches()
     setDnaResult(null); setDnaPendingData(null)
   }, [dnaPendingData, afficherNotification, chargerTaches])
@@ -281,25 +313,18 @@ export function useDashboard() {
   }, [])
 
   const toggleTache = useCallback(async (id, terminee, tachePriorite, bloquee) => {
-    // Vérifier les dépendances bloquantes AVANT de toucher l'UI
     if (!terminee && bloquee) {
       try {
-        const resDeps = await axios.get(`${API}/taches/${id}/dependances`)
+        const resDeps = await api.get(`/taches/${id}/dependances`)
         if (resDeps.data.filter(d => !d.terminee).length > 0) {
-          afficherNotification('⛔ Tâche bloquée par des prérequis non terminés', 'error')
-          return
+          afficherNotification('Tâche bloquée par des prérequis non terminés', 'error'); return
         }
       } catch {}
     }
-
     const nouvelEtat = !terminee
     const pts = tachePriorite === 'haute' ? 30 : tachePriorite === 'moyenne' ? 20 : 10
-
-    // OPTIMISTIC UPDATE — cocher immédiatement sans attendre l'API
     setTaches(p => p.map(t => t.id === id ? { ...t, terminee: nouvelEtat } : t))
     if (nouvelEtat) confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } })
-
-    // Mode offline
     if (!isOnline) {
       await mettreAJourTacheLocalement(id, { terminee: nouvelEtat })
       await ajouterActionSync({ type: 'TERMINER_TACHE', data: { id, terminee: nouvelEtat } })
@@ -307,30 +332,23 @@ export function useDashboard() {
       if (nouvelEtat) afficherNotification(`+${pts} pts (sync au retour réseau)`)
       return
     }
-
-    // API en arrière-plan — rollback si erreur
     try {
-      await axios.put(`${API}/taches/${id}`, { terminee: nouvelEtat })
+      await api.put(`/taches/${id}`, { terminee: nouvelEtat })
       if (nouvelEtat) {
-        // Points & badges sans bloquer l'UI
-        axios.put(`${API}/users/${user.id}/points`, { points: pts })
-          .then(res => {
-            setPoints(res.data.points); setNiveau(res.data.niveau)
-            if (res.data.streak) setStreak(res.data.streak)
-            if (res.data.nouveaux_badges?.length > 0) {
-              setBadgeNotif(res.data.nouveaux_badges[0])
-              confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } })
-              setTimeout(() => setBadgeNotif(null), 4000)
-            }
-          }).catch(() => {})
+        api.put(`/users/${user.id}/points`, { points: pts }).then(res => {
+          setPoints(res.data.points); setNiveau(res.data.niveau)
+          if (res.data.streak) setStreak(res.data.streak)
+          if (res.data.nouveaux_badges?.length > 0) {
+            setBadgeNotif(res.data.nouveaux_badges[0])
+            confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } })
+            setTimeout(() => setBadgeNotif(null), 4000)
+          }
+        }).catch(() => {})
         afficherNotification(`+${pts} points gagnés`)
       }
-      // Pas de chargerTaches() — l'optimistic update suffit
-      // On rafraîchit uniquement les badges/points côté UI
     } catch (err) {
-      // Rollback si l'API échoue
       setTaches(p => p.map(t => t.id === id ? { ...t, terminee: terminee } : t))
-      afficherNotification(`⛔ ${err?.response?.data?.message || 'Erreur'}`, 'error')
+      afficherNotification(`Erreur : ${err?.response?.data?.message || 'Réessaie'}`, 'error')
     }
   }, [isOnline, user?.id, afficherNotification, chargerPendingCount])
 
@@ -339,14 +357,14 @@ export function useDashboard() {
     setTaches(p => p.filter(t => t.id !== id))
     if (undoToast) {
       clearTimeout(undoToast.timer)
-      if (isOnline) axios.delete(`${API}/taches/${undoToast.tache.id}`).catch(() => {})
+      if (isOnline) api.delete(`/taches/${undoToast.tache.id}`).catch(() => {})
       else supprimerTacheLocalement(undoToast.tache.id)
     }
     const timer = setTimeout(async () => {
       setUndoToast(null)
       await supprimerTacheLocalement(id)
       if (!isOnline) { await ajouterActionSync({ type: 'SUPPRIMER_TACHE', data: { id } }); await chargerPendingCount(); return }
-      await axios.delete(`${API}/taches/${id}`)
+      await api.delete(`/taches/${id}`)
     }, 5000)
     setUndoToast({ tache: saved, timer })
   }, [taches, undoToast, isOnline, chargerPendingCount])
@@ -361,7 +379,7 @@ export function useDashboard() {
     if (!titre.trim()) { setErreurForm("Écris d'abord le titre de la tâche."); return }
     setIaLoading(true); setErreurForm(''); setTitrePourIA(titre)
     try {
-      const res = await axios.post(`${API}/ia/sous-taches-contextuelles`, { titre, user_id: user.id })
+      const res = await api.post(`/ia/sous-taches-contextuelles`, { titre, user_id: user.id })
       setIaSousTaches((res.data.sous_taches || []).map(st => ({ ...st, selectionne: true })))
       setIaConseil(res.data.conseil || ''); setIaType(res.data.type || ''); setIaPanel(true)
     } catch { afficherNotification('Erreur IA — réessaie', 'error') }
@@ -371,13 +389,13 @@ export function useDashboard() {
   const confirmerSousTachesIA = useCallback(async () => {
     if (!deadline) { setErreurForm("La date et l'heure sont obligatoires."); setIaPanel(false); return }
     const data = { titre: titrePourIA, priorite, deadline: deadline.toISOString().slice(0, 16), user_id: user.id }
-    const res = await axios.post(`${API}/taches`, data)
+    const res = await api.post(`/taches`, data)
     const selectionnees = iaSousTaches.filter(st => st.selectionne)
     await Promise.all(selectionnees.map((st, i) =>
-      axios.post(`${API}/taches/${res.data.id}/sous-taches`, { titre: st.titre, ordre: i })
+      api.post(`/taches/${res.data.id}/sous-taches`, { titre: st.titre, ordre: i })
     ))
     setTitre(''); setDeadline(null); setIaPanel(false); setIaSousTaches([])
-    afficherNotification(`✨ Tâche + ${selectionnees.length} sous-tâches créées`); chargerTaches()
+    afficherNotification(`Tâche + ${selectionnees.length} sous-tâches créées`); chargerTaches()
   }, [deadline, titrePourIA, priorite, user?.id, iaSousTaches, afficherNotification, chargerTaches])
 
   const toggleSousTacheIA = useCallback((i) => {
@@ -387,7 +405,7 @@ export function useDashboard() {
   const genererTaches = useCallback(async () => {
     if (!objectif.trim()) return
     afficherNotification('Génération en cours...')
-    const res = await axios.post(`${API}/ia/generer-taches`, { objectif, user_id: user.id, priorite: 'moyenne' })
+    const res = await api.post(`/ia/generer-taches`, { objectif, user_id: user.id, priorite: 'moyenne' })
     if (res.data.taches) {
       afficherNotification(`${res.data.taches.length} tâches créées`); setObjectif(''); chargerTaches()
       setTimeout(() => navigate('/ia'), 1500)
@@ -407,7 +425,7 @@ export function useDashboard() {
     if (!slackWebhook.trim()) return
     setSlackSaving(true)
     try {
-      await axios.post(`${API}/integrations/slack`, { user_id: user.id, webhook_url: slackWebhook })
+      await api.post(`/integrations/slack`, { user_id: user.id, webhook_url: slackWebhook })
       setSlackSaved(true); afficherNotification('Webhook Slack sauvegardé !')
       setTimeout(() => setSlackSaved(false), 3000)
     } catch { afficherNotification('Erreur lors de la sauvegarde') }
@@ -423,15 +441,13 @@ export function useDashboard() {
   // ── Coach ──────────────────────────────────────────────────────────
   const envoyerMessageCoach = useCallback(async (texte) => {
     if (!texte?.trim() || coachLoading) return
-
     const msgUser = { role: 'user', content: texte.trim() }
     const nouvelHistorique = [...coachMessages, msgUser]
     setCoachMessages(nouvelHistorique)
     setCoachInput('')
     setCoachLoading(true)
-
     try {
-      const response = await fetch('https://getshift-backend.onrender.com/ia/coach/chat', {
+      const response = await fetch(`${API}/ia/coach/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -439,42 +455,26 @@ export function useDashboard() {
           user_id: user?.id,
           message: texte.trim(),
           style: coachStyle,
-          historique: coachMessages.slice(-6).map(m => ({
-            role: m.role === 'user' ? 'user' : 'assistant',
-            contenu: m.content,
-          })),
+          historique: coachMessages.slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', contenu: m.content })),
         }),
       })
-
       const data = await response.json()
-
-      if (data.reponse) {
-        setCoachMessages(prev => [...prev, { role: 'coach', content: data.reponse }])
-      } else {
-        setCoachMessages(prev => [...prev, {
-          role: 'coach',
-          content: 'Je rencontre une difficulté. Réessaie dans un instant.',
-        }])
-      }
+      setCoachMessages(prev => [...prev, { role: 'coach', content: data.reponse || 'Je rencontre une difficulté. Réessaie.' }])
     } catch {
-      setCoachMessages(prev => [...prev, {
-        role: 'coach',
-        content: 'Connexion difficile. Vérifie ta connexion et réessaie.',
-      }])
+      setCoachMessages(prev => [...prev, { role: 'coach', content: 'Connexion difficile. Réessaie dans un instant.' }])
     }
-
     setCoachLoading(false)
   }, [coachLoading, coachMessages, coachStyle, user])
 
   const chargerRapportCoach = useCallback(async () => {
     setCoachRapportLoading(true)
-    try { const res = await axios.get(`${API}/ia/coach/rapport/${user.id}?style=${coachStyle}`); setCoachRapport(res.data) } catch {}
+    try { const res = await api.get(`/ia/coach/rapport/${user.id}?style=${coachStyle}`); setCoachRapport(res.data) } catch {}
     setCoachRapportLoading(false)
   }, [user?.id, coachStyle])
 
   const changerStyleCoach = useCallback(async (style) => {
     setCoachStyle(style); setCoachMessages([]); setCoachRapport(null)
-    try { const res = await axios.get(`${API}/ia/coach/historique/${user.id}?style=${style}`); setCoachMessages(res.data.messages || []) } catch {}
+    try { const res = await api.get(`/ia/coach/historique/${user.id}?style=${style}`); setCoachMessages(res.data.messages || []) } catch {}
   }, [user?.id])
 
   const ouvrirCoach = useCallback(async () => {
@@ -482,41 +482,78 @@ export function useDashboard() {
     if (coachMessages.length === 0) {
       const prenomUser = user?.nom?.split(' ')[0] || 'toi'
       const nbActives = taches.filter(t => !t.terminee).length
-      const nbHaute = taches.filter(t => t.priorite === 'haute' && !t.terminee).length
-
+      const nbHaute   = taches.filter(t => t.priorite === 'haute' && !t.terminee).length
       const msgBienvenue = coachStyle === 'motivateur'
         ? `Allez ${prenomUser} ! Tu as ${nbActives} tâches en cours${nbHaute > 0 ? ` dont ${nbHaute} haute priorité` : ''}. Qu'est-ce qui te bloque ?`
         : coachStyle === 'analytique'
         ? `Analyse : ${nbActives} tâches actives, taux de complétion ${Math.round((taches.filter(t => t.terminee).length / Math.max(taches.length, 1)) * 100)}%. Par quoi veux-tu commencer ?`
         : `Bonjour ${prenomUser} ! Tu as ${nbActives} tâches en cours. Comment puis-je t'aider aujourd'hui ?`
-
       setCoachMessages([{ role: 'coach', content: msgBienvenue }])
     }
   }, [coachMessages.length, coachStyle, taches, user])
 
   // ── Templates ──────────────────────────────────────────────────────
   const ouvrirTemplates = useCallback(() => {
-    setShowTemplates(true); if (templates.length === 0) chargerTemplates()
+    setShowTemplates(true)
+    setTemplateSucces(null)
+    if (templates.length === 0) chargerTemplates()
   }, [templates.length, chargerTemplates])
 
   const utiliserTemplate = useCallback(async (template) => {
     if (!templateDateDebut) { afficherNotification('Choisis une date de début', 'error'); return }
     setTemplateImporting(true)
+    setTemplateSucces(null)
+
     try {
-      const res = await axios.post(`${API}/templates/${template.id}/utiliser`, { user_id: user.id, date_debut: templateDateDebut.toISOString() })
-      afficherNotification(`✅ ${res.data.message}`)
+      // Convertir la Date en ISO string pour l'API
+      const dateISO = templateDateDebut instanceof Date
+        ? templateDateDebut.toISOString()
+        : new Date(templateDateDebut).toISOString()
+
+      const res = await api.post(`/templates/${template.id}/utiliser`, {
+        user_id: user.id,
+        date_debut: dateISO,
+      })
+
+      // ← FIX CRITIQUE : on NE ferme PAS le drawer, on affiche le succès DANS le drawer
+      setTemplateSucces({
+        message: res.data.message,
+        nb: res.data.taches_ids?.length || template.taches?.length || 0,
+        titre: template.titre,
+      })
+
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
-      setShowTemplates(false); setTemplateSelectionne(null); setTemplateDateDebut(null); chargerTaches()
-    } catch { afficherNotification("Erreur lors de l'import", 'error') }
+
+      // Reset sélection mais on garde le drawer ouvert pour voir le message
+      setTemplateSelectionne(null)
+      setTemplateDateDebut(null)
+
+      // Charger les tâches en arrière-plan
+      chargerTaches()
+
+      // Fermer automatiquement après 2.5s
+      setTimeout(() => {
+        setShowTemplates(false)
+        setTemplateSucces(null)
+        afficherNotification(`${res.data.taches_ids?.length || ''} tâches créées depuis "${template.titre}"`)
+      }, 2500)
+
+    } catch (err) {
+      afficherNotification("Erreur lors de l'import", 'error')
+    }
     setTemplateImporting(false)
   }, [templateDateDebut, user?.id, afficherNotification, chargerTaches])
 
   const soumettreNouveauTemplate = useCallback(async () => {
-    if (!nouveauTemplate.titre.trim() || nouveauTemplate.taches.length === 0) { afficherNotification('Titre et au moins une tâche requis', 'error'); return }
+    if (!nouveauTemplate.titre.trim() || nouveauTemplate.taches.length === 0) {
+      afficherNotification('Titre et au moins une tâche requis', 'error'); return
+    }
     try {
-      await axios.post(`${API}/templates`, { ...nouveauTemplate, user_id: user.id })
-      afficherNotification('🎉 Template publié !'); setShowCreerTemplate(false)
-      setNouveauTemplate({ titre: '', description: '', categorie: 'projet', icone: '📋', taches: [] }); chargerTemplates()
+      await api.post(`/templates`, { ...nouveauTemplate, user_id: user.id })
+      afficherNotification('Template publié !')
+      setShowCreerTemplate(false)
+      setNouveauTemplate({ titre: '', description: '', categorie: 'projet', icone: '📋', taches: [] })
+      chargerTemplates()
     } catch { afficherNotification('Erreur lors de la création', 'error') }
   }, [nouveauTemplate, user?.id, afficherNotification, chargerTemplates])
 
@@ -534,12 +571,12 @@ export function useDashboard() {
     try {
       const reg = await navigator.serviceWorker.register('/getshift/sw.js')
       if (await Notification.requestPermission() !== 'granted') return
-      const res = await axios.get(`${API}/push/vapid-public-key`)
+      const res = await api.get(`/push/vapid-public-key`)
       const pad = '='.repeat((4 - res.data.public_key.length % 4) % 4)
       const b64 = (res.data.public_key + pad).replace(/-/g, '+').replace(/_/g, '/')
       const key = Uint8Array.from([...window.atob(b64)].map(c => c.charCodeAt(0)))
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
-      await axios.post(`${API}/push/subscribe`, { user_id: user.id, subscription: sub.toJSON() })
+      await api.post(`/push/subscribe`, { user_id: user.id, subscription: sub.toJSON() })
     } catch {}
   }, [user?.id])
 
@@ -565,12 +602,12 @@ export function useDashboard() {
     iaLoading, iaPanel, setIaPanel, iaSousTaches, iaConseil, iaType, titrePourIA,
     dnaLoading, dnaResult, showDnaPopup, dnaPendingData,
     undoToast,
-    showCoach, setShowCoach, coachStyle, coachMessages, coachInput, setCoachInput,
+    showCoach, setShowCoach, coachStyle, setCoachStyle, coachMessages, coachInput, setCoachInput,
     coachLoading, coachTab, setCoachTab, coachRapport, coachRapportLoading,
     installPrompt, showInstallBanner, appInstalled,
     templates, templatesLoading, templateCategorie, setTemplateCategorie,
     templateSearch, setTemplateSearch, templateSelectionne, setTemplateSelectionne,
-    templateDateDebut, setTemplateDateDebut, templateImporting,
+    templateDateDebut, setTemplateDateDebut, templateImporting, templateSucces,
     nouveauTemplate, setNouveauTemplate, nouvelleTacheTemplate, setNouvelleTacheTemplate,
     isOnline, isSyncing, pendingActions, syncResult,
     ajouterTache, toggleTache, supprimerTache, annulerSuppression,

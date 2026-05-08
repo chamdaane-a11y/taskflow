@@ -1,0 +1,283 @@
+/* GetShift — Global Responsive Styles */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SMART TASK INPUT
+══════════════════════════════════════════════════════════════ */
+
+.smart-task-input {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.smart-task-input-field {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 15px;
+  font-weight: 500;
+  border: none;
+  border-radius: 12px;
+  outline: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.smart-task-input-field:focus {
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+.smart-task-input-field::placeholder {
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+.smart-task-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  animation: slideUp 0.2s ease-out;
+}
+
+.smart-task-preview-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border-width: 2px;
+  border-style: solid;
+  flex-shrink: 0;
+}
+
+.smart-task-preview-titre {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smart-task-preview-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.smart-task-preview-date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.smart-task-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.smart-task-btn-primary {
+  flex: 1;
+  min-width: 140px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.smart-task-btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.smart-task-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.smart-task-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.smart-task-btn-secondary {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.1s ease;
+}
+
+.smart-task-btn-secondary:active {
+  transform: scale(0.97);
+}
+
+.smart-task-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATS GRID
+══════════════════════════════════════════════════════════════ */
+
+.gs-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FORMS GRID
+══════════════════════════════════════════════════════════════ */
+
+.gs-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN CONTENT
+══════════════════════════════════════════════════════════════ */
+
+.main-content-padding {
+  padding: clamp(16px, 3vw, 40px);
+  padding-top: 60px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TASK BUTTONS (hide labels on smaller screens)
+══════════════════════════════════════════════════════════════ */
+
+.task-btn-label {
+  display: inline;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE OVERRIDES
+══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1000px) {
+  .task-btn-label {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .gs-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .gs-forms {
+    grid-template-columns: 1fr;
+  }
+
+  .smart-task-input {
+    padding: 16px;
+  }
+
+  .smart-task-input-field {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .smart-task-preview {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .smart-task-preview-titre {
+    font-size: 13px;
+  }
+
+  .smart-task-btn-primary {
+    padding: 13px 16px;
+    font-size: 13px;
+  }
+
+  .main-content-padding {
+    padding: 12px 16px 120px;
+    padding-top: 12px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════════════════════════════════ */
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCROLLBAR (WebKit)
+══════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
+}
