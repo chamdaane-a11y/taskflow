@@ -624,44 +624,48 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
         position: 'relative',
         background: T.bg2,
         border: `1px solid ${T.accent}40`,
-        borderRadius: 16,
-        padding: isMobile ? '14px 14px 12px' : '18px 22px 16px',
-        marginBottom: 20,
+        borderRadius: isMobile ? 14 : 16,
+        padding: isMobile ? '10px 12px 10px' : '18px 22px 16px',
+        marginBottom: isMobile ? 14 : 20,
         boxShadow: `0 0 0 1px ${T.accent}10, 0 4px 18px ${T.accent}10`,
         overflow: 'visible',
       }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: '16px 16px 0 0' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: isMobile ? 2 : 3, background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: isMobile ? '14px 14px 0 0' : '16px 16px 0 0' }} />
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Target size={16} color={T.accent} strokeWidth={2.2} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: isMobile ? (focused.length === 0 ? 8 : 8) : 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10, minWidth: 0 }}>
+          <div style={{ width: isMobile ? 26 : 32, height: isMobile ? 26 : 32, borderRadius: isMobile ? 8 : 10, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Target size={isMobile ? 13 : 16} color={T.accent} strokeWidth={2.2} />
           </div>
-          <div>
-            <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>Focus du jour</div>
-            <div style={{ fontSize: 11, color: T.text2, marginTop: 1, textTransform: 'capitalize' }}>{dateTitre}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: T.text, letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>Focus du jour</div>
+            {!isMobile && (
+              <div style={{ fontSize: 11, color: T.text2, marginTop: 1, textTransform: 'capitalize' }}>{dateTitre}</div>
+            )}
           </div>
         </div>
-        <div style={{ fontSize: 11, padding: '4px 10px', borderRadius: 99, background: `${T.accent}12`, color: T.accent, fontWeight: 700 }}>
+        <div style={{ fontSize: isMobile ? 10 : 11, padding: isMobile ? '3px 8px' : '4px 10px', borderRadius: 99, background: `${T.accent}12`, color: T.accent, fontWeight: 700, flexShrink: 0 }}>
           {focused.length}/3
         </div>
       </div>
 
       {/* Empty state — aucun focus */}
-      {focused.length === 0 && (
-        <div style={{ textAlign: 'center', padding: isMobile ? '10px 6px 6px' : '14px 6px 6px' }}>
+      {focused.length === 0 && !isMobile && (
+        <div style={{ textAlign: 'center', padding: '14px 6px 6px' }}>
           <div style={{ fontSize: 13, color: T.text2, marginBottom: 4, fontWeight: 500 }}>Choisis tes 3 priorités du jour</div>
           <div style={{ fontSize: 11.5, color: T.text2, opacity: 0.75, marginBottom: 12 }}>Tu n'as pas besoin d'en faire plus.</div>
         </div>
       )}
 
       {/* Slots */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 5 : 10 }}>
         {slots.map(i => {
           const t = focused[i]
           if (!t) {
             const isFirst = focused.length === 0 && i === 0
+            // Mobile : ne montrer qu'un seul slot vide (le premier) pour économiser l'espace
+            if (isMobile && !isFirst && focused.length === 0) return null
             return (
               <motion.button
                 key={`empty-${i}`}
@@ -670,22 +674,66 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                 whileTap={{ scale: 0.98 }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: isMobile ? '14px 12px' : '18px 12px',
+                  padding: isMobile ? '8px 10px' : '18px 12px',
                   background: 'transparent',
                   border: `1.5px dashed ${T.border}`,
-                  borderRadius: 12,
+                  borderRadius: isMobile ? 10 : 12,
                   color: T.text2,
-                  fontSize: 12,
+                  fontSize: isMobile ? 11.5 : 12,
                   fontWeight: 500,
                   cursor: 'pointer',
-                  minHeight: isMobile ? 56 : 70,
+                  minHeight: isMobile ? 36 : 70,
                 }}>
-                <Plus size={14} strokeWidth={2} />
-                {isFirst ? 'Choisir ma première tâche' : 'Épingler une tâche'}
+                <Plus size={isMobile ? 12 : 14} strokeWidth={2} />
+                {isMobile ? (isFirst ? 'Choisir ma 1ère tâche' : 'Épingler') : (isFirst ? 'Choisir ma première tâche' : 'Épingler une tâche')}
               </motion.button>
             )
           }
           const pts = t.priorite === 'haute' ? 30 : t.priorite === 'moyenne' ? 20 : 10
+
+          // ── Mobile : compact 1-line row ────────────────────────────
+          if (isMobile) {
+            return (
+              <motion.div
+                key={t.id} layout
+                initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+                style={{
+                  position: 'relative',
+                  background: T.bg3,
+                  border: `1px solid ${pColor(t.priorite)}30`,
+                  borderRadius: 10,
+                  padding: '7px 8px 7px 12px',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  minHeight: 38,
+                }}>
+                <div style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, background: pColor(t.priorite), borderRadius: 99 }} />
+                <span style={{ flex: 1, fontSize: 12.5, fontWeight: 500, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                  {t.titre}
+                </span>
+                {t.deadline && (
+                  <span style={{ fontSize: 10, color: T.text2, flexShrink: 0 }}>
+                    {new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                  </span>
+                )}
+                <motion.button
+                  onClick={() => d.toggleTache(t.id, t.terminee, t.priorite, t.bloquee)}
+                  whileTap={{ scale: 0.9 }}
+                  title="Terminer"
+                  style={{ width: 24, height: 24, borderRadius: 6, background: `${T.accent}15`, border: `1px solid ${T.accent}40`, color: T.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CheckCircle2 size={13} strokeWidth={2.2} />
+                </motion.button>
+                <motion.button
+                  onClick={() => d.togglerFocus(t.id, true)}
+                  whileTap={{ scale: 0.9 }}
+                  title="Désépingler"
+                  style={{ width: 22, height: 22, borderRadius: 6, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <X size={12} strokeWidth={2} />
+                </motion.button>
+              </motion.div>
+            )
+          }
+
+          // ── Desktop : carte verticale avec bouton Terminer ─────────
           return (
             <motion.div
               key={t.id} layout
@@ -697,7 +745,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                 borderRadius: 12,
                 padding: '10px 12px 10px 14px',
                 display: 'flex', flexDirection: 'column', gap: 8,
-                minHeight: isMobile ? 56 : 70,
+                minHeight: 70,
               }}>
               <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, background: pColor(t.priorite), borderRadius: 99 }} />
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -1053,18 +1101,23 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={() => d.setShowCreerTemplate(false)}
         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1090, backdropFilter: 'blur(5px)' }} />
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 1091, pointerEvents: 'none',
+        display: 'flex',
+        alignItems: isMobile ? 'flex-end' : 'center',
+        justifyContent: 'center',
+      }}>
       <motion.div
         initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96, y: 20 }}
         animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
         exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96, y: 10 }}
         transition={{ type: 'spring', damping: 30, stiffness: 320 }}
         style={{
-          position: 'fixed',
+          pointerEvents: 'auto',
           ...(isMobile
-            ? { left: 0, right: 0, bottom: 0, maxHeight: '92dvh', height: '92dvh', borderRadius: '20px 20px 0 0' }
-            : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'min(580px, 95vw)', maxHeight: '90dvh', borderRadius: 20 }
+            ? { width: '100%', maxHeight: '92dvh', height: '92dvh', borderRadius: '20px 20px 0 0' }
+            : { width: 'min(580px, 95vw)', maxHeight: '90dvh', borderRadius: 20 }
           ),
-          zIndex: 1091,
           background: T.bg2,
           border: `1px solid ${T.border}`,
           boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
@@ -1269,6 +1322,7 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
           </motion.button>
         </div>
       </motion.div>
+      </div>
     </>
   )
 })
