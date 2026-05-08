@@ -29,64 +29,64 @@ registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
 
 const PRIORITES = [
-  { val: 'haute',   label: 'Haute',   bg: 'rgba(224,92,92,0.12)',  color: '#e05c5c' },
+  { val: 'haute', label: 'Haute', bg: 'rgba(224,92,92,0.12)', color: '#e05c5c' },
   { val: 'moyenne', label: 'Moyenne', bg: 'rgba(224,138,60,0.12)', color: '#e08a3c' },
-  { val: 'basse',   label: 'Basse',   bg: 'rgba(76,175,130,0.12)', color: '#4caf82' },
+  { val: 'basse', label: 'Basse', bg: 'rgba(76,175,130,0.12)', color: '#4caf82' },
 ]
 
 const BADGES_CONFIG = [
-  { id: 'first_task',  nom: 'Premier pas',      icon: '🌱', description: 'Première tâche terminée',       categorie: 'performance' },
-  { id: 'five_tasks',  nom: 'En rythme',        icon: '🔥', description: '5 tâches terminées',            categorie: 'performance' },
-  { id: 'ten_tasks',   nom: 'Productif',        icon: '⚡', description: '10 tâches terminées',           categorie: 'performance' },
-  { id: 'fifty_tasks', nom: 'Machine',          icon: '🤖', description: '50 tâches terminées',           categorie: 'performance' },
-  { id: 'century',     nom: 'Centurion',        icon: '💯', description: '100 tâches terminées',          categorie: 'performance' },
-  { id: 'pts_100',     nom: 'Débutant',         icon: '🥉', description: '100 points gagnés',             categorie: 'points' },
-  { id: 'pts_500',     nom: 'Confirmé',         icon: '🥈', description: '500 points gagnés',             categorie: 'points' },
-  { id: 'pts_1000',    nom: 'Expert',           icon: '🥇', description: '1000 points gagnés',            categorie: 'points' },
-  { id: 'pts_5000',    nom: 'Maître',           icon: '👑', description: '5000 points gagnés',            categorie: 'points' },
-  { id: 'streak_3',    nom: '3 jours de suite', icon: '🔥', description: 'Actif 3 jours consécutifs',     categorie: 'streak' },
-  { id: 'streak_7',    nom: 'Semaine parfaite', icon: '📅', description: 'Actif 7 jours consécutifs',     categorie: 'streak' },
-  { id: 'streak_30',   nom: 'Mois de feu',      icon: '🌟', description: 'Actif 30 jours consécutifs',    categorie: 'streak' },
-  { id: 'early_bird',  nom: 'Lève-tôt',         icon: '🌅', description: 'Tâche terminée avant 8h',      categorie: 'special' },
-  { id: 'night_owl',   nom: 'Noctambule',       icon: '🦉', description: 'Tâche terminée après 23h',     categorie: 'special' },
-  { id: 'speedster',   nom: 'Fulgurant',        icon: '⚡', description: '5 tâches terminées en 1 jour',  categorie: 'special' },
+  { id: 'first_task', nom: 'Premier pas', icon: '🌱', description: 'Première tâche terminée', categorie: 'performance' },
+  { id: 'five_tasks', nom: 'En rythme', icon: '🔥', description: '5 tâches terminées', categorie: 'performance' },
+  { id: 'ten_tasks', nom: 'Productif', icon: '⚡', description: '10 tâches terminées', categorie: 'performance' },
+  { id: 'fifty_tasks', nom: 'Machine', icon: '🤖', description: '50 tâches terminées', categorie: 'performance' },
+  { id: 'century', nom: 'Centurion', icon: '💯', description: '100 tâches terminées', categorie: 'performance' },
+  { id: 'pts_100', nom: 'Débutant', icon: '🥉', description: '100 points gagnés', categorie: 'points' },
+  { id: 'pts_500', nom: 'Confirmé', icon: '🥈', description: '500 points gagnés', categorie: 'points' },
+  { id: 'pts_1000', nom: 'Expert', icon: '🥇', description: '1000 points gagnés', categorie: 'points' },
+  { id: 'pts_5000', nom: 'Maître', icon: '👑', description: '5000 points gagnés', categorie: 'points' },
+  { id: 'streak_3', nom: '3 jours de suite', icon: '🔥', description: 'Actif 3 jours consécutifs', categorie: 'streak' },
+  { id: 'streak_7', nom: 'Semaine parfaite', icon: '📅', description: 'Actif 7 jours consécutifs', categorie: 'streak' },
+  { id: 'streak_30', nom: 'Mois de feu', icon: '🌟', description: 'Actif 30 jours consécutifs', categorie: 'streak' },
+  { id: 'early_bird', nom: 'Lève-tôt', icon: '🌅', description: 'Tâche terminée avant 8h', categorie: 'special' },
+  { id: 'night_owl', nom: 'Noctambule', icon: '🦉', description: 'Tâche terminée après 23h', categorie: 'special' },
+  { id: 'speedster', nom: 'Fulgurant', icon: '⚡', description: '5 tâches terminées en 1 jour', categorie: 'special' },
 ]
 
 const COACH_STYLES_LIST = [
   { id: 'bienveillant', nom: 'Alex', emoji: 'heart', desc: 'Doux & encourageant' },
-  { id: 'motivateur',   nom: 'Max',  emoji: 'flame', desc: 'Energique & challengeant' },
-  { id: 'analytique',   nom: 'Nova', emoji: 'chart', desc: 'Précis & factuel' },
+  { id: 'motivateur', nom: 'Max', emoji: 'flame', desc: 'Energique & challengeant' },
+  { id: 'analytique', nom: 'Nova', emoji: 'chart', desc: 'Précis & factuel' },
 ]
 
 const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: 'Tableau de bord', path: '/dashboard'     },
-  { icon: Bot,             label: 'Assistant IA',    path: '/ia'            },
-  { icon: Sparkles,        label: 'Tomorrow Builder',path: '/tomorrow'      },
-  { icon: Flag,            label: 'Goal Reverse',    path: '/goal'          },
-  { icon: BarChart2,       label: 'Analytiques',     path: '/analytics'     },
-  { icon: Calendar,        label: 'Planification',   path: '/planification' },
-  { icon: Users,           label: 'Collaboration',   path: '/collaboration' },
-  { icon: HelpCircle,      label: 'Aide',            path: '/help'          },
+  { icon: LayoutDashboard, label: 'Tableau de bord', path: '/dashboard' },
+  { icon: Bot, label: 'Assistant IA', path: '/ia' },
+  { icon: Sparkles, label: 'Tomorrow Builder', path: '/tomorrow' },
+  { icon: Flag, label: 'Goal Reverse', path: '/goal' },
+  { icon: BarChart2, label: 'Analytiques', path: '/analytics' },
+  { icon: Calendar, label: 'Planification', path: '/planification' },
+  { icon: Users, label: 'Collaboration', path: '/collaboration' },
+  { icon: HelpCircle, label: 'Aide', path: '/help' },
 ]
 
 // ── Icons SVG ─────────────────────────────────────────────────────────────────
 const IconLock = ({ size = 14, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </svg>
 )
 const IconLink = ({ size = 14, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 )
 const IconUnlink = ({ size = 13, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18.84 12.25l1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/>
-    <path d="M5.17 11.75l-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/>
-    <line x1="8" y1="2" x2="8" y2="5"/><line x1="2" y1="8" x2="5" y2="8"/>
-    <line x1="16" y1="19" x2="16" y2="22"/><line x1="19" y1="16" x2="22" y2="16"/>
+    <path d="M18.84 12.25l1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71" />
+    <path d="M5.17 11.75l-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71" />
+    <line x1="8" y1="2" x2="8" y2="5" /><line x1="2" y1="8" x2="5" y2="8" />
+    <line x1="16" y1="19" x2="16" y2="22" /><line x1="19" y1="16" x2="22" y2="16" />
   </svg>
 )
 
@@ -169,14 +169,14 @@ const SousTaches = memo(function SousTaches({ tache, T }) {
   const [loading, setLoading] = React.useState(false)
   const [ajoutVisible, setAjoutVisible] = React.useState(false)
   React.useEffect(() => { charger() }, [tache.id])
-  const charger = async () => { try { const r = await axios.get(`${API}/taches/${tache.id}/sous-taches`); setSousTaches(r.data) } catch {} }
+  const charger = async () => { try { const r = await axios.get(`${API}/taches/${tache.id}/sous-taches`); setSousTaches(r.data) } catch { } }
   const ajouter = async () => {
     if (!nouvelle.trim()) return; setLoading(true)
-    try { await axios.post(`${API}/taches/${tache.id}/sous-taches`, { titre: nouvelle, ordre: sousTaches.length }); setNouvelle(''); setAjoutVisible(false); await charger() } catch {}
+    try { await axios.post(`${API}/taches/${tache.id}/sous-taches`, { titre: nouvelle, ordre: sousTaches.length }); setNouvelle(''); setAjoutVisible(false); await charger() } catch { }
     setLoading(false)
   }
-  const toggle   = async (st) => { try { await axios.put(`${API}/sous-taches/${st.id}`, { terminee: !st.terminee }); await charger() } catch {} }
-  const supprimer = async (id) => { try { await axios.delete(`${API}/sous-taches/${id}`); await charger() } catch {} }
+  const toggle = async (st) => { try { await axios.put(`${API}/sous-taches/${st.id}`, { terminee: !st.terminee }); await charger() } catch { } }
+  const supprimer = async (id) => { try { await axios.delete(`${API}/sous-taches/${id}`); await charger() } catch { } }
   const terminees = sousTaches.filter(st => st.terminee).length
   const pct = sousTaches.length > 0 ? Math.round((terminees / sousTaches.length) * 100) : 0
   return (
@@ -435,7 +435,7 @@ const MobileActionBar = ({ d, T, onOpenSheet, onOpenTemplates, onOpenExport }) =
       <motion.button onClick={() => d.setShowRappels(s => !s)}
         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 10, color: '#e05c5c', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
         whileTap={{ scale: 0.96 }}>
-      <Bell size={14} />{d.rappels.length}
+        <Bell size={14} />{d.rappels.length}
       </motion.button>
     )}
   </div>
@@ -493,6 +493,10 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
   const menuRef = useRef(null)
   const pts = tache.priorite === 'haute' ? 30 : tache.priorite === 'moyenne' ? 20 : 10
   const isBloquee = tache.bloquee && !tache.terminee
+  const todayStr = (() => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}` })()
+  const isFocused = !!tache.focus_date && String(tache.focus_date).slice(0,10) === todayStr
+  const focusFull = (d.tachesFocus?.length || 0) >= 3 && !isFocused
+  const canPin = !tache.terminee && !isBloquee
 
   useEffect(() => {
     const h = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
@@ -547,6 +551,15 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
                     <CheckSquare size={14} strokeWidth={1.8} />{tache.terminee ? 'Rouvrir' : 'Marquer terminée'}
                   </button>
                 )}
+                {canPin && (
+                  <button
+                    disabled={focusFull}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: isFocused ? T.accent : focusFull ? `${T.text2}80` : T.text, fontSize: 13, cursor: focusFull ? 'not-allowed' : 'pointer', textAlign: 'left' }}
+                    onClick={() => { if (!focusFull) { d.togglerFocus(tache.id, isFocused); setMenuOpen(false) } }}>
+                    <Star size={14} strokeWidth={1.8} fill={isFocused ? T.accent : 'none'} />
+                    {isFocused ? 'Désépingler du focus' : focusFull ? 'Focus complet (3/3)' : 'Épingler au focus'}
+                  </button>
+                )}
                 <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: T.text, fontSize: 13, cursor: 'pointer', textAlign: 'left' }} onClick={() => toggleExpand('sousTaches')}>
                   <ChevronDown size={14} strokeWidth={1.8} />Sous-tâches
                 </button>
@@ -574,6 +587,199 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             style={{ overflow: 'hidden', paddingLeft: 18, paddingRight: 12, paddingBottom: 12 }}>
             {expandMode === 'sousTaches' && <SousTaches tache={tache} T={T} />}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+})
+
+// ── FocusDuJour — 3 priorités de la journée ──────────────────────────────────
+const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const pickerRef = useRef(null)
+  const focused = d.tachesFocus || []
+  const slots = [0, 1, 2]
+  const limitAtteinte = focused.length >= 3
+  const dateTitre = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  useEffect(() => {
+    const h = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false) }
+    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const tachesCandidates = (d.taches || []).filter(t =>
+    !t.terminee && !focused.some(f => f.id === t.id)
+  )
+
+  const epingler = (id) => {
+    d.togglerFocus(id, false)
+    setPickerOpen(false)
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+      style={{
+        position: 'relative',
+        background: T.bg2,
+        border: `1px solid ${T.accent}40`,
+        borderRadius: 16,
+        padding: isMobile ? '14px 14px 12px' : '18px 22px 16px',
+        marginBottom: 20,
+        boxShadow: `0 0 0 1px ${T.accent}10, 0 4px 18px ${T.accent}10`,
+        overflow: 'visible',
+      }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: '16px 16px 0 0' }} />
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 10, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Target size={16} color={T.accent} strokeWidth={2.2} />
+          </div>
+          <div>
+            <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>Focus du jour</div>
+            <div style={{ fontSize: 11, color: T.text2, marginTop: 1, textTransform: 'capitalize' }}>{dateTitre}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, padding: '4px 10px', borderRadius: 99, background: `${T.accent}12`, color: T.accent, fontWeight: 700 }}>
+          {focused.length}/3
+        </div>
+      </div>
+
+      {/* Empty state — aucun focus */}
+      {focused.length === 0 && (
+        <div style={{ textAlign: 'center', padding: isMobile ? '10px 6px 6px' : '14px 6px 6px' }}>
+          <div style={{ fontSize: 13, color: T.text2, marginBottom: 4, fontWeight: 500 }}>Choisis tes 3 priorités du jour</div>
+          <div style={{ fontSize: 11.5, color: T.text2, opacity: 0.75, marginBottom: 12 }}>Tu n'as pas besoin d'en faire plus.</div>
+        </div>
+      )}
+
+      {/* Slots */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 10 }}>
+        {slots.map(i => {
+          const t = focused[i]
+          if (!t) {
+            const isFirst = focused.length === 0 && i === 0
+            return (
+              <motion.button
+                key={`empty-${i}`}
+                onClick={() => setPickerOpen(true)}
+                whileHover={{ borderColor: `${T.accent}80`, background: `${T.accent}06` }}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: isMobile ? '14px 12px' : '18px 12px',
+                  background: 'transparent',
+                  border: `1.5px dashed ${T.border}`,
+                  borderRadius: 12,
+                  color: T.text2,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  minHeight: isMobile ? 56 : 70,
+                }}>
+                <Plus size={14} strokeWidth={2} />
+                {isFirst ? 'Choisir ma première tâche' : 'Épingler une tâche'}
+              </motion.button>
+            )
+          }
+          const pts = t.priorite === 'haute' ? 30 : t.priorite === 'moyenne' ? 20 : 10
+          return (
+            <motion.div
+              key={t.id} layout
+              initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+              style={{
+                position: 'relative',
+                background: T.bg3,
+                border: `1px solid ${pColor(t.priorite)}30`,
+                borderRadius: 12,
+                padding: '10px 12px 10px 14px',
+                display: 'flex', flexDirection: 'column', gap: 8,
+                minHeight: isMobile ? 56 : 70,
+              }}>
+              <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, background: pColor(t.priorite), borderRadius: 99 }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {t.titre}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
+                    {t.deadline && (
+                      <span style={{ fontSize: 10.5, color: T.text2, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <Calendar size={9} strokeWidth={2} />
+                        {new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 10, color: T.accent, fontWeight: 700 }}>+{pts}</span>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => d.togglerFocus(t.id, true)}
+                  whileHover={{ background: 'rgba(224,92,92,0.12)', color: '#e05c5c' }} whileTap={{ scale: 0.9 }}
+                  title="Désépingler"
+                  style={{ width: 22, height: 22, borderRadius: 6, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <X size={13} strokeWidth={2} />
+                </motion.button>
+              </div>
+              <motion.button
+                onClick={() => d.toggleTache(t.id, t.terminee, t.priorite, t.bloquee)}
+                whileHover={{ background: `${T.accent}25` }} whileTap={{ scale: 0.97 }}
+                style={{
+                  alignSelf: 'flex-start',
+                  padding: '5px 12px', borderRadius: 8, fontSize: 11.5, fontWeight: 600,
+                  background: `${T.accent}15`, border: `1px solid ${T.accent}40`, color: T.accent,
+                  cursor: 'pointer',
+                }}>
+                Terminer
+              </motion.button>
+            </motion.div>
+          )
+        })}
+      </div>
+
+      {/* Picker dropdown */}
+      <AnimatePresence>
+        {pickerOpen && (
+          <motion.div
+            ref={pickerRef}
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            style={{
+              position: 'absolute', top: '100%', left: isMobile ? 12 : 22, right: isMobile ? 12 : 22, marginTop: 6,
+              zIndex: 300, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12,
+              boxShadow: '0 12px 32px rgba(0,0,0,0.25)', overflow: 'hidden', maxHeight: 320, overflowY: 'auto',
+            }}>
+            {limitAtteinte ? (
+              <div style={{ padding: '14px 16px', fontSize: 12, color: T.text2, textAlign: 'center' }}>
+                Limite de 3 tâches atteinte — désépingles-en une avant.
+              </div>
+            ) : tachesCandidates.length === 0 ? (
+              <div style={{ padding: '14px 16px', fontSize: 12, color: T.text2, textAlign: 'center' }}>
+                Aucune tâche disponible. Crée-en une d'abord.
+              </div>
+            ) : (
+              tachesCandidates.slice(0, 30).map(t => (
+                <button key={t.id}
+                  onClick={() => epingler(t.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '10px 14px', background: 'transparent', border: 'none',
+                    borderBottom: `1px solid ${T.border}40`,
+                    color: T.text, fontSize: 13, cursor: 'pointer', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = T.bg3}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: pColor(t.priorite), flexShrink: 0 }} />
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
+                  {t.deadline && (
+                    <span style={{ fontSize: 10.5, color: T.text2, flexShrink: 0 }}>
+                      {new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -609,7 +815,7 @@ export default function Dashboard() {
   const mainMarginL = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
 
   const pColor = (p) => p === 'haute' ? '#e05c5c' : p === 'moyenne' ? '#e08a3c' : '#4caf82'
-  const pBg    = (p) => p === 'haute' ? 'rgba(224,92,92,0.12)' : p === 'moyenne' ? 'rgba(224,138,60,0.12)' : 'rgba(76,175,130,0.12)'
+  const pBg = (p) => p === 'haute' ? 'rgba(224,92,92,0.12)' : p === 'moyenne' ? 'rgba(224,138,60,0.12)' : 'rgba(76,175,130,0.12)'
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
@@ -648,7 +854,7 @@ export default function Dashboard() {
         {d.badgeNotif && (
           <motion.div initial={{ opacity: 0, y: 80 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 80 }}
             style={{ position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', zIndex: 1001, background: T.bg2, border: `2px solid ${T.accent}`, borderRadius: 20, padding: '16px 28px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: `0 8px 40px ${T.accent}40`, minWidth: 280 }}>
-            <motion.span animate={{ rotate: [0,-15,15,-10,10,0], scale: [1,1.3,1.3,1.1,1] }} transition={{ duration: 0.6 }} style={{ fontSize: 32 }}>{d.badgeNotif.icon}</motion.span>
+            <motion.span animate={{ rotate: [0, -15, 15, -10, 10, 0], scale: [1, 1.3, 1.3, 1.1, 1] }} transition={{ duration: 0.6 }} style={{ fontSize: 32 }}>{d.badgeNotif.icon}</motion.span>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: 1, marginBottom: 2 }}>BADGE DÉBLOQUÉ !</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{d.badgeNotif.nom}</div>
@@ -697,9 +903,9 @@ export default function Dashboard() {
         <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
         <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
         {[
-          { val: 'toutes',   label: 'Toutes les tâches' },
-          { val: 'haute',    label: 'Priorité haute' },
-          { val: 'bloquee',  label: `Bloquées${d.bloquees > 0 ? ` (${d.bloquees})` : ''}` },
+          { val: 'toutes', label: 'Toutes les tâches' },
+          { val: 'haute', label: 'Priorité haute' },
+          { val: 'bloquee', label: `Bloquées${d.bloquees > 0 ? ` (${d.bloquees})` : ''}` },
           { val: 'terminee', label: 'Terminées' },
         ].map(f => (
           <motion.button key={f.val}
@@ -754,7 +960,7 @@ export default function Dashboard() {
                   </div>
                   <div style={{ padding: '6px' }}>
                     {[
-                      { label: 'Mon profil',  icon: User,     onClick: () => { navigate('/profile'); d.setShowProfileMenu(false) } },
+                      { label: 'Mon profil', icon: User, onClick: () => { navigate('/profile'); d.setShowProfileMenu(false) } },
                       { label: 'Paramètres', icon: Settings, onClick: () => { d.setShowSettings(true); d.setShowProfileMenu(false) }, shortcut: '⌘ ,' },
                     ].map(({ label, icon: Icon, onClick, shortcut }) => (
                       <motion.button key={label} onClick={onClick}
@@ -842,9 +1048,9 @@ export default function Dashboard() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <motion.button style={{ padding: '8px 16px', background: T.accent, border: 'none', borderRadius: 8, color: T.bg, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                    onClick={() => { localStorage.setItem('guide_vu','true'); d.setShowGuideBanner(false); navigate('/help') }}>Voir le guide</motion.button>
+                    onClick={() => { localStorage.setItem('guide_vu', 'true'); d.setShowGuideBanner(false); navigate('/help') }}>Voir le guide</motion.button>
                   <motion.button style={{ padding: '8px 14px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, fontSize: 12, cursor: 'pointer' }}
-                    onClick={() => { localStorage.setItem('guide_vu','true'); d.setShowGuideBanner(false) }}>Plus tard</motion.button>
+                    onClick={() => { localStorage.setItem('guide_vu', 'true'); d.setShowGuideBanner(false) }}>Plus tard</motion.button>
                 </div>
               </motion.div>
             )}
@@ -901,6 +1107,9 @@ export default function Dashboard() {
 
           <ExportModal isOpen={d.showExport} onClose={() => d.setShowExport(false)} taches={d.taches} stats={{ total, terminees, haute, enCours, pct }} user={d.user} theme={d.theme} />
 
+          {/* Focus du jour */}
+          <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
+
           {/* Rappels */}
           <AnimatePresence>
             {d.showRappels && d.rappels?.length > 0 && (
@@ -921,10 +1130,10 @@ export default function Dashboard() {
           {/* Stats */}
           <div className="gs-stats" style={{ marginBottom: 16 }}>
             {[
-              { icon: CheckSquare,   val: total,     label: 'Total',     color: T.accent   },
-              { icon: CheckSquare,   val: terminees, label: 'Terminées', color: '#4caf82'  },
-              { icon: AlertTriangle, val: haute,     label: 'Urgentes',  color: '#e05c5c'  },
-              { icon: Clock,         val: enCours,   label: 'En cours',  color: '#6c63ff'  },
+              { icon: CheckSquare, val: total, label: 'Total', color: T.accent },
+              { icon: CheckSquare, val: terminees, label: 'Terminées', color: '#4caf82' },
+              { icon: AlertTriangle, val: haute, label: 'Urgentes', color: '#e05c5c' },
+              { icon: Clock, val: enCours, label: 'En cours', color: '#6c63ff' },
             ].map((stat, i) => {
               const Icon = stat.icon
               return (
@@ -991,7 +1200,7 @@ export default function Dashboard() {
 
           {/* Filtres */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
-            {[['toutes','Toutes'],['haute','Haute'],['moyenne','Moyenne'],['basse','Basse'],['bloquee','Bloquées'],['terminee','Terminées']].map(([val, label]) => (
+            {[['toutes', 'Toutes'], ['haute', 'Haute'], ['moyenne', 'Moyenne'], ['basse', 'Basse'], ['bloquee', 'Bloquées'], ['terminee', 'Terminées']].map(([val, label]) => (
               <motion.button key={val}
                 style={{ display: 'flex', alignItems: 'center', gap: 4, padding: isMobile ? '5px 10px' : '5px 14px', background: d.filtre === val ? `${T.accent}15` : 'transparent', border: `1px solid ${d.filtre === val ? T.accent : T.border}`, borderRadius: 99, color: d.filtre === val ? T.accent : T.text2, fontSize: isMobile ? 11 : 12, fontWeight: d.filtre === val ? 600 : 400, cursor: 'pointer', flexShrink: 0 }}
                 onClick={() => d.setFiltre(val)} whileTap={{ scale: 0.97 }}>
@@ -1004,7 +1213,7 @@ export default function Dashboard() {
 
           {/* Liste tâches */}
           {d.loading ? (
-            <div>{[1,2,3,4,5].map(i => <SkeletonCard key={i} T={T} />)}</div>
+            <div>{[1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} T={T} />)}</div>
           ) : d.tachesFiltrees.length === 0 ? (
             <motion.div style={{ textAlign: 'center', padding: '60px 20px', color: T.text2 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <CheckSquare size={40} color={T.border} strokeWidth={1} style={{ margin: '0 auto 16px' }} />
@@ -1022,6 +1231,10 @@ export default function Dashboard() {
                 const isExpanded = d.expandedTaches[tache.id]
                 const currentMode = d.expandMode[tache.id]
                 const isBloquee = tache.bloquee && !tache.terminee
+                const todayStr = (() => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}` })()
+                const isFocused = !!tache.focus_date && String(tache.focus_date).slice(0,10) === todayStr
+                const focusFull = (d.tachesFocus?.length || 0) >= 3 && !isFocused
+                const canPin = !tache.terminee && !isBloquee
 
                 return (
                   <motion.div key={tache.id} layout
@@ -1062,6 +1275,16 @@ export default function Dashboard() {
                         {tache.priorite}
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                        {canPin && (
+                          <motion.button
+                            onClick={() => !focusFull && d.togglerFocus(tache.id, isFocused)}
+                            disabled={focusFull}
+                            title={isFocused ? 'Désépingler du focus' : focusFull ? 'Limite de 3 atteinte' : 'Épingler au focus du jour'}
+                            style={{ padding: '5px 8px', borderRadius: 8, background: isFocused ? `${T.accent}15` : 'transparent', border: `1px solid ${isFocused ? T.accent : T.border}`, color: isFocused ? T.accent : focusFull ? `${T.text2}50` : T.text2, cursor: focusFull ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', opacity: focusFull ? 0.5 : 1 }}
+                            whileHover={!focusFull ? { borderColor: T.accent, color: T.accent } : {}}>
+                            <Star size={13} strokeWidth={1.8} fill={isFocused ? T.accent : 'none'} />
+                          </motion.button>
+                        )}
                         <motion.button onClick={() => d.toggleExpand(tache.id, 'dependances')}
                           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 8px', borderRadius: 8, fontSize: 11, background: isExpanded && currentMode === 'dependances' ? `${T.accent}15` : 'transparent', border: `1px solid ${isExpanded && currentMode === 'dependances' ? T.accent : T.border}`, color: isExpanded && currentMode === 'dependances' ? T.accent : T.text2, cursor: 'pointer' }}
                           whileHover={{ borderColor: T.accent, color: T.accent }}>
@@ -1115,7 +1338,7 @@ export default function Dashboard() {
       {/* Onboarding */}
       {d.showOnboarding && (
         <Onboarding T={T} userId={d.user?.id} etapeInitiale={0}
-          onTerminer={() => { localStorage.setItem('onboarding_termine','true'); d.setShowOnboarding(false) }}
+          onTerminer={() => { localStorage.setItem('onboarding_termine', 'true'); d.setShowOnboarding(false) }}
           activerNotifications={d.activerNotifications} />
       )}
 
@@ -1147,7 +1370,7 @@ export default function Dashboard() {
                     onClick={() => d.toggleSousTacheIA(i)}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: st.selectionne ? `${T.accent}12` : T.bg3, border: `1.5px solid ${st.selectionne ? T.accent : T.border}`, borderRadius: 12, cursor: 'pointer' }}>
                     <div style={{ width: 18, height: 18, borderRadius: 5, background: st.selectionne ? T.accent : 'transparent', border: `2px solid ${st.selectionne ? T.accent : T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {st.selectionne && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke={T.bg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      {st.selectionne && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke={T.bg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     </div>
                     <span style={{ fontSize: 13, color: st.selectionne ? T.text : T.text2, fontWeight: st.selectionne ? 500 : 400, flex: 1 }}>{st.titre}</span>
                     <span style={{ fontSize: 10, fontWeight: 600, borderRadius: 99, padding: '2px 7px', background: st.priorite === 'haute' ? '#e05c5c22' : `${T.accent}18`, color: st.priorite === 'haute' ? '#e05c5c' : T.accent }}>{st.priorite}</span>
@@ -1218,7 +1441,7 @@ export default function Dashboard() {
                         <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>jours de streak</div>
                       </div>
                     </div>
-                    {['performance','points','streak','special'].map(cat => (
+                    {['performance', 'points', 'streak', 'special'].map(cat => (
                       <div key={cat} style={{ marginBottom: 20 }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 10, textTransform: 'uppercase' }}>{cat}</div>
                         {BADGES_CONFIG.filter(b => b.categorie === cat).map(b => {
@@ -1231,7 +1454,7 @@ export default function Dashboard() {
                                 <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>{b.description}</div>
                               </div>
                               {obtenu
-                                ? <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                                ? <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
                                 : <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px dashed ${T.border}`, flexShrink: 0 }} />
                               }
                             </div>
@@ -1255,7 +1478,7 @@ export default function Dashboard() {
                             ))}
                           </div>
                           <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: d.theme === key ? 700 : 500, color: T.text }}>{t.name}</div></div>
-                          {d.theme === key && <div style={{ width: 20, height: 20, borderRadius: '50%', background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>}
+                          {d.theme === key && <div style={{ width: 20, height: 20, borderRadius: '50%', background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>}
                         </motion.button>
                       ))}
                     </div>
@@ -1341,7 +1564,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
-                  {['tous','projet','voyage','habitude','etude','autre'].map(cat => (
+                  {['tous', ...Array.from(new Set((d.templates || []).map(t => t.categorie).filter(Boolean)))].map(cat => (
                     <motion.button key={cat} onClick={() => d.setTemplateCategorie(cat)} whileTap={{ scale: 0.97 }}
                       style={{ padding: '4px 12px', borderRadius: 99, flexShrink: 0, fontSize: 11, fontWeight: d.templateCategorie === cat ? 600 : 400, background: d.templateCategorie === cat ? `${T.accent}15` : 'transparent', border: `1px solid ${d.templateCategorie === cat ? T.accent : T.border}`, color: d.templateCategorie === cat ? T.accent : T.text2, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       {cat === 'tous' ? 'Tous' : cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -1373,7 +1596,7 @@ export default function Dashboard() {
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
                 {d.templatesLoading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {[1,2,3].map(i => (
+                    {[1, 2, 3].map(i => (
                       <div key={i} style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, padding: '14px 16px' }}>
                         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                           <Skeleton w={40} h={40} r={10} />
@@ -1559,8 +1782,8 @@ export default function Dashboard() {
                       {coachStyleObj?.id === 'motivateur'
                         ? `Allez ! ${total - terminees} tâches restantes — qu'est-ce qui te bloque ?`
                         : coachStyleObj?.id === 'analytique'
-                        ? `Analyse : ${pct}% de complétion, ${d.bloquees} tâche(s) bloquée(s). Que veux-tu optimiser ?`
-                        : `Bonjour ! Tu as ${total - terminees} tâches en cours. Comment je peux t'aider ?`}
+                          ? `Analyse : ${pct}% de complétion, ${d.bloquees} tâche(s) bloquée(s). Que veux-tu optimiser ?`
+                          : `Bonjour ! Tu as ${total - terminees} tâches en cours. Comment je peux t'aider ?`}
                     </div>
                   </motion.div>
                 )}
@@ -1570,8 +1793,8 @@ export default function Dashboard() {
                       <CoachIcon style={coachStyleObj} size={14} />
                     </div>
                     <div style={{ padding: '10px 14px', borderRadius: '14px 14px 14px 4px', background: T.bg3, border: `1px solid ${T.border}`, display: 'flex', gap: 4, alignItems: 'center' }}>
-                      {[0,1,2].map(i => (
-                        <motion.div key={i} animate={{ y: [0,-4,0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
+                      {[0, 1, 2].map(i => (
+                        <motion.div key={i} animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
                           style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent }} />
                       ))}
                     </div>
@@ -1581,7 +1804,7 @@ export default function Dashboard() {
               <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
                 {(!d.coachMessages || d.coachMessages.length === 0) && (
                   <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-                    {['Quelles tâches prioriser ?','Aide-moi à débloquer','Analyse ma semaine'].map(s => (
+                    {['Quelles tâches prioriser ?', 'Aide-moi à débloquer', 'Analyse ma semaine'].map(s => (
                       <motion.button key={s} onClick={() => d.envoyerMessageCoach?.(s)} whileTap={{ scale: 0.96 }}
                         style={{ padding: '5px 11px', borderRadius: 99, fontSize: 11, fontWeight: 500, background: `${T.accent}10`, border: `1px solid ${T.accent}25`, color: T.accent, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         {s}
@@ -1599,7 +1822,7 @@ export default function Dashboard() {
                     style={{ width: 40, height: 40, borderRadius: 10, background: d.coachInput?.trim() ? T.accent : T.bg3, border: `1px solid ${d.coachInput?.trim() ? T.accent : T.border}`, color: d.coachInput?.trim() ? T.bg : T.text2, cursor: d.coachInput?.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                     whileHover={d.coachInput?.trim() ? { scale: 1.05 } : {}} whileTap={{ scale: 0.95 }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                     </svg>
                   </motion.button>
                 </div>
@@ -1609,7 +1832,8 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* MODAL CRÉER TEMPLATE */}
+      {/* MODAL CRÉER TE
+      MPLATE */}
       <AnimatePresence>
         {d.showCreerTemplate && (
           <>
@@ -1650,7 +1874,7 @@ export default function Dashboard() {
                 <div style={{ marginBottom: 20 }}>
                   <label style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 7 }}>Catégorie</label>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {[{ val: 'projet', label: 'Projet' }, { val: 'voyage', label: 'Voyage' }, { val: 'habitude', label: 'Habitude' }, { val: 'etude', label: 'Étude' }, { val: 'autre', label: 'Autre' }].map(cat => (
+                    {[{ val: 'projet', label: 'Projet' }, { val: 'voyage', label: 'Voyage' }, { val: 'habitude', label: 'Habitude' }, { val: 'etude', label: 'Étude' }, { val: 'apprentissage', label: 'Apprentissage' }, { val: 'productivite', label: 'Productivité' }, { val: 'focus', label: 'Focus' }, { val: 'freelance', label: 'Freelance' }, { val: 'travail', label: 'Travail' }, { val: 'entrepreneuriat', label: 'Entrepreneuriat' }, { val: 'carriere', label: 'Carrière' }, { val: 'sante', label: 'Santé' }, { val: 'vie', label: 'Vie' }, { val: 'finance', label: 'Finance' }, { val: 'challenge', label: 'Challenge' }, { val: 'autre', label: 'Autre' }].map(cat => (
                       <motion.button key={cat.val} onClick={() => d.setNouveauTemplate(prev => ({ ...prev, categorie: cat.val }))} whileTap={{ scale: 0.96 }}
                         style={{ padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: d.nouveauTemplate?.categorie === cat.val ? 700 : 400, background: d.nouveauTemplate?.categorie === cat.val ? `${T.accent}15` : 'transparent', border: `1.5px solid ${d.nouveauTemplate?.categorie === cat.val ? T.accent : T.border}`, color: d.nouveauTemplate?.categorie === cat.val ? T.accent : T.text2, cursor: 'pointer' }}>
                         {cat.label}

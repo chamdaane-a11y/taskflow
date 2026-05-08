@@ -139,6 +139,20 @@ export function useDashboard() {
 
   const bloquees = useMemo(() => taches.filter(t => t.bloquee && !t.terminee).length, [taches])
 
+  const todayISO = () => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  }
+
+  const tachesFocus = useMemo(() => {
+    const today = todayISO()
+    return taches.filter(t => {
+      if (!t.focus_date || t.terminee) return false
+      const fd = String(t.focus_date).slice(0, 10)
+      return fd === today
+    })
+  }, [taches])
+
   const NIVEAUX = [
     { niveau: 1, label: 'Débutant',  min: 0 },
     { niveau: 2, label: 'Apprenti',  min: 100 },
@@ -351,6 +365,25 @@ export function useDashboard() {
       afficherNotification(`Erreur : ${err?.response?.data?.message || 'Réessaie'}`, 'error')
     }
   }, [isOnline, user?.id, afficherNotification, chargerPendingCount])
+
+  const togglerFocus = useCallback(async (id, currentlyFocused) => {
+    const today = todayISO()
+    const newFocusDate = currentlyFocused ? null : today
+    setTaches(p => p.map(t => t.id === id ? { ...t, focus_date: newFocusDate } : t))
+    if (!isOnline) {
+      await mettreAJourTacheLocalement(id, { focus_date: newFocusDate })
+      await ajouterActionSync({ type: 'TOGGLE_FOCUS', data: { id, focus: !currentlyFocused } })
+      await chargerPendingCount()
+      return
+    }
+    try {
+      await api.patch(`/taches/${id}/focus`, { focus: !currentlyFocused })
+    } catch (err) {
+      setTaches(p => p.map(t => t.id === id ? { ...t, focus_date: currentlyFocused ? today : null } : t))
+      const msg = err?.response?.data?.erreur || 'Erreur — réessaie'
+      afficherNotification(msg, 'warning')
+    }
+  }, [isOnline, afficherNotification, chargerPendingCount])
 
   const supprimerTache = useCallback(async (id) => {
     const saved = taches.find(t => t.id === id)
@@ -585,7 +618,7 @@ export function useDashboard() {
   // ══════════════════════════════════════════════════════════════════
   return {
     user, T, theme, points, niveau, streak,
-    taches, tachesFiltrees, statsTaches, bloquees, loading,
+    taches, tachesFiltrees, tachesFocus, statsTaches, bloquees, loading,
     badgesObtenus, badgeNotif, rappels,
     niveauActuel, niveauSuivant, pctNiveau, salut,
     titre, setTitre, priorite, setPriorite, deadline, setDeadline,
@@ -610,7 +643,7 @@ export function useDashboard() {
     templateDateDebut, setTemplateDateDebut, templateImporting, templateSucces,
     nouveauTemplate, setNouveauTemplate, nouvelleTacheTemplate, setNouvelleTacheTemplate,
     isOnline, isSyncing, pendingActions, syncResult,
-    ajouterTache, toggleTache, supprimerTache, annulerSuppression,
+    ajouterTache, toggleTache, togglerFocus, supprimerTache, annulerSuppression,
     confirmerCreationApresDNA, annulerCreationApresDNA,
     genererSousTachesIA, confirmerSousTachesIA, toggleSousTacheIA,
     genererTaches, toggleExpand, changerTheme, sauvegarderSlack, exporterGoogleCalendar,

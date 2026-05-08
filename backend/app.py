@@ -482,6 +482,27 @@ def demarrer_scheduler():
 threading.Thread(target=demarrer_scheduler, daemon=True).start()
 
 # ============================================
+# AUTO-MIGRATIONS (idempotentes)
+# ============================================
+def run_migrations():
+    try:
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("""
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'taches' AND column_name = 'focus_date'
+        """)
+        if curseur.fetchone()[0] == 0:
+            curseur.execute("ALTER TABLE taches ADD COLUMN focus_date DATE NULL")
+            db.commit()
+            print("[Migrations] focus_date ajouté à taches ✅")
+        db.close()
+    except Exception as e:
+        print(f"[Migrations] erreur : {e}")
+
+run_migrations()
+
+# ============================================
 # AUTHENTIFICATION
 # ============================================
 
@@ -949,6 +970,40 @@ def update_statut_tache(id):
         curseur.execute("UPDATE taches SET statut=%s WHERE id=%s", (data.get('statut', 'a_faire'), id))
         db.commit(); db.close()
         return jsonify({"message": "Statut mis à jour !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/taches/<int:id>/focus', methods=['PATCH'])
+def update_focus_tache(id):
+    try:
+        data = request.get_json() or {}
+        focus = bool(data.get('focus', False))
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT user_id FROM taches WHERE id = %s", (id,))
+        row = curseur.fetchone()
+        if not row:
+            db.close()
+            return jsonify({"erreur": "Tâche introuvable"}), 404
+        user_id = row['user_id']
+        if focus:
+            curseur.execute("""
+                SELECT COUNT(*) AS n FROM taches
+                WHERE user_id = %s AND focus_date = CURDATE() AND terminee = FALSE AND id <> %s
+            """, (user_id, id))
+            if curseur.fetchone()['n'] >= 3:
+                db.close()
+                return jsonify({"erreur": "Limite de 3 tâches atteinte"}), 400
+            curseur.execute("UPDATE taches SET focus_date = CURDATE() WHERE id = %s", (id,))
+            db.commit()
+            curseur.execute("SELECT focus_date FROM taches WHERE id = %s", (id,))
+            focus_date = curseur.fetchone()['focus_date']
+            db.close()
+            return jsonify({"message": "Focus mis à jour", "focus_date": str(focus_date) if focus_date else None})
+        else:
+            curseur.execute("UPDATE taches SET focus_date = NULL WHERE id = %s", (id,))
+            db.commit(); db.close()
+            return jsonify({"message": "Focus retiré", "focus_date": None})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
@@ -1796,32 +1851,202 @@ def init_templates():
                 titre VARCHAR(200) NOT NULL, ordre INT DEFAULT 0,
                 FOREIGN KEY (template_tache_id) REFERENCES template_taches(id) ON DELETE CASCADE)""")
         db.commit()
-        curseur.execute("SELECT COUNT(*) FROM templates")
-        if curseur.fetchone()[0] == 0:
-            templates_defaut = [
-                {"user_id": 1, "titre": "Lancer un projet", "description": "Toutes les étapes pour démarrer un projet de A à Z", "categorie": "projet", "icone": "🚀", "taches": [
-                    {"titre": "Définir les objectifs", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Rédiger le cahier des charges", "Identifier les parties prenantes"]},
-                    {"titre": "Constituer l'équipe", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Lister les compétences", "Assigner les rôles"]},
-                    {"titre": "Créer le planning", "priorite": "moyenne", "deadline_jours": 7, "sous_taches": ["Définir les jalons", "Répartir les tâches"]},
-                ]},
-                {"user_id": 1, "titre": "Préparer un voyage", "description": "Checklist pour organiser votre voyage", "categorie": "voyage", "icone": "✈️", "taches": [
-                    {"titre": "Réserver les billets", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Comparer les prix", "Choisir les dates"]},
-                    {"titre": "Préparer les documents", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["Vérifier passeport", "Demander visa si nécessaire"]},
-                ]},
-                {"user_id": 1, "titre": "Routine matinale", "description": "Démarrez chaque journée avec productivité", "categorie": "habitude", "icone": "🌅", "taches": [
-                    {"titre": "Sport / Exercice", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Échauffement 5 min", "Séance 20 min"]},
-                    {"titre": "Planifier sa journée", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Lister les 3 priorités", "Vérifier le calendrier"]},
-                ]},
-            ]
-            for tmpl in templates_defaut:
-                curseur.execute("INSERT INTO templates (user_id, titre, description, categorie, icone) VALUES (%s, %s, %s, %s, %s)", (tmpl['user_id'], tmpl['titre'], tmpl['description'], tmpl['categorie'], tmpl['icone']))
-                template_id = curseur.lastrowid
-                for t in tmpl['taches']:
-                    curseur.execute("INSERT INTO template_taches (template_id, titre, priorite, deadline_jours, ordre) VALUES (%s, %s, %s, %s, %s)", (template_id, t['titre'], t['priorite'], t['deadline_jours'], tmpl['taches'].index(t)))
-                    tache_id = curseur.lastrowid
-                    for j, st in enumerate(t.get('sous_taches', [])):
-                        curseur.execute("INSERT INTO template_sous_taches (template_tache_id, titre, ordre) VALUES (%s, %s, %s)", (tache_id, st, j))
-            db.commit()
+        templates_defaut = [
+            {"user_id": 1, "titre": "Lancer un projet", "description": "Toutes les étapes pour démarrer un projet de A à Z", "categorie": "projet", "icone": "🚀", "taches": [
+                {"titre": "Définir les objectifs", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Rédiger le cahier des charges", "Identifier les parties prenantes"]},
+                {"titre": "Constituer l'équipe", "priorite": "haute", "deadline_jours": 3, "sous_taches": ["Lister les compétences", "Assigner les rôles"]},
+                {"titre": "Créer le planning", "priorite": "moyenne", "deadline_jours": 7, "sous_taches": ["Définir les jalons", "Répartir les tâches"]},
+            ]},
+            {"user_id": 1, "titre": "Préparer un voyage", "description": "Checklist pour organiser votre voyage", "categorie": "voyage", "icone": "✈️", "taches": [
+                {"titre": "Réserver les billets", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Comparer les prix", "Choisir les dates"]},
+                {"titre": "Préparer les documents", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["Vérifier passeport", "Demander visa si nécessaire"]},
+                {"titre": "Faire la valise", "priorite": "moyenne", "deadline_jours": 7, "sous_taches": ["Liste vêtements", "Médicaments et trousse"]},
+            ]},
+            {"user_id": 1, "titre": "Routine matinale", "description": "Démarrez chaque journée avec productivité", "categorie": "habitude", "icone": "🌅", "taches": [
+                {"titre": "Sport / Exercice", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Échauffement 5 min", "Séance 20 min"]},
+                {"titre": "Planifier sa journée", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Lister les 3 priorités", "Vérifier le calendrier"]},
+            ]},
+            {"user_id": 1, "titre": "Sprint d'examen 7 jours", "description": "Plan complet de révision pour réussir un examen en 1 semaine", "categorie": "etude", "icone": "📚", "taches": [
+                {"titre": "Cartographier la matière", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Lister tous les chapitres", "Identifier les zones faibles"]},
+                {"titre": "Plan de révision personnalisé", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Diviser par jour", "Allouer le temps par chapitre"]},
+                {"titre": "Sessions Pomodoro × 8 / jour", "priorite": "moyenne", "deadline_jours": 4, "sous_taches": ["Préparer environnement", "Couper notifications"]},
+                {"titre": "Tests blancs et corrections", "priorite": "haute", "deadline_jours": 5, "sous_taches": ["Faire un test complet", "Analyser les erreurs"]},
+                {"titre": "Sommeil et nutrition la veille", "priorite": "haute", "deadline_jours": 6, "sous_taches": ["Dormir 8h", "Manger sain et léger"]},
+            ]},
+            {"user_id": 1, "titre": "Mémoire / Thèse 30 jours", "description": "Roadmap pour rédiger un mémoire ou une thèse en un mois", "categorie": "etude", "icone": "🎓", "taches": [
+                {"titre": "Choisir et valider le sujet", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Discuter avec encadrant", "Définir la problématique"]},
+                {"titre": "Rédiger l'introduction", "priorite": "haute", "deadline_jours": 7, "sous_taches": ["Plan détaillé", "Première version"]},
+                {"titre": "Revue de littérature", "priorite": "haute", "deadline_jours": 14, "sous_taches": ["Lire 20 articles", "Synthèse"]},
+                {"titre": "Méthodologie + premiers résultats", "priorite": "haute", "deadline_jours": 21, "sous_taches": ["Définir méthodes", "Analyser les données"]},
+                {"titre": "Rédaction des chapitres", "priorite": "haute", "deadline_jours": 27, "sous_taches": ["Brouillon", "Relecture"]},
+                {"titre": "Préparer la soutenance", "priorite": "haute", "deadline_jours": 30, "sous_taches": ["Slides", "Répétition", "Anticiper les questions"]},
+            ]},
+            {"user_id": 1, "titre": "Apprendre une compétence (30j)", "description": "Apprendre une nouvelle compétence en 30 jours avec projet final", "categorie": "apprentissage", "icone": "🧠", "taches": [
+                {"titre": "Définir l'objectif SMART", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Mesurable", "Réaliste"]},
+                {"titre": "Trouver 3 ressources", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Cours en ligne", "Livre", "Mentor"]},
+                {"titre": "Planning quotidien 1h", "priorite": "moyenne", "deadline_jours": 3, "sous_taches": ["Bloquer le créneau", "Préparer le matériel"]},
+                {"titre": "Mini-projet semaine 1", "priorite": "moyenne", "deadline_jours": 7},
+                {"titre": "Mini-projet semaine 2", "priorite": "moyenne", "deadline_jours": 14},
+                {"titre": "Bilan + ajustement", "priorite": "moyenne", "deadline_jours": 21},
+                {"titre": "Projet final", "priorite": "haute", "deadline_jours": 30, "sous_taches": ["Conception", "Réalisation", "Démo"]},
+            ]},
+            {"user_id": 1, "titre": "Routine du soir", "description": "Bien finir sa journée pour mieux commencer demain", "categorie": "habitude", "icone": "🌙", "taches": [
+                {"titre": "Préparer demain", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Tenue", "Sac", "3 priorités"]},
+                {"titre": "Déconnexion écrans 1h avant", "priorite": "moyenne", "deadline_jours": 1},
+                {"titre": "Lecture 20 min", "priorite": "basse", "deadline_jours": 1},
+                {"titre": "Méditation 5 min", "priorite": "moyenne", "deadline_jours": 1},
+            ]},
+            {"user_id": 1, "titre": "Sprint Pomodoro 4h", "description": "Bloc de deep work de 4 heures avec 4 Pomodoros", "categorie": "focus", "icone": "⏱️", "taches": [
+                {"titre": "Bloquer le calendrier", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Mode ne pas déranger", "Eau + collation"]},
+                {"titre": "Pomodoro 1 — démarrage (25 min)", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Pomodoro 2 — flow (25 min)", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Pause 15 min", "priorite": "basse", "deadline_jours": 1},
+                {"titre": "Pomodoro 3 — production (25 min)", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Pomodoro 4 — finalisation (25 min)", "priorite": "haute", "deadline_jours": 1},
+            ]},
+            {"user_id": 1, "titre": "Onboarding nouveau client (freelance)", "description": "Démarrer une mission freelance de manière professionnelle", "categorie": "freelance", "icone": "🤝", "taches": [
+                {"titre": "Contrat signé + acompte", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Vérifier les clauses", "Encaisser l'acompte"]},
+                {"titre": "Réunion de cadrage", "priorite": "haute", "deadline_jours": 2, "sous_taches": ["Brief", "Livrables", "Deadlines"]},
+                {"titre": "Accès aux outils du client", "priorite": "moyenne", "deadline_jours": 3},
+                {"titre": "Plan de communication", "priorite": "moyenne", "deadline_jours": 4, "sous_taches": ["Channel", "Fréquence", "Reporting"]},
+                {"titre": "Premier livrable", "priorite": "haute", "deadline_jours": 7},
+            ]},
+            {"user_id": 1, "titre": "Présentation client", "description": "Préparer une présentation impactante en 5 jours", "categorie": "travail", "icone": "📊", "taches": [
+                {"titre": "Comprendre l'audience", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Profils", "Attentes"]},
+                {"titre": "Storyline en 3 actes", "priorite": "haute", "deadline_jours": 2},
+                {"titre": "Slides v1", "priorite": "moyenne", "deadline_jours": 3},
+                {"titre": "Répétition + chrono", "priorite": "haute", "deadline_jours": 4},
+                {"titre": "Anticiper objections", "priorite": "moyenne", "deadline_jours": 5},
+            ]},
+            {"user_id": 1, "titre": "Sunday Review (planifier la semaine)", "description": "Bilan hebdo + planning de la semaine en 1h", "categorie": "productivite", "icone": "📅", "taches": [
+                {"titre": "Bilan semaine passée", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Wins", "Echecs", "Leçons"]},
+                {"titre": "3 objectifs majeurs de la semaine", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Bloquer les deep work sessions", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Préparer les meetings", "priorite": "moyenne", "deadline_jours": 1},
+                {"titre": "Vie perso : 1 sortie + 2 sports", "priorite": "moyenne", "deadline_jours": 1},
+            ]},
+            {"user_id": 1, "titre": "Bilan trimestriel", "description": "Faire le point tous les 3 mois sur ses objectifs", "categorie": "productivite", "icone": "📈", "taches": [
+                {"titre": "Lister les wins", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Lister les échecs", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Causes racines"]},
+                {"titre": "Mesurer les KPIs", "priorite": "haute", "deadline_jours": 2},
+                {"titre": "3 priorités du prochain trimestre", "priorite": "haute", "deadline_jours": 3},
+                {"titre": "Communiquer aux parties prenantes", "priorite": "moyenne", "deadline_jours": 5},
+            ]},
+            {"user_id": 1, "titre": "Lancer un side-project (30j)", "description": "De l'idée au lancement public en 30 jours", "categorie": "entrepreneuriat", "icone": "💡", "taches": [
+                {"titre": "Valider le besoin (5 interviews)", "priorite": "haute", "deadline_jours": 3},
+                {"titre": "Wireframe MVP", "priorite": "haute", "deadline_jours": 5},
+                {"titre": "Stack technique + setup", "priorite": "moyenne", "deadline_jours": 7},
+                {"titre": "Premier prototype fonctionnel", "priorite": "haute", "deadline_jours": 14},
+                {"titre": "Beta avec 10 testeurs", "priorite": "haute", "deadline_jours": 21},
+                {"titre": "Lancement public", "priorite": "haute", "deadline_jours": 30, "sous_taches": ["Product Hunt", "Reddit", "Twitter"]},
+            ]},
+            {"user_id": 1, "titre": "Lancer un MVP (6 semaines)", "description": "Ship un produit minimum viable en 6 semaines", "categorie": "entrepreneuriat", "icone": "🚀", "taches": [
+                {"titre": "Définir la valeur unique", "priorite": "haute", "deadline_jours": 2},
+                {"titre": "Roadmap 6 semaines", "priorite": "haute", "deadline_jours": 3},
+                {"titre": "Build core feature", "priorite": "haute", "deadline_jours": 21},
+                {"titre": "Landing page + email capture", "priorite": "moyenne", "deadline_jours": 25},
+                {"titre": "Beta privée 20 users", "priorite": "haute", "deadline_jours": 35},
+                {"titre": "Lancement Product Hunt", "priorite": "haute", "deadline_jours": 42},
+            ]},
+            {"user_id": 1, "titre": "Préparer un entretien d'embauche", "description": "Maximiser ses chances en 6 jours", "categorie": "carriere", "icone": "💼", "taches": [
+                {"titre": "Analyser le poste", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Compétences clés", "Mission"]},
+                {"titre": "CV adapté au poste", "priorite": "haute", "deadline_jours": 2},
+                {"titre": "Préparer 5 STAR stories", "priorite": "haute", "deadline_jours": 3},
+                {"titre": "Recherches sur l'entreprise", "priorite": "moyenne", "deadline_jours": 4, "sous_taches": ["Vision", "Concurrents", "Actualités"]},
+                {"titre": "Questions à poser", "priorite": "basse", "deadline_jours": 5},
+                {"titre": "Mock interview", "priorite": "haute", "deadline_jours": 6},
+                {"titre": "Tenue + logistique", "priorite": "basse", "deadline_jours": 6},
+            ]},
+            {"user_id": 1, "titre": "Networking événement", "description": "Maximiser le ROI d'un événement de networking", "categorie": "carriere", "icone": "🎤", "taches": [
+                {"titre": "LinkedIn à jour", "priorite": "haute", "deadline_jours": 3},
+                {"titre": "Pitch personnel 30 sec", "priorite": "haute", "deadline_jours": 4},
+                {"titre": "Lister 5 personnes à rencontrer", "priorite": "moyenne", "deadline_jours": 5},
+                {"titre": "Cartes de visite / QR code", "priorite": "basse", "deadline_jours": 6},
+                {"titre": "Follow-up J+2", "priorite": "haute", "deadline_jours": 8, "sous_taches": ["Message LinkedIn", "Meeting si pertinent"]},
+            ]},
+            {"user_id": 1, "titre": "Levée de fonds (seed)", "description": "Roadmap pour lever en 60 jours", "categorie": "entrepreneuriat", "icone": "💰", "taches": [
+                {"titre": "Pitch deck v1", "priorite": "haute", "deadline_jours": 7},
+                {"titre": "Liste 50 investisseurs", "priorite": "haute", "deadline_jours": 10},
+                {"titre": "Warm intros via réseau", "priorite": "haute", "deadline_jours": 14},
+                {"titre": "Premiers rendez-vous", "priorite": "haute", "deadline_jours": 21},
+                {"titre": "Data room complète", "priorite": "haute", "deadline_jours": 28},
+                {"titre": "Term sheet négocié", "priorite": "haute", "deadline_jours": 60},
+            ]},
+            {"user_id": 1, "titre": "Plan sportif 30 jours", "description": "Reprise du sport progressive avec bilan", "categorie": "sante", "icone": "🏋️", "taches": [
+                {"titre": "Bilan physique de départ", "priorite": "haute", "deadline_jours": 1, "sous_taches": ["Photos", "Mesures", "Performances"]},
+                {"titre": "Plan d'entraînement", "priorite": "haute", "deadline_jours": 2},
+                {"titre": "Adapter alimentation", "priorite": "moyenne", "deadline_jours": 3},
+                {"titre": "Semaine 1 — assiduité 5/7", "priorite": "haute", "deadline_jours": 7},
+                {"titre": "Bilan mi-parcours", "priorite": "moyenne", "deadline_jours": 15},
+                {"titre": "Bilan final + photos", "priorite": "haute", "deadline_jours": 30},
+            ]},
+            {"user_id": 1, "titre": "Méditation 21 jours", "description": "Installer une pratique de méditation durable", "categorie": "habitude", "icone": "🧘", "taches": [
+                {"titre": "Installer une app (Petit Bambou, Headspace)", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Choisir un créneau fixe", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Sessions 5 min × 7 jours", "priorite": "moyenne", "deadline_jours": 7},
+                {"titre": "Sessions 10 min × 7 jours", "priorite": "moyenne", "deadline_jours": 14},
+                {"titre": "Sessions 15 min × 7 jours", "priorite": "moyenne", "deadline_jours": 21},
+                {"titre": "Bilan sensations", "priorite": "basse", "deadline_jours": 21},
+            ]},
+            {"user_id": 1, "titre": "Détox digitale 7 jours", "description": "Reprendre le contrôle de son temps d'écran", "categorie": "habitude", "icone": "📵", "taches": [
+                {"titre": "Auditer le screen time", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Désinstaller 3 apps chronophages", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Couper les notifications non essentielles", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "1h sans écran le matin", "priorite": "moyenne", "deadline_jours": 2},
+                {"titre": "Sortie sans téléphone", "priorite": "moyenne", "deadline_jours": 4},
+                {"titre": "Bilan + nouvelles règles", "priorite": "moyenne", "deadline_jours": 7},
+            ]},
+            {"user_id": 1, "titre": "Reset alimentation 14 jours", "description": "Reprendre une alimentation saine", "categorie": "sante", "icone": "🥗", "taches": [
+                {"titre": "Vider les placards (sucre, ultra-transformé)", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Liste de courses saines", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Meal prep dimanche", "priorite": "haute", "deadline_jours": 7},
+                {"titre": "Hydratation 2L / jour", "priorite": "moyenne", "deadline_jours": 14},
+                {"titre": "Bilan énergie", "priorite": "basse", "deadline_jours": 14},
+            ]},
+            {"user_id": 1, "titre": "Déménagement", "description": "Organiser un déménagement sans stress", "categorie": "vie", "icone": "📦", "taches": [
+                {"titre": "Trier et donner", "priorite": "haute", "deadline_jours": 7},
+                {"titre": "Cartons + étiquetage", "priorite": "haute", "deadline_jours": 14},
+                {"titre": "Réserver camion ou déménageurs", "priorite": "haute", "deadline_jours": 21},
+                {"titre": "Changements d'adresse", "priorite": "haute", "deadline_jours": 28, "sous_taches": ["EDF / GDF", "Internet", "Banque", "Impôts"]},
+                {"titre": "Jour J", "priorite": "haute", "deadline_jours": 30, "sous_taches": ["Inventaire", "État des lieux"]},
+                {"titre": "Installer dans la nouvelle", "priorite": "moyenne", "deadline_jours": 35},
+            ]},
+            {"user_id": 1, "titre": "Préparer un événement", "description": "Mariage, fête, anniversaire — checklist complète", "categorie": "vie", "icone": "🎉", "taches": [
+                {"titre": "Définir budget + invités", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Choisir lieu et date", "priorite": "haute", "deadline_jours": 7},
+                {"titre": "Envoyer invitations", "priorite": "haute", "deadline_jours": 14},
+                {"titre": "Traiteur + déco", "priorite": "moyenne", "deadline_jours": 21},
+                {"titre": "Logistique J-3", "priorite": "haute", "deadline_jours": 28},
+                {"titre": "Jour J", "priorite": "haute", "deadline_jours": 30},
+            ]},
+            {"user_id": 1, "titre": "Budget mensuel", "description": "Maîtriser ses finances chaque mois", "categorie": "finance", "icone": "💶", "taches": [
+                {"titre": "Calculer revenus nets", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Lister dépenses fixes", "priorite": "haute", "deadline_jours": 1},
+                {"titre": "Catégoriser dépenses variables", "priorite": "moyenne", "deadline_jours": 2},
+                {"titre": "Définir épargne (% revenus)", "priorite": "haute", "deadline_jours": 2},
+                {"titre": "Mid-month check", "priorite": "moyenne", "deadline_jours": 15},
+                {"titre": "Bilan fin de mois", "priorite": "haute", "deadline_jours": 30},
+            ]},
+            {"user_id": 1, "titre": "Challenge zéro déchet (mois 1)", "description": "Premier mois pour réduire ses déchets", "categorie": "challenge", "icone": "♻️", "taches": [
+                {"titre": "Auditer poubelles d'une semaine", "priorite": "haute", "deadline_jours": 7},
+                {"titre": "Acheter contenants réutilisables", "priorite": "moyenne", "deadline_jours": 10},
+                {"titre": "Mettre en place un compost", "priorite": "moyenne", "deadline_jours": 14},
+                {"titre": "Refuser jetable au resto", "priorite": "basse", "deadline_jours": 21},
+                {"titre": "Bilan + objectifs mois 2", "priorite": "basse", "deadline_jours": 30},
+            ]},
+        ]
+        for tmpl in templates_defaut:
+            curseur.execute("SELECT id FROM templates WHERE user_id=%s AND titre=%s LIMIT 1", (tmpl['user_id'], tmpl['titre']))
+            if curseur.fetchone():
+                continue
+            curseur.execute("INSERT INTO templates (user_id, titre, description, categorie, icone) VALUES (%s, %s, %s, %s, %s)", (tmpl['user_id'], tmpl['titre'], tmpl['description'], tmpl['categorie'], tmpl['icone']))
+            template_id = curseur.lastrowid
+            for i, t in enumerate(tmpl['taches']):
+                curseur.execute("INSERT INTO template_taches (template_id, titre, priorite, deadline_jours, ordre) VALUES (%s, %s, %s, %s, %s)", (template_id, t['titre'], t['priorite'], t.get('deadline_jours'), i))
+                tache_id = curseur.lastrowid
+                for j, st in enumerate(t.get('sous_taches', [])):
+                    curseur.execute("INSERT INTO template_sous_taches (template_tache_id, titre, ordre) VALUES (%s, %s, %s)", (tache_id, st, j))
+        db.commit()
         db.close()
         return jsonify({"message": "Tables templates créées avec succès"})
     except Exception as e:
