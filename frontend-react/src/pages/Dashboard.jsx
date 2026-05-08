@@ -787,6 +787,489 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
   )
 })
 
+// ── TaskDNAPopup — Analyse IA d'une tâche avant création ────────────────────
+const TaskDNAPopup = memo(function TaskDNAPopup({ d, T, isMobile }) {
+  if (!d.showDnaPopup || !d.dnaResult) return null
+  const r = d.dnaResult
+  const score = Math.max(0, Math.min(100, r.score_viabilite || 0))
+  const scoreColor = score >= 71 ? '#4caf82' : score >= 41 ? '#e08a3c' : '#e05c5c'
+  const scoreLabel = score >= 81 ? 'Très viable' : score >= 61 ? 'Viable' : score >= 41 ? 'Risquée' : 'Difficile'
+  const radius = 52, circ = 2 * Math.PI * radius
+
+  const reformulation = r.conseil_reformulation
+  const facteursSucces = Array.isArray(r.facteurs_succes) ? r.facteurs_succes.filter(Boolean).slice(0, 4) : []
+  const facteursRisque = Array.isArray(r.facteurs_risque) ? r.facteurs_risque.filter(Boolean).slice(0, 4) : []
+
+  const appliquerReformulation = () => {
+    if (!reformulation || !d.dnaPendingData) return
+    d.setTitre(reformulation)
+    // remplace dans dnaPendingData puis confirme
+    const updated = { ...d.dnaPendingData, titre: reformulation }
+    d.setDnaPendingData?.(updated)
+  }
+
+  return (
+    <AnimatePresence>
+      {d.showDnaPopup && (
+        <>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={d.annulerCreationApresDNA}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, backdropFilter: 'blur(6px)' }} />
+          <motion.div
+            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.94, y: 20 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.94, y: 10 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+            style={{
+              position: 'fixed',
+              ...(isMobile
+                ? { left: 0, right: 0, bottom: 0, maxHeight: '92vh', borderRadius: '20px 20px 0 0' }
+                : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'min(560px, 95vw)', maxHeight: '92vh', borderRadius: 20 }
+              ),
+              zIndex: 1101,
+              background: T.bg2,
+              border: `1px solid ${T.border}`,
+              boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+              overflow: 'hidden',
+              display: 'flex', flexDirection: 'column',
+            }}>
+
+            {/* Drag handle (mobile) */}
+            {isMobile && (
+              <div style={{ padding: '8px 0 0', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 40, height: 4, borderRadius: 99, background: T.border }} />
+              </div>
+            )}
+
+            {/* Header */}
+            <div style={{ padding: isMobile ? '14px 18px 14px' : '20px 24px 16px', borderBottom: `1px solid ${T.border}40`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                <div style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>{r.emoji_categorie || '🧬'}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase' }}>Task DNA</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.label_categorie || 'Analyse'}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                    {r.niveau_complexite && (
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: T.bg3, color: T.text2, fontWeight: 600 }}>
+                        Complexité {r.niveau_complexite}
+                      </span>
+                    )}
+                    {r.duree_label && (
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: T.bg3, color: T.text2, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Clock size={9} strokeWidth={2} /> {r.duree_label}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <motion.button onClick={d.annulerCreationApresDNA}
+                whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}
+                style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <X size={16} />
+              </motion.button>
+            </div>
+
+            {/* Body scrollable */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 18px' : '20px 24px' }}>
+
+              {/* Score gauge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 16 : 22, marginBottom: 18 }}>
+                <div style={{ position: 'relative', width: 120, height: 120, flexShrink: 0 }}>
+                  <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="60" cy="60" r={radius} fill="none" stroke={T.bg3} strokeWidth="8" />
+                    <motion.circle cx="60" cy="60" r={radius} fill="none" stroke={scoreColor} strokeWidth="8" strokeLinecap="round"
+                      strokeDasharray={circ}
+                      initial={{ strokeDashoffset: circ }}
+                      animate={{ strokeDashoffset: circ - (circ * score) / 100 }}
+                      transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }} />
+                  </svg>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: scoreColor, lineHeight: 1, letterSpacing: '-1px' }}>
+                      <AnimatedNumber value={score} />
+                    </div>
+                    <div style={{ fontSize: 10, color: T.text2, marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.6 }}>/ 100</div>
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Viabilité</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor, marginBottom: 8 }}>{scoreLabel}</div>
+                  {r.explication_score && (
+                    <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.45 }}>{r.explication_score}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Conseil principal */}
+              {r.conseil_principal && (
+                <div style={{
+                  background: `${T.accent}10`,
+                  border: `1px solid ${T.accent}30`,
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  marginBottom: 14,
+                  display: 'flex', gap: 10, alignItems: 'flex-start',
+                }}>
+                  <Sparkles size={15} color={T.accent} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 }}>Conseil de l'IA</div>
+                    <div style={{ fontSize: 13, color: T.text, lineHeight: 1.5 }}>{r.conseil_principal}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reformulation suggérée */}
+              {reformulation && (
+                <motion.button
+                  onClick={appliquerReformulation}
+                  whileHover={{ background: `${T.accent}18` }} whileTap={{ scale: 0.99 }}
+                  style={{
+                    width: '100%',
+                    background: `${T.accent}08`,
+                    border: `1px dashed ${T.accent}50`,
+                    borderRadius: 12,
+                    padding: '11px 14px',
+                    marginBottom: 16,
+                    cursor: 'pointer',
+                    display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left',
+                  }}>
+                  <Target size={15} color={T.accent} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.accent, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 3 }}>Reformuler en (cliquer pour appliquer)</div>
+                    <div style={{ fontSize: 13, color: T.text, fontWeight: 500, lineHeight: 1.4 }}>« {reformulation} »</div>
+                  </div>
+                </motion.button>
+              )}
+
+              {/* Facteurs succès / risque */}
+              {(facteursSucces.length > 0 || facteursRisque.length > 0) && (
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : facteursSucces.length && facteursRisque.length ? '1fr 1fr' : '1fr', gap: 10, marginBottom: 14 }}>
+                  {facteursSucces.length > 0 && (
+                    <div style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, padding: '11px 13px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#4caf82', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <CheckCircle2 size={11} strokeWidth={2.4} /> Facteurs de succès
+                      </div>
+                      {facteursSucces.map((f, i) => (
+                        <div key={i} style={{ fontSize: 12, color: T.text, marginBottom: 5, display: 'flex', gap: 6, lineHeight: 1.4 }}>
+                          <span style={{ color: '#4caf82', fontWeight: 700, flexShrink: 0 }}>+</span>{f}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {facteursRisque.length > 0 && (
+                    <div style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, padding: '11px 13px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#e05c5c', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <AlertTriangle size={11} strokeWidth={2.4} /> Facteurs de risque
+                      </div>
+                      {facteursRisque.map((f, i) => (
+                        <div key={i} style={{ fontSize: 12, color: T.text, marginBottom: 5, display: 'flex', gap: 6, lineHeight: 1.4 }}>
+                          <span style={{ color: '#e05c5c', fontWeight: 700, flexShrink: 0 }}>!</span>{f}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Meilleur moment */}
+              {r.meilleur_moment && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.text2, padding: '10px 13px', background: T.bg3, borderRadius: 10 }}>
+                  <Clock size={13} strokeWidth={1.8} />
+                  <span>Meilleur moment : <strong style={{ color: T.text, fontWeight: 600, textTransform: 'capitalize' }}>{r.meilleur_moment}</strong></span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer sticky */}
+            <div style={{ padding: isMobile ? '14px 18px calc(env(safe-area-inset-bottom) + 14px)' : '16px 24px 20px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10, flexShrink: 0, background: T.bg2 }}>
+              <motion.button
+                onClick={d.annulerCreationApresDNA}
+                whileTap={{ scale: 0.98 }}
+                style={{ flex: 1, padding: '12px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 11, color: T.text2, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Annuler
+              </motion.button>
+              <motion.button
+                onClick={d.confirmerCreationApresDNA}
+                whileTap={{ scale: 0.98 }}
+                style={{ flex: 2, padding: '12px', borderRadius: 11, background: T.accent, border: `1px solid ${T.accent}`, color: T.bg, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                <Sparkles size={14} strokeWidth={2.2} /> Créer la tâche
+              </motion.button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+})
+
+// ── CreerTemplateModal — Création d'un template (mobile bottom sheet + desktop) ─
+const TEMPLATE_CATS = [
+  { val: 'projet',          label: 'Projet' },
+  { val: 'voyage',          label: 'Voyage' },
+  { val: 'habitude',        label: 'Habitude' },
+  { val: 'etude',           label: 'Étude' },
+  { val: 'apprentissage',   label: 'Apprentissage' },
+  { val: 'productivite',    label: 'Productivité' },
+  { val: 'focus',           label: 'Focus' },
+  { val: 'freelance',       label: 'Freelance' },
+  { val: 'travail',         label: 'Travail' },
+  { val: 'entrepreneuriat', label: 'Entrepreneuriat' },
+  { val: 'carriere',        label: 'Carrière' },
+  { val: 'sante',           label: 'Santé' },
+  { val: 'vie',             label: 'Vie' },
+  { val: 'finance',         label: 'Finance' },
+  { val: 'challenge',       label: 'Challenge' },
+  { val: 'autre',           label: 'Autre' },
+]
+
+const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) {
+  const titreOk = !!d.nouveauTemplate?.titre?.trim()
+  const tachesOk = (d.nouveauTemplate?.taches?.length || 0) > 0
+  const valide = titreOk && tachesOk
+  const ajouterTacheTemplate = () => {
+    const titre = d.nouvelleTacheTemplate?.titre?.trim()
+    if (!titre) return
+    d.setNouveauTemplate(prev => ({
+      ...prev,
+      taches: [...(prev.taches || []), {
+        titre,
+        priorite: d.nouvelleTacheTemplate?.priorite || 'moyenne',
+        deadline_jours: d.nouvelleTacheTemplate?.deadline_jours || 7,
+      }],
+    }))
+    d.setNouvelleTacheTemplate({ titre: '', priorite: 'moyenne', deadline_jours: 7 })
+  }
+  const publier = async () => {
+    if (!valide) return
+    await d.soumettreNouveauTemplate()
+    d.setNouveauTemplate({ titre: '', description: '', categorie: 'projet', icone: '📋', taches: [] })
+    d.setNouvelleTacheTemplate({ titre: '', priorite: 'moyenne', deadline_jours: 7 })
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={() => d.setShowCreerTemplate(false)}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1090, backdropFilter: 'blur(5px)' }} />
+      <motion.div
+        initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96, y: 20 }}
+        animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+        exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96, y: 10 }}
+        transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+        style={{
+          position: 'fixed',
+          ...(isMobile
+            ? { left: 0, right: 0, bottom: 0, maxHeight: '92dvh', height: '92dvh', borderRadius: '20px 20px 0 0' }
+            : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'min(580px, 95vw)', maxHeight: '90dvh', borderRadius: 20 }
+          ),
+          zIndex: 1091,
+          background: T.bg2,
+          border: `1px solid ${T.border}`,
+          boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+
+        {/* Drag handle mobile */}
+        {isMobile && (
+          <div style={{ padding: '8px 0 0', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 40, height: 4, borderRadius: 99, background: T.border }} />
+          </div>
+        )}
+
+        {/* Header sticky */}
+        <div style={{ padding: isMobile ? '12px 18px 14px' : '20px 24px 16px', borderBottom: `1px solid ${T.border}40`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: T.bg2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <BookOpen size={18} color={T.accent} strokeWidth={1.8} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Créer un template</h2>
+              <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Partage ta structure avec la communauté</p>
+            </div>
+          </div>
+          <motion.button onClick={() => d.setShowCreerTemplate(false)}
+            whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}
+            style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <X size={16} />
+          </motion.button>
+        </div>
+
+        {/* Body scrollable */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '14px 16px' : '18px 24px', WebkitOverflowScrolling: 'touch' }}>
+
+          {/* Section Infos */}
+          <div style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, padding: '14px 14px 12px', marginBottom: 14 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Titre *</label>
+            <input
+              value={d.nouveauTemplate?.titre || ''}
+              onChange={e => d.setNouveauTemplate(prev => ({ ...prev, titre: e.target.value }))}
+              placeholder="Ex: Lancer un projet SaaS"
+              style={{ width: '100%', padding: '11px 14px', background: T.bg2, border: `1.5px solid ${titreOk ? T.accent + '40' : T.border}`, borderRadius: 10, color: T.text, fontSize: 14, fontWeight: 500, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }} />
+
+            <label style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Description</label>
+            <textarea
+              value={d.nouveauTemplate?.description || ''}
+              onChange={e => d.setNouveauTemplate(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Décris à quoi sert ce template…"
+              rows={2}
+              style={{ width: '100%', padding: '10px 14px', background: T.bg2, border: `1.5px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', minHeight: 56 }} />
+          </div>
+
+          {/* Section Catégorie — scroll horizontal */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 10, paddingLeft: 2 }}>Catégorie</label>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', margin: isMobile ? '0 -16px' : '0 -4px', padding: isMobile ? '2px 16px 4px' : '2px 4px 4px' }}
+              className="hide-scrollbar">
+              {TEMPLATE_CATS.map(cat => {
+                const active = d.nouveauTemplate?.categorie === cat.val
+                return (
+                  <motion.button key={cat.val}
+                    onClick={() => d.setNouveauTemplate(prev => ({ ...prev, categorie: cat.val }))}
+                    whileTap={{ scale: 0.95 }}
+                    style={{
+                      flexShrink: 0,
+                      padding: '7px 14px',
+                      borderRadius: 99,
+                      fontSize: 12,
+                      fontWeight: active ? 700 : 500,
+                      background: active ? `${T.accent}18` : T.bg3,
+                      border: `1.5px solid ${active ? T.accent : T.border}`,
+                      color: active ? T.accent : T.text2,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}>
+                    {cat.label}
+                  </motion.button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Section Tâches */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                Tâches {d.nouveauTemplate?.taches?.length > 0 && <span style={{ color: T.accent }}>({d.nouveauTemplate.taches.length})</span>}
+              </label>
+              <span style={{ fontSize: 10, color: tachesOk ? '#4caf82' : T.text2, fontWeight: 600 }}>{tachesOk ? '✓ OK' : 'Au moins 1 requise'}</span>
+            </div>
+
+            {/* Liste tâches */}
+            {(d.nouveauTemplate?.taches || []).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                {d.nouveauTemplate.taches.map((tache, idx) => {
+                  const pColor = tache.priorite === 'haute' ? '#e05c5c' : tache.priorite === 'basse' ? '#4caf82' : '#e08a3c'
+                  const pBg = tache.priorite === 'haute' ? 'rgba(224,92,92,0.12)' : tache.priorite === 'basse' ? 'rgba(76,175,130,0.12)' : 'rgba(224,138,60,0.12)'
+                  return (
+                    <motion.div key={idx}
+                      initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 6 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 11, background: T.bg3, border: `1px solid ${T.border}`, position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: pColor }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text2, flexShrink: 0, minWidth: 18, textAlign: 'center' }}>{idx + 1}</span>
+                      <span style={{ flex: 1, fontSize: 13, color: T.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{tache.titre}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: pBg, color: pColor, flexShrink: 0, textTransform: 'uppercase' }}>{tache.priorite}</span>
+                      <span style={{ fontSize: 10, color: T.text2, flexShrink: 0 }}>J+{tache.deadline_jours}</span>
+                      <motion.button
+                        onClick={() => d.setNouveauTemplate(prev => ({ ...prev, taches: prev.taches.filter((_, i) => i !== idx) }))}
+                        whileHover={{ background: 'rgba(224,92,92,0.12)', color: '#e05c5c' }} whileTap={{ scale: 0.9 }}
+                        style={{ width: 26, height: 26, borderRadius: 7, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Trash2 size={13} strokeWidth={1.8} />
+                      </motion.button>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Form ajout tâche */}
+            <div style={{ background: T.bg3, border: `1.5px dashed ${T.border}`, borderRadius: 12, padding: '12px' }}>
+              <input
+                value={d.nouvelleTacheTemplate?.titre || ''}
+                onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, titre: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterTacheTemplate() } }}
+                placeholder="Titre d'une tâche…"
+                style={{ width: '100%', padding: '10px 12px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 10 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <select
+                  value={d.nouvelleTacheTemplate?.priorite || 'moyenne'}
+                  onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, priorite: e.target.value }))}
+                  style={{ flex: '0 0 auto', padding: '8px 10px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12, outline: 'none', cursor: 'pointer', minWidth: 90 }}>
+                  <option value="haute">Haute</option>
+                  <option value="moyenne">Moyenne</option>
+                  <option value="basse">Basse</option>
+                </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: T.text2 }}>
+                  <span>Dans</span>
+                  <input type="number" min={1} max={365}
+                    value={d.nouvelleTacheTemplate?.deadline_jours || 7}
+                    onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, deadline_jours: parseInt(e.target.value) || 7 }))}
+                    style={{ width: 56, padding: '7px 8px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12, outline: 'none', textAlign: 'center' }} />
+                  <span>j</span>
+                </div>
+                <motion.button
+                  onClick={ajouterTacheTemplate}
+                  disabled={!d.nouvelleTacheTemplate?.titre?.trim()}
+                  whileTap={{ scale: 0.96 }}
+                  style={{
+                    marginLeft: 'auto',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '8px 14px', borderRadius: 9,
+                    fontSize: 12, fontWeight: 700,
+                    background: d.nouvelleTacheTemplate?.titre?.trim() ? T.accent : T.bg2,
+                    border: `1.5px solid ${d.nouvelleTacheTemplate?.titre?.trim() ? T.accent : T.border}`,
+                    color: d.nouvelleTacheTemplate?.titre?.trim() ? T.bg : T.text2,
+                    cursor: d.nouvelleTacheTemplate?.titre?.trim() ? 'pointer' : 'not-allowed',
+                    flexShrink: 0,
+                  }}>
+                  <Plus size={13} strokeWidth={2.5} /> Ajouter
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer sticky */}
+        <div style={{
+          padding: isMobile ? '12px 16px calc(env(safe-area-inset-bottom) + 12px)' : '14px 24px 18px',
+          borderTop: `1px solid ${T.border}`,
+          display: 'flex', gap: 10,
+          flexShrink: 0,
+          background: T.bg2,
+          boxShadow: '0 -8px 18px rgba(0,0,0,0.12)',
+        }}>
+          <motion.button
+            onClick={() => d.setShowCreerTemplate(false)}
+            whileTap={{ scale: 0.98 }}
+            style={{ flex: 1, padding: '12px', background: 'transparent', border: `1.5px solid ${T.border}`, borderRadius: 11, color: T.text2, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Annuler
+          </motion.button>
+          <motion.button
+            onClick={publier}
+            disabled={!valide}
+            whileTap={valide ? { scale: 0.98 } : {}}
+            style={{
+              flex: 2,
+              padding: '12px',
+              fontSize: 13.5, fontWeight: 700,
+              borderRadius: 11,
+              background: valide ? T.accent : T.bg3,
+              border: `1.5px solid ${valide ? T.accent : T.border}`,
+              color: valide ? T.bg : T.text2,
+              cursor: valide ? 'pointer' : 'not-allowed',
+              opacity: valide ? 1 : 0.5,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            }}>
+            <Sparkles size={14} strokeWidth={2.4} /> Publier le template
+          </motion.button>
+        </div>
+      </motion.div>
+    </>
+  )
+})
+
 // ══════════════════════════════════════════════════════════════════════════════
 // DASHBOARD PRINCIPAL
 // ══════════════════════════════════════════════════════════════════════════════
@@ -835,6 +1318,9 @@ export default function Dashboard() {
         @media (max-width: 1000px) { .task-btn-label { display: none !important; } }
         /* Mobile action bar scrollbar hide */
         .mobile-actions::-webkit-scrollbar { display: none; }
+        /* Generic hide-scrollbar utility (template modal cat pills, picker, etc.) */
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
         select option { background: #1a1a2e; }
       `}</style>
 
@@ -1836,125 +2322,24 @@ export default function Dashboard() {
       MPLATE */}
       <AnimatePresence>
         {d.showCreerTemplate && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => d.setShowCreerTemplate(false)}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1090, backdropFilter: 'blur(5px)' }} />
-            <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-              style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'min(560px, 95vw)', maxHeight: '92vh', overflowY: 'auto', zIndex: 1091, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 20, boxShadow: '0 24px 80px rgba(0,0,0,0.4)' }}>
-              <div style={{ padding: '22px 24px 18px', borderBottom: `1px solid ${T.border}`, position: 'sticky', top: 0, background: T.bg2, zIndex: 1, borderRadius: '20px 20px 0 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 11, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BookOpen size={18} color={T.accent} strokeWidth={1.8} /></div>
-                    <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Créer un template</h2>
-                      <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 2 }}>Partage ta structure avec la communauté</p>
-                    </div>
-                  </div>
-                  <motion.button onClick={() => d.setShowCreerTemplate(false)}
-                    style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}>
-                    <X size={16} />
-                  </motion.button>
-                </div>
-              </div>
-              <div style={{ padding: '20px 24px 24px' }}>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 7 }}>Titre *</label>
-                  <input value={d.nouveauTemplate?.titre || ''} onChange={e => d.setNouveauTemplate(prev => ({ ...prev, titre: e.target.value }))}
-                    placeholder="Ex: Lancer un projet SaaS" autoFocus
-                    style={{ width: '100%', padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 7 }}>Description</label>
-                  <textarea value={d.nouveauTemplate?.description || ''} onChange={e => d.setNouveauTemplate(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Décris à quoi sert ce template..." rows={2}
-                    style={{ width: '100%', padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
-                </div>
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 7 }}>Catégorie</label>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {[{ val: 'projet', label: 'Projet' }, { val: 'voyage', label: 'Voyage' }, { val: 'habitude', label: 'Habitude' }, { val: 'etude', label: 'Étude' }, { val: 'apprentissage', label: 'Apprentissage' }, { val: 'productivite', label: 'Productivité' }, { val: 'focus', label: 'Focus' }, { val: 'freelance', label: 'Freelance' }, { val: 'travail', label: 'Travail' }, { val: 'entrepreneuriat', label: 'Entrepreneuriat' }, { val: 'carriere', label: 'Carrière' }, { val: 'sante', label: 'Santé' }, { val: 'vie', label: 'Vie' }, { val: 'finance', label: 'Finance' }, { val: 'challenge', label: 'Challenge' }, { val: 'autre', label: 'Autre' }].map(cat => (
-                      <motion.button key={cat.val} onClick={() => d.setNouveauTemplate(prev => ({ ...prev, categorie: cat.val }))} whileTap={{ scale: 0.96 }}
-                        style={{ padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: d.nouveauTemplate?.categorie === cat.val ? 700 : 400, background: d.nouveauTemplate?.categorie === cat.val ? `${T.accent}15` : 'transparent', border: `1.5px solid ${d.nouveauTemplate?.categorie === cat.val ? T.accent : T.border}`, color: d.nouveauTemplate?.categorie === cat.val ? T.accent : T.text2, cursor: 'pointer' }}>
-                        {cat.label}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ height: 1, background: T.border, marginBottom: 18 }} />
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8, textTransform: 'uppercase' }}>Tâches ({d.nouveauTemplate?.taches?.length || 0})</label>
-                    <span style={{ fontSize: 10, color: T.text2 }}>Au moins 1 requise</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                    {(d.nouveauTemplate?.taches || []).map((tache, idx) => (
-                      <motion.div key={idx} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}` }}>
-                        <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${T.border}`, flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 12.5, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tache.titre}</span>
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: tache.priorite === 'haute' ? 'rgba(224,92,92,0.12)' : tache.priorite === 'basse' ? 'rgba(76,175,130,0.12)' : 'rgba(224,138,60,0.12)', color: tache.priorite === 'haute' ? '#e05c5c' : tache.priorite === 'basse' ? '#4caf82' : '#e08a3c', flexShrink: 0 }}>{tache.priorite}</span>
-                        <motion.button onClick={() => d.setNouveauTemplate(prev => ({ ...prev, taches: prev.taches.filter((_, i) => i !== idx) }))}
-                          style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', padding: 2, flexShrink: 0 }} whileHover={{ color: '#e05c5c' }}>
-                          <Trash2 size={12} strokeWidth={1.8} />
-                        </motion.button>
-                      </motion.div>
-                    ))}
-                  </div>
-                  <div style={{ background: T.bg3, border: `1px dashed ${T.border}`, borderRadius: 12, padding: '14px' }}>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                      <input value={d.nouvelleTacheTemplate?.titre || ''} onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, titre: e.target.value }))}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' && d.nouvelleTacheTemplate?.titre?.trim()) {
-                            d.setNouveauTemplate(prev => ({ ...prev, taches: [...(prev.taches || []), { titre: d.nouvelleTacheTemplate.titre.trim(), priorite: d.nouvelleTacheTemplate?.priorite || 'moyenne', deadline_jours: d.nouvelleTacheTemplate?.deadline_jours || 7 }] }))
-                            d.setNouvelleTacheTemplate({ titre: '', priorite: 'moyenne', deadline_jours: 7 })
-                          }
-                        }}
-                        placeholder="Titre de la tâche..."
-                        style={{ flex: 1, minWidth: 120, padding: '8px 12px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12.5, outline: 'none' }} />
-                      <select value={d.nouvelleTacheTemplate?.priorite || 'moyenne'} onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, priorite: e.target.value }))}
-                        style={{ padding: '8px 10px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12, outline: 'none', cursor: 'pointer' }}>
-                        <option value="haute">Haute</option>
-                        <option value="moyenne">Moyenne</option>
-                        <option value="basse">Basse</option>
-                      </select>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 11, color: T.text2, flexShrink: 0 }}>Dans</span>
-                      <input type="number" min={1} max={365} value={d.nouvelleTacheTemplate?.deadline_jours || 7}
-                        onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, deadline_jours: parseInt(e.target.value) || 7 }))}
-                        style={{ width: 60, padding: '6px 10px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12, outline: 'none', textAlign: 'center' }} />
-                      <span style={{ fontSize: 11, color: T.text2 }}>jours</span>
-                      <motion.button
-                        onClick={() => {
-                          if (!d.nouvelleTacheTemplate?.titre?.trim()) return
-                          d.setNouveauTemplate(prev => ({ ...prev, taches: [...(prev.taches || []), { titre: d.nouvelleTacheTemplate.titre.trim(), priorite: d.nouvelleTacheTemplate?.priorite || 'moyenne', deadline_jours: d.nouvelleTacheTemplate?.deadline_jours || 7 }] }))
-                          d.setNouvelleTacheTemplate({ titre: '', priorite: 'moyenne', deadline_jours: 7 })
-                        }}
-                        disabled={!d.nouvelleTacheTemplate?.titre?.trim()}
-                        style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '6px 13px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: d.nouvelleTacheTemplate?.titre?.trim() ? `${T.accent}15` : T.bg2, border: `1px solid ${d.nouvelleTacheTemplate?.titre?.trim() ? T.accent + '40' : T.border}`, color: d.nouvelleTacheTemplate?.titre?.trim() ? T.accent : T.text2, cursor: d.nouvelleTacheTemplate?.titre?.trim() ? 'pointer' : 'not-allowed' }}
-                        whileTap={{ scale: 0.97 }}>
-                        <Plus size={12} strokeWidth={2.5} />Ajouter
-                      </motion.button>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <motion.button onClick={() => d.setShowCreerTemplate(false)}
-                    style={{ flex: 1, padding: '11px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 11, color: T.text2, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-                    whileHover={{ background: T.bg3 }}>Annuler</motion.button>
-                  <motion.button
-                    onClick={async () => { await d.soumettreNouveauTemplate(); d.setNouveauTemplate({ titre: '', description: '', categorie: 'projet', icone: '📋', taches: [] }); d.setNouvelleTacheTemplate({ titre: '', priorite: 'moyenne', deadline_jours: 7 }) }}
-                    disabled={!d.nouveauTemplate?.titre?.trim() || !(d.nouveauTemplate?.taches?.length > 0)}
-                    style={{ flex: 2, padding: '11px', fontSize: 13, fontWeight: 700, borderRadius: 11, background: (d.nouveauTemplate?.titre?.trim() && d.nouveauTemplate?.taches?.length > 0) ? T.accent : T.bg3, border: `1px solid ${(d.nouveauTemplate?.titre?.trim() && d.nouveauTemplate?.taches?.length > 0) ? T.accent : T.border}`, color: (d.nouveauTemplate?.titre?.trim() && d.nouveauTemplate?.taches?.length > 0) ? T.bg : T.text2, cursor: (!d.nouveauTemplate?.titre?.trim() || !(d.nouveauTemplate?.taches?.length > 0)) ? 'not-allowed' : 'pointer', opacity: (!d.nouveauTemplate?.titre?.trim() || !(d.nouveauTemplate?.taches?.length > 0)) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
-                    whileTap={{ scale: 0.98 }}>
-                    <Sparkles size={14} strokeWidth={2} />Publier le template
-                  </motion.button>
-                </div>
-              </div>
+          <CreerTemplateModal d={d} T={T} isMobile={isMobile} />
+        )}
+      </AnimatePresence>
+
+      {/* Task DNA Popup */}
+      <TaskDNAPopup d={d} T={T} isMobile={isMobile} />
+
+      {/* Loading toast pendant l'analyse DNA */}
+      <AnimatePresence>
+        {d.dnaLoading && !d.showDnaPopup && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            style={{ position: 'fixed', top: isMobile ? 60 : 24, left: '50%', transform: 'translateX(-50%)', zIndex: 1095, background: T.bg2, border: `1px solid ${T.accent}40`, borderRadius: 99, padding: '10px 18px', boxShadow: `0 8px 28px ${T.accent}25`, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+              <Sparkles size={14} color={T.accent} strokeWidth={2.2} />
             </motion.div>
-          </>
+            <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>Analyse Task DNA en cours…</span>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

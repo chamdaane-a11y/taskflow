@@ -633,7 +633,7 @@ export function useDashboard() {
     expandedTaches, expandMode,
     slackWebhook, setSlackWebhook, slackSaving, slackSaved,
     iaLoading, iaPanel, setIaPanel, iaSousTaches, iaConseil, iaType, titrePourIA,
-    dnaLoading, dnaResult, showDnaPopup, dnaPendingData,
+    dnaLoading, dnaResult, showDnaPopup, dnaPendingData, setDnaPendingData,
     undoToast,
     showCoach, setShowCoach, coachStyle, setCoachStyle, coachMessages, coachInput, setCoachInput,
     coachLoading, coachTab, setCoachTab, coachRapport, coachRapportLoading,
