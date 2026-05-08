@@ -1087,7 +1087,7 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
             </div>
             <div style={{ minWidth: 0 }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Créer un template</h2>
-              <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Partage ta structure avec la communauté</p>
+              <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 2 }}>Partage ta structure avec la communauté</p>
             </div>
           </div>
           <motion.button onClick={() => d.setShowCreerTemplate(false)}
@@ -1184,49 +1184,52 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
               </div>
             )}
 
-            {/* Form ajout tâche */}
-            <div style={{ background: T.bg3, border: `1.5px dashed ${T.border}`, borderRadius: 12, padding: '12px' }}>
-              <input
-                value={d.nouvelleTacheTemplate?.titre || ''}
-                onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, titre: e.target.value }))}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterTacheTemplate() } }}
-                placeholder="Titre d'une tâche…"
-                style={{ width: '100%', padding: '10px 12px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 10 }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <select
-                  value={d.nouvelleTacheTemplate?.priorite || 'moyenne'}
-                  onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, priorite: e.target.value }))}
-                  style={{ flex: '0 0 auto', padding: '8px 10px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12, outline: 'none', cursor: 'pointer', minWidth: 90 }}>
-                  <option value="haute">Haute</option>
-                  <option value="moyenne">Moyenne</option>
-                  <option value="basse">Basse</option>
-                </select>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: T.text2 }}>
-                  <span>Dans</span>
-                  <input type="number" min={1} max={365}
-                    value={d.nouvelleTacheTemplate?.deadline_jours || 7}
-                    onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, deadline_jours: parseInt(e.target.value) || 7 }))}
-                    style={{ width: 56, padding: '7px 8px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12, outline: 'none', textAlign: 'center' }} />
-                  <span>j</span>
-                </div>
-                <motion.button
-                  onClick={ajouterTacheTemplate}
-                  disabled={!d.nouvelleTacheTemplate?.titre?.trim()}
-                  whileTap={{ scale: 0.96 }}
-                  style={{
-                    marginLeft: 'auto',
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '8px 14px', borderRadius: 9,
-                    fontSize: 12, fontWeight: 700,
-                    background: d.nouvelleTacheTemplate?.titre?.trim() ? T.accent : T.bg2,
-                    border: `1.5px solid ${d.nouvelleTacheTemplate?.titre?.trim() ? T.accent : T.border}`,
-                    color: d.nouvelleTacheTemplate?.titre?.trim() ? T.bg : T.text2,
-                    cursor: d.nouvelleTacheTemplate?.titre?.trim() ? 'pointer' : 'not-allowed',
-                    flexShrink: 0,
-                  }}>
-                  <Plus size={13} strokeWidth={2.5} /> Ajouter
-                </motion.button>
+          </div>
+        </div>
+
+        {/* Form ajout tâche — pincé entre body et footer, toujours visible */}
+        <div style={{ borderTop: `1px solid ${T.border}40`, padding: isMobile ? '10px 16px' : '12px 24px', background: T.bg2, flexShrink: 0 }}>
+          <div style={{ background: T.bg3, border: `1.5px dashed ${T.border}`, borderRadius: 12, padding: '10px 12px' }}>
+            <input
+              value={d.nouvelleTacheTemplate?.titre || ''}
+              onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, titre: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterTacheTemplate() } }}
+              placeholder="Titre d'une tâche…"
+              style={{ width: '100%', padding: '9px 12px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <select
+                value={d.nouvelleTacheTemplate?.priorite || 'moyenne'}
+                onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, priorite: e.target.value }))}
+                style={{ flex: '0 0 auto', padding: '7px 10px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12, outline: 'none', cursor: 'pointer', minWidth: 90 }}>
+                <option value="haute">Haute</option>
+                <option value="moyenne">Moyenne</option>
+                <option value="basse">Basse</option>
+              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: T.text2 }}>
+                <span>Dans</span>
+                <input type="number" min={1} max={365}
+                  value={d.nouvelleTacheTemplate?.deadline_jours || 7}
+                  onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, deadline_jours: parseInt(e.target.value) || 7 }))}
+                  style={{ width: 52, padding: '6px 8px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 12, outline: 'none', textAlign: 'center' }} />
+                <span>j</span>
               </div>
+              <motion.button
+                onClick={ajouterTacheTemplate}
+                disabled={!d.nouvelleTacheTemplate?.titre?.trim()}
+                whileTap={{ scale: 0.96 }}
+                style={{
+                  marginLeft: 'auto',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '7px 14px', borderRadius: 9,
+                  fontSize: 12, fontWeight: 700,
+                  background: d.nouvelleTacheTemplate?.titre?.trim() ? T.accent : T.bg2,
+                  border: `1.5px solid ${d.nouvelleTacheTemplate?.titre?.trim() ? T.accent : T.border}`,
+                  color: d.nouvelleTacheTemplate?.titre?.trim() ? T.bg : T.text2,
+                  cursor: d.nouvelleTacheTemplate?.titre?.trim() ? 'pointer' : 'not-allowed',
+                  flexShrink: 0,
+                }}>
+                <Plus size={13} strokeWidth={2.5} /> Ajouter
+              </motion.button>
             </div>
           </div>
         </div>
