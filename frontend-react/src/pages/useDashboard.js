@@ -33,10 +33,11 @@ export function useDashboard() {
   const [theme,  setTheme]  = useState(() => localStorage.getItem('theme') || 'dark')
   const T = themes[theme]
 
-  // ── Dashboard HUD stats + Coach daily message ──────────────────────
+  // ── Dashboard HUD stats + Coach daily message + DNA insights ────────
   const [dashboardStats,    setDashboardStats]    = useState(null)
   const [coachDailyMessage, setCoachDailyMessage] = useState(null)
   const [coachDailyLoading, setCoachDailyLoading] = useState(false)
+  const [dnaInsights,       setDnaInsights]       = useState(null)
 
   // ── Tâches ─────────────────────────────────────────────────────────
   const [taches,  setTaches]  = useState([])
@@ -188,6 +189,7 @@ export function useDashboard() {
       chargerBadges(),
       chargerDashboardStats(),
       chargerCoachDailyMessage(),
+      chargerDnaInsights(),
       chargerSlackWebhook(),
     ]).finally(() => {
       activerNotifications()
@@ -222,6 +224,14 @@ export function useDashboard() {
       if (typeof res.data.streak === 'number') setStreak(res.data.streak)
       if (typeof res.data.points === 'number') setPoints(res.data.points)
       if (typeof res.data.niveau === 'number') setNiveau(res.data.niveau)
+    } catch {}
+  }, [user?.id])
+
+  const chargerDnaInsights = useCallback(async () => {
+    if (!user?.id) return
+    try {
+      const res = await api.get(`/ia/task-dna/stats/${user.id}`)
+      setDnaInsights(res.data)
     } catch {}
   }, [user?.id])
 
@@ -666,7 +676,7 @@ export function useDashboard() {
   // ══════════════════════════════════════════════════════════════════
   return {
     user, T, theme, points, niveau, streak,
-    dashboardStats, coachDailyMessage, coachDailyLoading, chargerCoachDailyMessage,
+    dashboardStats, coachDailyMessage, coachDailyLoading, chargerCoachDailyMessage, dnaInsights,
     taches, tachesFiltrees, tachesFocus, statsTaches, bloquees, loading,
     badgesObtenus, badgeNotif, rappels,
     niveauActuel, niveauSuivant, pctNiveau, salut,

@@ -642,6 +642,18 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
 const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile }) {
   const cdm = d.coachDailyMessage
   const loading = d.coachDailyLoading
+
+  // Dismissible per day — clé localStorage par jour
+  const todayKey = `coachDailyDismissed_${new Date().toISOString().slice(0, 10)}`
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(todayKey) === '1' } catch { return false }
+  })
+  const dismiss = () => {
+    try { localStorage.setItem(todayKey, '1') } catch {}
+    setDismissed(true)
+  }
+
+  if (dismissed) return null
   if (!cdm && !loading) return null
 
   const coach = cdm?.coach
@@ -688,7 +700,22 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile }) {
         </motion.div>
 
         {/* Contenu */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          {/* Bouton Fermer pour la journée */}
+          <motion.button
+            onClick={dismiss}
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ background: T.bg3, color: T.text }}
+            title="Masquer pour aujourd'hui"
+            style={{
+              position: 'absolute', top: -4, right: -4,
+              width: 24, height: 24, borderRadius: 7,
+              background: 'transparent', border: 'none',
+              color: T.text2, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+            <X size={13} strokeWidth={2.2} />
+          </motion.button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4, flexWrap: 'wrap' }}>
             <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 800, color: T.text, letterSpacing: '-0.2px' }}>
               {coach?.nom || 'Coach'}
@@ -861,6 +888,9 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
             <div style={{ fontSize: 9, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>réussite</div>
           </div>
         </div>
+
+        {/* Footer DNA insight — mobile, discret */}
+        <DnaInsightFooter d={d} T={T} isMobile={true} />
       </motion.div>
     )
   }
@@ -968,7 +998,54 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
           </div>
         </motion.div>
       </div>
+
+      {/* Footer DNA insight — discret, n'apparaît que si analyses disponibles */}
+      <DnaInsightFooter d={d} T={T} isMobile={false} />
     </motion.div>
+  )
+})
+
+// ── DnaInsightFooter — petite ligne d'insight DNA en bas du HUD ──────────────
+const CATEGORIE_DNA_LABELS = {
+  deep_work: 'Travail profond',
+  creative: 'Créatif',
+  admin: 'Administratif',
+  learning: 'Apprentissage',
+  meeting: 'Réunion',
+  routine: 'Routine',
+  social: 'Social',
+  planning: 'Planification',
+}
+
+const DnaInsightFooter = memo(function DnaInsightFooter({ d, T, isMobile }) {
+  const dna = d.dnaInsights
+  if (!dna || (dna.total_analyses || 0) < 2) return null
+  const score = dna.score_global || 0
+  const topCat = (dna.stats_par_categorie || [])[0]
+  const topCatLabel = topCat?.categorie ? (CATEGORIE_DNA_LABELS[topCat.categorie] || topCat.categorie.replace(/_/g, ' ')) : null
+  const scoreColor = score >= 71 ? '#4caf82' : score >= 41 ? '#e08a3c' : '#e05c5c'
+
+  return (
+    <div style={{
+      marginTop: isMobile ? 9 : 12,
+      paddingTop: isMobile ? 8 : 10,
+      borderTop: `1px dashed ${T.border}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: isMobile ? 10.5 : 11.5, color: T.text2, fontWeight: 600 }}>
+        <Sparkles size={11} color={T.accent} strokeWidth={2.4} />
+        <span>Task DNA</span>
+        <span style={{ color: T.text2, opacity: 0.5 }}>·</span>
+        <span>Score moyen : <strong style={{ color: scoreColor }}>{score}/100</strong></span>
+        {topCatLabel && (
+          <>
+            <span style={{ color: T.text2, opacity: 0.5 }}>·</span>
+            <span>Top catégorie : <strong style={{ color: T.text }}>{topCatLabel}</strong></span>
+          </>
+        )}
+      </div>
+      <span style={{ fontSize: 10, color: T.text2, opacity: 0.7 }}>{dna.total_analyses} analyses</span>
+    </div>
   )
 })
 
@@ -2073,17 +2150,6 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
 
-          {/* Progression */}
-          <motion.div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: isMobile ? '12px 14px' : 20, marginBottom: 20 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
-              <span style={{ color: T.text2, fontWeight: 500 }}>Progression globale</span>
-              <span style={{ color: T.accent, fontWeight: 700 }}>{pct}%</span>
-            </div>
-            <div style={{ height: 6, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
-              <motion.div style={{ height: '100%', background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: 99 }}
-                initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }} />
-            </div>
-          </motion.div>
 
           {/* Formulaire desktop - Smart Task Input */}
           {!isMobile && (
