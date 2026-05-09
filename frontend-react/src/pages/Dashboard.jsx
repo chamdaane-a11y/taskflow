@@ -907,18 +907,23 @@ const TaskDNAPopup = memo(function TaskDNAPopup({ d, T, isMobile }) {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={d.annulerCreationApresDNA}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, backdropFilter: 'blur(6px)' }} />
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 1101, pointerEvents: 'none',
+            display: 'flex',
+            alignItems: isMobile ? 'flex-end' : 'center',
+            justifyContent: 'center',
+          }}>
           <motion.div
             initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.94, y: 20 }}
             animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
             exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.94, y: 10 }}
             transition={{ type: 'spring', damping: 30, stiffness: 320 }}
             style={{
-              position: 'fixed',
+              pointerEvents: 'auto',
               ...(isMobile
-                ? { left: 0, right: 0, bottom: 0, maxHeight: '92vh', borderRadius: '20px 20px 0 0' }
-                : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'min(560px, 95vw)', maxHeight: '92vh', borderRadius: 20 }
+                ? { width: '100%', maxHeight: '92dvh', borderRadius: '20px 20px 0 0' }
+                : { width: 'min(560px, 95vw)', maxHeight: '92dvh', borderRadius: 20 }
               ),
-              zIndex: 1101,
               background: T.bg2,
               border: `1px solid ${T.border}`,
               boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
@@ -1089,6 +1094,7 @@ const TaskDNAPopup = memo(function TaskDNAPopup({ d, T, isMobile }) {
               </motion.button>
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
