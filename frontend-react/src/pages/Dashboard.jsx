@@ -1075,31 +1075,23 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
 // ── StatsHUD — Niveau / Streak / Points semaine / Conseil IA ─────────────────
 const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
   const stats = d.dashboardStats
-  // Fallback skeleton si stats pas encore chargées
-  if (!stats) {
-    return (
-      <div style={{
-        background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16,
-        padding: isMobile ? 14 : 18, marginBottom: 16, minHeight: isMobile ? 130 : 110,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.text2, fontSize: 12,
-      }}>
-        <motion.div animate={{ opacity: [0.4, 0.8, 0.4] }} transition={{ duration: 1.4, repeat: Infinity }}>
-          Chargement de tes stats…
-        </motion.div>
-      </div>
-    )
-  }
+  // Pas de skeleton — on utilise les données déjà disponibles en fallback,
+  // puis on enrichit dès que /dashboard/stats arrive.
+  const localTotal = (d.taches || []).length
+  const localDone = (d.taches || []).filter(t => t.terminee).length
+  const niveauLabelsLocal = { 1:'Débutant', 2:'Apprenti', 3:'Confirmé', 4:'Expert', 5:'Maître', 6:'Légende' }
 
-  const niveau = stats.niveau || 1
-  const niveauLabel = stats.niveau_label || `Niveau ${niveau}`
-  const progres = stats.progres_niveau || 0
-  const points = stats.points || 0
-  const pointsToNext = stats.points_to_next || 0
-  const pointsSemaine = stats.points_semaine || 0
-  const deltaSemaine = stats.delta_semaine || 0
-  const streak = stats.streak || 0
-  const taux = stats.taux_completion || 0
-  const terminees = stats.terminees_total || 0
+  const niveau = stats?.niveau ?? d.niveau ?? 1
+  const niveauLabel = stats?.niveau_label ?? niveauLabelsLocal[niveau] ?? `Niveau ${niveau}`
+  const progres = stats?.progres_niveau ?? 0
+  const points = stats?.points ?? d.points ?? 0
+  const pointsToNext = stats?.points_to_next ?? 0
+  const pointsSemaine = stats?.points_semaine ?? 0
+  const deltaSemaine = stats?.delta_semaine ?? 0
+  const streak = stats?.streak ?? d.streak ?? 0
+  const total = stats?.total_taches ?? localTotal
+  const terminees = stats?.terminees_total ?? localDone
+  const taux = stats?.taux_completion ?? (total > 0 ? Math.round(terminees / total * 100) : 0)
 
   const deltaPositive = deltaSemaine >= 0
   const deltaColor = deltaPositive ? '#4caf82' : '#e05c5c'
@@ -1161,15 +1153,19 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
             <div style={{ fontSize: 15, fontWeight: 800, color: pointsColor, lineHeight: 1.1, marginTop: 2 }}>{pointsSemaine}</div>
             <div style={{ fontSize: 9, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>cette sem.</div>
           </div>
-          {/* Taux */}
+          {/* Tâches : terminées / total */}
           <div style={{
             background: 'rgba(76,175,130,0.08)',
             border: '1px solid rgba(76,175,130,0.25)',
             borderRadius: 10, padding: '8px 6px', textAlign: 'center',
           }}>
             <CheckCircle2 size={13} color="#4caf82" strokeWidth={2.2} />
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#4caf82', lineHeight: 1.1, marginTop: 2 }}>{taux}%</div>
-            <div style={{ fontSize: 9, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>réussite</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#4caf82', lineHeight: 1.1, marginTop: 2 }}>
+              {terminees}/{total}
+            </div>
+            <div style={{ fontSize: 9, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+              tâches · {taux}%
+            </div>
           </div>
         </div>
 
@@ -1263,7 +1259,7 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
           </div>
         </motion.div>
 
-        {/* TAUX RÉUSSITE */}
+        {/* TÂCHES : terminées / total */}
         <motion.div whileHover={{ y: -1 }} style={{
           background: 'rgba(76,175,130,0.05)', border: '1px solid rgba(76,175,130,0.25)',
           borderRadius: 12, padding: '14px 16px',
@@ -1271,14 +1267,15 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircle2 size={16} color="#4caf82" strokeWidth={2.2} />
-            <span style={{ fontSize: 11, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Réussite</span>
+            <span style={{ fontSize: 11, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tâches</span>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-              <span style={{ fontSize: 28, fontWeight: 800, color: '#4caf82', letterSpacing: '-0.5px', lineHeight: 1 }}>{taux}</span>
-              <span style={{ fontSize: 14, color: '#4caf82', fontWeight: 700 }}>%</span>
+              <span style={{ fontSize: 26, fontWeight: 800, color: '#4caf82', letterSpacing: '-0.5px', lineHeight: 1 }}>{terminees}</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.text2 }}>/{total}</span>
+              <span style={{ fontSize: 11, color: '#4caf82', fontWeight: 700, marginLeft: 6 }}>{taux}%</span>
             </div>
-            <div style={{ fontSize: 11, color: T.text2, marginTop: 4, fontWeight: 600 }}>{terminees} terminées</div>
+            <div style={{ fontSize: 11, color: T.text2, marginTop: 4, fontWeight: 600 }}>{total - terminees} restante{(total - terminees) > 1 ? 's' : ''}</div>
           </div>
         </motion.div>
       </div>
