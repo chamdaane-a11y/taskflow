@@ -2929,7 +2929,8 @@ def assistant_augmente():
         historique  = data.get('historique', [])
         tache_id    = data.get('tache_id')
         force_search = data.get('force_search', False)
-        coach_style = data.get('coach_style')  # 'bienveillant' / 'motivateur' / 'analytique' / None
+        coach_style = data.get('coach_style')
+        attachment_text = data.get('attachment_text', '')  # texte extrait d'un fichier uploadé  # 'bienveillant' / 'motivateur' / 'analytique' / None
 
         if not message_raw:
             return jsonify({"erreur": "Message vide"}), 400
@@ -3043,7 +3044,12 @@ def assistant_augmente():
         for h in historique[-16:]:
             role = "assistant" if h.get('role') in ('ia', 'assistant') else "user"
             messages_api.append({"role": role, "content": h.get('content', '')})
-        messages_api.append({"role": "user", "content": message})
+
+        # Injecter le contenu d'un fichier uploadé en contexte avant le message user
+        user_content = message
+        if attachment_text:
+            user_content = f"[FICHIER UPLOADÉ — voici son contenu :]\n\n{attachment_text}\n\n[FIN DU FICHIER]\n\n{message}"
+        messages_api.append({"role": "user", "content": user_content})
 
         # 8. Appel Groq
         completion = groq_client.chat.completions.create(model=modele, messages=messages_api, max_tokens=2000, temperature=0.72)
@@ -3144,7 +3150,10 @@ def assistant_stream():
         for h in historique[-16:]:
             role = "assistant" if h.get('role') in ('ia', 'assistant') else "user"
             messages_api.append({"role": role, "content": h.get('content', '')})
-        messages_api.append({"role": "user", "content": message})
+        user_content_stream = message
+        if attachment_text:
+            user_content_stream = f"[FICHIER UPLOADÉ — voici son contenu :]\n\n{attachment_text}\n\n[FIN DU FICHIER]\n\n{message}"
+        messages_api.append({"role": "user", "content": user_content_stream})
 
         def generate():
             full_response_parts = []
@@ -3314,6 +3323,120 @@ def clear_user_memory(user_id):
         return jsonify({"message": "Mémoire effacée"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/ia/memory/<int:user_id>/<int:memory_id>', methods=['DELETE'])
+def delete_one_memory(user_id, memory_id):
+    """Supprime une entrée de mémoire spécifique."""
+    try:
+        db = connecter()
+        cur = db.cursor()
+        cur.execute("DELETE FROM user_memory WHERE id=%s AND user_id=%s", (memory_id, user_id))
+        affected = cur.rowcount
+        db.commit(); cur.close(); db.close()
+        if affected == 0:
+            return jsonify({"erreur": "Mémoire non trouvée"}), 404
+        return jsonify({"message": "Souvenir oublié"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/ia/memory/<int:user_id>/full', methods=['GET'])
+def get_user_memory_full(user_id):
+    """Retourne toutes les entrées de mémoire avec leurs id pour pouvoir les supprimer."""
+    try:
+        db = connecter()
+        cur = db.cursor(dictionary=True)
+        cur.execute("CREATE TABLE IF NOT EXISTS user_memory (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, categorie VARCHAR(50), cle VARCHAR(150), valeur TEXT, poids INT DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
+        cur.execute("SELECT id, categorie, cle, valeur, poids, created_at FROM user_memory WHERE user_id=%s ORDER BY poids DESC, created_at DESC LIMIT 100", (user_id,))
+        rows = cur.fetchall()
+        for r in rows:
+            if r.get('created_at'): r['created_at'] = str(r['created_at'])
+        cur.close(); db.close()
+        return jsonify({"items": rows, "total": len(rows)})
+    except Exception as e:
+        return jsonify({"erreur": str(e), "items": []}), 500
+
+@app.route('/ia/upload-extract', methods=['POST'])
+def ia_upload_extract():
+    """
+    Reçoit un fichier (PDF, image, txt) → extrait le texte → laisse l'IA en faire des tâches.
+    Retourne juste le texte extrait pour que le frontend l'envoie comme contexte.
+    """
+    import base64
+    try:
+        if 'file' not in request.files:
+            return jsonify({"erreur": "Aucun fichier"}), 400
+        f = request.files['file']
+        if not f or not f.filename:
+            return jsonify({"erreur": "Fichier vide"}), 400
+
+        filename = f.filename.lower()
+        contenu_extrait = ""
+
+        # ── TXT/MD ────────────────────────────────────────────────
+        if filename.endswith(('.txt', '.md', '.markdown')):
+            contenu_extrait = f.read().decode('utf-8', errors='replace')
+
+        # ── PDF ───────────────────────────────────────────────────
+        elif filename.endswith('.pdf'):
+            try:
+                from pypdf import PdfReader
+                reader = PdfReader(f)
+                pages = []
+                for p in reader.pages[:30]:  # max 30 pages
+                    try: pages.append(p.extract_text() or "")
+                    except: pass
+                contenu_extrait = "\n\n".join(pages)
+            except ImportError:
+                # Fallback : tente avec PyPDF2
+                try:
+                    from PyPDF2 import PdfReader
+                    reader = PdfReader(f)
+                    contenu_extrait = "\n\n".join((p.extract_text() or "") for p in reader.pages[:30])
+                except Exception:
+                    return jsonify({"erreur": "PDF non supportable côté serveur (lib manquante)"}), 500
+
+        # ── IMAGE → Groq Vision ───────────────────────────────────
+        elif filename.endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif')):
+            try:
+                file_bytes = f.read()
+                if len(file_bytes) > 4 * 1024 * 1024:
+                    return jsonify({"erreur": "Image trop grande (max 4 Mo)"}), 400
+                b64 = base64.b64encode(file_bytes).decode('utf-8')
+                mime = 'image/jpeg' if filename.endswith(('.jpg', '.jpeg')) else 'image/png' if filename.endswith('.png') else 'image/webp'
+                # Groq vision model
+                vision_resp = groq_client.chat.completions.create(
+                    model="llama-3.2-90b-vision-preview",
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Extrais TOUT le texte visible sur cette image (planning, syllabus, notes, calendrier, capture d'écran...). Retourne uniquement le texte, structuré si possible. Si tu vois des dates/horaires/tâches, conserve-les exactement comme elles apparaissent."},
+                            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+                        ]
+                    }],
+                    max_tokens=2000, temperature=0.2,
+                )
+                contenu_extrait = vision_resp.choices[0].message.content.strip()
+            except Exception as e:
+                return jsonify({"erreur": f"Vision IA indisponible : {str(e)[:200]}"}), 500
+        else:
+            return jsonify({"erreur": f"Type non supporté ({filename.split('.')[-1] if '.' in filename else 'inconnu'})"}), 400
+
+        # Limiter la taille
+        if len(contenu_extrait) > 12000:
+            contenu_extrait = contenu_extrait[:12000] + "\n\n[…contenu tronqué]"
+
+        return jsonify({
+            "texte": contenu_extrait,
+            "filename": f.filename,
+            "type": filename.rsplit('.', 1)[-1] if '.' in filename else 'unknown',
+            "longueur": len(contenu_extrait),
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()[:500]}), 500
+
 
 @app.route('/ia/expand-abreviations', methods=['POST'])
 def route_expand_abreviations():

@@ -9,7 +9,7 @@ import {
   LogOut, Copy, Plus, X, ChevronRight, Layers, Menu,
   Users, Sparkles, Zap, Globe, CheckCircle, Trash2,
   Search, AlertCircle, Check, Brain, ChevronDown, Database,
-  Heart, Flame, BarChart, Target, Flag
+  Heart, Flame, BarChart, Target, Flag, Bot, HelpCircle, Paperclip,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -40,11 +40,14 @@ const INTENTION_META = {
 }
 
 const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: 'Dashboard',    path: '/dashboard'     },
-  { icon: Brain,           label: 'Assistant IA', path: '/ia'            },
-  { icon: BarChart2,       label: 'Analytiques',  path: '/analytics'     },
-  { icon: Calendar,        label: 'Planification',path: '/planification' },
-  { icon: Users,           label: 'Collaboration',path: '/collaboration' },
+  { icon: LayoutDashboard, label: 'Tableau de bord', path: '/dashboard' },
+  { icon: Bot,             label: 'Assistant IA',    path: '/ia' },
+  { icon: Sparkles,        label: 'Tomorrow Builder',path: '/tomorrow' },
+  { icon: Flag,            label: 'Goal Reverse',    path: '/goal' },
+  { icon: BarChart2,       label: 'Analytiques',     path: '/analytics' },
+  { icon: Calendar,        label: 'Planification',   path: '/planification' },
+  { icon: Users,           label: 'Collaboration',   path: '/collaboration' },
+  { icon: HelpCircle,      label: 'Aide',            path: '/help' },
 ]
 
 // ── Personas Coach (lien avec le drawer Coach du Dashboard) ────────────
@@ -54,6 +57,17 @@ const COACHES = {
   analytique:   { id: 'analytique',   nom: 'Nova',  Icon: BarChart, color: '#3b82f6', tag: 'Analytique',   accroche: 'Précis, factuel, basé sur tes données' },
 }
 const getCoach = (style) => COACHES[style] || COACHES.bienveillant
+
+// ── Slash commands ────────────────────────────────────────────────────
+const SLASH_COMMANDS = [
+  { cmd: '/tache',  Icon: Plus,         color: '#10b981', desc: "Crée une tâche : préciser le titre",                     prefix: 'Crée une tâche : ' },
+  { cmd: '/focus',  Icon: Target,       color: '#a855f7', desc: 'Choisis mes 3 priorités du jour parmi mes tâches',         prefix: 'Choisis mes 3 priorités du jour parmi mes tâches actives' },
+  { cmd: '/plan',   Icon: Calendar,     color: '#f59e0b', desc: 'Construis mon planning de la semaine',                     prefix: 'Construis mon planning de la semaine' },
+  { cmd: '/dna',    Icon: Brain,        color: '#0ea5e9', desc: 'Analyse mes patterns Task DNA et donne 3 conseils',        prefix: 'Analyse mes patterns Task DNA et donne 3 conseils actionnables' },
+  { cmd: '/find',   Icon: Search,       color: '#6c63ff', desc: 'Cherche dans mes tâches : préciser ce que tu cherches',    prefix: 'Cherche dans mes tâches : ' },
+  { cmd: '/web',    Icon: Globe,        color: '#0ea5e9', desc: 'Recherche sur le web temps réel',                          prefix: '' /* spécial : active forceSearch */, special: 'web' },
+  { cmd: '/clear',  Icon: Trash2,       color: '#ef4444', desc: 'Efface la conversation actuelle',                          prefix: '', special: 'clear' },
+]
 
 // ── Tableau markdown memoïsé ─────────────────────────────────────────
 const Tableau = memo(function Tableau({ lignes, accent, T }) {
@@ -351,6 +365,19 @@ export default function IAChat() {
   const coach = useMemo(() => getCoach(coachStyle), [coachStyle])
   // Suggestions personnalisées (rules-based backend)
   const [suggestions, setSuggestions] = useState(null)
+  // Mémoire visible (drawer)
+  const [showMemoryDrawer, setShowMemoryDrawer] = useState(false)
+  const [memoryItems, setMemoryItems] = useState([])
+  const [memoryLoading, setMemoryLoading] = useState(false)
+  // Slash commands (popup)
+  const [showSlashMenu, setShowSlashMenu] = useState(false)
+  const [slashIndex, setSlashIndex] = useState(0)
+  // Upload fichier
+  const [attachment, setAttachment] = useState(null) // { filename, type, texte, longueur }
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
+  // Tâches panel mobile
+  const [showTasksPanelMobile, setShowTasksPanelMobile] = useState(false)
 
   const endRef      = useRef(null)
   const textareaRef = useRef(null)
@@ -390,6 +417,77 @@ export default function IAChat() {
   const chargerMemoire     = useCallback(async () => { try { const r = await axios.get(`${API}/ia/memory/${user.id}`);       setMemoryCount(r.data.total_entrees || 0)          } catch {} }, [user?.id])
   const chargerSuggestions = useCallback(async () => { try { const r = await axios.get(`${API}/ia/suggestions/${user.id}`);  setSuggestions(r.data?.suggestions || null)        } catch {} }, [user?.id])
 
+  const chargerMemoryItems = useCallback(async () => {
+    if (!user?.id) return
+    setMemoryLoading(true)
+    try {
+      const r = await axios.get(`${API}/ia/memory/${user.id}/full`)
+      setMemoryItems(r.data?.items || [])
+    } catch {}
+    setMemoryLoading(false)
+  }, [user?.id])
+
+  const oublierUnSouvenir = useCallback(async (id) => {
+    try {
+      await axios.delete(`${API}/ia/memory/${user.id}/${id}`)
+      setMemoryItems(p => p.filter(m => m.id !== id))
+      setMemoryCount(p => Math.max(0, p - 1))
+    } catch {}
+  }, [user?.id])
+
+  const oublierToutSouvenirs = useCallback(async () => {
+    if (!confirm("Effacer toute la mémoire de l'IA ? L'IA oubliera tout ce qu'elle sait de toi.")) return
+    try {
+      await axios.delete(`${API}/ia/memory/${user.id}`)
+      setMemoryItems([]); setMemoryCount(0)
+    } catch {}
+  }, [user?.id])
+
+  const ouvrirMemoryDrawer = useCallback(() => {
+    setShowMemoryDrawer(true)
+    chargerMemoryItems()
+  }, [chargerMemoryItems])
+
+  // Upload fichier
+  const handleFileUpload = useCallback(async (file) => {
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { alert('Fichier trop gros (max 5 Mo)'); return }
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const r = await axios.post(`${API}/ia/upload-extract`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      if (r.data?.texte) {
+        setAttachment({ filename: r.data.filename, type: r.data.type, texte: r.data.texte, longueur: r.data.longueur })
+      } else {
+        alert(r.data?.erreur || 'Extraction échouée')
+      }
+    } catch (e) {
+      alert(e.response?.data?.erreur || "Erreur lors de l'upload")
+    }
+    setUploading(false)
+  }, [])
+
+  const removeAttachment = useCallback(() => setAttachment(null), [])
+
+  // Slash commands action
+  const applySlash = useCallback((c) => {
+    setShowSlashMenu(false)
+    if (c.special === 'web') {
+      setForceSearch(true)
+      setPrompt('')
+      return
+    }
+    if (c.special === 'clear') {
+      effacer()
+      setPrompt('')
+      return
+    }
+    // Sinon : remplacer le prompt par le préfixe (l'utilisateur complète + envoie)
+    setPrompt(c.prefix)
+    setTimeout(() => textareaRef.current?.focus(), 50)
+  }, [effacer])
+
   // Persister le choix de coach
   useEffect(() => {
     try { localStorage.setItem('getshift_coach_style', coachStyle) } catch {}
@@ -413,14 +511,17 @@ export default function IAChat() {
       .map(m => ({ role: m.role === 'ia' ? 'assistant' : 'user', content: m.content }))
 
     const payload = {
-      user_id:      user.id,
-      message:      texte,
+      user_id:        user.id,
+      message:        texte,
       modele,
-      historique:   hist,
-      tache_id:     tacheSelectionnee || null,
-      force_search: forceSearch,
-      coach_style:  coachStyle,
+      historique:     hist,
+      tache_id:       tacheSelectionnee || null,
+      force_search:   forceSearch,
+      coach_style:    coachStyle,
+      attachment_text: attachment?.texte || '',
     }
+    const localAttachment = attachment
+    setAttachment(null) // reset après envoi
 
     // Détection rapide d'une intention "action" → on bascule sur l'endpoint non-stream
     const lowerMsg = texte.toLowerCase()
@@ -551,7 +652,7 @@ export default function IAChat() {
     if (tacheSelectionnee) setTacheSelectionnee(null)
     chargerHistorique(); chargerMemoire()
     setLoading(false)
-  }, [prompt, loading, modele, tacheSelectionnee, forceSearch, user?.id, accent, accent2, navigate, chargerTaches, chargerHistorique, chargerMemoire, chargerSuggestions, coachStyle])
+  }, [prompt, loading, modele, tacheSelectionnee, forceSearch, user?.id, accent, accent2, navigate, chargerTaches, chargerHistorique, chargerMemoire, chargerSuggestions, coachStyle, attachment])
   // Note: messages retiré des dépendances — on utilise messagesRef à la place
 
   const creerTache = useCallback(async (titre) => {
@@ -629,10 +730,15 @@ export default function IAChat() {
               </div>
             </div>
             {memoryCount > 0 && (
-              <div style={{ marginTop: 9, display: 'flex', alignItems: 'center', gap: 5, padding: '4px 8px', background: `${accent}12`, borderRadius: 6, border: `1px solid ${accent}20` }}>
+              <motion.button
+                onClick={ouvrirMemoryDrawer}
+                whileHover={{ background: `${accent}22` }}
+                whileTap={{ scale: 0.97 }}
+                style={{ width: '100%', marginTop: 9, display: 'flex', alignItems: 'center', gap: 5, padding: '4px 8px', background: `${accent}12`, borderRadius: 6, border: `1px solid ${accent}30`, cursor: 'pointer' }}>
                 <Database size={9} color={accent} />
-                <span style={{ fontSize: 9, color: accent, fontWeight: 600, letterSpacing: '0.5px' }}>{memoryCount} SOUVENIRS</span>
-              </div>
+                <span style={{ fontSize: 9, color: accent, fontWeight: 700, letterSpacing: '0.5px', flex: 1, textAlign: 'left' }}>{memoryCount} SOUVENIRS</span>
+                <ChevronRight size={9} color={accent} />
+              </motion.button>
             )}
           </div>
         )}
@@ -746,6 +852,13 @@ export default function IAChat() {
             )}
           </div>
           <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
+            {/* Bouton tâches mobile (split view light) */}
+            {isMobile && tachesEnCours.length > 0 && (
+              <motion.button onClick={() => setShowTasksPanelMobile(true)} whileTap={{ scale: 0.92 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: `${accent}12`, border: `1px solid ${accent}30`, borderRadius: 8, color: accent, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
+                <Layers size={11} />{tachesEnCours.length}
+              </motion.button>
+            )}
             {messages.length > 0 && (
               <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, cursor: 'pointer', fontSize: 11 }}
                 onClick={effacer} whileHover={{ borderColor: '#ef4444', color: '#ef4444' }}>
@@ -829,13 +942,15 @@ export default function IAChat() {
               {/* Capacités */}
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 28 }}>
                 {[
-                  { Icon: Globe,       label: 'Web temps réel',          color: '#0ea5e9' },
-                  { Icon: Database,    label: `${memoryCount} souvenirs`, color: accent    },
-                  { Icon: Brain,       label: 'Spécialiste productivité', color: '#a855f7' },
-                  { Icon: CheckCircle, label: 'Actions directes',         color: '#10b981' },
-                ].map(({ Icon, label, color }, i) => (
+                  { Icon: Globe,       label: 'Web temps réel',          color: '#0ea5e9', onClick: null },
+                  { Icon: Database,    label: `${memoryCount} souvenirs`, color: accent,    onClick: memoryCount > 0 ? ouvrirMemoryDrawer : null },
+                  { Icon: Brain,       label: 'Spécialiste productivité', color: '#a855f7', onClick: null },
+                  { Icon: CheckCircle, label: 'Actions directes',         color: '#10b981', onClick: null },
+                ].map(({ Icon, label, color, onClick }, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.07 }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: `${color}10`, border: `1px solid ${color}25`, borderRadius: 99, fontSize: 10.5, color, fontWeight: 600 }}>
+                    onClick={onClick || undefined}
+                    whileHover={onClick ? { scale: 1.05 } : {}}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: `${color}10`, border: `1px solid ${color}25`, borderRadius: 99, fontSize: 10.5, color, fontWeight: 600, cursor: onClick ? 'pointer' : 'default' }}>
                     <Icon size={10} />{label}
                   </motion.div>
                 ))}
@@ -934,21 +1049,127 @@ export default function IAChat() {
               </motion.div>
             )}
           </AnimatePresence>
+          {/* Attachment chip */}
+          {attachment && (
+            <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+              style={{ marginBottom: 9, padding: '8px 12px', background: `${accent}12`, border: `1px solid ${accent}30`, borderRadius: 10, fontSize: 12, color: accent, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Paperclip size={12} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                <strong>{attachment.filename}</strong> · {attachment.longueur} caractères extraits
+              </span>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: accent, display: 'flex', padding: 0 }} onClick={removeAttachment}><X size={14} /></button>
+            </motion.div>
+          )}
+          {uploading && (
+            <div style={{ marginBottom: 9, padding: '8px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12, color: T.text2, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}>
+                <Sparkles size={12} color={accent} />
+              </motion.div>
+              Extraction du contenu en cours…
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+            {/* Bouton attache fichier */}
+            <input type="file" ref={fileInputRef} style={{ display: 'none' }}
+              accept=".txt,.md,.markdown,.pdf,.png,.jpg,.jpeg,.webp,.gif"
+              onChange={e => { handleFileUpload(e.target.files?.[0]); e.target.value = '' }} />
+            <motion.button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || !!attachment}
+              whileTap={{ scale: 0.92 }}
+              title="Joindre un fichier (PDF, image, txt)"
+              style={{
+                width: 50, height: 50,
+                background: attachment ? `${accent}18` : T.bg3,
+                border: `1px solid ${attachment ? accent : T.border}`,
+                color: attachment ? accent : T.text2,
+                borderRadius: 14, cursor: uploading ? 'wait' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+              <Paperclip size={17} strokeWidth={2} />
+            </motion.button>
+
             <div style={{ flex: 1, position: 'relative' }}>
+              {/* Slash menu popup */}
+              {showSlashMenu && (() => {
+                const search = prompt.slice(1).toLowerCase()
+                const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(search))
+                if (filtered.length === 0) return null
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, right: 0,
+                      background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12,
+                      boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 6, zIndex: 50,
+                      maxHeight: 320, overflowY: 'auto',
+                    }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, padding: '6px 10px 4px', letterSpacing: '1.5px' }}>COMMANDES RAPIDES</div>
+                    {filtered.map((c, idx) => {
+                      const active = idx === slashIndex
+                      return (
+                        <motion.button key={c.cmd}
+                          onClick={() => applySlash(c)}
+                          whileHover={{ background: T.bg3 }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                            padding: '8px 10px', borderRadius: 9,
+                            background: active ? `${c.color}12` : 'transparent',
+                            border: `1px solid ${active ? c.color + '40' : 'transparent'}`,
+                            cursor: 'pointer', textAlign: 'left',
+                          }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: `${c.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <c.Icon size={13} color={c.color} strokeWidth={2.2} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{c.cmd}</div>
+                            <div style={{ fontSize: 11, color: T.text2, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.desc}</div>
+                          </div>
+                        </motion.button>
+                      )
+                    })}
+                    <div style={{ fontSize: 9.5, color: T.text2, padding: '6px 10px 2px', borderTop: `1px solid ${T.border}`, marginTop: 4, opacity: 0.7 }}>
+                      ↑↓ pour naviguer · Entrée ou Tab pour valider · Esc pour fermer
+                    </div>
+                  </motion.div>
+                )
+              })()}
+
               <textarea
                 ref={textareaRef}
                 style={{ width: '100%', padding: '13px 16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, color: T.text, fontSize: 14, outline: 'none', resize: 'none', minHeight: 50, maxHeight: 160, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.55, backdropFilter: 'blur(20px)', transition: 'border-color 0.2s', caretColor: accent }}
                 placeholder={
                   forceSearch       ? 'Que veux-tu rechercher sur le web ?' :
                   tacheSelectionnee ? `Question sur "${taches.find(t => t.id === tacheSelectionnee)?.titre}" ?` :
-                  `Message à ${coach.nom}...`
+                  `Message à ${coach.nom}... (tape / pour les commandes)`
                 }
                 value={prompt}
-                onChange={e => { setPrompt(e.target.value); autoResize(e) }}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer() } }}
+                onChange={e => {
+                  const v = e.target.value
+                  setPrompt(v); autoResize(e)
+                  // Slash menu : afficher si texte commence par '/' et pas d'espace
+                  if (v.startsWith('/') && !v.includes(' ')) {
+                    setShowSlashMenu(true); setSlashIndex(0)
+                  } else {
+                    setShowSlashMenu(false)
+                  }
+                }}
+                onKeyDown={e => {
+                  if (showSlashMenu) {
+                    const search = prompt.slice(1).toLowerCase()
+                    const filtered = SLASH_COMMANDS.filter(c => c.cmd.slice(1).startsWith(search))
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setSlashIndex(i => Math.min(i + 1, filtered.length - 1)) }
+                    else if (e.key === 'ArrowUp')   { e.preventDefault(); setSlashIndex(i => Math.max(i - 1, 0)) }
+                    else if (e.key === 'Enter' || e.key === 'Tab') {
+                      if (filtered[slashIndex]) { e.preventDefault(); applySlash(filtered[slashIndex]) }
+                    } else if (e.key === 'Escape') { e.preventDefault(); setShowSlashMenu(false) }
+                  } else if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault(); envoyer()
+                  }
+                }}
                 onFocus={e => e.target.style.borderColor = `${accent}60`}
-                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                onBlur={e => e.target.style.borderColor = T.border}
                 rows={1}
               />
             </div>
@@ -968,6 +1189,171 @@ export default function IAChat() {
           </p>
         </div>
       </main>
+
+      {/* ── DRAWER MÉMOIRE — ce que l'IA sait de toi ─────────────────── */}
+      <AnimatePresence>
+        {showMemoryDrawer && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowMemoryDrawer(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1090, backdropFilter: 'blur(6px)' }} />
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              style={{
+                position: 'fixed', top: 0, right: 0, bottom: 0,
+                width: 'min(420px, 95vw)',
+                background: T.bg2,
+                borderLeft: `1px solid ${T.border}`,
+                zIndex: 1091, display: 'flex', flexDirection: 'column',
+                boxShadow: '-12px 0 40px rgba(0,0,0,0.3)',
+              }}>
+              {/* Header drawer */}
+              <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Database size={16} color={accent} strokeWidth={2.2} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: T.text, letterSpacing: '-0.2px' }}>Mémoire de l'IA</div>
+                    <div style={{ fontSize: 11, color: T.text2 }}>Ce que {coach.nom} sait de toi · {memoryItems.length} souvenirs</div>
+                  </div>
+                </div>
+                <motion.button onClick={() => setShowMemoryDrawer(false)} whileTap={{ scale: 0.9 }}
+                  style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={14} />
+                </motion.button>
+              </div>
+
+              {/* Body */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '14px 20px' }}>
+                {memoryLoading && (
+                  <div style={{ textAlign: 'center', padding: 30, color: T.text2, fontSize: 12 }}>
+                    Chargement de tes souvenirs…
+                  </div>
+                )}
+                {!memoryLoading && memoryItems.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: 40, color: T.text2 }}>
+                    <Brain size={36} color={T.border} strokeWidth={1.4} style={{ marginBottom: 14 }} />
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>Aucun souvenir pour l'instant</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.6 }}>Au fil de tes conversations, {coach.nom} retient ce qui te concerne (préférences, projets, contraintes…).</div>
+                  </div>
+                )}
+                {!memoryLoading && memoryItems.length > 0 && (() => {
+                  // Grouper par catégorie
+                  const grouped = memoryItems.reduce((acc, m) => {
+                    const cat = m.categorie || 'autre'
+                    if (!acc[cat]) acc[cat] = []
+                    acc[cat].push(m)
+                    return acc
+                  }, {})
+                  const catLabels = { preferences: 'Préférences', objectifs: 'Objectifs', contraintes: 'Contraintes', habitudes: 'Habitudes', faits: 'Faits', autre: 'Autre' }
+                  return Object.entries(grouped).map(([cat, items]) => (
+                    <div key={cat} style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: accent, letterSpacing: '1.5px', marginBottom: 8, textTransform: 'uppercase' }}>{catLabels[cat] || cat}</div>
+                      {items.map(m => (
+                        <motion.div key={m.id}
+                          initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }}
+                          style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, padding: '10px 12px', marginBottom: 6, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {m.cle && <div style={{ fontSize: 11, fontWeight: 700, color: T.text, marginBottom: 3 }}>{m.cle}</div>}
+                            <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.5 }}>{m.valeur}</div>
+                            <div style={{ fontSize: 9.5, color: T.text2, marginTop: 5, opacity: 0.6, display: 'flex', gap: 8 }}>
+                              <span>poids {m.poids}</span>
+                              {m.created_at && <span>· {new Date(m.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
+                            </div>
+                          </div>
+                          <motion.button onClick={() => oublierUnSouvenir(m.id)}
+                            whileTap={{ scale: 0.88 }} title="Oublier ce souvenir"
+                            style={{ width: 26, height: 26, borderRadius: 7, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Trash2 size={13} />
+                          </motion.button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ))
+                })()}
+              </div>
+
+              {/* Footer */}
+              {memoryItems.length > 0 && (
+                <div style={{ padding: '12px 20px', borderTop: `1px solid ${T.border}` }}>
+                  <motion.button onClick={oublierToutSouvenirs} whileTap={{ scale: 0.97 }}
+                    style={{ width: '100%', padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Trash2 size={13} /> Tout oublier
+                  </motion.button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── BOTTOM SHEET TÂCHES MOBILE — split view light ─────────────── */}
+      <AnimatePresence>
+        {isMobile && showTasksPanelMobile && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowTasksPanelMobile(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1090, backdropFilter: 'blur(6px)' }} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              style={{
+                position: 'fixed', left: 0, right: 0, bottom: 0,
+                maxHeight: '70dvh',
+                background: T.bg2,
+                borderTop: `1px solid ${T.border}`,
+                borderRadius: '20px 20px 0 0',
+                zIndex: 1091, display: 'flex', flexDirection: 'column',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+              }}>
+              <div style={{ padding: '8px 0 0', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: 40, height: 4, borderRadius: 99, background: T.border }} />
+              </div>
+              <div style={{ padding: '12px 18px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Layers size={15} color={accent} strokeWidth={2.2} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>Tes tâches actives</div>
+                    <div style={{ fontSize: 11, color: T.text2 }}>Tap → lier à la conversation</div>
+                  </div>
+                </div>
+                <motion.button onClick={() => setShowTasksPanelMobile(false)} whileTap={{ scale: 0.9 }}
+                  style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={14} />
+                </motion.button>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 14px' }}>
+                {tachesEnCours.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 30, color: T.text2, fontSize: 12 }}>Aucune tâche active</div>
+                ) : (
+                  tachesEnCours.slice(0, 30).map(t => {
+                    const pColor = t.priorite === 'haute' ? '#e05c5c' : t.priorite === 'moyenne' ? '#e08a3c' : '#4caf82'
+                    return (
+                      <motion.button key={t.id}
+                        onClick={() => { setTacheSelectionnee(t.id); setShowTasksPanelMobile(false) }}
+                        whileTap={{ scale: 0.97 }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                          padding: '10px 12px', marginBottom: 6,
+                          background: tacheSelectionnee === t.id ? `${accent}15` : T.bg3,
+                          border: `1px solid ${tacheSelectionnee === t.id ? accent : T.border}`,
+                          borderRadius: 11, cursor: 'pointer', textAlign: 'left',
+                        }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
+                        {t.deadline && <span style={{ fontSize: 10, color: T.text2 }}>{new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
+                      </motion.button>
+                    )
+                  })
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </div>
