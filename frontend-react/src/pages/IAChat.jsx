@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
+import MobileBackButton from '../components/MobileBackButton'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -496,7 +497,7 @@ export default function IAChat() {
 
         {/* Navigation */}
         <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>NAVIGATION</div>
-        {NAV_ITEMS.map(item => {
+        {NAV_ITEMS.filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path)).map(item => {
           const Icon = item.icon
           const active = item.path === '/ia'
           return (
@@ -783,6 +784,7 @@ export default function IAChat() {
           </p>
         </div>
       </main>
+      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </div>
   )

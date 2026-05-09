@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
+import MobileBackButton from '../components/MobileBackButton'
 
 registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
@@ -384,6 +385,7 @@ export default function GoalReverse() {
         </AnimatePresence>
 
       </main>
+      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </div>
   )

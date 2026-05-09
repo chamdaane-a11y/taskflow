@@ -9,6 +9,8 @@ import {
   Settings as SettingsIcon
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
+import BottomNavMobile from '../components/BottomNavMobile'
+import MobileBackButton from '../components/MobileBackButton'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -550,6 +552,8 @@ export default function Settings() {
           </AnimatePresence>
         </main>
       </div>
+      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
+      {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
 }

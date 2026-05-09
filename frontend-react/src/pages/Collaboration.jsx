@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
+import BottomNavMobile from '../components/BottomNavMobile'
+import MobileBackButton from '../components/MobileBackButton'
 import {
   Users, Plus, Copy, Check, X, Send, MessageCircle,
   LayoutDashboard, Bot, BarChart2, Calendar, HelpCircle, Layers,
@@ -520,7 +522,7 @@ export default function Collaboration() {
 
         {/* Navigation */}
         <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
-        {NAV_ITEMS.map(item => {
+        {NAV_ITEMS.filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path)).map(item => {
           const Icon = item.icon
           const active = window.location.pathname === item.path || (item.path === '/collaboration' && window.location.pathname.includes('collaboration'))
           return (
@@ -900,6 +902,8 @@ export default function Collaboration() {
           </>
         )}
       </AnimatePresence>
+      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
+      {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
 }

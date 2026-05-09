@@ -451,7 +451,7 @@ export default function Planification() {
 
         {/* Navigation */}
         <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
-        {NAV_ITEMS.map(item => {
+        {NAV_ITEMS.filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path)).map(item => {
           const Icon = item.icon
           const active = item.path === '/planification'
           return (
