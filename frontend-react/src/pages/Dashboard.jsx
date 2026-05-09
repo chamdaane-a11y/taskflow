@@ -2219,13 +2219,16 @@ export default function Dashboard() {
 
   const [showBottomSheet, setShowBottomSheet] = useState(false)
 
-  // Auto-ouvrir le BottomSheet si on arrive depuis la BottomNav d'une autre page
+  // Auto-ouvrir BottomSheet ou Coach drawer si on arrive depuis la BottomNav d'une autre page
   useEffect(() => {
     if (location.state?.openAddSheet) {
       setShowBottomSheet(true)
-      // Nettoyer le state pour éviter ré-ouverture sur retour arrière
+      navigate(location.pathname, { replace: true, state: {} })
+    } else if (location.state?.openCoach) {
+      d.setShowCoach?.(true)
       navigate(location.pathname, { replace: true, state: {} })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, location.pathname, navigate])
 
   const SIDEBAR_W = 248
@@ -2804,6 +2807,7 @@ export default function Dashboard() {
         <BottomNavMobile
           T={T}
           onCreateTask={() => setShowBottomSheet(true)}
+          onOpenCoach={() => d.setShowCoach?.(true)}
           hidden={showBottomSheet}
         />
       )}

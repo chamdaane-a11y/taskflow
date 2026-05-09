@@ -1,22 +1,14 @@
 // BottomNavMobile.jsx — barre de nav iOS-style permanente sur mobile
-// 5 items : Accueil / Coach / + (FAB central) / Planning / Stats
+// 5 items : Accueil / Coach (Alex/Max/Nova) / + (FAB central) / Planning / Stats
 
 import { memo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Bot, Plus, Calendar, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, Heart, Plus, Calendar, BarChart2 } from 'lucide-react'
 
-export const BOTTOM_NAV_HEIGHT = 64 // utilisé par les pages pour ajuster le padding
+export const BOTTOM_NAV_HEIGHT = 64
 
-const ITEMS = [
-  { path: '/dashboard',     icon: LayoutDashboard, label: 'Accueil' },
-  { path: '/ia',            icon: Bot,             label: 'Coach' },
-  { fab: true,              icon: Plus,            label: 'Ajouter' },
-  { path: '/planification', icon: Calendar,        label: 'Planning' },
-  { path: '/analytics',     icon: BarChart2,       label: 'Stats' },
-]
-
-const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden = false }) {
+const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, onOpenCoach, hidden = false }) {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -26,17 +18,62 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden 
   const accent2 = T?.accent2 || accent
   const bg = T?.bg2 || '#1a1a2e'
   const border = T?.border || 'rgba(255,255,255,0.08)'
-  const text = T?.text || '#fff'
   const text2 = T?.text2 || 'rgba(255,255,255,0.5)'
 
   const handleFab = () => {
-    if (onCreateTask) {
-      onCreateTask()
-    } else {
-      // Sur les pages autres que Dashboard, on retourne au Dashboard avec
-      // un state pour ouvrir le bottom sheet d'ajout direct
-      navigate('/dashboard', { state: { openAddSheet: true } })
-    }
+    if (onCreateTask) onCreateTask()
+    else navigate('/dashboard', { state: { openAddSheet: true } })
+  }
+  const handleCoach = () => {
+    if (onOpenCoach) onOpenCoach()
+    else navigate('/dashboard', { state: { openCoach: true } })
+  }
+
+  const isOnDashboard = location.pathname === '/dashboard'
+  const isOnPlanning = location.pathname === '/planification'
+  const isOnAnalytics = location.pathname === '/analytics'
+
+  // Style item commun
+  const itemBase = {
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    padding: '8px 2px 10px',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    position: 'relative',
+  }
+
+  const renderItem = (key, { Icon, label, active, onClick }) => {
+    const color = active ? accent : text2
+    return (
+      <motion.button key={key} onClick={onClick} whileTap={{ scale: 0.92 }} style={{ ...itemBase, color }}>
+        {active && (
+          <motion.div layoutId="bottomNavActive"
+            style={{
+              position: 'absolute', top: 4,
+              width: 32, height: 26, borderRadius: 99,
+              background: `${accent}18`, zIndex: -1,
+            }} />
+        )}
+        <Icon size={19} strokeWidth={active ? 2.4 : 1.9} fill={active && Icon === Heart ? color : 'none'} />
+        <span style={{
+          fontSize: 9.5,
+          fontWeight: active ? 700 : 500,
+          color,
+          letterSpacing: 0.1,
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>{label}</span>
+      </motion.button>
+    )
   }
 
   return (
@@ -55,95 +92,67 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden 
         display: 'flex',
         alignItems: 'stretch',
       }}>
-      {ITEMS.map((item, i) => {
-        if (item.fab) {
-          return (
-            <motion.button
-              key="fab"
-              onClick={handleFab}
-              whileTap={{ scale: 0.92 }}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                position: 'relative',
-                paddingTop: 4, paddingBottom: 4,
-              }}>
-              <div style={{
-                position: 'absolute',
-                top: -18,
-                width: 52, height: 52,
-                borderRadius: '50%',
-                background: `linear-gradient(135deg, ${accent}, ${accent2})`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: `0 8px 22px ${accent}55, 0 0 0 4px ${bg}`,
-              }}>
-                <Plus size={24} color="#fff" strokeWidth={2.6} />
-              </div>
-              <span style={{
-                fontSize: 9.5,
-                fontWeight: 700,
-                color: text2,
-                letterSpacing: 0.3,
-                textTransform: 'uppercase',
-                marginTop: 38,
-              }}>{item.label}</span>
-            </motion.button>
-          )
-        }
+      {renderItem('home', {
+        Icon: LayoutDashboard, label: 'Accueil',
+        active: isOnDashboard,
+        onClick: () => navigate('/dashboard'),
+      })}
+      {renderItem('coach', {
+        Icon: Heart, label: 'Coach',
+        active: false,
+        onClick: handleCoach,
+      })}
 
-        const active = location.pathname === item.path
-        const Icon = item.icon
-        const itemColor = active ? accent : text2
+      {/* FAB central — colonne dédiée, taille contenue pour ne pas déborder */}
+      <motion.button
+        key="fab"
+        onClick={handleFab}
+        whileTap={{ scale: 0.92 }}
+        style={{
+          flex: 1, minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          position: 'relative',
+          padding: '6px 2px 10px',
+        }}>
+        <div style={{
+          width: 44, height: 44,
+          marginTop: -14,
+          borderRadius: '50%',
+          background: `linear-gradient(135deg, ${accent}, ${accent2})`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: `0 6px 18px ${accent}55, 0 0 0 4px ${bg}`,
+          flexShrink: 0,
+        }}>
+          <Plus size={20} color="#fff" strokeWidth={2.6} />
+        </div>
+        <span style={{
+          fontSize: 9.5,
+          fontWeight: 700,
+          color: text2,
+          letterSpacing: 0.1,
+          marginTop: 4,
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>Ajouter</span>
+      </motion.button>
 
-        return (
-          <motion.button
-            key={item.path}
-            onClick={() => navigate(item.path)}
-            whileTap={{ scale: 0.92 }}
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              padding: '8px 2px 10px',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: itemColor,
-              position: 'relative',
-            }}>
-            {/* Pastille active : fond accent translucide */}
-            {active && (
-              <motion.div
-                layoutId="bottomNavActive"
-                style={{
-                  position: 'absolute',
-                  top: 4,
-                  width: 36, height: 28,
-                  borderRadius: 99,
-                  background: `${accent}18`,
-                  zIndex: -1,
-                }}
-              />
-            )}
-            <Icon size={20} strokeWidth={active ? 2.4 : 1.9} />
-            <span style={{
-              fontSize: 10,
-              fontWeight: active ? 700 : 500,
-              color: itemColor,
-              letterSpacing: 0.2,
-            }}>{item.label}</span>
-          </motion.button>
-        )
+      {renderItem('plan', {
+        Icon: Calendar, label: 'Planning',
+        active: isOnPlanning,
+        onClick: () => navigate('/planification'),
+      })}
+      {renderItem('stats', {
+        Icon: BarChart2, label: 'Stats',
+        active: isOnAnalytics,
+        onClick: () => navigate('/analytics'),
       })}
     </motion.nav>
   )
