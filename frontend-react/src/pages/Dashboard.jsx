@@ -235,28 +235,41 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
   const [input, setInput] = useState('')
   const [parsed, setParsed] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [manualDeadline, setManualDeadline] = useState(null)
+  const [dateValue, setDateValue] = useState('')   // YYYY-MM-DD
+  const [timeValue, setTimeValue] = useState('')   // HH:mm
+  const [touched, setTouched] = useState(false)    // user has tried to submit
   const inputRef = useRef(null)
 
   useEffect(() => {
     if (input.length > 1) {
       const p = parseTaskInput(input)
       setParsed(p)
-      // Si le parser détecte une date et l'utilisateur n'a pas encore choisi, on synchronise
-      if (p?.deadline && !manualDeadline) {
-        setManualDeadline(p.deadline)
-      }
+      // Synchroniser ce que le parser a détecté
+      if (p?.dateValue && !dateValue) setDateValue(p.dateValue)
+      if (p?.timeValue && !timeValue) setTimeValue(p.timeValue)
     } else {
       setParsed(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input])
 
-  const deadline = manualDeadline
+  const dateOk = !!dateValue
+  const timeOk = !!timeValue
+  const titreOk = !!parsed?.titre?.trim()
+  const formValide = titreOk && dateOk && timeOk
+
+  const buildDeadline = () => {
+    if (!dateOk || !timeOk) return null
+    const [y, m, d2] = dateValue.split('-').map(Number)
+    const [h, mn] = timeValue.split(':').map(Number)
+    return new Date(y, m - 1, d2, h, mn, 0, 0)
+  }
 
   const creer = async () => {
-    if (!parsed?.titre?.trim()) return
+    setTouched(true)
+    if (!formValide) return
+    const deadline = buildDeadline()
+    if (!deadline) return
     setLoading(true)
     try {
       await d.ajouterTache({
@@ -266,8 +279,9 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
       })
       setInput('')
       setParsed(null)
-      setManualDeadline(null)
-      setShowDatePicker(false)
+      setDateValue('')
+      setTimeValue('')
+      setTouched(false)
       onSuccess?.()
     } catch (e) {
       console.error(e)
@@ -277,6 +291,11 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
 
   const pColor = getPrioriteColor(parsed?.priorite || 'moyenne')
   const pBg = getPrioriteBg(parsed?.priorite || 'moyenne')
+  const todayStr = new Date().toISOString().slice(0, 10)
+
+  // Couleur des bordures selon état
+  const dateBorder = dateOk ? T.accent + '60' : (touched ? '#e05c5c' : T.border)
+  const timeBorder = timeOk ? T.accent + '60' : (touched ? '#e05c5c' : T.border)
 
   return (
     <div className="smart-task-input" style={{ background: T.bg2, border: `1px solid ${T.border}` }}>
@@ -287,7 +306,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && parsed?.titre && deadline) creer()
+            if (e.key === 'Enter') creer()
           }}
           placeholder="Finir le rapport demain 15h haute..."
           className="smart-task-input-field"
@@ -295,7 +314,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
         />
         {input && (
           <motion.button
-            onClick={() => { setInput(''); setParsed(null); setManualDeadline(null) }}
+            onClick={() => { setInput(''); setParsed(null); setDateValue(''); setTimeValue(''); setTouched(false) }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4, display: 'flex' }}>
             <X size={14} strokeWidth={2} />
@@ -319,61 +338,84 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
         )}
       </AnimatePresence>
 
-      {/* Date picker inline — toujours visible */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: parsed && input.length > 1 ? 0 : 4 }}>
-        <Calendar size={14} color={deadline ? T.accent : T.text2} strokeWidth={2} style={{ flexShrink: 0 }} />
-        <DatePicker
-          selected={deadline}
-          onChange={date => { setManualDeadline(date) }}
-          locale="fr"
-          dateFormat="EEEE d MMMM · HH:mm"
-          showTimeSelect
-          timeFormat="HH:mm"
-          timeIntervals={15}
-          minDate={new Date()}
-          placeholderText="Choisir une date et heure"
-          popperPlacement="bottom-start"
-          popperProps={{ strategy: 'fixed' }}
-          customInput={
-            <input style={{
-              flex: 1,
-              padding: '10px 14px',
+      {/* Date + Time obligatoires — toujours visibles */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {/* Date */}
+        <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{ fontSize: 10.5, fontWeight: 700, color: T.text2, letterSpacing: 0.5, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Calendar size={11} strokeWidth={2.2} color={dateOk ? T.accent : T.text2} />
+            Quel jour ? *
+          </label>
+          <input
+            type="date"
+            value={dateValue}
+            min={todayStr}
+            onChange={e => setDateValue(e.target.value)}
+            style={{
+              padding: '10px 12px',
               background: T.bg3,
-              border: `1.5px solid ${deadline ? T.accent + '60' : T.border}`,
+              border: `1.5px solid ${dateBorder}`,
               borderRadius: 10,
-              color: deadline ? T.accent : T.text,
+              color: T.text,
               fontSize: 13,
-              fontWeight: deadline ? 600 : 500,
+              fontWeight: 500,
               outline: 'none',
               cursor: 'pointer',
               width: '100%',
-              textTransform: 'capitalize',
-            }} />
-          }
-        />
-        {deadline && (
-          <motion.button
-            onClick={() => setManualDeadline(null)}
-            whileTap={{ scale: 0.95 }}
-            title="Effacer la date"
-            style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <X size={14} strokeWidth={2} />
-          </motion.button>
-        )}
+              boxSizing: 'border-box',
+              colorScheme: 'dark',
+            }}
+          />
+        </div>
+        {/* Time */}
+        <div style={{ flex: 1, minWidth: 130, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{ fontSize: 10.5, fontWeight: 700, color: T.text2, letterSpacing: 0.5, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Clock size={11} strokeWidth={2.2} color={timeOk ? T.accent : T.text2} />
+            À quelle heure ? *
+          </label>
+          <input
+            type="time"
+            value={timeValue}
+            onChange={e => setTimeValue(e.target.value)}
+            style={{
+              padding: '10px 12px',
+              background: T.bg3,
+              border: `1.5px solid ${timeBorder}`,
+              borderRadius: 10,
+              color: T.text,
+              fontSize: 13,
+              fontWeight: 500,
+              outline: 'none',
+              cursor: 'pointer',
+              width: '100%',
+              boxSizing: 'border-box',
+              colorScheme: 'dark',
+            }}
+          />
+        </div>
       </div>
+
+      {/* Message d'aide quand un champ manque */}
+      {touched && !formValide && (
+        <div style={{ fontSize: 12, color: '#e05c5c', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <AlertTriangle size={13} strokeWidth={2} />
+          {!titreOk ? 'Décris la tâche' : !dateOk && !timeOk ? 'Choisis le jour et l\'heure' : !dateOk ? 'Choisis le jour' : 'Choisis l\'heure'}
+        </div>
+      )}
 
       {/* Actions */}
       <div className="smart-task-actions">
         <motion.button
           onClick={creer}
-          disabled={loading || !parsed?.titre || !deadline}
+          disabled={loading}
           className="smart-task-btn-primary"
           style={{
             background: loading ? T.text2 : `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`,
             color: T.bg,
-            boxShadow: parsed?.titre && deadline ? `0 6px 20px ${T.accent}30` : 'none',
+            boxShadow: formValide ? `0 6px 20px ${T.accent}30` : 'none',
+            opacity: formValide ? 1 : 0.7,
           }}
-          whileHover={!loading && parsed?.titre && deadline ? { scale: 1.01 } : {}}
+          whileHover={!loading && formValide ? { scale: 1.01 } : {}}
           whileTap={{ scale: 0.98 }}>
           {loading ? (
             <>

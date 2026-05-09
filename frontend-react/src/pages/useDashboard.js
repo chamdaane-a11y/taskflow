@@ -298,20 +298,29 @@ export function useDashboard() {
     if (isOnline) {
       setDnaLoading(true)
       try {
-        const dnaRes = await api.post(`/ia/task-dna`, { titre, priorite, user_id: user.id })
+        const dnaRes = await api.post(`/ia/task-dna`, { titre: finalTitre, priorite: finalPriorite, user_id: user.id })
         setDnaResult(dnaRes.data); setDnaPendingData(data); setShowDnaPopup(true)
         setDnaLoading(false); return
-      } catch { setDnaLoading(false) }
+      } catch (err) {
+        console.warn('DNA failed, fallback to direct creation', err)
+        setDnaLoading(false)
+        // Fallback: créer la tâche directement si DNA échoue
+        try {
+          await api.post(`/taches`, data)
+          setTitre(''); setDeadline(null); setErreurForm('')
+          afficherNotification('Tâche ajoutée avec succès'); chargerTaches()
+          return
+        } catch (e) {
+          afficherNotification("Erreur lors de la création", 'error')
+          return
+        }
+      }
     }
     setTitre(''); setDeadline(null); setErreurForm('')
-    if (!isOnline) {
-      const tl = await ajouterTacheLocalement({ ...data, bloquee: false, terminee: false })
-      await ajouterActionSync({ type: 'AJOUTER_TACHE', data: { ...data, id_temp: tl.id } })
-      await chargerPendingCount(); setTaches(p => [tl, ...p])
-      afficherNotification('Tâche sauvegardée offline'); return
-    }
-    await api.post(`/taches`, data)
-    afficherNotification('Tâche ajoutée avec succès'); chargerTaches()
+    const tl = await ajouterTacheLocalement({ ...data, bloquee: false, terminee: false })
+    await ajouterActionSync({ type: 'AJOUTER_TACHE', data: { ...data, id_temp: tl.id } })
+    await chargerPendingCount(); setTaches(p => [tl, ...p])
+    afficherNotification('Tâche sauvegardée offline')
   }, [titre, priorite, deadline, user?.id, isOnline, afficherNotification, chargerTaches, chargerPendingCount, setErreurForm])
 
   const confirmerCreationApresDNA = useCallback(async () => {

@@ -21,7 +21,10 @@ export function parseTaskInput(texte) {
   const t = texte.toLowerCase().trim()
   let titre = texte.trim()
   let priorite = 'moyenne'
-  let deadline = null
+  let dateDetected = false
+  let timeDetected = false
+  let dateValue = null   // YYYY-MM-DD si détecté
+  let timeValue = null   // HH:mm si détecté
 
   // Détection priorité
   if (/\b(urgent|urgente|haute|important|critique|!)\b/.test(t)) {
@@ -33,29 +36,29 @@ export function parseTaskInput(texte) {
   }
 
   const now = new Date()
+  let dateBase = null // Date object (sans heure significative)
 
-  // Détection deadline : aujourd'hui / demain / dans N jours
   if (/\baujourd'?hui\b/.test(t)) {
-    deadline = new Date(now)
-    deadline.setHours(18, 0, 0, 0)
+    dateBase = new Date(now)
+    dateDetected = true
     titre = titre.replace(/\baujourd'?hui\b/gi, '').trim()
   } else if (/\bdemain\b/.test(t)) {
-    deadline = new Date(now)
-    deadline.setDate(deadline.getDate() + 1)
-    deadline.setHours(9, 0, 0, 0)
+    dateBase = new Date(now)
+    dateBase.setDate(dateBase.getDate() + 1)
+    dateDetected = true
     titre = titre.replace(/\bdemain\b/gi, '').trim()
   } else {
     const dansMatch = t.match(/\bdans\s+(\d+)\s+jours?\b/)
     if (dansMatch) {
-      deadline = new Date(now)
-      deadline.setDate(deadline.getDate() + parseInt(dansMatch[1]))
-      deadline.setHours(9, 0, 0, 0)
+      dateBase = new Date(now)
+      dateBase.setDate(dateBase.getDate() + parseInt(dansMatch[1]))
+      dateDetected = true
       titre = titre.replace(/\bdans\s+\d+\s+jours?\b/gi, '').trim()
     }
   }
 
-  // Détection jour de la semaine
-  if (!deadline) {
+  // Jour de la semaine
+  if (!dateDetected) {
     for (const [nom, jourCible] of Object.entries(JOURS_SEMAINE)) {
       const reg = new RegExp(`\\b${nom}\\s*(prochain)?\\b`)
       if (reg.test(t)) {
@@ -64,36 +67,61 @@ export function parseTaskInput(texte) {
         let diff = jourCible - jourActuel
         if (diff <= 0) diff += 7
         d.setDate(d.getDate() + diff)
-        d.setHours(9, 0, 0, 0)
-        deadline = d
+        dateBase = d
+        dateDetected = true
         titre = titre.replace(reg, '').trim()
         break
       }
     }
   }
 
-  // Détection date complète (ex: "15 janvier")
-  if (!deadline) {
+  // Date explicite (ex: "15 janvier")
+  if (!dateDetected) {
     const dateMatch = t.match(/\b(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\b/)
     if (dateMatch) {
-      deadline = new Date(now.getFullYear(), MOIS[dateMatch[2]], parseInt(dateMatch[1]), 9, 0, 0)
-      if (deadline < now) deadline.setFullYear(deadline.getFullYear() + 1)
+      const y = now.getFullYear()
+      dateBase = new Date(y, MOIS[dateMatch[2]], parseInt(dateMatch[1]))
+      if (dateBase < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+        dateBase.setFullYear(y + 1)
+      }
+      dateDetected = true
       titre = titre.replace(new RegExp(dateMatch[0], 'i'), '').trim()
     }
   }
 
-  // Détection heure (ex: "15h30", "9h")
+  // Heure (ex: "15h30", "9h", "à 14h")
   const heureMatch = t.match(/\bà?\s*(\d{1,2})h(\d{2})?\b/)
-  if (heureMatch && deadline) {
-    deadline.setHours(parseInt(heureMatch[1]), parseInt(heureMatch[2] || '0'), 0, 0)
-    titre = titre.replace(new RegExp(heureMatch[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim()
+  if (heureMatch) {
+    const hh = parseInt(heureMatch[1])
+    const mm = parseInt(heureMatch[2] || '0')
+    if (hh >= 0 && hh < 24 && mm >= 0 && mm < 60) {
+      timeDetected = true
+      timeValue = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+      titre = titre.replace(new RegExp(heureMatch[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim()
+    }
+  }
+
+  if (dateBase) {
+    dateValue = `${dateBase.getFullYear()}-${String(dateBase.getMonth() + 1).padStart(2, '0')}-${String(dateBase.getDate()).padStart(2, '0')}`
+  }
+
+  // Construction de la deadline finale (Date) si on a au moins la date
+  let deadline = null
+  if (dateDetected && dateBase) {
+    deadline = new Date(dateBase)
+    if (timeDetected && timeValue) {
+      const [hh, mm] = timeValue.split(':').map(Number)
+      deadline.setHours(hh, mm, 0, 0)
+    } else {
+      deadline.setHours(9, 0, 0, 0)
+    }
   }
 
   // Nettoyage final du titre
   titre = titre.replace(/\s+/g, ' ').replace(/^[-,\s]+|[-,\s]+$/g, '').trim()
   if (!titre) titre = texte.trim()
 
-  return { titre, priorite, deadline }
+  return { titre, priorite, deadline, dateDetected, timeDetected, dateValue, timeValue }
 }
 
 /**
