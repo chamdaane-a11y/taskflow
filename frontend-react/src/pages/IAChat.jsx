@@ -470,7 +470,10 @@ export default function IAChat() {
 
   const removeAttachment = useCallback(() => setAttachment(null), [])
 
-  // Slash commands action
+  // Slash commands action — utilise effacer via ref pour éviter TDZ
+  // (effacer est déclaré plus bas, donc le mettre dans les deps causerait
+  // "Cannot access 'effacer' before initialization")
+  const effacerRef = useRef(null)
   const applySlash = useCallback((c) => {
     setShowSlashMenu(false)
     if (c.special === 'web') {
@@ -479,14 +482,14 @@ export default function IAChat() {
       return
     }
     if (c.special === 'clear') {
-      effacer()
+      effacerRef.current?.()
       setPrompt('')
       return
     }
     // Sinon : remplacer le prompt par le préfixe (l'utilisateur complète + envoie)
     setPrompt(c.prefix)
     setTimeout(() => textareaRef.current?.focus(), 50)
-  }, [effacer])
+  }, [])
 
   // Persister le choix de coach
   useEffect(() => {
@@ -672,6 +675,8 @@ export default function IAChat() {
     localStorage.removeItem(`shift_msgs_${user?.id}`)
     setMessages([])
   }, [user?.id])
+  // Brancher la ref pour applySlash (déclaré plus haut)
+  useEffect(() => { effacerRef.current = effacer }, [effacer])
 
   const autoResize = useCallback((e) => {
     e.target.style.height = 'auto'
