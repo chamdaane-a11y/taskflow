@@ -11,6 +11,7 @@ import {
   Search, AlertCircle, Check, Brain, ChevronDown, Database
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
+import BottomNavMobile from '../components/BottomNavMobile'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -782,6 +783,7 @@ export default function IAChat() {
           </p>
         </div>
       </main>
+      {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
 }

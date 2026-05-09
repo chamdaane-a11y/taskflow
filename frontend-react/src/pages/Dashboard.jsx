@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -22,6 +22,7 @@ import React from 'react'
 import axios from 'axios'
 import OutilsIntegrations from './OutilsIntegrations'
 import TemplateIconBox from './CustomIcons'
+import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import { parseTaskInput, getPrioriteColor, getPrioriteBg } from '../utils/parseTask'
 
 registerLocale('fr', fr)
@@ -458,13 +459,9 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
 })
 
 // ── MobileActionBar — barre d'actions visible sur mobile ─────────────────────
-const MobileActionBar = ({ d, T, onOpenSheet, onOpenTemplates, onOpenExport }) => (
+const MobileActionBar = ({ d, T, onOpenTemplates, onOpenExport }) => (
+  // Note : "+ Ajouter" supprimé car maintenant dans la BottomNavMobile (FAB central)
   <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: T.bg2, borderBottom: `1px solid ${T.border}`, overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0 }}>
-    <motion.button onClick={onOpenSheet}
-      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: T.accent, border: 'none', borderRadius: 10, color: T.bg, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-      whileTap={{ scale: 0.96 }}>
-      <Plus size={14} />Ajouter
-    </motion.button>
     <motion.button onClick={onOpenTemplates}
       style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: `${T.accent}15`, border: `1px solid ${T.accent}30`, borderRadius: 10, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
       whileTap={{ scale: 0.96 }}>
@@ -2201,6 +2198,7 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
 export default function Dashboard() {
   const d = useDashboard()
   const navigate = useNavigate()
+  const location = useLocation()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const isTablet = useMediaQuery('(max-width: 1100px)')
   const coachStyleObj = COACH_STYLES_LIST.find(s => s.id === d.coachStyle)
@@ -2220,6 +2218,15 @@ export default function Dashboard() {
   useEffect(() => { if (isMobile) setSidebarOpen(d.showSidebar) }, [d.showSidebar, isMobile])
 
   const [showBottomSheet, setShowBottomSheet] = useState(false)
+
+  // Auto-ouvrir le BottomSheet si on arrive depuis la BottomNav d'une autre page
+  useEffect(() => {
+    if (location.state?.openAddSheet) {
+      setShowBottomSheet(true)
+      // Nettoyer le state pour éviter ré-ouverture sur retour arrière
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location.state, location.pathname, navigate])
 
   const SIDEBAR_W = 248
   const sidebarLeft = isMobile ? (sidebarOpen ? 0 : '-100%') : (sidebarOpen ? 0 : -SIDEBAR_W)
@@ -2436,7 +2443,6 @@ export default function Dashboard() {
           <div style={{ position: 'sticky', top: 0, zIndex: 100, paddingTop: 52 }}>
             <MobileActionBar
               d={d} T={T}
-              onOpenSheet={() => setShowBottomSheet(true)}
               onOpenTemplates={d.ouvrirTemplates}
               onOpenExport={() => d.setShowExport(true)}
             />
@@ -2792,6 +2798,15 @@ export default function Dashboard() {
 
       {/* BottomSheet ajout mobile */}
       <BottomSheetAjout open={showBottomSheet} onClose={() => setShowBottomSheet(false)} d={d} T={T} />
+
+      {/* Bottom Nav mobile permanente */}
+      {isMobile && (
+        <BottomNavMobile
+          T={T}
+          onCreateTask={() => setShowBottomSheet(true)}
+          hidden={showBottomSheet}
+        />
+      )}
 
       {/* Onboarding */}
       {d.showOnboarding && (

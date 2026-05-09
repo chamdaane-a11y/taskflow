@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
+import BottomNavMobile from '../components/BottomNavMobile'
 import {
   LayoutDashboard, Bot, BarChart2, Calendar, LogOut, Layers, Sparkles,
   Menu, HelpCircle, Columns, BarChart, CheckSquare, Zap, Target, X,
@@ -902,6 +903,7 @@ export default function Planification() {
           </>
         )}
       </AnimatePresence>
+      {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
 }

@@ -19,6 +19,7 @@ import {
   LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler
 } from 'chart.js'
 import { useMediaQuery } from '../useMediaQuery'
+import BottomNavMobile from '../components/BottomNavMobile'
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -1092,6 +1093,7 @@ export default function Analytics() {
           </>
         )}
       </AnimatePresence>
+      {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
 }

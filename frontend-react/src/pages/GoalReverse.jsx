@@ -12,6 +12,8 @@ import {
   CheckCircle2, AlertCircle, Clock, Zap, ArrowRight,
   Download, ChevronDown, ChevronUp, Layers
 } from 'lucide-react'
+import { useMediaQuery } from '../useMediaQuery'
+import BottomNavMobile from '../components/BottomNavMobile'
 
 registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
@@ -382,6 +384,7 @@ export default function GoalReverse() {
         </AnimatePresence>
 
       </main>
+      {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
 }

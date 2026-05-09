@@ -10,6 +10,7 @@ import {
   SkipForward, Info
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
+import BottomNavMobile from '../components/BottomNavMobile'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -552,6 +553,7 @@ export default function TomorrowBuilder() {
           </motion.div>
         )}
       </div>
+      {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
 }
