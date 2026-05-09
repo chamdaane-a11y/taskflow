@@ -2840,7 +2840,9 @@ def extraire_titre_tache(prompt: str) -> str:
             return prompt.lower().replace(mot, "").strip().capitalize()[:120]
     return prompt.strip().capitalize()[:120]
 
-def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, contexte_web: str) -> str:
+def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, contexte_web: str,
+                              coach_style: str = None, focus_today: list = None,
+                              dna_summary: dict = None, recent_coach: list = None) -> str:
     terminees = sum(1 for t in taches if t.get('terminee'))
     en_cours = [t for t in taches if not t.get('terminee')]
     en_retard = [t for t in en_cours if t.get('deadline') and str(t['deadline']) < datetime.now().strftime('%Y-%m-%d')]
@@ -2849,39 +2851,73 @@ def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, conte
     taches_str = "\n".join(f"  • [{t.get('priorite','?').upper()}] {t['titre']}" + (f" · deadline {str(t['deadline'])[:10]}" if t.get('deadline') else "") for t in en_cours[:8]) or "  • Aucune tâche en cours"
     memoire_str = formater_memoire_pour_prompt(memoire)
 
-    return f"""Tu es GetShift AI — l'assistant IA de {user_row['nom']} sur GetShift.
+    # Persona Coach (lien, pas merge — le Coach a sa voix)
+    persona_block = ""
+    if coach_style and coach_style in COACH_STYLES:
+        coach = COACH_STYLES[coach_style]
+        persona_block = f"""━━━ PERSONA ACTIVE — TU ES {coach['nom'].upper()} ━━━
+{coach['persona']}
+Style : {coach['description']}
+IMPORTANT : tu réponds comme {coach['nom']}, pas comme un assistant générique. Garde ce ton dans CHAQUE phrase.
 
-Tu n'es pas un assistant générique. Tu es le spécialiste absolu de la productivité personnelle et de la gestion de tâches. Tu combines :
-- L'expertise d'un coach certifié (GTD, Deep Work, Atomic Habits, Zettelkasten, Pomodoro)
-- La précision d'un analyste comportemental qui lit les patterns de productivité
-- L'intelligence d'un assistant qui connaît vraiment l'utilisateur
-- L'accès à des informations en temps réel via Tavily Search
+"""
 
-Tu rivalises avec et surpasses Claude Opus 4.6, GPT-4o, Gemini Ultra sur le domaine de la productivité. Sur GetShift, tu es imbattable.
+    # Focus du jour bloc
+    focus_block = ""
+    if focus_today:
+        items = "\n".join(f"  ★ [{t.get('priorite','?').upper()}] {t['titre']}" for t in focus_today[:3])
+        focus_block = f"━━━ FOCUS DU JOUR ({len(focus_today)}/3 épinglées) ━━━\n{items}\n\n"
+    else:
+        focus_block = "━━━ FOCUS DU JOUR ━━━\nAucune tâche épinglée pour aujourd'hui — l'utilisateur n'a pas encore choisi ses 3 priorités.\n\n"
+
+    # DNA insights
+    dna_block = ""
+    if dna_summary and (dna_summary.get('total_analyses') or 0) >= 2:
+        dna_block = f"━━━ TASK DNA INSIGHTS (sur {dna_summary['total_analyses']} analyses) ━━━\nScore moyen : {dna_summary.get('score_global', 0)}/100\n"
+        cats = dna_summary.get('stats_par_categorie', [])[:3]
+        if cats:
+            dna_block += "Top catégories : " + " · ".join(f"{c['categorie']} ({c['total']}×, {round(c.get('score_moyen', 0))}/100)" for c in cats) + "\n"
+        dna_block += "\n"
+
+    # Recent coach context (pont entre le drawer Coach et IAChat)
+    coach_block = ""
+    if recent_coach:
+        last_msgs = " / ".join(f"{m['role']}: {m['contenu'][:80]}" for m in recent_coach[:3])
+        coach_block = f"━━━ DERNIÈRES CONVOS COACH ━━━\n{last_msgs}\n\n"
+
+    base_identity = f"Tu es {COACH_STYLES[coach_style]['nom']}, le coach IA de {user_row['nom']} sur GetShift." if coach_style and coach_style in COACH_STYLES else f"Tu es GetShift AI — l'assistant IA de {user_row['nom']} sur GetShift."
+
+    return f"""{persona_block}{base_identity}
+
+Tu n'es pas un assistant générique. Tu es le spécialiste absolu de la productivité personnelle. Tu combines :
+- L'expertise d'un coach certifié (GTD, Deep Work, Atomic Habits, Zettelkasten, Pomodoro, Cal Newport)
+- La précision d'un analyste comportemental qui lit les patterns
+- L'intelligence d'un assistant qui connaît vraiment {user_row['nom']}
+- L'accès au web temps réel via Tavily Search
 
 ━━━ PROFIL ━━━
 Nom : {user_row['nom']} | Niveau : {user_row.get('niveau', 1)} | Points : {user_row.get('points', 0)} | Streak : {user_row.get('streak', 0)}j
-Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours)} en cours | {len(en_retard)} en retard
-{f"Urgent : {', '.join(t['titre'] for t in haute[:3])}" if haute else "Aucune haute priorité urgente"}
+Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours)} actives | {len(en_retard)} en retard
+{f"Urgentes : {', '.join(t['titre'] for t in haute[:3])}" if haute else "Aucune haute priorité urgente"}
 
-━━━ TÂCHES EN COURS ━━━
+{focus_block}━━━ TÂCHES EN COURS ━━━
 {taches_str}
 
-{f"━━━ {memoire_str}" if memoire_str else ""}
+{dna_block}{coach_block}{f"━━━ {memoire_str}" if memoire_str else ""}
 {f"━━━ DONNÉES WEB TEMPS RÉEL ━━━{chr(10)}{contexte_web}" if contexte_web else ""}
 
 ━━━ RÈGLES ABSOLUES ━━━
 1. PERSONNALISATION TOTALE — Chaque réponse reflète le contexte de {user_row['nom']}. Zéro réponse générique.
-2. FORMAT RICHE — Markdown systématique : ## sections, **gras**, listes, | tableaux |, `code`, ---
-3. TABLEAUX pour les plannings et comparaisons — colonnes claires, données structurées
-4. ACTIONNABLE — Chaque réponse se termine par une action concrète faisable dans les 5 prochaines minutes
-5. PROACTIF — Si tu détectes procrastination, surcharge ou pattern négatif, tu le mentionnes
-6. SOURCES — Si tu utilises des données web, tu cites naturellement ("Selon [source]...")
-7. LANGUE — Français par défaut, adapte-toi si changement de langue
-8. MÉMOIRE — Tu te souviens des conversations précédentes et tu les utilises
-9. LONGUEUR — Adapte : question simple = réponse percutante ; question complexe = analyse complète
+2. FORMAT RICHE — Markdown : ## sections, **gras**, listes, | tableaux |, `code`, ---
+3. ACTIONNABLE — Chaque réponse se termine par une action concrète faisable dans les 5 minutes
+4. PROACTIF — Si tu détectes procrastination, surcharge ou pattern négatif, tu le dis sans détour
+5. CONNECTÉ — Si tu vois un pattern dans le Focus du jour ou DNA, tu l'exploites pour conseiller
+6. SOURCES — Si tu utilises des données web, tu cites ("Selon [source]...")
+7. LANGUE — Français par défaut
+8. LONGUEUR — Question simple = réponse percutante ; complexe = analyse complète mais sans bavardage
+9. PERSONA — Si tu joues un coach (Alex/Max/Nova), garde son ton dans CHAQUE phrase, pas seulement la première
 
-Tu es GetShift AI. Prouve à chaque réponse que tu es le meilleur assistant de productivité qui existe."""
+Prouve à chaque réponse que tu es le meilleur assistant de productivité qui existe."""
 
 @app.route('/ia/assistant', methods=['POST'])
 def assistant_augmente():
@@ -2893,6 +2929,7 @@ def assistant_augmente():
         historique  = data.get('historique', [])
         tache_id    = data.get('tache_id')
         force_search = data.get('force_search', False)
+        coach_style = data.get('coach_style')  # 'bienveillant' / 'motivateur' / 'analytique' / None
 
         if not message_raw:
             return jsonify({"erreur": "Message vide"}), 400
@@ -2910,10 +2947,39 @@ def assistant_augmente():
             db.close()
             return jsonify({"erreur": "Utilisateur introuvable"}), 404
 
-        curseur.execute("SELECT id, titre, priorite, deadline, terminee FROM taches WHERE user_id=%s ORDER BY terminee ASC, created_at DESC LIMIT 25", (user_id,))
+        curseur.execute("SELECT id, titre, priorite, deadline, terminee, focus_date FROM taches WHERE user_id=%s ORDER BY terminee ASC, created_at DESC LIMIT 25", (user_id,))
         taches = curseur.fetchall()
         for t in taches:
             if t.get('deadline'): t['deadline'] = str(t['deadline'])
+            if t.get('focus_date'): t['focus_date'] = str(t['focus_date'])
+
+        # Focus du jour (3 max)
+        focus_today = [t for t in taches if not t.get('terminee') and t.get('focus_date') and str(t['focus_date'])[:10] == datetime.now().strftime('%Y-%m-%d')][:3]
+
+        # DNA summary (réutilise la logique de /ia/task-dna/stats)
+        dna_summary = None
+        try:
+            curseur.execute("SELECT categorie, COUNT(*) as total, AVG(score_viabilite) as score_moyen FROM task_dna_analyses WHERE user_id=%s GROUP BY categorie ORDER BY total DESC LIMIT 5", (user_id,))
+            stats_cat = curseur.fetchall()
+            curseur.execute("SELECT AVG(score_viabilite) as score_global, COUNT(*) as total FROM task_dna_analyses WHERE user_id=%s", (user_id,))
+            g = curseur.fetchone() or {}
+            if g.get('total'):
+                dna_summary = {
+                    "score_global": round(g.get('score_global') or 0),
+                    "total_analyses": g.get('total') or 0,
+                    "stats_par_categorie": stats_cat,
+                }
+        except Exception:
+            pass
+
+        # Récents échanges Coach (pont entre drawer Coach et IAChat)
+        recent_coach = []
+        try:
+            curseur.execute("SELECT role, contenu FROM coach_messages WHERE user_id=%s ORDER BY created_at DESC LIMIT 6", (user_id,))
+            recent_coach = curseur.fetchall()
+            recent_coach.reverse()
+        except Exception:
+            pass
 
         # 3. Mémoire
         memoire = charger_memoire(user_id)
@@ -2963,8 +3029,14 @@ def assistant_augmente():
             search_results = web_search_tavily(query, max_results=5)
             contexte_web = formater_search_pour_prompt(search_results, query)
 
-        # 6. System prompt élite
-        system_prompt = build_elite_system_prompt(user_row, taches, memoire, contexte_web)
+        # 6. System prompt élite (enrichi avec persona Coach + Focus + DNA + Coach history)
+        system_prompt = build_elite_system_prompt(
+            user_row, taches, memoire, contexte_web,
+            coach_style=coach_style,
+            focus_today=focus_today,
+            dna_summary=dna_summary,
+            recent_coach=recent_coach,
+        )
 
         # 7. Messages API
         messages_api = [{"role": "system", "content": system_prompt}]
@@ -2994,6 +3066,230 @@ def assistant_augmente():
         import traceback
         print(f"[GetShift AI] Erreur: {e}")
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
+@app.route('/ia/assistant/stream', methods=['POST'])
+def assistant_stream():
+    """
+    Variante streaming SSE de /ia/assistant — pour effet ChatGPT/Claude.
+    Envoie les tokens au fur et à mesure que Groq les génère.
+    Ne gère QUE le mode 'chat' (pas les actions create/terminer/planifier qui restent sur /ia/assistant).
+    Si une action est détectée, le client doit refallback sur /ia/assistant non-stream.
+    """
+    from flask import Response, stream_with_context
+    try:
+        data = request.get_json()
+        user_id      = data.get('user_id')
+        message_raw  = data.get('message', '').strip()
+        modele       = data.get('modele', 'llama-3.3-70b-versatile')
+        historique   = data.get('historique', [])
+        force_search = data.get('force_search', False)
+        coach_style  = data.get('coach_style')
+
+        if not message_raw or not user_id:
+            return jsonify({"erreur": "user_id et message requis"}), 400
+
+        message = expand_abreviations(message_raw)
+
+        # Charge le contexte une fois
+        db = connecter()
+        c = db.cursor(dictionary=True)
+        c.execute("SELECT nom, email, points, niveau, streak FROM users WHERE id=%s", (user_id,))
+        user_row = c.fetchone()
+        if not user_row:
+            db.close()
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        c.execute("SELECT id, titre, priorite, deadline, terminee, focus_date FROM taches WHERE user_id=%s ORDER BY terminee ASC, created_at DESC LIMIT 25", (user_id,))
+        taches = c.fetchall()
+        for t in taches:
+            if t.get('deadline'): t['deadline'] = str(t['deadline'])
+            if t.get('focus_date'): t['focus_date'] = str(t['focus_date'])
+        focus_today = [t for t in taches if not t.get('terminee') and t.get('focus_date') and str(t['focus_date'])[:10] == datetime.now().strftime('%Y-%m-%d')][:3]
+        # DNA
+        dna_summary = None
+        try:
+            c.execute("SELECT categorie, COUNT(*) as total, AVG(score_viabilite) as score_moyen FROM task_dna_analyses WHERE user_id=%s GROUP BY categorie ORDER BY total DESC LIMIT 5", (user_id,))
+            stats_cat = c.fetchall()
+            c.execute("SELECT AVG(score_viabilite) as score_global, COUNT(*) as total FROM task_dna_analyses WHERE user_id=%s", (user_id,))
+            g = c.fetchone() or {}
+            if g.get('total'):
+                dna_summary = {"score_global": round(g.get('score_global') or 0), "total_analyses": g.get('total') or 0, "stats_par_categorie": stats_cat}
+        except Exception:
+            pass
+        # Coach recent
+        recent_coach = []
+        try:
+            c.execute("SELECT role, contenu FROM coach_messages WHERE user_id=%s ORDER BY created_at DESC LIMIT 6", (user_id,))
+            recent_coach = c.fetchall(); recent_coach.reverse()
+        except Exception:
+            pass
+        memoire = charger_memoire(user_id)
+        db.close()
+
+        # Web search (sync, avant le stream)
+        contexte_web = ""
+        search_results = []
+        faire_search, query_search = evaluer_besoin_search(message, historique)
+        if force_search or faire_search:
+            query = message[:100] if force_search else query_search
+            search_results = web_search_tavily(query, max_results=5)
+            contexte_web = formater_search_pour_prompt(search_results, query)
+
+        system_prompt = build_elite_system_prompt(
+            user_row, taches, memoire, contexte_web,
+            coach_style=coach_style, focus_today=focus_today,
+            dna_summary=dna_summary, recent_coach=recent_coach,
+        )
+
+        messages_api = [{"role": "system", "content": system_prompt}]
+        for h in historique[-16:]:
+            role = "assistant" if h.get('role') in ('ia', 'assistant') else "user"
+            messages_api.append({"role": role, "content": h.get('content', '')})
+        messages_api.append({"role": "user", "content": message})
+
+        def generate():
+            full_response_parts = []
+            # Métadonnées au tout début (1 ligne JSON)
+            meta = {
+                "type": "meta",
+                "search_results": search_results if search_results else None,
+                "web_searched": bool(search_results),
+                "intention": "search" if (faire_search or force_search) else "chat",
+                "modele": modele,
+            }
+            yield f"data: {json.dumps(meta)}\n\n"
+            try:
+                stream = groq_client.chat.completions.create(
+                    model=modele, messages=messages_api,
+                    max_tokens=2000, temperature=0.72, stream=True,
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content if chunk.choices and chunk.choices[0].delta else None
+                    if delta:
+                        full_response_parts.append(delta)
+                        yield f"data: {json.dumps({'type': 'token', 'content': delta})}\n\n"
+                full_response = "".join(full_response_parts)
+                yield f"data: {json.dumps({'type': 'done', 'full': full_response})}\n\n"
+                # Side effects post-stream (historique + mémoire)
+                try:
+                    db2 = connecter(); cur2 = db2.cursor()
+                    cur2.execute("INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s,%s,%s,%s,%s)", (user_id, message_raw, full_response, modele, None))
+                    db2.commit(); cur2.close(); db2.close()
+                except Exception as e:
+                    print(f"[Stream] historique err: {e}")
+                threading.Thread(target=extraire_et_sauvegarder_memoire, args=(user_id, message_raw, full_response), daemon=True).start()
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype='text/event-stream', headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive',
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
+
+@app.route('/ia/suggestions/<int:user_id>', methods=['GET'])
+def ia_suggestions(user_id):
+    """
+    Retourne 4 suggestions contextuelles pour l'écran d'accueil de IAChat.
+    Rules-based (pas de Groq) → instantané + free.
+    """
+    try:
+        from datetime import date
+        db = connecter()
+        c = db.cursor(dictionary=True)
+        c.execute("SELECT nom, streak FROM users WHERE id=%s", (user_id,))
+        u = c.fetchone() or {}
+        prenom = (u.get('nom') or 'toi').split(' ')[0]
+        streak = u.get('streak') or 0
+
+        c.execute("""SELECT
+            COUNT(CASE WHEN terminee=0 AND deadline < NOW() THEN 1 END) as en_retard,
+            COUNT(CASE WHEN terminee=0 AND priorite='haute' THEN 1 END) as haute,
+            COUNT(CASE WHEN terminee=0 THEN 1 END) as actives,
+            COUNT(CASE WHEN terminee=1 AND DATE(updated_at)=CURDATE() THEN 1 END) as terminees_aujourdhui,
+            COUNT(CASE WHEN focus_date=CURDATE() AND terminee=0 THEN 1 END) as focus_jour
+            FROM taches WHERE user_id=%s""", (user_id,))
+        cnt = c.fetchone() or {}
+
+        c.execute("SELECT titre FROM taches WHERE user_id=%s AND terminee=0 AND priorite='haute' ORDER BY deadline ASC LIMIT 1", (user_id,))
+        top_haute = c.fetchone()
+
+        # DNA
+        c.execute("SELECT COUNT(*) as nb FROM task_dna_analyses WHERE user_id=%s", (user_id,))
+        dna_count = (c.fetchone() or {}).get('nb', 0)
+        db.close()
+
+        suggestions = []
+        # 1. En retard prioritaire
+        if (cnt.get('en_retard') or 0) > 0:
+            n = cnt['en_retard']
+            suggestions.append({
+                "icon": "AlertCircle", "color": "#ef4444",
+                "text": f"J'ai {n} tâche{'s' if n>1 else ''} en retard. Aide-moi à les rattraper en priorité.",
+                "grad": "linear-gradient(135deg,#ef4444,#f59e0b)",
+            })
+        # 2. Focus du jour vide
+        if (cnt.get('focus_jour') or 0) == 0 and (cnt.get('actives') or 0) > 0:
+            suggestions.append({
+                "icon": "Target", "color": "#a855f7",
+                "text": "Choisis mes 3 priorités du jour parmi mes tâches actives.",
+                "grad": "linear-gradient(135deg,#a855f7,#ec4899)",
+            })
+        # 3. Top haute priorité actionable
+        if top_haute and top_haute.get('titre'):
+            t = top_haute['titre'][:60]
+            suggestions.append({
+                "icon": "Zap", "color": "#f59e0b",
+                "text": f"Décompose la tâche \"{t}\" en sous-étapes.",
+                "grad": "linear-gradient(135deg,#f59e0b,#ef4444)",
+            })
+        # 4. Streak motivation
+        if streak >= 3:
+            suggestions.append({
+                "icon": "Flame", "color": "#f97316",
+                "text": f"{streak} jours de streak ! Comment je maintiens cette dynamique ?",
+                "grad": "linear-gradient(135deg,#f97316,#ec4899)",
+            })
+        elif streak == 0 and (cnt.get('actives') or 0) > 0:
+            suggestions.append({
+                "icon": "Flame", "color": "#f97316",
+                "text": "Aide-moi à créer une routine quotidienne pour démarrer un streak.",
+                "grad": "linear-gradient(135deg,#f97316,#ec4899)",
+            })
+        # 5. DNA insight si dispo
+        if dna_count >= 2:
+            suggestions.append({
+                "icon": "Brain", "color": "#0ea5e9",
+                "text": "Analyse mes patterns de productivité (Task DNA) et donne-moi 3 conseils.",
+                "grad": "linear-gradient(135deg,#0ea5e9,#a855f7)",
+            })
+        # 6. Plan semaine si peu d'actions
+        if len(suggestions) < 4:
+            suggestions.append({
+                "icon": "Calendar", "color": "#6c63ff",
+                "text": f"Construis-moi un plan d'action pour la semaine, {prenom}.",
+                "grad": "linear-gradient(135deg,#6c63ff,#a855f7)",
+            })
+        if len(suggestions) < 4:
+            suggestions.append({
+                "icon": "Sparkles", "color": "#10b981",
+                "text": "Comment optimiser mes 2 prochaines heures pour être au max ?",
+                "grad": "linear-gradient(135deg,#10b981,#0ea5e9)",
+            })
+        if len(suggestions) < 4:
+            suggestions.append({
+                "icon": "Globe", "color": "#0ea5e9",
+                "text": "Cherche les 3 meilleures techniques de productivité pour étudiants/travailleurs.",
+                "grad": "linear-gradient(135deg,#0ea5e9,#06b6d4)",
+            })
+
+        return jsonify({"suggestions": suggestions[:4]})
+    except Exception as e:
+        return jsonify({"erreur": str(e), "suggestions": []}), 500
+
 
 @app.route('/ia/web-search', methods=['POST'])
 def route_web_search():

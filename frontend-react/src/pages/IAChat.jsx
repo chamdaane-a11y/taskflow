@@ -8,7 +8,8 @@ import {
   Send, History, Link, LayoutDashboard, BarChart2, Calendar,
   LogOut, Copy, Plus, X, ChevronRight, Layers, Menu,
   Users, Sparkles, Zap, Globe, CheckCircle, Trash2,
-  Search, AlertCircle, Check, Brain, ChevronDown, Database
+  Search, AlertCircle, Check, Brain, ChevronDown, Database,
+  Heart, Flame, BarChart, Target, Flag
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -46,26 +47,34 @@ const NAV_ITEMS = [
   { icon: Users,           label: 'Collaboration',path: '/collaboration' },
 ]
 
+// ── Personas Coach (lien avec le drawer Coach du Dashboard) ────────────
+const COACHES = {
+  bienveillant: { id: 'bienveillant', nom: 'Alex',  Icon: Heart,    color: '#ec4899', tag: 'Bienveillant', accroche: 'Doux, encourageant, à ton écoute' },
+  motivateur:   { id: 'motivateur',   nom: 'Max',   Icon: Flame,    color: '#f97316', tag: 'Motivateur',   accroche: 'Énergique, challengeant, on passe à l\'action' },
+  analytique:   { id: 'analytique',   nom: 'Nova',  Icon: BarChart, color: '#3b82f6', tag: 'Analytique',   accroche: 'Précis, factuel, basé sur tes données' },
+}
+const getCoach = (style) => COACHES[style] || COACHES.bienveillant
+
 // ── Tableau markdown memoïsé ─────────────────────────────────────────
-const Tableau = memo(function Tableau({ lignes, accent }) {
+const Tableau = memo(function Tableau({ lignes, accent, T }) {
   if (lignes.length < 2) return null
   const headers = lignes[0].split('|').map(h => h.trim()).filter(Boolean)
   const rows    = lignes.slice(2).map(l => l.split('|').map(c => c.trim()).filter(Boolean))
   return (
-    <div style={{ overflowX: 'auto', margin: '14px 0', borderRadius: 12, border: 'rgba(255,255,255,0.08) 1px solid', background: 'rgba(255,255,255,0.03)' }}>
+    <div style={{ overflowX: 'auto', margin: '14px 0', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bg2 }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr>{headers.map((h, i) => (
-            <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: accent, fontSize: 11, letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', background: `${accent}10` }}>
+            <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: accent, fontSize: 11, letterSpacing: '0.5px', borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap', background: `${accent}10` }}>
               {h.toUpperCase()}
             </th>
           ))}</tr>
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+            <tr key={i} onMouseEnter={e => e.currentTarget.style.background = T.bg3} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               {row.map((cell, j) => (
-                <td key={j} style={{ padding: '9px 16px', color: 'rgba(255,255,255,0.85)', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13, lineHeight: 1.5 }}>{cell}</td>
+                <td key={j} style={{ padding: '9px 16px', color: T.text, borderBottom: `1px solid ${T.border}`, fontSize: 13, lineHeight: 1.5 }}>{cell}</td>
               ))}
             </tr>
           ))}
@@ -76,16 +85,16 @@ const Tableau = memo(function Tableau({ lignes, accent }) {
 })
 
 // ── Markdown memoïsé ─────────────────────────────────────────────────
-const Markdown = memo(function Markdown({ content, accent }) {
+const Markdown = memo(function Markdown({ content, accent, T }) {
   const lines = content.split('\n')
 
   const inline = (text) => {
     const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
     return parts.map((p, i) => {
       if (p.startsWith('**') && p.endsWith('**'))
-        return <strong key={i} style={{ fontWeight: 700, color: 'rgba(255,255,255,0.95)' }}>{p.slice(2,-2)}</strong>
+        return <strong key={i} style={{ fontWeight: 700, color: T.text }}>{p.slice(2,-2)}</strong>
       if (p.startsWith('`') && p.endsWith('`'))
-        return <code key={i} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '1px 7px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#4ade80' }}>{p.slice(1,-1)}</code>
+        return <code key={i} style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 5, padding: '1px 7px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#4ade80' }}>{p.slice(1,-1)}</code>
       return p
     })
   }
@@ -100,8 +109,8 @@ const Markdown = memo(function Markdown({ content, accent }) {
       else {
         inCode = false
         els.push(
-          <div key={`c${i}`} style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '14px 18px', margin: '12px 0', overflowX: 'auto' }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: 2, marginBottom: 10 }}>CODE</div>
+          <div key={`c${i}`} style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, padding: '14px 18px', margin: '12px 0', overflowX: 'auto' }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 2, marginBottom: 10 }}>CODE</div>
             <pre style={{ margin: 0, fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 12, color: '#4ade80', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{codeLines.join('\n')}</pre>
           </div>
         )
@@ -116,18 +125,18 @@ const Markdown = memo(function Markdown({ content, accent }) {
       while (i + 1 < lines.length && (lines[i+1].startsWith('|') || lines[i+1].match(/^\|[-| ]+\|$/))) {
         i++; tableLines.push(lines[i])
       }
-      els.push(<Tableau key={`t${i}`} lignes={tableLines} accent={accent} />)
+      els.push(<Tableau key={`t${i}`} lignes={tableLines} accent={accent} T={T} />)
       i++; continue
     }
 
-    if (line.startsWith('### '))      els.push(<p key={i} style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.9)', margin: '14px 0 5px', letterSpacing: '-0.2px' }}>{inline(line.slice(4))}</p>)
-    else if (line.startsWith('## ')) els.push(<p key={i} style={{ fontSize: 15, fontWeight: 800, color: '#fff', margin: '18px 0 7px', letterSpacing: '-0.4px' }}>{inline(line.slice(3))}</p>)
-    else if (line.startsWith('# '))  els.push(<p key={i} style={{ fontSize: 17, fontWeight: 800, color: '#fff', margin: '20px 0 10px', letterSpacing: '-0.5px' }}>{inline(line.slice(2))}</p>)
+    if (line.startsWith('### '))      els.push(<p key={i} style={{ fontSize: 13, fontWeight: 700, color: T.text, margin: '14px 0 5px', letterSpacing: '-0.2px' }}>{inline(line.slice(4))}</p>)
+    else if (line.startsWith('## ')) els.push(<p key={i} style={{ fontSize: 15, fontWeight: 800, color: T.text, margin: '18px 0 7px', letterSpacing: '-0.4px' }}>{inline(line.slice(3))}</p>)
+    else if (line.startsWith('# '))  els.push(<p key={i} style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: '20px 0 10px', letterSpacing: '-0.5px' }}>{inline(line.slice(2))}</p>)
     else if (line.startsWith('- ') || line.startsWith('• '))
       els.push(
         <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 6 }}>
           <div style={{ width: 5, height: 5, borderRadius: '50%', background: accent, flexShrink: 0, marginTop: 8 }} />
-          <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.82)', lineHeight: 1.75 }}>{inline(line.slice(2))}</span>
+          <span style={{ fontSize: 14, color: T.text, lineHeight: 1.75 }}>{inline(line.slice(2))}</span>
         </div>
       )
     else {
@@ -136,12 +145,12 @@ const Markdown = memo(function Markdown({ content, accent }) {
         els.push(
           <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 7 }}>
             <div style={{ minWidth: 22, height: 22, borderRadius: 6, background: `${accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: accent, flexShrink: 0, marginTop: 1 }}>{num[1]}</div>
-            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.82)', lineHeight: 1.75 }}>{inline(num[2])}</span>
+            <span style={{ fontSize: 14, color: T.text, lineHeight: 1.75 }}>{inline(num[2])}</span>
           </div>
         )
-      else if (line.match(/^-{3,}$/)) els.push(<div key={i} style={{ height: 1, background: 'rgba(255,255,255,0.07)', margin: '14px 0' }} />)
+      else if (line.match(/^-{3,}$/)) els.push(<div key={i} style={{ height: 1, background: T.border, margin: '14px 0' }} />)
       else if (!line.trim())          els.push(<div key={i} style={{ height: 7 }} />)
-      else                            els.push(<p key={i} style={{ fontSize: 14, color: 'rgba(255,255,255,0.82)', lineHeight: 1.78, margin: '2px 0' }}>{inline(line)}</p>)
+      else                            els.push(<p key={i} style={{ fontSize: 14, color: T.text, lineHeight: 1.78, margin: '2px 0' }}>{inline(line)}</p>)
     }
     i++
   }
@@ -149,23 +158,23 @@ const Markdown = memo(function Markdown({ content, accent }) {
 })
 
 // ── Sources web memoïsé ───────────────────────────────────────────────
-const SourcesWeb = memo(function SourcesWeb({ results }) {
+const SourcesWeb = memo(function SourcesWeb({ results, T }) {
   const [open, setOpen] = useState(false)
   if (!results?.length) return null
   return (
-    <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+    <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
       <button onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
         <Globe size={11} color="#0ea5e9" />
         <span style={{ fontSize: 11, fontWeight: 700, color: '#0ea5e9', letterSpacing: '0.5px' }}>{results.length} SOURCE{results.length > 1 ? 'S' : ''} WEB</span>
-        <ChevronDown size={10} color="rgba(255,255,255,0.3)" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <ChevronDown size={10} color={T.text2} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>
       <AnimatePresence>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginTop: 10 }}>
             {results.map((r, i) => (
-              <div key={i} style={{ padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9, marginBottom: 6 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title || 'Source'}</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{r.snippet?.substring(0, 140)}{r.snippet?.length > 140 ? '…' : ''}</div>
+              <div key={i} style={{ padding: '9px 12px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 9, marginBottom: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title || 'Source'}</div>
+                <div style={{ fontSize: 11, color: T.text2, lineHeight: 1.5 }}>{r.snippet?.substring(0, 140)}{r.snippet?.length > 140 ? '…' : ''}</div>
                 {r.url && <a href={r.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: '#0ea5e9', marginTop: 4, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.url}</a>}
               </div>
             ))}
@@ -177,7 +186,7 @@ const SourcesWeb = memo(function SourcesWeb({ results }) {
 })
 
 // ── Carte action memoïsé ──────────────────────────────────────────────
-const CarteAction = memo(function CarteAction({ action }) {
+const CarteAction = memo(function CarteAction({ action, T }) {
   if (!action) return null
   const configs = {
     tache_creee:               { color: '#10b981', Icon: Plus,     label: 'Tâche créée'     },
@@ -194,14 +203,14 @@ const CarteAction = memo(function CarteAction({ action }) {
       </div>
       <div>
         <div style={{ fontSize: 11, fontWeight: 700, color: cfg.color, letterSpacing: '0.5px' }}>{cfg.label.toUpperCase()}</div>
-        {action.titre && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>"{action.titre}"</div>}
+        {action.titre && <div style={{ fontSize: 12, color: T.text2, marginTop: 2 }}>"{action.titre}"</div>}
       </div>
     </motion.div>
   )
 })
 
 // ── Bulle message memoïsé ─────────────────────────────────────────────
-const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, isMobile, copie, onCopy, onEnvoyer, onCreerTache, onForceSearch }) {
+const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, isMobile, copie, onCopy, onEnvoyer, onCreerTache, onForceSearch, T, coach }) {
   if (msg.role === 'systeme') return (
     <div style={{ display: 'flex', justifyContent: 'center' }}>
       <div style={{ padding: '5px 14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 99, fontSize: 11, color: '#10b981', fontWeight: 600 }}>
@@ -212,23 +221,29 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
 
   if (msg.role === 'user') return (
     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-      <div style={{ maxWidth: isMobile ? '86%' : '65%', padding: '13px 17px', borderRadius: '17px 17px 4px 17px', background: `linear-gradient(135deg, ${accent}30, ${accent}18)`, border: `1px solid ${accent}35`, fontSize: 14, color: 'rgba(255,255,255,0.9)', lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word', backdropFilter: 'blur(10px)' }}>
+      <div style={{ maxWidth: isMobile ? '86%' : '65%', padding: '13px 17px', borderRadius: '17px 17px 4px 17px', background: `linear-gradient(135deg, ${accent}30, ${accent}18)`, border: `1px solid ${accent}35`, fontSize: 14, color: T.text, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word', backdropFilter: 'blur(10px)' }}>
         {msg.content}
       </div>
     </div>
   )
 
   const meta = msg.intention && msg.intention !== 'chat' ? INTENTION_META[msg.intention] : null
+  // Coach affiché pour cette bulle : prioriser celui stocké sur le message, sinon fallback au coach actuel
+  const bubbleCoachStyle = msg.coach_style || coach?.id || 'bienveillant'
+  const bubbleCoach = COACHES[bubbleCoachStyle] || coach || COACHES.bienveillant
+  const bColor = bubbleCoach.color
+  const BubbleIcon = bubbleCoach.Icon
 
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
       <div style={{ maxWidth: isMobile ? '92%' : '80%', width: '100%' }}>
-        {/* Avatar + meta */}
+        {/* Avatar persona Coach + meta */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 9, background: `linear-gradient(135deg, ${accent}, ${accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 14px ${accent}35` }}>
-            <Sparkles size={13} color="#fff" strokeWidth={2} />
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${bColor}, ${bColor}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 14px ${bColor}55` }}>
+            <BubbleIcon size={13} color="#fff" strokeWidth={2.2} fill={bubbleCoach.id === 'motivateur' ? '#fff' : 'none'} />
           </div>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.5px', fontFamily: "'Clash Display', sans-serif" }}>GetShift AI</span>
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: T.text, letterSpacing: '-0.2px', fontFamily: "'Clash Display', sans-serif" }}>{bubbleCoach.nom}</span>
+          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: `${bColor}18`, color: bColor, letterSpacing: 0.4, textTransform: 'uppercase' }}>Coach</span>
           {meta && (
             <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 9px', background: `${meta.color}14`, border: `1px solid ${meta.color}30`, borderRadius: 99 }}>
@@ -246,7 +261,7 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
         </div>
 
         {/* Bulle */}
-        <div style={{ padding: '18px 20px', borderRadius: '4px 18px 18px 18px', background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(30px)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ padding: '18px 20px', borderRadius: '4px 18px 18px 18px', background: T.bg2, backdropFilter: 'blur(30px)', border: `1px solid ${T.border}` }}>
           {msg.abrev_expandees && msg.message_expande && (
             <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: `${accent}10`, border: `1px solid ${accent}20`, borderRadius: 8, fontSize: 10, color: accent }}>
               <Zap size={9} />
@@ -258,12 +273,31 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
               <AlertCircle size={14} color="#ef4444" />{msg.content}
             </div>
           ) : (
-            <Markdown content={msg.content} accent={accent} />
+            <>
+              {msg.content
+                ? <Markdown content={msg.content} accent={accent} T={T} />
+                : msg.streaming && (
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', padding: '4px 0' }}>
+                    {[0, 1, 2].map(i => (
+                      <motion.div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: bColor }}
+                        animate={{ y: [-3, 3, -3], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.15 }} />
+                    ))}
+                  </div>
+                )
+              }
+              {msg.streaming && msg.content && (
+                <motion.span
+                  style={{ display: 'inline-block', width: 8, height: 14, background: bColor, marginLeft: 2, verticalAlign: 'middle', borderRadius: 1 }}
+                  animate={{ opacity: [1, 0, 1] }}
+                  transition={{ duration: 0.7, repeat: Infinity }}
+                />
+              )}
+            </>
           )}
-          {msg.action && <CarteAction action={msg.action} />}
-          {msg.search_results && <SourcesWeb results={msg.search_results} />}
-          {msg.role === 'ia' && (
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {msg.action && <CarteAction action={msg.action} T={T} />}
+          {msg.search_results && <SourcesWeb results={msg.search_results} T={T} />}
+          {msg.role === 'ia' && !msg.streaming && msg.content && (
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
               {[
                 { label: copie === idx ? 'Copié !' : 'Copier', Icon: Copy,         action: () => onCopy(msg.content, idx),                         color: copie === idx ? accent : null },
                 { label: 'Créer tâche',                         Icon: Plus,         action: () => onCreerTache(msg.content.substring(0, 80)),       color: null },
@@ -271,9 +305,9 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
                 { label: 'Rechercher',                          Icon: Search,       action: () => { onForceSearch(); onEnvoyer(msg.content.substring(0, 60)) }, color: '#0ea5e9' },
               ].map(({ label, Icon, action, color }) => (
                 <motion.button key={label}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: color ? `${color}12` : 'transparent', border: `1px solid ${color ? color + '30' : 'rgba(255,255,255,0.08)'}`, borderRadius: 99, color: color || 'rgba(255,255,255,0.35)', fontSize: 11, cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: color ? `${color}12` : 'transparent', border: `1px solid ${color ? color + "30" : T.border}`, borderRadius: 99, color: color || T.text2, fontSize: 11, cursor: 'pointer' }}
                   onClick={action}
-                  whileHover={{ color: color || '#fff', borderColor: color ? `${color}60` : 'rgba(255,255,255,0.25)' }}>
+                  whileHover={{ color: color || T.text, borderColor: color ? `${color}60` : T.border }}>
                   <Icon size={10} />{label}
                 </motion.button>
               ))}
@@ -310,6 +344,13 @@ export default function IAChat() {
   const [showSidebar,       setShowSidebar]       = useState(false)
   const [showModeles,       setShowModeles]       = useState(false)
   const [memoryCount,       setMemoryCount]       = useState(0)
+  // Coach persona — lien avec le drawer Coach du Dashboard
+  const [coachStyle,        setCoachStyle]        = useState(() => {
+    try { return localStorage.getItem('getshift_coach_style') || 'bienveillant' } catch { return 'bienveillant' }
+  })
+  const coach = useMemo(() => getCoach(coachStyle), [coachStyle])
+  // Suggestions personnalisées (rules-based backend)
+  const [suggestions, setSuggestions] = useState(null)
 
   const endRef      = useRef(null)
   const textareaRef = useRef(null)
@@ -329,6 +370,7 @@ export default function IAChat() {
     chargerHistorique()
     chargerProfil()
     chargerMemoire()
+    chargerSuggestions()
   }, [])
 
   useEffect(() => { chargerTaches() }, [location.pathname])
@@ -342,12 +384,18 @@ export default function IAChat() {
   }, [messages])
 
   // ── Loaders (fire & forget) ───────────────────────────────────────
-  const chargerProfil     = useCallback(async () => { try { const r = await axios.get(`${API}/users/${user.id}`);          setProfil(r.data)                                  } catch {} }, [user?.id])
-  const chargerTaches     = useCallback(async () => { try { const r = await axios.get(`${API}/taches/${user.id}`);          setTaches(r.data)                                  } catch {} }, [user?.id])
-  const chargerHistorique = useCallback(async () => { try { const r = await axios.get(`${API}/ia/historique/${user.id}`);   setHistorique(r.data)                              } catch {} }, [user?.id])
-  const chargerMemoire    = useCallback(async () => { try { const r = await axios.get(`${API}/ia/memory/${user.id}`);       setMemoryCount(r.data.total_entrees || 0)          } catch {} }, [user?.id])
+  const chargerProfil      = useCallback(async () => { try { const r = await axios.get(`${API}/users/${user.id}`);          setProfil(r.data)                                  } catch {} }, [user?.id])
+  const chargerTaches      = useCallback(async () => { try { const r = await axios.get(`${API}/taches/${user.id}`);          setTaches(r.data)                                  } catch {} }, [user?.id])
+  const chargerHistorique  = useCallback(async () => { try { const r = await axios.get(`${API}/ia/historique/${user.id}`);   setHistorique(r.data)                              } catch {} }, [user?.id])
+  const chargerMemoire     = useCallback(async () => { try { const r = await axios.get(`${API}/ia/memory/${user.id}`);       setMemoryCount(r.data.total_entrees || 0)          } catch {} }, [user?.id])
+  const chargerSuggestions = useCallback(async () => { try { const r = await axios.get(`${API}/ia/suggestions/${user.id}`);  setSuggestions(r.data?.suggestions || null)        } catch {} }, [user?.id])
 
-  // ── Envoi — optimistic update + messagesRef ───────────────────────
+  // Persister le choix de coach
+  useEffect(() => {
+    try { localStorage.setItem('getshift_coach_style', coachStyle) } catch {}
+  }, [coachStyle])
+
+  // ── Envoi — streaming SSE + fallback non-stream sur action/erreur ───
   const envoyer = useCallback(async (texteForce) => {
     const texte = (texteForce || prompt).trim()
     if (!texte || loading) return
@@ -359,57 +407,151 @@ export default function IAChat() {
     setLoading(true)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
-    try {
-      // Utiliser messagesRef pour éviter la dépendance sur messages
-      const hist = messagesRef.current
-        .filter(m => m.role === 'user' || m.role === 'ia')
-        .slice(-16)
-        .map(m => ({ role: m.role === 'ia' ? 'assistant' : 'user', content: m.content }))
+    const hist = messagesRef.current
+      .filter(m => m.role === 'user' || m.role === 'ia')
+      .slice(-16)
+      .map(m => ({ role: m.role === 'ia' ? 'assistant' : 'user', content: m.content }))
 
-      const { data } = await axios.post(`${API}/ia/assistant`, {
-        user_id:      user.id,
-        message:      texte,
-        modele,
-        historique:   hist,
-        tache_id:     tacheSelectionnee || null,
-        force_search: forceSearch,
-      })
+    const payload = {
+      user_id:      user.id,
+      message:      texte,
+      modele,
+      historique:   hist,
+      tache_id:     tacheSelectionnee || null,
+      force_search: forceSearch,
+      coach_style:  coachStyle,
+    }
 
-      setMessages(p => [...p, {
-        role:             'ia',
-        content:          data.reponse,
-        modele:           data.modele || modele,
-        intention:        data.intention,
-        action:           data.action || null,
-        search_results:   data.search_results || null,
-        web_searched:     data.web_searched || false,
-        abrev_expandees:  data.abrev_expandees,
-        message_original: data.message_original,
-        message_expande:  data.message_expande,
-      }])
+    // Détection rapide d'une intention "action" → on bascule sur l'endpoint non-stream
+    const lowerMsg = texte.toLowerCase()
+    const looksLikeAction = /\b(crée|créer|cree|ajoute|nouvelle? tâche|nouvelle? tache|terminée|terminer|fini|planifie|planifier|tomorrow)\b/.test(lowerMsg)
 
-      // Side effects sans bloquer l'UI
-      if (data.action?.type === 'tache_creee' || data.action?.type === 'tache_terminee') {
-        confetti({ particleCount: 70, spread: 55, origin: { y: 0.65 }, colors: [accent, '#10b981', accent2] })
-        chargerTaches()
+    if (looksLikeAction) {
+      // Mode classique non-stream pour gérer les actions
+      try {
+        const { data } = await axios.post(`${API}/ia/assistant`, payload)
+        setMessages(p => [...p, {
+          role: 'ia', content: data.reponse, modele: data.modele || modele,
+          intention: data.intention, action: data.action || null,
+          search_results: data.search_results || null, web_searched: data.web_searched || false,
+          abrev_expandees: data.abrev_expandees, message_original: data.message_original,
+          message_expande: data.message_expande, coach_style: coachStyle,
+        }])
+        if (data.action?.type === 'tache_creee' || data.action?.type === 'tache_terminee') {
+          confetti({ particleCount: 70, spread: 55, origin: { y: 0.65 }, colors: [accent, '#10b981', accent2] })
+          chargerTaches()
+        }
+        if (data.action?.type === 'redirect_tomorrow_builder')
+          setTimeout(() => navigate('/planification'), 1800)
+      } catch (err) {
+        setMessages(p => [...p, { role: 'erreur', content: err.response?.data?.erreur || 'Erreur de connexion. Vérifie ta connexion et réessaie.' }])
       }
-      if (data.action?.type === 'redirect_tomorrow_builder')
-        setTimeout(() => navigate('/planification'), 1800)
       if (forceSearch) setForceSearch(false)
       if (tacheSelectionnee) setTacheSelectionnee(null)
-
-      // Refresh en arrière-plan (pas await)
-      chargerHistorique()
-      chargerMemoire()
-
-    } catch (err) {
-      setMessages(p => [...p, {
-        role: 'erreur',
-        content: err.response?.data?.erreur || 'Erreur de connexion. Vérifie ta connexion et réessaie.'
-      }])
+      chargerHistorique(); chargerMemoire(); chargerSuggestions()
+      setLoading(false)
+      return
     }
+
+    // ── STREAMING ──────────────────────────────────────────────────
+    let placeholderIdx = null
+    setMessages(p => {
+      placeholderIdx = p.length
+      return [...p, { role: 'ia', content: '', streaming: true, coach_style: coachStyle }]
+    })
+
+    try {
+      const resp = await fetch(`${API}/ia/assistant/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`)
+
+      const reader = resp.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let metaApplied = false
+
+      const updateLast = (mut) => {
+        setMessages(p => {
+          const out = [...p]
+          if (out.length === 0) return out
+          const lastIdx = out.length - 1
+          out[lastIdx] = { ...out[lastIdx], ...mut(out[lastIdx]) }
+          return out
+        })
+      }
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const events = buffer.split('\n\n')
+        buffer = events.pop() || ''
+        for (const evt of events) {
+          if (!evt.startsWith('data: ')) continue
+          const json = evt.slice(6).trim()
+          if (!json) continue
+          try {
+            const obj = JSON.parse(json)
+            if (obj.type === 'meta' && !metaApplied) {
+              metaApplied = true
+              updateLast(m => ({
+                modele:         obj.modele || modele,
+                intention:      obj.intention,
+                search_results: obj.search_results || null,
+                web_searched:   !!obj.web_searched,
+              }))
+            } else if (obj.type === 'token') {
+              updateLast(m => ({ content: (m.content || '') + obj.content }))
+            } else if (obj.type === 'done') {
+              updateLast(m => ({ content: obj.full || m.content, streaming: false }))
+            } else if (obj.type === 'error') {
+              updateLast(m => ({ content: m.content || `Erreur : ${obj.message}`, streaming: false }))
+            }
+          } catch {}
+        }
+      }
+      // Sécurité : si le stream a fini sans 'done' explicit
+      updateLast(m => ({ streaming: false }))
+    } catch (err) {
+      // Fallback non-stream si streaming échoue
+      try {
+        const { data } = await axios.post(`${API}/ia/assistant`, payload)
+        setMessages(p => {
+          const out = [...p]
+          // remplacer le placeholder vide par la réponse complète
+          if (out.length && out[out.length - 1].role === 'ia' && (out[out.length - 1].streaming || !out[out.length - 1].content)) {
+            out[out.length - 1] = {
+              role: 'ia', content: data.reponse, modele: data.modele || modele,
+              intention: data.intention, action: data.action || null,
+              search_results: data.search_results || null, web_searched: data.web_searched || false,
+              coach_style: coachStyle,
+            }
+          } else {
+            out.push({ role: 'ia', content: data.reponse, modele: data.modele || modele, intention: data.intention, action: data.action, coach_style: coachStyle })
+          }
+          return out
+        })
+      } catch (err2) {
+        setMessages(p => {
+          const out = [...p]
+          if (out.length && out[out.length - 1].streaming) {
+            out[out.length - 1] = { role: 'erreur', content: 'Erreur de connexion. Vérifie ta connexion et réessaie.' }
+          } else {
+            out.push({ role: 'erreur', content: 'Erreur de connexion.' })
+          }
+          return out
+        })
+      }
+    }
+
+    if (forceSearch) setForceSearch(false)
+    if (tacheSelectionnee) setTacheSelectionnee(null)
+    chargerHistorique(); chargerMemoire()
     setLoading(false)
-  }, [prompt, loading, modele, tacheSelectionnee, forceSearch, user?.id, accent, accent2, navigate, chargerTaches, chargerHistorique, chargerMemoire])
+  }, [prompt, loading, modele, tacheSelectionnee, forceSearch, user?.id, accent, accent2, navigate, chargerTaches, chargerHistorique, chargerMemoire, chargerSuggestions, coachStyle])
   // Note: messages retiré des dépendances — on utilise messagesRef à la place
 
   const creerTache = useCallback(async (titre) => {
@@ -445,7 +587,7 @@ export default function IAChat() {
   // RENDER
   // ══════════════════════════════════════════════════════════════════
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#080810', color: '#fff', fontFamily: "'DM Sans', sans-serif", position: 'relative', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif", position: 'relative', overflow: 'hidden' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Clash+Display:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
@@ -462,15 +604,15 @@ export default function IAChat() {
       </div>
 
       {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
-      <aside style={{ width: 'min(250px, 85%)', maxWidth: 250, display: 'flex', flexDirection: 'column', padding: '22px 14px', position: 'fixed', top: 0, left: isMobile ? (showSidebar ? 0 : '-100%') : 0, height: '100vh', transition: 'left 0.3s ease', zIndex: 100, overflowY: 'auto', borderRight: '1px solid rgba(255,255,255,0.07)', background: 'rgba(10,10,20,0.85)', backdropFilter: 'blur(40px)' }}>
+      <aside style={{ width: 'min(250px, 85%)', maxWidth: 250, display: 'flex', flexDirection: 'column', padding: '22px 14px', position: 'fixed', top: 0, left: isMobile ? (showSidebar ? 0 : '-100%') : 0, height: '100vh', transition: 'left 0.3s ease', zIndex: 100, overflowY: 'auto', borderRight: `1px solid ${T.border}`, background: T.bg2, backdropFilter: 'blur(40px)' }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '0 4px' }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${accent}, ${accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 20px ${accent}40` }}>
             <Layers size={16} color="#fff" strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', fontFamily: "'Clash Display', sans-serif", letterSpacing: '-0.3px' }}>GetShift</div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '1.5px', fontWeight: 600 }}>GETSHIFT AI</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.text, fontFamily: "'Clash Display', sans-serif", letterSpacing: '-0.3px' }}>GetShift</div>
+            <div style={{ fontSize: 9, color: T.text2, letterSpacing: '1.5px', fontWeight: 600 }}>GETSHIFT AI</div>
           </div>
         </div>
 
@@ -478,12 +620,12 @@ export default function IAChat() {
         {profil && (
           <div className="glass" style={{ borderRadius: 12, padding: '11px 12px', marginBottom: 22 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, ${accent}, ${accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, ${accent}, ${accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: T.text, flexShrink: 0 }}>
                 {user?.nom?.charAt(0).toUpperCase()}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.nom}</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>{profil.points || 0} pts · Niveau {profil.niveau || 1}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.nom}</div>
+                <div style={{ fontSize: 10, color: T.text2, marginTop: 1 }}>{profil.points || 0} pts · Niveau {profil.niveau || 1}</div>
               </div>
             </div>
             {memoryCount > 0 && (
@@ -496,15 +638,15 @@ export default function IAChat() {
         )}
 
         {/* Navigation */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>NAVIGATION</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>NAVIGATION</div>
         {NAV_ITEMS.filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path)).map(item => {
           const Icon = item.icon
           const active = item.path === '/ia'
           return (
             <motion.button key={item.path}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', borderRadius: 9, color: active ? '#fff' : 'rgba(255,255,255,0.45)', background: active ? `${accent}20` : 'transparent', border: active ? `1px solid ${accent}35` : '1px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', borderRadius: 9, color: active ? T.text : T.text2, background: active ? `${accent}20` : 'transparent', border: active ? `1px solid ${accent}35` : '1px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
               onClick={() => { navigate(item.path); if (isMobile) setShowSidebar(false) }}
-              whileHover={{ color: '#fff', x: 2 }}>
+              whileHover={{ color: T.text, x: 2 }}>
               <Icon size={14} strokeWidth={active ? 2.5 : 1.8} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
               {active && <div style={{ marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%', background: accent }} />}
@@ -512,26 +654,26 @@ export default function IAChat() {
           )
         })}
 
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '16px 0' }} />
+        <div style={{ height: 1, background: T.bg3, margin: '16px 0' }} />
 
         {/* Modèle */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>MODÈLE IA</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>MODÈLE IA</div>
         <motion.button className="glass" style={{ width: '100%', padding: '9px 12px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}
           onClick={() => setShowModeles(!showModeles)}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{modeleActuel.nom}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{modeleActuel.nom}</div>
             <div style={{ fontSize: 10, color: accent, marginTop: 1 }}>{modeleActuel.tag}</div>
           </div>
-          <ChevronDown size={13} color="rgba(255,255,255,0.3)" style={{ transform: showModeles ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          <ChevronDown size={13} color={T.text2} style={{ transform: showModeles ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
         </motion.button>
         <AnimatePresence>
           {showModeles && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 8 }}>
               {MODELES.filter(m => m.id !== modele).map(m => (
                 <motion.button key={m.id}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 9, background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, textAlign: 'left', marginBottom: 4 }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 9, background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: T.text2, cursor: 'pointer', fontSize: 12, textAlign: 'left', marginBottom: 4 }}
                   onClick={() => { setModele(m.id); setShowModeles(false) }}
-                  whileHover={{ color: '#fff', borderColor: `${accent}50`, background: `${accent}08` }}>
+                  whileHover={{ color: T.text, borderColor: `${accent}50`, background: `${accent}08` }}>
                   <span style={{ fontWeight: 500 }}>{m.nom}</span>
                   <span style={{ fontSize: 10, color: accent, marginLeft: 8 }}>{m.tag}</span>
                 </motion.button>
@@ -540,27 +682,27 @@ export default function IAChat() {
           )}
         </AnimatePresence>
 
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0 16px' }} />
+        <div style={{ height: 1, background: T.bg3, margin: '4px 0 16px' }} />
 
         {/* Tâches à lier */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>LIER UNE TÂCHE</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>LIER UNE TÂCHE</div>
         <div style={{ maxHeight: 130, overflowY: 'auto', marginBottom: 6 }}>
           {[{ id: null, titre: 'Aucune', priorite: '' }, ...tachesEnCours.slice(0, 8)].map(t => (
             <motion.button key={t.id || 'none'}
               style={{ width: '100%', padding: '6px 10px', borderRadius: 8, background: tacheSelectionnee === t.id ? `${accent}18` : 'transparent', border: `1px solid ${tacheSelectionnee === t.id ? accent + '40' : 'transparent'}`, color: tacheSelectionnee === t.id ? '#fff' : 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 11, textAlign: 'left', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               onClick={() => setTacheSelectionnee(t.id)}
-              whileHover={{ color: '#fff' }}>
+              whileHover={{ color: T.text }}>
               {tacheSelectionnee === t.id ? '● ' : '○ '}{t.titre}
             </motion.button>
           ))}
         </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 12, marginBottom: 2 }}
-            onClick={() => setShowHistorique(!showHistorique)} whileHover={{ color: '#fff' }}>
+        <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: `1px solid ${T.border}` }}>
+          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 12, marginBottom: 2 }}
+            onClick={() => setShowHistorique(!showHistorique)} whileHover={{ color: T.text }}>
             <History size={13} strokeWidth={1.8} />Historique ({historique.length})
           </motion.button>
-          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 12 }}
+          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 12 }}
             onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ color: '#ef4444' }}>
             <LogOut size={13} strokeWidth={1.8} />Déconnexion
           </motion.button>
@@ -569,7 +711,7 @@ export default function IAChat() {
 
       {/* Mobile */}
       {isMobile && (
-        <motion.button style={{ position: 'fixed', top: 14, left: 14, zIndex: 200, width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}
+        <motion.button style={{ position: 'fixed', top: 14, left: 14, zIndex: 200, width: 38, height: 38, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}
           onClick={() => setShowSidebar(!showSidebar)}>
           <Menu size={17} />
         </motion.button>
@@ -582,14 +724,15 @@ export default function IAChat() {
       <main style={{ marginLeft: isMobile ? 0 : 250, flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', minWidth: 0, position: 'relative', zIndex: 1 }}>
 
         {/* Header */}
-        <div style={{ padding: '12px clamp(16px,4vw,28px)', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: 'rgba(8,8,16,0.7)', backdropFilter: 'blur(30px)' }}>
+        <div style={{ padding: '12px clamp(16px,4vw,28px)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: T.bg2, backdropFilter: 'blur(30px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: `${accent}14`, border: `1px solid ${accent}28`, borderRadius: 99 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: `${coach.color}14`, border: `1px solid ${coach.color}40`, borderRadius: 99 }}>
               <motion.div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: accent, whiteSpace: 'nowrap', fontFamily: "'Clash Display', sans-serif" }}>SHIFT · GetShift AI</span>
+              <coach.Icon size={11} color={coach.color} strokeWidth={2.4} fill={coach.id === 'motivateur' ? coach.color : 'none'} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: coach.color, whiteSpace: 'nowrap', fontFamily: "'Clash Display', sans-serif" }}>{coach.nom} · {coach.tag}</span>
             </div>
             <motion.button
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: forceSearch ? 'rgba(14,165,233,0.15)' : 'transparent', border: `1px solid ${forceSearch ? '#0ea5e9' : 'rgba(255,255,255,0.1)'}`, borderRadius: 99, color: forceSearch ? '#0ea5e9' : 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 11, fontWeight: forceSearch ? 700 : 400, whiteSpace: 'nowrap' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: forceSearch ? 'rgba(14,165,233,0.15)' : 'transparent', border: `1px solid ${forceSearch ? '#0ea5e9' : T.border}`, borderRadius: 99, color: forceSearch ? '#0ea5e9' : T.text2, cursor: 'pointer', fontSize: 11, fontWeight: forceSearch ? 700 : 400, whiteSpace: 'nowrap' }}
               onClick={() => setForceSearch(!forceSearch)} whileHover={{ borderColor: '#0ea5e9', color: '#0ea5e9' }}>
               <Globe size={10} />{!isMobile && 'Web'}{forceSearch && ' ON'}
             </motion.button>
@@ -598,13 +741,13 @@ export default function IAChat() {
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', background: `${accent}12`, border: `1px solid ${accent}28`, borderRadius: 99 }}>
                 <Link size={10} color={accent} />
                 <span style={{ fontSize: 11, color: accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{taches.find(t => t.id === tacheSelectionnee)?.titre}</span>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', padding: 0, display: 'flex' }} onClick={() => setTacheSelectionnee(null)}><X size={10} /></button>
+                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, padding: 0, display: 'flex' }} onClick={() => setTacheSelectionnee(null)}><X size={10} /></button>
               </motion.div>
             )}
           </div>
           <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
             {messages.length > 0 && (
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 11 }}
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, cursor: 'pointer', fontSize: 11 }}
                 onClick={effacer} whileHover={{ borderColor: '#ef4444', color: '#ef4444' }}>
                 <Trash2 size={11} />{!isMobile && 'Effacer'}
               </motion.button>
@@ -616,17 +759,17 @@ export default function IAChat() {
         <AnimatePresence>
           {showHistorique && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-              style={{ background: 'rgba(8,8,16,0.9)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px clamp(16px,4vw,28px)', maxHeight: 200, overflowY: 'auto', flexShrink: 0, backdropFilter: 'blur(30px)' }}>
+              style={{ background: T.bg2, borderBottom: `1px solid ${T.border}`, padding: '14px clamp(16px,4vw,28px)', maxHeight: 200, overflowY: 'auto', flexShrink: 0, backdropFilter: 'blur(30px)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Historique</span>
-                <button style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }} onClick={() => setShowHistorique(false)}><X size={13} /></button>
+                <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>Historique</span>
+                <button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer' }} onClick={() => setShowHistorique(false)}><X size={13} /></button>
               </div>
               {historique.slice(0, 20).map(h => (
                 <motion.div key={h.id} className="glass" style={{ borderRadius: 9, padding: '8px 12px', marginBottom: 5, cursor: 'pointer' }}
                   whileHover={{ borderColor: `${accent}50` }}
                   onClick={() => { setPrompt(h.prompt); setShowHistorique(false) }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>{new Date(h.created_at).toLocaleDateString('fr-FR')}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.prompt?.substring(0, 80)}</div>
+                  <div style={{ fontSize: 10, color: T.text2, marginBottom: 2 }}>{new Date(h.created_at).toLocaleDateString('fr-FR')}</div>
+                  <div style={{ fontSize: 12, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.prompt?.substring(0, 80)}</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -636,25 +779,55 @@ export default function IAChat() {
         {/* ── MESSAGES ─────────────────────────────────────────────── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(20px,4vw,36px)', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* État vide */}
+          {/* État vide — accueil avec persona Coach + suggestions perso */}
           {messages.length === 0 && (
             <motion.div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', textAlign: 'center' }}
               initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <motion.div style={{ position: 'relative', marginBottom: 32 }}>
-                <motion.div style={{ width: 80, height: 80, borderRadius: 24, background: `linear-gradient(135deg, ${accent}, ${accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 60px ${accent}40, 0 0 120px ${accent}20` }}
+              {/* Avatar Coach */}
+              <motion.div style={{ position: 'relative', marginBottom: 28 }}>
+                <motion.div style={{ width: 84, height: 84, borderRadius: '50%', background: `linear-gradient(135deg, ${coach.color}, ${coach.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 60px ${coach.color}55, 0 0 120px ${coach.color}30` }}
                   animate={{ y: [0, -8, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}>
-                  <Sparkles size={36} color="#fff" strokeWidth={1.5} />
+                  <coach.Icon size={36} color="#fff" strokeWidth={2} fill={coach.id === 'motivateur' ? '#fff' : 'none'} />
                 </motion.div>
-                <motion.div style={{ position: 'absolute', inset: -8, borderRadius: 32, border: `1px solid ${accent}30` }}
+                <motion.div style={{ position: 'absolute', inset: -8, borderRadius: '50%', border: `1px solid ${coach.color}40` }}
                   animate={{ opacity: [0.3, 0.8, 0.3], scale: [1, 1.05, 1] }} transition={{ duration: 2.5, repeat: Infinity }} />
               </motion.div>
-              <h1 style={{ fontSize: 'clamp(24px,5vw,34px)', fontWeight: 700, color: '#fff', letterSpacing: '-0.8px', marginBottom: 10, fontFamily: "'Clash Display', sans-serif", lineHeight: 1.2 }}>
-                Bonjour, {user?.nom?.split(' ')[0]}
+
+              {/* Salutation personnalisée par le coach */}
+              <h1 style={{ fontSize: 'clamp(22px,5vw,32px)', fontWeight: 800, color: T.text, letterSpacing: '-0.8px', marginBottom: 6, fontFamily: "'Clash Display', sans-serif", lineHeight: 1.2 }}>
+                {coach.nom} — coach <span style={{ color: coach.color }}>{coach.tag.toLowerCase()}</span>
               </h1>
-              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 14, maxWidth: 440, lineHeight: 1.7 }}>
-                Je suis GetShift AI — votre assistant IA personnel. Je connais vos tâches, vos habitudes et j'ai accès au web en temps réel via Tavily.
+              <p style={{ fontSize: 13, color: T.text2, marginBottom: 18, maxWidth: 440, lineHeight: 1.6, fontStyle: 'italic' }}>
+                « {coach.accroche} »
               </p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 36 }}>
+              <p style={{ fontSize: 14, color: T.text, marginBottom: 14, maxWidth: 480, lineHeight: 1.65 }}>
+                Salut <strong>{user?.nom?.split(' ')[0]}</strong>. Je connais tes tâches, ton focus du jour, ton streak et tes patterns. On commence par quoi ?
+              </p>
+
+              {/* Switch coach rapide */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 18 }}>
+                {Object.values(COACHES).map(c => (
+                  <motion.button key={c.id}
+                    onClick={() => setCoachStyle(c.id)}
+                    whileTap={{ scale: 0.94 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '5px 11px',
+                      background: c.id === coach.id ? `${c.color}18` : 'transparent',
+                      border: `1px solid ${c.id === coach.id ? c.color : T.border}`,
+                      borderRadius: 99,
+                      color: c.id === coach.id ? c.color : T.text2,
+                      fontSize: 11, fontWeight: c.id === coach.id ? 700 : 500,
+                      cursor: 'pointer',
+                    }}>
+                    <c.Icon size={11} fill={c.id === coach.id && c.id === 'motivateur' ? c.color : 'none'} />
+                    {c.nom}
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Capacités */}
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 28 }}>
                 {[
                   { Icon: Globe,       label: 'Web temps réel',          color: '#0ea5e9' },
                   { Icon: Database,    label: `${memoryCount} souvenirs`, color: accent    },
@@ -662,24 +835,28 @@ export default function IAChat() {
                   { Icon: CheckCircle, label: 'Actions directes',         color: '#10b981' },
                 ].map(({ Icon, label, color }, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.07 }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 13px', background: `${color}10`, border: `1px solid ${color}22`, borderRadius: 99, fontSize: 11, color, fontWeight: 600 }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: `${color}10`, border: `1px solid ${color}25`, borderRadius: 99, fontSize: 10.5, color, fontWeight: 600 }}>
                     <Icon size={10} />{label}
                   </motion.div>
                 ))}
               </div>
+
+              {/* Suggestions DYNAMIQUES (rules-based backend) avec fallback statique */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 10, width: '100%', maxWidth: 580 }}>
-                {SUGGESTIONS.map((s, i) => {
-                  const Icon = s.icon
+                {(suggestions && suggestions.length > 0 ? suggestions : SUGGESTIONS).slice(0, 4).map((s, i) => {
+                  // Suggestions backend = string icon name ; fallback statique = composant
+                  const iconMap = { Brain, Globe, Plus, Zap, AlertCircle, Target, Flame, Calendar, Sparkles, CheckCircle }
+                  const Icon = typeof s.icon === 'string' ? (iconMap[s.icon] || Sparkles) : (s.icon || Sparkles)
                   return (
                     <motion.button key={i} className="glass"
-                      style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '15px 18px', borderRadius: 14, cursor: 'pointer', textAlign: 'left' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '15px 18px', borderRadius: 14, cursor: 'pointer', textAlign: 'left', background: T.bg2, border: `1px solid ${T.border}` }}
                       onClick={() => envoyer(s.text)}
                       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.08 }}
-                      whileHover={{ scale: 1.02, borderColor: 'rgba(255,255,255,0.18)' }} whileTap={{ scale: 0.98 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      whileHover={{ scale: 1.02, borderColor: `${s.color || coach.color}55` }} whileTap={{ scale: 0.98 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: s.grad || `linear-gradient(135deg, ${coach.color}, ${coach.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Icon size={16} color="#fff" strokeWidth={2} />
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.65)', lineHeight: 1.45 }}>{s.text}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: T.text, lineHeight: 1.45 }}>{s.text}</span>
                     </motion.button>
                   )
                 })}
@@ -691,10 +868,10 @@ export default function IAChat() {
                   {tachesEnCours.slice(0, 3).map(t => (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: t.priorite === 'haute' ? '#ef4444' : t.priorite === 'moyenne' ? '#f59e0b' : '#10b981', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
+                      <span style={{ fontSize: 12, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
                     </div>
                   ))}
-                  {tachesEnCours.length > 3 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>+{tachesEnCours.length - 3} autres</div>}
+                  {tachesEnCours.length > 3 && <div style={{ fontSize: 11, color: T.text2, marginTop: 4 }}>+{tachesEnCours.length - 3} autres</div>}
                 </motion.div>
               )}
             </motion.div>
@@ -713,34 +890,41 @@ export default function IAChat() {
                   onEnvoyer={envoyer}
                   onCreerTache={creerTache}
                   onForceSearch={handleForceSearch}
+                  T={T}
+                  coach={coach}
                 />
               </motion.div>
             ))}
           </AnimatePresence>
 
-          {/* Loading */}
-          {loading && (
-            <motion.div style={{ display: 'flex' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 9, background: `linear-gradient(135deg, ${accent}, ${accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Sparkles size={13} color="#fff" strokeWidth={2} />
-                </div>
-                <div className="glass" style={{ padding: '12px 18px', borderRadius: '4px 16px 16px 16px' }}>
-                  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                    {[0, 1, 2].map(i => (
-                      <motion.div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: accent }}
-                        animate={{ y: [-3, 3, -3], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.15 }} />
-                    ))}
+          {/* Loading — N'AFFICHE QUE si le dernier message n'est pas en streaming
+               (le streaming a déjà sa propre bulle qui se remplit progressivement) */}
+          {loading && (() => {
+            const last = messages[messages.length - 1]
+            if (last && last.role === 'ia' && (last.streaming || last.content)) return null
+            return (
+              <motion.div style={{ display: 'flex' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${coach.color}, ${coach.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 14px ${coach.color}55` }}>
+                    <coach.Icon size={13} color="#fff" strokeWidth={2.2} fill={coach.id === 'motivateur' ? '#fff' : 'none'} />
+                  </div>
+                  <div style={{ padding: '12px 18px', borderRadius: '4px 16px 16px 16px', background: T.bg2, border: `1px solid ${T.border}` }}>
+                    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                      {[0, 1, 2].map(i => (
+                        <motion.div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: coach.color }}
+                          animate={{ y: [-3, 3, -3], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.15 }} />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )
+          })()}
           <div ref={endRef} />
         </div>
 
         {/* ── INPUT ─────────────────────────────────────────────────── */}
-        <div style={{ padding: '12px clamp(16px,4vw,28px) clamp(16px,4vw,22px)', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(8,8,16,0.8)', backdropFilter: 'blur(30px)', flexShrink: 0 }}>
+        <div style={{ padding: '12px clamp(16px,4vw,28px) clamp(16px,4vw,22px)', borderTop: `1px solid ${T.border}`, background: T.bg2, backdropFilter: 'blur(30px)', flexShrink: 0 }}>
           <AnimatePresence>
             {forceSearch && (
               <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -754,11 +938,11 @@ export default function IAChat() {
             <div style={{ flex: 1, position: 'relative' }}>
               <textarea
                 ref={textareaRef}
-                style={{ width: '100%', padding: '13px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#fff', fontSize: 14, outline: 'none', resize: 'none', minHeight: 50, maxHeight: 160, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.55, backdropFilter: 'blur(20px)', transition: 'border-color 0.2s', caretColor: accent }}
+                style={{ width: '100%', padding: '13px 16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, color: T.text, fontSize: 14, outline: 'none', resize: 'none', minHeight: 50, maxHeight: 160, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.55, backdropFilter: 'blur(20px)', transition: 'border-color 0.2s', caretColor: accent }}
                 placeholder={
                   forceSearch       ? 'Que veux-tu rechercher sur le web ?' :
                   tacheSelectionnee ? `Question sur "${taches.find(t => t.id === tacheSelectionnee)?.titre}" ?` :
-                  'Message à GetShift AI...'
+                  `Message à ${coach.nom}...`
                 }
                 value={prompt}
                 onChange={e => { setPrompt(e.target.value); autoResize(e) }}
@@ -779,7 +963,7 @@ export default function IAChat() {
               }
             </motion.button>
           </div>
-          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 8, letterSpacing: '0.3px' }}>
+          <p style={{ fontSize: 10, color: T.text2, marginTop: 8, letterSpacing: '0.3px' }}>
             Entrée pour envoyer · Shift+Entrée nouvelle ligne · Globe pour la recherche web
           </p>
         </div>
