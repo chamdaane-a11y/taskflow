@@ -638,8 +638,278 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
   )
 })
 
+// ── WelcomeHero — Bandeau d'accueil pour nouveaux users (0 tâches) ──────────
+// Sélection de templates "starter" — slugs → ce qu'on essaie de matcher
+const STARTER_TEMPLATE_SLUGS = ['etude', 'projet', 'voyage', 'sante', 'productivite', 'apprentissage']
+
+const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, navigate }) {
+  const prenom = d.user?.nom?.split(' ')[0] || ''
+  const accent = T.accent
+  const accent2 = T.accent2 || accent
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+      style={{
+        position: 'relative',
+        background: T.bg2,
+        border: `1px solid ${accent}35`,
+        borderRadius: 18,
+        padding: isMobile ? '18px 16px 16px' : '26px 28px 22px',
+        marginBottom: 14,
+        overflow: 'hidden',
+        boxShadow: `0 12px 36px ${accent}12, 0 0 0 1px ${accent}10`,
+      }}>
+      {/* Halos décoratifs */}
+      <div style={{
+        position: 'absolute', top: -60, right: -60, width: 220, height: 220,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${accent}25, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: -80, left: -40, width: 200, height: 200,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${accent2}18, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{ position: 'relative' }}>
+        {/* Badge bienvenue */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '4px 10px',
+          borderRadius: 99,
+          background: `${accent}15`,
+          border: `1px solid ${accent}30`,
+          color: accent,
+          fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6,
+          marginBottom: 12,
+        }}>
+          <Sparkles size={11} strokeWidth={2.5} />
+          Bienvenue {prenom && `· ${prenom}`}
+        </div>
+
+        {/* Titre principal */}
+        <h2 style={{
+          fontSize: isMobile ? 22 : 30,
+          fontWeight: 800,
+          color: T.text,
+          margin: 0, marginBottom: 6,
+          letterSpacing: '-0.6px', lineHeight: 1.15,
+        }}>
+          {prenom ? `Salut ${prenom}` : 'Bienvenue'} 👋
+        </h2>
+        <p style={{
+          fontSize: isMobile ? 13 : 15,
+          color: T.text2,
+          margin: 0, marginBottom: isMobile ? 16 : 22,
+          fontWeight: 500, lineHeight: 1.5,
+          maxWidth: 540,
+        }}>
+          GetShift va te rendre <strong style={{ color: T.text }}>3× plus productif</strong> grâce à l'IA.
+          Démarre en 30 secondes — choisis comment tu commences&nbsp;:
+        </p>
+
+        {/* 3 actions rapides — grille */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: 10,
+        }}>
+          {/* Action 1 — créer 1ère tâche */}
+          <motion.button
+            onClick={onCreateTask}
+            whileHover={{ y: -2, borderColor: accent }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: isMobile ? '12px 14px' : '14px 16px',
+              background: T.bg3,
+              border: `1.5px solid ${T.border}`,
+              borderRadius: 13,
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'all 0.2s',
+              minHeight: 60,
+            }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: `${accent}18`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Plus size={18} color={accent} strokeWidth={2.5} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 1 }}>Crée ta 1ère tâche</div>
+              <div style={{ fontSize: 11, color: T.text2 }}>En langage naturel · 10 sec</div>
+            </div>
+            <ChevronRight size={14} color={T.text2} />
+          </motion.button>
+
+          {/* Action 2 — choisir un template */}
+          <motion.button
+            onClick={() => d.setShowTemplates?.(true)}
+            whileHover={{ y: -2, borderColor: '#a855f7' }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: isMobile ? '12px 14px' : '14px 16px',
+              background: T.bg3,
+              border: `1.5px solid ${T.border}`,
+              borderRadius: 13,
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'all 0.2s',
+              minHeight: 60,
+            }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'rgba(168,85,247,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <BookOpen size={18} color="#a855f7" strokeWidth={2.5} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 1 }}>Choisis un template</div>
+              <div style={{ fontSize: 11, color: T.text2 }}>25 modèles prêts à l'emploi</div>
+            </div>
+            <ChevronRight size={14} color={T.text2} />
+          </motion.button>
+
+          {/* Action 3 — Goal Reverse */}
+          <motion.button
+            onClick={() => navigate?.('/goal')}
+            whileHover={{ y: -2, borderColor: '#ec4899' }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: isMobile ? '12px 14px' : '14px 16px',
+              background: T.bg3,
+              border: `1.5px solid ${T.border}`,
+              borderRadius: 13,
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'all 0.2s',
+              minHeight: 60,
+            }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'rgba(236,72,153,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Flag size={18} color="#ec4899" strokeWidth={2.5} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 1 }}>Définis un objectif</div>
+              <div style={{ fontSize: 11, color: T.text2 }}>L'IA te crée le plan d'action</div>
+            </div>
+            <ChevronRight size={14} color={T.text2} />
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  )
+})
+
+// ── StarterTemplates — Carousel des templates phares pour démarrer ──────────
+const StarterTemplates = memo(function StarterTemplates({ d, T, isMobile }) {
+  const templates = (d.templates || [])
+    .filter(t => STARTER_TEMPLATE_SLUGS.includes(t.categorie))
+    .slice(0, 6)
+
+  if (templates.length === 0) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+      style={{ marginBottom: 14 }}>
+      {/* Header section */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
+        <div>
+          <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 800, color: T.text, letterSpacing: '-0.2px' }}>
+            🚀 Démarre en 1 clic
+          </div>
+          <div style={{ fontSize: 11, color: T.text2, marginTop: 1 }}>Templates populaires pré-remplis</div>
+        </div>
+        <motion.button
+          onClick={() => d.setShowTemplates?.(true)}
+          whileTap={{ scale: 0.96 }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '5px 11px',
+            background: 'transparent',
+            border: `1px solid ${T.border}`,
+            borderRadius: 99,
+            color: T.text2,
+            fontSize: 11, fontWeight: 600,
+            cursor: 'pointer',
+          }}>
+          Tous · {d.templates?.length || 0} <ChevronRight size={11} />
+        </motion.button>
+      </div>
+
+      {/* Grille / scroll horizontal */}
+      <div
+        className="hide-scrollbar"
+        style={{
+          display: isMobile ? 'flex' : 'grid',
+          gridTemplateColumns: isMobile ? undefined : 'repeat(3, 1fr)',
+          gap: 8,
+          overflowX: isMobile ? 'auto' : 'visible',
+          paddingBottom: 4,
+          margin: isMobile ? '0 -16px' : 0,
+          padding: isMobile ? '2px 16px 4px' : 0,
+          WebkitOverflowScrolling: 'touch',
+        }}>
+        {templates.map((tmpl, i) => (
+          <motion.button
+            key={tmpl.id}
+            onClick={() => d.utiliserTemplateRapide?.(tmpl)}
+            disabled={d.templateImporting}
+            whileHover={{ y: -3 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ delay: i * 0.04 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '11px 12px',
+              background: T.bg2,
+              border: `1px solid ${T.border}`,
+              borderRadius: 13,
+              cursor: d.templateImporting ? 'wait' : 'pointer',
+              textAlign: 'left',
+              minWidth: isMobile ? 220 : undefined,
+              flexShrink: 0,
+              opacity: d.templateImporting ? 0.6 : 1,
+              transition: 'border-color 0.2s',
+            }}>
+            <TemplateIconBox categorie={tmpl.categorie} size={16} boxSize={36} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 1 }}>
+                {tmpl.titre}
+              </div>
+              <div style={{ fontSize: 10.5, color: T.text2, fontWeight: 500 }}>
+                {tmpl.taches?.length || 0} tâches · {tmpl.categorie}
+              </div>
+            </div>
+          </motion.button>
+        ))}
+      </div>
+    </motion.div>
+  )
+})
+
 // ── CoachDailyMessage — Message personnalisé du coach (Alex/Max/Nova) ────────
-const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile }) {
+const COACH_WELCOME_MESSAGES = {
+  bienveillant: (prenom) => `Hey ${prenom || 'toi'} ! Je suis Alex, ton coach perso. On va bâtir ta routine pas à pas, sans pression. Crée ta première tâche — je te guide.`,
+  motivateur:   (prenom) => `${prenom || 'Toi'}, c'est l'heure ! Je suis Max et on va passer à l'action ensemble. Une seule règle : crée ta première tâche dans les 60 secondes. Go.`,
+  analytique:   (prenom) => `Bienvenue ${prenom || ''}. Je suis Nova. Pour t'aider à devenir plus performant, j'ai besoin de données. Crée ta première tâche pour calibrer mes recommandations.`,
+}
+
+const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNewUser }) {
   const cdm = d.coachDailyMessage
   const loading = d.coachDailyLoading
 
@@ -654,11 +924,25 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile }) {
   }
 
   if (dismissed) return null
-  if (!cdm && !loading) return null
 
-  const coach = cdm?.coach
-  const message = cdm?.message
-  const styleId = coach?.style || d.coachStyle || 'bienveillant'
+  const styleId = cdm?.coach?.style || d.coachStyle || 'bienveillant'
+  const coachLabels = {
+    bienveillant: { nom: 'Alex', emoji: '🤗' },
+    motivateur:   { nom: 'Max',  emoji: '🔥' },
+    analytique:   { nom: 'Nova', emoji: '📊' },
+  }
+  let coach = cdm?.coach || coachLabels[styleId]
+  let message = cdm?.message
+
+  // ── Override pour nouveau user : message d'accueil hardcodé ───────────
+  if (isNewUser) {
+    const prenom = d.user?.nom?.split(' ')[0] || ''
+    const welcomeFn = COACH_WELCOME_MESSAGES[styleId] || COACH_WELCOME_MESSAGES.bienveillant
+    message = welcomeFn(prenom)
+    coach = coachLabels[styleId] || coachLabels.bienveillant
+  }
+
+  if (!message && !loading) return null
 
   // Couleur par persona
   const personaColor = styleId === 'motivateur' ? '#f97316' : styleId === 'analytique' ? '#3b82f6' : '#ec4899'
@@ -1925,6 +2209,9 @@ export default function Dashboard() {
   const coachStyleObj = COACH_STYLES_LIST.find(s => s.id === d.coachStyle)
   const { statsTaches: { total, terminees, haute, enCours, pct }, T } = d
 
+  // Nouveau user = pas chargé encore OU 0 tâche jamais créée
+  const isNewUser = !d.loading && (d.taches?.length || 0) === 0 && (d.dashboardStats?.total_taches ?? 0) === 0
+
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
   })
@@ -2237,11 +2524,41 @@ export default function Dashboard() {
 
           <ExportModal isOpen={d.showExport} onClose={() => d.setShowExport(false)} taches={d.taches} stats={{ total, terminees, haute, enCours, pct }} user={d.user} theme={d.theme} />
 
-          {/* Coach Daily Message — bandeau personnalisé du coach */}
-          <CoachDailyMessage d={d} T={T} isMobile={isMobile} />
+          {/* ── MODE NOUVEAU USER (0 tâche jamais créée) ──────────────────── */}
+          {isNewUser ? (
+            <>
+              <WelcomeHero
+                d={d}
+                T={T}
+                isMobile={isMobile}
+                navigate={navigate}
+                onCreateTask={() => {
+                  if (isMobile) {
+                    setShowBottomSheet(true)
+                  } else {
+                    // scroll vers le SmartTaskInput
+                    setTimeout(() => {
+                      const input = document.querySelector('.smart-task-input-field')
+                      if (input) {
+                        input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        input.focus()
+                      }
+                    }, 80)
+                  }
+                }}
+              />
+              <StarterTemplates d={d} T={T} isMobile={isMobile} />
+              <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={true} />
+            </>
+          ) : (
+            <>
+              {/* Coach Daily Message — bandeau personnalisé du coach */}
+              <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={false} />
 
-          {/* Focus du jour */}
-          <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
+              {/* Focus du jour */}
+              <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
+            </>
+          )}
 
           {/* Rappels */}
           <AnimatePresence>
@@ -2260,8 +2577,8 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
 
-          {/* Stats HUD — Niveau / Streak / Points semaine / Réussite */}
-          <StatsHUD d={d} T={T} isMobile={isMobile} />
+          {/* Stats HUD — Niveau / Streak / Points semaine / Réussite (caché si nouveau user) */}
+          {!isNewUser && <StatsHUD d={d} T={T} isMobile={isMobile} />}
 
           {/* Alerte bloquées */}
           <AnimatePresence>
@@ -2314,12 +2631,54 @@ export default function Dashboard() {
           {d.loading ? (
             <div>{[1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} T={T} />)}</div>
           ) : d.tachesFiltrees.length === 0 ? (
-            <motion.div style={{ textAlign: 'center', padding: '60px 20px', color: T.text2 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <CheckSquare size={40} color={T.border} strokeWidth={1} style={{ margin: '0 auto 16px' }} />
-              <p style={{ fontSize: 14, fontWeight: 500 }}>Aucune tâche ici</p>
-              <p style={{ fontSize: 13, marginTop: 6, color: T.accent }}>
-                {isMobile ? 'Appuie sur Ajouter pour créer une tâche' : "Ajoute une tâche ou génère-en avec l'IA"}
+            <motion.div
+              style={{
+                textAlign: 'center',
+                padding: isNewUser ? '40px 20px' : '50px 20px',
+                color: T.text2,
+                background: isNewUser ? T.bg2 : 'transparent',
+                border: isNewUser ? `1px dashed ${T.border}` : 'none',
+                borderRadius: 14,
+              }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ marginBottom: 14, display: 'inline-block' }}>
+                {isNewUser
+                  ? <Sparkles size={36} color={T.accent} strokeWidth={1.6} />
+                  : <CheckSquare size={36} color={T.border} strokeWidth={1.4} />}
+              </motion.div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: 0, marginBottom: 4 }}>
+                {isNewUser
+                  ? "C'est tout neuf ici"
+                  : d.filtre === 'terminee' ? "Aucune tâche terminée pour l'instant"
+                  : d.filtre === 'bloquee' ? "Aucune tâche bloquée — bravo !"
+                  : "Aucune tâche dans ce filtre"}
               </p>
+              <p style={{ fontSize: 12.5, marginTop: 4, color: T.text2, marginBottom: isNewUser ? 16 : 0, fontWeight: 500 }}>
+                {isNewUser
+                  ? "Crée ta 1ère tâche maintenant — tu vas voir, c'est rapide."
+                  : isMobile ? 'Appuie sur Ajouter pour créer une tâche' : "Ajoute une tâche ou génère-en avec l'IA"}
+              </p>
+              {isNewUser && (
+                <motion.button
+                  onClick={() => isMobile ? setShowBottomSheet(true) : (() => {
+                    const input = document.querySelector('.smart-task-input-field')
+                    if (input) { input.scrollIntoView({ behavior: 'smooth', block: 'center' }); input.focus() }
+                  })()}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                    padding: '10px 18px',
+                    background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`,
+                    border: 'none', borderRadius: 10,
+                    color: T.bg, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                    boxShadow: `0 6px 20px ${T.accent}30`,
+                  }}>
+                  <Plus size={14} strokeWidth={2.6} /> Créer ma 1ère tâche
+                </motion.button>
+              )}
             </motion.div>
           ) : (
             <AnimatePresence>

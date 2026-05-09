@@ -190,6 +190,7 @@ export function useDashboard() {
       chargerDashboardStats(),
       chargerCoachDailyMessage(),
       chargerDnaInsights(),
+      chargerTemplates(),
       chargerSlackWebhook(),
     ]).finally(() => {
       activerNotifications()
@@ -590,6 +591,24 @@ export function useDashboard() {
     if (templates.length === 0) chargerTemplates()
   }, [templates.length, chargerTemplates])
 
+  const utiliserTemplateRapide = useCallback(async (template) => {
+    // Version 1-click pour le WelcomeHero : utilise aujourd'hui comme date de début
+    setTemplateImporting(true)
+    try {
+      const dateISO = new Date().toISOString()
+      await api.post(`/templates/${template.id}/utiliser`, {
+        user_id: user.id,
+        date_debut: dateISO,
+      })
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
+      afficherNotification(`Template "${template.titre}" importé !`)
+      await chargerTaches()
+    } catch (err) {
+      afficherNotification('Erreur lors de l\'import', 'error')
+    }
+    setTemplateImporting(false)
+  }, [user?.id, afficherNotification, chargerTaches])
+
   const utiliserTemplate = useCallback(async (template) => {
     if (!templateDateDebut) { afficherNotification('Choisis une date de début', 'error'); return }
     setTemplateImporting(true)
@@ -707,7 +726,7 @@ export function useDashboard() {
     genererSousTachesIA, confirmerSousTachesIA, toggleSousTacheIA,
     genererTaches, toggleExpand, changerTheme, sauvegarderSlack, exporterGoogleCalendar,
     ouvrirCoach, envoyerMessageCoach, chargerRapportCoach, changerStyleCoach,
-    ouvrirTemplates, utiliserTemplate, soumettreNouveauTemplate, chargerTemplates,
+    ouvrirTemplates, utiliserTemplate, utiliserTemplateRapide, soumettreNouveauTemplate, chargerTemplates,
     installerApp, chargerTaches,
   }
 }
