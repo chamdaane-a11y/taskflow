@@ -863,6 +863,95 @@ def get_streak(id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+
+@app.route('/dashboard/stats/<int:user_id>', methods=['GET'])
+def dashboard_stats(user_id):
+    """Stats agrégées pour le HUD du Dashboard : niveau, points, streak, semaine."""
+    try:
+        from datetime import date as _date
+        db = connecter()
+        c = db.cursor(dictionary=True)
+        c.execute("SELECT nom, points, niveau, streak, derniere_activite FROM users WHERE id=%s", (user_id,))
+        u = c.fetchone()
+        if not u:
+            db.close(); return jsonify({"erreur": "User non trouvé"}), 404
+
+        c.execute("""SELECT
+            COUNT(CASE WHEN terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
+            COUNT(CASE WHEN terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine_prec,
+            COUNT(CASE WHEN terminee=1 THEN 1 END) as terminees_total,
+            COUNT(CASE WHEN terminee=0 THEN 1 END) as actives,
+            COUNT(*) as total
+            FROM taches WHERE user_id=%s""", (user_id,))
+        cnt = c.fetchone()
+
+        # Niveau brackets : 1: 0-100, 2: 100-300, 3: 300-700, 4: 700-1500, 5: 1500-3000, 6: 3000+
+        BRACKETS = [0, 100, 300, 700, 1500, 3000]
+        points = u['points'] or 0
+        niveau_actuel = 1
+        for i, threshold in enumerate(BRACKETS):
+            if points >= threshold:
+                niveau_actuel = i + 1
+        niveau_actuel = min(niveau_actuel, len(BRACKETS))
+        if niveau_actuel != (u['niveau'] or 1):
+            c.execute("UPDATE users SET niveau=%s WHERE id=%s", (niveau_actuel, user_id))
+            db.commit()
+        prev_threshold = BRACKETS[niveau_actuel - 1] if niveau_actuel >= 1 else 0
+        next_threshold = BRACKETS[niveau_actuel] if niveau_actuel < len(BRACKETS) else (BRACKETS[-1] + 1500)
+        progres_niveau = round((points - prev_threshold) / max(1, next_threshold - prev_threshold) * 100)
+        progres_niveau = max(0, min(100, progres_niveau))
+        niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende"}
+        niveau_label = niveaux_labels.get(niveau_actuel, f"Niveau {niveau_actuel}")
+
+        # Streak — auto-reset si > 1 jour d'inactivité
+        streak = u['streak'] or 0
+        derniere = u['derniere_activite']
+        if derniere:
+            today = _date.today()
+            d_act = derniere.date() if hasattr(derniere, 'date') else derniere
+            try:
+                delta_days = (today - d_act).days
+                if delta_days > 1:
+                    streak = 0
+                    c.execute("UPDATE users SET streak=0 WHERE id=%s", (user_id,))
+                    db.commit()
+            except Exception:
+                pass
+
+        # Points semaine : 10 points par tâche terminée cette semaine
+        points_semaine = (cnt['terminees_semaine'] or 0) * 10
+        points_semaine_prec = (cnt['terminees_semaine_prec'] or 0) * 10
+        if points_semaine_prec > 0:
+            delta_pct = round((points_semaine - points_semaine_prec) / points_semaine_prec * 100)
+        else:
+            delta_pct = 100 if points_semaine > 0 else 0
+
+        total = cnt['total'] or 0
+        terminees_total = cnt['terminees_total'] or 0
+        taux = round(terminees_total / total * 100) if total > 0 else 0
+
+        db.close()
+        return jsonify({
+            "niveau": niveau_actuel,
+            "niveau_label": niveau_label,
+            "points": points,
+            "points_to_next": max(0, next_threshold - points),
+            "progres_niveau": progres_niveau,
+            "next_threshold": next_threshold,
+            "streak": streak,
+            "points_semaine": points_semaine,
+            "points_semaine_prec": points_semaine_prec,
+            "delta_semaine": delta_pct,
+            "terminees_semaine": cnt['terminees_semaine'] or 0,
+            "terminees_total": terminees_total,
+            "taches_actives": cnt['actives'] or 0,
+            "total_taches": total,
+            "taux_completion": taux,
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
 # ============================================
 # CATEGORIES
 # ============================================
@@ -2392,6 +2481,81 @@ def coach_chat():
     except Exception as e:
         import traceback
         return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
+
+@app.route('/ia/coach/daily-message/<int:user_id>', methods=['GET'])
+def coach_daily_message(user_id):
+    """Message du coach personnalisé pour la journée. Cache 24h."""
+    try:
+        from datetime import date as _date
+        style = request.args.get('style', 'bienveillant')
+        coach = COACH_STYLES.get(style, COACH_STYLES['bienveillant'])
+        db = connecter()
+        c = db.cursor(dictionary=True)
+        c.execute("""CREATE TABLE IF NOT EXISTS coach_daily_messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            date_msg DATE NOT NULL,
+            style_coach VARCHAR(30),
+            contenu TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_user_day_style (user_id, date_msg, style_coach),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )""")
+        today_str = _date.today().isoformat()
+        c.execute("SELECT contenu FROM coach_daily_messages WHERE user_id=%s AND date_msg=%s AND style_coach=%s",
+                  (user_id, today_str, style))
+        existing = c.fetchone()
+        if existing and existing['contenu']:
+            db.close()
+            return jsonify({
+                "message": existing['contenu'],
+                "coach": {"nom": coach['nom'], "emoji": coach['emoji'], "style": style},
+                "cached": True
+            })
+
+        ctx = get_coach_context(user_id, c)
+        c.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND focus_date=CURDATE() AND terminee=0", (user_id,))
+        focus_count = (c.fetchone() or {}).get('nb', 0)
+        c.execute("""SELECT titre FROM taches WHERE user_id=%s AND terminee=0 AND focus_date=CURDATE()
+                     ORDER BY FIELD(priorite,'haute','moyenne','basse'), deadline ASC LIMIT 1""", (user_id,))
+        top = c.fetchone()
+        top_titre = top['titre'] if top else None
+
+        prompt = f"""{coach['persona']}
+
+CONTEXTE DE {ctx['prenom'].upper()}:
+- {ctx['taches_actives']} tâches actives, {ctx['taches_en_retard']} en retard
+- Streak: {ctx['streak']} jour(s) consécutif(s)
+- Taux complétion global: {ctx['taux_completion']}%
+- Focus du jour: {focus_count}/3 tâches épinglées
+{f"- Top du jour: \"{top_titre}\"" if top_titre else "- Aucune tâche épinglée pour aujourd'hui"}
+
+Écris un message du matin court (2-3 phrases max), personnalisé et actionnable pour {ctx['prenom']}.
+- Mentionne 1 détail concret de son contexte (chiffre, tâche, streak…)
+- Pas de "Bonjour" ni de salutation générique
+- Va droit au but mais avec ton ton de coach
+- Termine par une mini-action ou un focus pour la journée"""
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=180, temperature=0.85
+        )
+        contenu = response.choices[0].message.content.strip()
+        c.execute("""INSERT INTO coach_daily_messages (user_id, date_msg, style_coach, contenu)
+                     VALUES (%s, %s, %s, %s)
+                     ON DUPLICATE KEY UPDATE contenu=VALUES(contenu)""",
+                  (user_id, today_str, style, contenu))
+        db.commit(); db.close()
+        return jsonify({
+            "message": contenu,
+            "coach": {"nom": coach['nom'], "emoji": coach['emoji'], "style": style},
+            "cached": False
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+
 
 @app.route('/ia/coach/rapport/<int:user_id>', methods=['GET'])
 def coach_rapport(user_id):

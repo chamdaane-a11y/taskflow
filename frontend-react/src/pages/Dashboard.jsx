@@ -638,6 +638,340 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
   )
 })
 
+// ── CoachDailyMessage — Message personnalisé du coach (Alex/Max/Nova) ────────
+const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile }) {
+  const cdm = d.coachDailyMessage
+  const loading = d.coachDailyLoading
+  if (!cdm && !loading) return null
+
+  const coach = cdm?.coach
+  const message = cdm?.message
+  const styleId = coach?.style || d.coachStyle || 'bienveillant'
+
+  // Couleur par persona
+  const personaColor = styleId === 'motivateur' ? '#f97316' : styleId === 'analytique' ? '#3b82f6' : '#ec4899'
+  const personaIcon = styleId === 'motivateur' ? Flame : styleId === 'analytique' ? BarChart : Heart
+
+  const PersonaIcon = personaIcon
+  const ouvrirCoach = () => d.setShowCoach?.(true)
+  const refreshMessage = () => d.chargerCoachDailyMessage?.()
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: T.bg2,
+        border: `1px solid ${personaColor}40`,
+        borderRadius: 16,
+        padding: isMobile ? '12px 14px' : '16px 20px',
+        marginBottom: 14,
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: `0 0 0 1px ${personaColor}10, 0 4px 18px ${personaColor}10`,
+      }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${personaColor}, ${personaColor}80)` }} />
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 10 : 14 }}>
+        {/* Avatar coach */}
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          onClick={ouvrirCoach}
+          style={{
+            width: isMobile ? 36 : 44, height: isMobile ? 36 : 44,
+            borderRadius: '50%',
+            background: `linear-gradient(135deg, ${personaColor}, ${personaColor}cc)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, cursor: 'pointer',
+            boxShadow: `0 4px 14px ${personaColor}40`,
+          }}>
+          <PersonaIcon size={isMobile ? 16 : 20} color="#fff" strokeWidth={2.4} fill={styleId === 'motivateur' ? '#fff' : 'none'} />
+        </motion.div>
+
+        {/* Contenu */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 800, color: T.text, letterSpacing: '-0.2px' }}>
+              {coach?.nom || 'Coach'}
+            </span>
+            <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, background: `${personaColor}18`, color: personaColor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              Coach
+            </span>
+            <span style={{ fontSize: 10, color: T.text2 }}>· du jour</span>
+          </div>
+
+          {loading && !message ? (
+            <motion.div animate={{ opacity: [0.4, 0.8, 0.4] }} transition={{ duration: 1.4, repeat: Infinity }}
+              style={{ fontSize: isMobile ? 12.5 : 13, color: T.text2, fontStyle: 'italic' }}>
+              {coach?.nom || 'Le coach'} prépare ton message…
+            </motion.div>
+          ) : (
+            <p style={{
+              margin: 0,
+              fontSize: isMobile ? 12.5 : 13.5,
+              lineHeight: 1.55,
+              color: T.text,
+              fontWeight: 500,
+            }}>
+              {message}
+            </p>
+          )}
+
+          {/* CTA */}
+          {message && (
+            <div style={{ display: 'flex', gap: 7, marginTop: 9, flexWrap: 'wrap' }}>
+              <motion.button
+                onClick={ouvrirCoach}
+                whileTap={{ scale: 0.96 }}
+                whileHover={{ background: personaColor + '25' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 11px',
+                  background: `${personaColor}15`,
+                  border: `1px solid ${personaColor}40`,
+                  borderRadius: 99,
+                  color: personaColor,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}>
+                <Bot size={11} strokeWidth={2.4} /> Discuter
+              </motion.button>
+              <motion.button
+                onClick={refreshMessage}
+                whileTap={{ scale: 0.96, rotate: 180 }}
+                title="Régénérer le message"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '5px 9px',
+                  background: 'transparent',
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 99,
+                  color: T.text2,
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}>
+                <Sparkles size={10} strokeWidth={2.4} /> {isMobile ? '' : 'Régénérer'}
+              </motion.button>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  )
+})
+
+// ── StatsHUD — Niveau / Streak / Points semaine / Conseil IA ─────────────────
+const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
+  const stats = d.dashboardStats
+  // Fallback skeleton si stats pas encore chargées
+  if (!stats) {
+    return (
+      <div style={{
+        background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16,
+        padding: isMobile ? 14 : 18, marginBottom: 16, minHeight: isMobile ? 130 : 110,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.text2, fontSize: 12,
+      }}>
+        <motion.div animate={{ opacity: [0.4, 0.8, 0.4] }} transition={{ duration: 1.4, repeat: Infinity }}>
+          Chargement de tes stats…
+        </motion.div>
+      </div>
+    )
+  }
+
+  const niveau = stats.niveau || 1
+  const niveauLabel = stats.niveau_label || `Niveau ${niveau}`
+  const progres = stats.progres_niveau || 0
+  const points = stats.points || 0
+  const pointsToNext = stats.points_to_next || 0
+  const pointsSemaine = stats.points_semaine || 0
+  const deltaSemaine = stats.delta_semaine || 0
+  const streak = stats.streak || 0
+  const taux = stats.taux_completion || 0
+  const terminees = stats.terminees_total || 0
+
+  const deltaPositive = deltaSemaine >= 0
+  const deltaColor = deltaPositive ? '#4caf82' : '#e05c5c'
+  const streakActive = streak > 0
+  const streakColor = streakActive ? '#f97316' : T.text2
+
+  // Couleurs accent
+  const niveauColor = T.accent
+  const pointsColor = '#a855f7'
+
+  // ── Mobile : grille 2x2 compacte + barre niveau pleine largeur ────────
+  if (isMobile) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        style={{
+          background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14,
+          padding: '12px 12px 10px', marginBottom: 14, position: 'relative', overflow: 'hidden',
+        }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${niveauColor}, ${pointsColor})` }} />
+        {/* Niveau pleine largeur */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Award size={14} color={niveauColor} strokeWidth={2.2} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{niveauLabel}</span>
+              <span style={{ fontSize: 10, color: T.text2 }}>· Niv. {niveau}</span>
+            </div>
+            <span style={{ fontSize: 10, color: T.text2, fontWeight: 600 }}>
+              {points} pts {pointsToNext > 0 && <span style={{ color: T.accent }}>· {pointsToNext} pour ↑</span>}
+            </span>
+          </div>
+          <div style={{ height: 5, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
+            <motion.div
+              initial={{ width: 0 }} animate={{ width: `${progres}%` }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              style={{ height: '100%', background: `linear-gradient(90deg, ${niveauColor}, ${pointsColor})`, borderRadius: 99 }} />
+          </div>
+        </div>
+
+        {/* Grille 3 cartes compactes */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {/* Streak */}
+          <div style={{
+            background: streakActive ? 'rgba(249,115,22,0.08)' : T.bg3,
+            border: `1px solid ${streakActive ? 'rgba(249,115,22,0.25)' : T.border}`,
+            borderRadius: 10, padding: '8px 6px', textAlign: 'center',
+          }}>
+            <Flame size={13} color={streakColor} strokeWidth={2.2} fill={streakActive ? streakColor : 'none'} />
+            <div style={{ fontSize: 16, fontWeight: 800, color: streakColor, lineHeight: 1.1, marginTop: 2 }}>{streak}</div>
+            <div style={{ fontSize: 9, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>{streak > 1 ? 'jours' : 'jour'}</div>
+          </div>
+          {/* Points cette semaine */}
+          <div style={{
+            background: 'rgba(168,85,247,0.08)',
+            border: `1px solid rgba(168,85,247,0.25)`,
+            borderRadius: 10, padding: '8px 6px', textAlign: 'center',
+          }}>
+            <TrendingUp size={13} color={pointsColor} strokeWidth={2.2} />
+            <div style={{ fontSize: 15, fontWeight: 800, color: pointsColor, lineHeight: 1.1, marginTop: 2 }}>{pointsSemaine}</div>
+            <div style={{ fontSize: 9, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>cette sem.</div>
+          </div>
+          {/* Taux */}
+          <div style={{
+            background: 'rgba(76,175,130,0.08)',
+            border: '1px solid rgba(76,175,130,0.25)',
+            borderRadius: 10, padding: '8px 6px', textAlign: 'center',
+          }}>
+            <CheckCircle2 size={13} color="#4caf82" strokeWidth={2.2} />
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#4caf82', lineHeight: 1.1, marginTop: 2 }}>{taux}%</div>
+            <div style={{ fontSize: 9, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>réussite</div>
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
+
+  // ── Desktop : layout horizontal riche ──────────────────────────────────
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16,
+        padding: 18, marginBottom: 18, position: 'relative', overflow: 'hidden',
+      }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${niveauColor}, ${pointsColor})` }} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 14, alignItems: 'stretch' }}>
+        {/* NIVEAU + barre */}
+        <motion.div whileHover={{ y: -1 }} style={{
+          background: T.bg3, border: `1px solid ${niveauColor}30`, borderRadius: 12, padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 100,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: `${niveauColor}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Award size={16} color={niveauColor} strokeWidth={2.2} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Niveau {niveau}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: T.text, letterSpacing: '-0.3px' }}>{niveauLabel}</div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: niveauColor, lineHeight: 1 }}>{points}</div>
+              <div style={{ fontSize: 10, color: T.text2, marginTop: 2 }}>points</div>
+            </div>
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: T.text2, marginBottom: 4, fontWeight: 600 }}>
+              <span>Progression</span>
+              <span style={{ color: niveauColor }}>{progres}% {pointsToNext > 0 ? `· ${pointsToNext} pts pour ↑` : '· max'}</span>
+            </div>
+            <div style={{ height: 7, background: T.bg2, borderRadius: 99, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+              <motion.div
+                initial={{ width: 0 }} animate={{ width: `${progres}%` }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                style={{ height: '100%', background: `linear-gradient(90deg, ${niveauColor}, ${pointsColor})`, borderRadius: 99 }} />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* STREAK */}
+        <motion.div whileHover={{ y: -1 }} style={{
+          background: streakActive ? 'rgba(249,115,22,0.06)' : T.bg3,
+          border: `1px solid ${streakActive ? 'rgba(249,115,22,0.3)' : T.border}`,
+          borderRadius: 12, padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 100,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Flame size={16} color={streakColor} strokeWidth={2.2} fill={streakActive ? streakColor : 'none'} />
+            <span style={{ fontSize: 11, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Streak</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: streakColor, letterSpacing: '-1px', lineHeight: 1 }}>{streak}</div>
+            <div style={{ fontSize: 11, color: T.text2, marginTop: 4, fontWeight: 600 }}>
+              {streakActive ? `jour${streak > 1 ? 's' : ''} consécutif${streak > 1 ? 's' : ''}` : 'Démarre aujourd\'hui'}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* POINTS SEMAINE */}
+        <motion.div whileHover={{ y: -1 }} style={{
+          background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.25)',
+          borderRadius: 12, padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 100,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <TrendingUp size={16} color={pointsColor} strokeWidth={2.2} />
+            <span style={{ fontSize: 11, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Cette semaine</span>
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+              <span style={{ fontSize: 28, fontWeight: 800, color: pointsColor, letterSpacing: '-0.5px', lineHeight: 1 }}>{pointsSemaine}</span>
+              <span style={{ fontSize: 11, color: T.text2 }}>pts</span>
+            </div>
+            <div style={{ fontSize: 11, color: deltaColor, marginTop: 4, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+              {deltaPositive ? '↑' : '↓'} {Math.abs(deltaSemaine)}% <span style={{ color: T.text2, fontWeight: 500 }}>vs sem. dern.</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* TAUX RÉUSSITE */}
+        <motion.div whileHover={{ y: -1 }} style={{
+          background: 'rgba(76,175,130,0.05)', border: '1px solid rgba(76,175,130,0.25)',
+          borderRadius: 12, padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 100,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CheckCircle2 size={16} color="#4caf82" strokeWidth={2.2} />
+            <span style={{ fontSize: 11, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Réussite</span>
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+              <span style={{ fontSize: 28, fontWeight: 800, color: '#4caf82', letterSpacing: '-0.5px', lineHeight: 1 }}>{taux}</span>
+              <span style={{ fontSize: 14, color: '#4caf82', fontWeight: 700 }}>%</span>
+            </div>
+            <div style={{ fontSize: 11, color: T.text2, marginTop: 4, fontWeight: 600 }}>{terminees} terminées</div>
+          </div>
+        </motion.div>
+      </div>
+    </motion.div>
+  )
+})
+
 // ── FocusDuJour — 3 priorités de la journée ──────────────────────────────────
 const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -1700,6 +2034,9 @@ export default function Dashboard() {
 
           <ExportModal isOpen={d.showExport} onClose={() => d.setShowExport(false)} taches={d.taches} stats={{ total, terminees, haute, enCours, pct }} user={d.user} theme={d.theme} />
 
+          {/* Coach Daily Message — bandeau personnalisé du coach */}
+          <CoachDailyMessage d={d} T={T} isMobile={isMobile} />
+
           {/* Focus du jour */}
           <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
 
@@ -1720,31 +2057,8 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
 
-          {/* Stats */}
-          <div className="gs-stats" style={{ marginBottom: 16 }}>
-            {[
-              { icon: CheckSquare, val: total, label: 'Total', color: T.accent },
-              { icon: CheckSquare, val: terminees, label: 'Terminées', color: '#4caf82' },
-              { icon: AlertTriangle, val: haute, label: 'Urgentes', color: '#e05c5c' },
-              { icon: Clock, val: enCours, label: 'En cours', color: '#6c63ff' },
-            ].map((stat, i) => {
-              const Icon = stat.icon
-              return (
-                <motion.div key={stat.label}
-                  style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: isMobile ? '10px 12px' : 16 }}
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-                  whileHover={{ y: -2, borderColor: stat.color + '60' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <Icon size={15} color={stat.color} strokeWidth={1.8} />
-                    <span style={{ fontSize: 10, color: T.text2, background: T.bg3, padding: '1px 5px', borderRadius: 99 }}>{stat.label}</span>
-                  </div>
-                  <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, color: T.text, letterSpacing: '-0.5px' }}>
-                    <AnimatedNumber value={stat.val} />
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
+          {/* Stats HUD — Niveau / Streak / Points semaine / Réussite */}
+          <StatsHUD d={d} T={T} isMobile={isMobile} />
 
           {/* Alerte bloquées */}
           <AnimatePresence>

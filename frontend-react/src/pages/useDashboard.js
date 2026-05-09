@@ -33,6 +33,11 @@ export function useDashboard() {
   const [theme,  setTheme]  = useState(() => localStorage.getItem('theme') || 'dark')
   const T = themes[theme]
 
+  // ── Dashboard HUD stats + Coach daily message ──────────────────────
+  const [dashboardStats,    setDashboardStats]    = useState(null)
+  const [coachDailyMessage, setCoachDailyMessage] = useState(null)
+  const [coachDailyLoading, setCoachDailyLoading] = useState(false)
+
   // ── Tâches ─────────────────────────────────────────────────────────
   const [taches,  setTaches]  = useState([])
   const [loading, setLoading] = useState(true)
@@ -181,6 +186,8 @@ export function useDashboard() {
       chargerTaches(),
       chargerRappels(),
       chargerBadges(),
+      chargerDashboardStats(),
+      chargerCoachDailyMessage(),
       chargerSlackWebhook(),
     ]).finally(() => {
       activerNotifications()
@@ -205,6 +212,31 @@ export function useDashboard() {
       setBadgesObtenus(res.data.badges.filter(b => b.obtenu))
       setStreak(res.data.streak || 0)
     } catch {}
+  }, [user?.id])
+
+  const chargerDashboardStats = useCallback(async () => {
+    if (!user?.id) return
+    try {
+      const res = await api.get(`/dashboard/stats/${user.id}`)
+      setDashboardStats(res.data)
+      if (typeof res.data.streak === 'number') setStreak(res.data.streak)
+      if (typeof res.data.points === 'number') setPoints(res.data.points)
+      if (typeof res.data.niveau === 'number') setNiveau(res.data.niveau)
+    } catch {}
+  }, [user?.id])
+
+  const chargerCoachDailyMessage = useCallback(async () => {
+    if (!user?.id) return
+    setCoachDailyLoading(true)
+    try {
+      const styleParam = coachStyle || 'bienveillant'
+      const res = await api.get(`/ia/coach/daily-message/${user.id}?style=${styleParam}`)
+      setCoachDailyMessage(res.data)
+    } catch {
+      setCoachDailyMessage(null)
+    }
+    setCoachDailyLoading(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   const chargerProfil = useCallback(async () => {
@@ -243,6 +275,13 @@ export function useDashboard() {
       const res = await api.get(`/taches/${user.id}`)
       setTaches(res.data)
       await sauvegarderTachesLocalement(res.data)
+      // Recharger les stats du HUD à chaque sync de tâches (inline pour éviter dep loop)
+      api.get(`/dashboard/stats/${user.id}`).then(r => {
+        setDashboardStats(r.data)
+        if (typeof r.data.streak === 'number') setStreak(r.data.streak)
+        if (typeof r.data.points === 'number') setPoints(r.data.points)
+        if (typeof r.data.niveau === 'number') setNiveau(r.data.niveau)
+      }).catch(() => {})
     } catch {
       if (!local?.length) setTaches([])
     }
@@ -627,6 +666,7 @@ export function useDashboard() {
   // ══════════════════════════════════════════════════════════════════
   return {
     user, T, theme, points, niveau, streak,
+    dashboardStats, coachDailyMessage, coachDailyLoading, chargerCoachDailyMessage,
     taches, tachesFiltrees, tachesFocus, statsTaches, bloquees, loading,
     badgesObtenus, badgeNotif, rappels,
     niveauActuel, niveauSuivant, pctNiveau, salut,
