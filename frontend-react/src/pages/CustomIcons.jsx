@@ -11,26 +11,26 @@ import {
 // ─── Mapping catégorie → { LucideIcon, bgColor, iconColor } ──────────────────
 
 const ICON_MAP = {
-  projet:          { LucideIcon: Layers,       bgColor: '#6c63ff20', iconColor: '#6c63ff', borderColor: '#6c63ff30' },
-  voyage:          { LucideIcon: PlaneTakeoff, bgColor: '#4caf8220', iconColor: '#4caf82', borderColor: '#4caf8230' },
-  habitude:        { LucideIcon: RefreshCw,    bgColor: '#4caf8220', iconColor: '#4caf82', borderColor: '#4caf8230' },
-  etude:           { LucideIcon: BookOpen,     bgColor: '#6c63ff20', iconColor: '#6c63ff', borderColor: '#6c63ff30' },
-  matin:           { LucideIcon: Sun,          bgColor: '#e08a3c20', iconColor: '#e08a3c', borderColor: '#e08a3c30' },
-  job:             { LucideIcon: Briefcase,    bgColor: '#6c63ff20', iconColor: '#6c63ff', borderColor: '#6c63ff30' },
-  event:           { LucideIcon: CalendarDays, bgColor: '#e05c5c20', iconColor: '#e05c5c', borderColor: '#e05c5c30' },
-  learn:           { LucideIcon: BookOpen,     bgColor: '#6c63ff20', iconColor: '#6c63ff', borderColor: '#6c63ff30' },
-  apprentissage:   { LucideIcon: Brain,        bgColor: '#a855f720', iconColor: '#a855f7', borderColor: '#a855f730' },
-  focus:           { LucideIcon: Target,       bgColor: '#a855f720', iconColor: '#a855f7', borderColor: '#a855f730' },
-  freelance:       { LucideIcon: Handshake,    bgColor: '#14b8a620', iconColor: '#14b8a6', borderColor: '#14b8a630' },
-  travail:         { LucideIcon: Briefcase,    bgColor: '#6c63ff20', iconColor: '#6c63ff', borderColor: '#6c63ff30' },
-  productivite:    { LucideIcon: TrendingUp,   bgColor: '#10b98120', iconColor: '#10b981', borderColor: '#10b98130' },
-  entrepreneuriat: { LucideIcon: Rocket,       bgColor: '#f59e0b20', iconColor: '#f59e0b', borderColor: '#f59e0b30' },
-  carriere:        { LucideIcon: Award,        bgColor: '#3b82f620', iconColor: '#3b82f6', borderColor: '#3b82f630' },
-  sante:           { LucideIcon: HeartPulse,   bgColor: '#ec489920', iconColor: '#ec4899', borderColor: '#ec489930' },
-  vie:             { LucideIcon: Home,         bgColor: '#f9731620', iconColor: '#f97316', borderColor: '#f9731630' },
-  finance:         { LucideIcon: Wallet,       bgColor: '#22c55e20', iconColor: '#22c55e', borderColor: '#22c55e30' },
-  challenge:       { LucideIcon: Trophy,       bgColor: '#ef444420', iconColor: '#ef4444', borderColor: '#ef444430' },
-  autre:           { LucideIcon: FileText,     bgColor: '#88888820', iconColor: '#888888', borderColor: '#88888830' },
+  projet:          { LucideIcon: Layers,       bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  voyage:          { LucideIcon: PlaneTakeoff, bgColor: '#4caf82', iconColor: '#ffffff', borderColor: '#4caf82' },
+  habitude:        { LucideIcon: RefreshCw,    bgColor: '#4caf82', iconColor: '#ffffff', borderColor: '#4caf82' },
+  etude:           { LucideIcon: BookOpen,     bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  matin:           { LucideIcon: Sun,          bgColor: '#e08a3c', iconColor: '#ffffff', borderColor: '#e08a3c' },
+  job:             { LucideIcon: Briefcase,    bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  event:           { LucideIcon: CalendarDays, bgColor: '#e05c5c', iconColor: '#ffffff', borderColor: '#e05c5c' },
+  learn:           { LucideIcon: BookOpen,     bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  apprentissage:   { LucideIcon: Brain,        bgColor: '#a855f7', iconColor: '#ffffff', borderColor: '#a855f7' },
+  focus:           { LucideIcon: Target,       bgColor: '#a855f7', iconColor: '#ffffff', borderColor: '#a855f7' },
+  freelance:       { LucideIcon: Handshake,    bgColor: '#14b8a6', iconColor: '#ffffff', borderColor: '#14b8a6' },
+  travail:         { LucideIcon: Briefcase,    bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  productivite:    { LucideIcon: TrendingUp,   bgColor: '#10b981', iconColor: '#ffffff', borderColor: '#10b981' },
+  entrepreneuriat: { LucideIcon: Rocket,       bgColor: '#f59e0b', iconColor: '#ffffff', borderColor: '#f59e0b' },
+  carriere:        { LucideIcon: Award,        bgColor: '#3b82f6', iconColor: '#ffffff', borderColor: '#3b82f6' },
+  sante:           { LucideIcon: HeartPulse,   bgColor: '#ec4899', iconColor: '#ffffff', borderColor: '#ec4899' },
+  vie:             { LucideIcon: Home,         bgColor: '#f97316', iconColor: '#ffffff', borderColor: '#f97316' },
+  finance:         { LucideIcon: Wallet,       bgColor: '#22c55e', iconColor: '#ffffff', borderColor: '#22c55e' },
+  challenge:       { LucideIcon: Trophy,       bgColor: '#ef4444', iconColor: '#ffffff', borderColor: '#ef4444' },
+  autre:           { LucideIcon: FileText,     bgColor: '#888888', iconColor: '#ffffff', borderColor: '#888888' },
 }
 
 // ─── Composant TemplateIconBox ────────────────────────────────────────────────
@@ -52,7 +52,7 @@ export function TemplateIconBox({ categorie, size = 18, boxSize = 40 }) {
       justifyContent: 'center',
       flexShrink: 0,
     }}>
-      <LucideIcon size={size} color={iconColor} strokeWidth={1.8} />
+      <LucideIcon size={size} color={iconColor} strokeWidth={2.2} />
     </div>
   )
 }

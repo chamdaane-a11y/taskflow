@@ -241,13 +241,19 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
 
   useEffect(() => {
     if (input.length > 1) {
-      setParsed(parseTaskInput(input))
+      const p = parseTaskInput(input)
+      setParsed(p)
+      // Si le parser détecte une date et l'utilisateur n'a pas encore choisi, on synchronise
+      if (p?.deadline && !manualDeadline) {
+        setManualDeadline(p.deadline)
+      }
     } else {
       setParsed(null)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input])
 
-  const deadline = parsed?.deadline || manualDeadline
+  const deadline = manualDeadline
 
   const creer = async () => {
     if (!parsed?.titre?.trim()) return
@@ -309,56 +315,52 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
             <span className="smart-task-preview-badge" style={{ background: pBg, color: pColor }}>
               {parsed.priorite}
             </span>
-            {deadline ? (
-              <span className="smart-task-preview-date" style={{ color: T.accent }}>
-                <Calendar size={12} strokeWidth={2} />
-                {deadline.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                {' · '}
-                {deadline.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            ) : (
-              <motion.button
-                onClick={() => setShowDatePicker(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: T.text2, background: 'transparent', border: `1px dashed ${T.border}`, borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}
-                whileHover={{ borderColor: T.accent, color: T.accent }}>
-                <Calendar size={11} strokeWidth={1.8} />
-                Ajouter date
-              </motion.button>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Date picker inline si pas de date détectée */}
-      <AnimatePresence>
-        {showDatePicker && !parsed?.deadline && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-            style={{ overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0' }}>
-              <DatePicker
-                selected={manualDeadline}
-                onChange={date => { setManualDeadline(date); setShowDatePicker(false) }}
-                locale="fr"
-                dateFormat="dd/MM/yyyy HH:mm"
-                showTimeSelect
-                timeFormat="HH:mm"
-                timeIntervals={15}
-                minDate={new Date()}
-                placeholderText="Choisir date et heure"
-                customInput={
-                  <input style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', cursor: 'pointer', width: '100%' }} />
-                }
-              />
-              <motion.button
-                onClick={() => setShowDatePicker(false)}
-                style={{ padding: '8px 12px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, fontSize: 12, cursor: 'pointer' }}>
-                Annuler
-              </motion.button>
-            </div>
-          </motion.div>
+      {/* Date picker inline — toujours visible */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: parsed && input.length > 1 ? 0 : 4 }}>
+        <Calendar size={14} color={deadline ? T.accent : T.text2} strokeWidth={2} style={{ flexShrink: 0 }} />
+        <DatePicker
+          selected={deadline}
+          onChange={date => { setManualDeadline(date) }}
+          locale="fr"
+          dateFormat="EEEE d MMMM · HH:mm"
+          showTimeSelect
+          timeFormat="HH:mm"
+          timeIntervals={15}
+          minDate={new Date()}
+          placeholderText="Choisir une date et heure"
+          popperPlacement="bottom-start"
+          popperProps={{ strategy: 'fixed' }}
+          customInput={
+            <input style={{
+              flex: 1,
+              padding: '10px 14px',
+              background: T.bg3,
+              border: `1.5px solid ${deadline ? T.accent + '60' : T.border}`,
+              borderRadius: 10,
+              color: deadline ? T.accent : T.text,
+              fontSize: 13,
+              fontWeight: deadline ? 600 : 500,
+              outline: 'none',
+              cursor: 'pointer',
+              width: '100%',
+              textTransform: 'capitalize',
+            }} />
+          }
+        />
+        {deadline && (
+          <motion.button
+            onClick={() => setManualDeadline(null)}
+            whileTap={{ scale: 0.95 }}
+            title="Effacer la date"
+            style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={14} strokeWidth={2} />
+          </motion.button>
         )}
-      </AnimatePresence>
+      </div>
 
       {/* Actions */}
       <div className="smart-task-actions">
@@ -510,7 +512,7 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
   }
 
   return (
-    <motion.div style={{ background: T.bg2, border: `1px solid ${isBloquee ? 'rgba(224,92,92,0.3)' : T.border}`, borderRadius: 14, marginBottom: 8, overflow: 'hidden', opacity: tache.terminee ? 0.55 : 1, position: 'relative' }}
+    <motion.div style={{ background: T.bg2, border: `1px solid ${isBloquee ? 'rgba(224,92,92,0.3)' : T.border}`, borderRadius: 14, marginBottom: 8, overflow: 'visible', opacity: tache.terminee ? 0.55 : 1, position: 'relative', zIndex: menuOpen ? 50 : 'auto' }}
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: tache.terminee ? 0.55 : 1, y: 0 }} exit={{ opacity: 0, x: 40 }}>
       <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: pColor(tache.priorite), borderRadius: '14px 0 0 14px' }} />
       <div style={{ padding: '12px 12px 12px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
