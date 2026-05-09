@@ -12,7 +12,7 @@ import {
   Calendar, Layers, Bell, Award, Palette, Sparkles, Target, Users, Settings, HelpCircle,
   ChevronDown, ChevronUp, ExternalLink, User, Download, BookOpen, X,
   Flame, Star, Heart, BarChart, CheckCircle2, Flag, MoreHorizontal,
-  PanelLeftClose, PanelLeftOpen, Link2,
+  PanelLeftClose, PanelLeftOpen, Link2, Sunset, ArrowRight,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import ExportModal from './ExportModal'
@@ -1046,6 +1046,132 @@ const DnaInsightFooter = memo(function DnaInsightFooter({ d, T, isMobile }) {
       </div>
       <span style={{ fontSize: 10, color: T.text2, opacity: 0.7 }}>{dna.total_analyses} analyses</span>
     </div>
+  )
+})
+
+// ── TomorrowBuilderCTA — CTA contextuel pour planifier demain ────────────────
+// Apparaît uniquement après 17h ET si tâches actives > 0. Dismissible per day.
+const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, navigate }) {
+  const hour = new Date().getHours()
+  const tachesActives = d.dashboardStats?.taches_actives ?? d.statsTaches?.enCours ?? 0
+
+  // Dismissible per day
+  const todayKey = `tomorrowCtaDismissed_${new Date().toISOString().slice(0, 10)}`
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(todayKey) === '1' } catch { return false }
+  })
+  const dismiss = (e) => {
+    e.stopPropagation()
+    try { localStorage.setItem(todayKey, '1') } catch {}
+    setDismissed(true)
+  }
+
+  // Conditions d'affichage : après 17h ET au moins 1 tâche active ET non dismissé
+  if (dismissed) return null
+  if (hour < 17) return null
+  if (tachesActives < 1) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+      onClick={() => navigate('/tomorrow')}
+      whileHover={{ y: -2 }}
+      style={{
+        position: 'relative',
+        background: 'linear-gradient(135deg, #f59e0b 0%, #ec4899 60%, #6366f1 100%)',
+        borderRadius: 16,
+        padding: isMobile ? '14px 14px' : '18px 22px',
+        marginTop: 22,
+        marginBottom: 12,
+        cursor: 'pointer',
+        overflow: 'hidden',
+        boxShadow: '0 10px 32px rgba(236,72,153,0.25), 0 0 0 1px rgba(255,255,255,0.06)',
+      }}>
+      {/* Décor : halo lumineux */}
+      <div style={{
+        position: 'absolute', top: -40, right: -40, width: 160, height: 160,
+        borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 16, position: 'relative' }}>
+        {/* Icône Sunset */}
+        <div style={{
+          width: isMobile ? 44 : 52, height: isMobile ? 44 : 52,
+          borderRadius: 14,
+          background: 'rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.25)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Sunset size={isMobile ? 22 : 26} color="#fff" strokeWidth={2.2} />
+        </div>
+
+        {/* Texte */}
+        <div style={{ flex: 1, minWidth: 0, color: '#fff' }}>
+          <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 800, letterSpacing: '-0.3px', marginBottom: 2 }}>
+            Planifier demain ?
+          </div>
+          <div style={{ fontSize: isMobile ? 11.5 : 12.5, opacity: 0.9, fontWeight: 500, lineHeight: 1.4 }}>
+            L'IA construit ton planning de demain en 30 secondes — tu n'auras qu'à valider.
+          </div>
+        </div>
+
+        {/* CTA bouton */}
+        {!isMobile && (
+          <motion.div
+            whileTap={{ scale: 0.95 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '10px 16px',
+              borderRadius: 99,
+              background: 'rgba(255,255,255,0.95)',
+              color: '#ec4899',
+              fontSize: 13,
+              fontWeight: 800,
+              flexShrink: 0,
+            }}>
+            C'est parti <ArrowRight size={14} strokeWidth={2.6} />
+          </motion.div>
+        )}
+
+        {/* Bouton Fermer pour aujourd'hui */}
+        <motion.button
+          onClick={dismiss}
+          whileTap={{ scale: 0.9 }}
+          title="Masquer pour aujourd'hui"
+          style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: 'rgba(0,0,0,0.18)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#fff', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+          <X size={13} strokeWidth={2.4} />
+        </motion.button>
+      </div>
+
+      {/* CTA mobile en bas */}
+      {isMobile && (
+        <motion.div
+          whileTap={{ scale: 0.97 }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            marginTop: 10,
+            padding: '9px 14px',
+            borderRadius: 10,
+            background: 'rgba(255,255,255,0.95)',
+            color: '#ec4899',
+            fontSize: 13,
+            fontWeight: 800,
+          }}>
+          C'est parti <ArrowRight size={14} strokeWidth={2.6} />
+        </motion.div>
+      )}
+    </motion.div>
   )
 })
 
@@ -2302,6 +2428,9 @@ export default function Dashboard() {
               })}
             </AnimatePresence>
           )}
+
+          {/* Tomorrow Builder CTA — contextuel : après 17h + tâches actives */}
+          <TomorrowBuilderCTA d={d} T={T} isMobile={isMobile} navigate={navigate} />
         </div>
       </motion.main>
 
