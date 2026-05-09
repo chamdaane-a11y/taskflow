@@ -12,7 +12,7 @@ import {
   Calendar, Layers, Bell, Award, Palette, Sparkles, Target, Users, Settings, HelpCircle,
   ChevronDown, ChevronUp, ExternalLink, User, Download, BookOpen, X,
   Flame, Star, Heart, BarChart, CheckCircle2, Flag, MoreHorizontal,
-  PanelLeftClose, PanelLeftOpen, Link2, Sunset, ArrowRight,
+  PanelLeftClose, PanelLeftOpen, Link2, Sunset, ArrowRight, TrendingUp,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import ExportModal from './ExportModal'
