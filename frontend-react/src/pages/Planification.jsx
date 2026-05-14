@@ -110,6 +110,7 @@ export default function Planification() {
   // ── Kanban drag state ──────────────────────────────────────────────
   const [kanbanDrag, setKanbanDrag] = useState(null)
   const [kanbanDragOver, setKanbanDragOver] = useState(null)
+  const [kanbanActiveCol, setKanbanActiveCol] = useState('a_faire')
 
   // Filtres (inutilisés dans planification mais présents pour la sidebar identique)
   const [filtre, setFiltre] = useState('toutes')
@@ -698,7 +699,7 @@ export default function Planification() {
         }}>
 
         {/* Header */}
-        <div style={{ marginBottom: isMobile ? 10 : 14 }}>
+        <div style={{ marginBottom: isMobile ? 8 : 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
@@ -760,7 +761,7 @@ export default function Planification() {
         </div>
 
         {/* Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 12, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 0 }}>
           {stats.map((s, i) => {
             const Icon = s.Icon
             return (
@@ -768,39 +769,45 @@ export default function Planification() {
                 style={{
                   background: T.bg2,
                   border: `1px solid ${T.border}`,
-                  borderRadius: 14,
-                  padding: isMobile ? '12px 14px' : '14px 16px',
+                  borderRadius: isMobile ? 12 : 14,
+                  padding: isMobile ? '10px 8px' : '14px 16px',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: isMobile ? 10 : 14,
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'center' : 'center',
+                  gap: isMobile ? 4 : 14,
                   position: 'relative',
                   overflow: 'hidden',
+                  textAlign: isMobile ? 'center' : 'left',
                 }}
-                initial={{ opacity: 0, y: 14 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07 }}
+                transition={{ delay: i * 0.05 }}
                 whileHover={{ y: -2, boxShadow: `0 6px 20px ${s.color}18` }}>
-                {/* Colored left accent strip */}
+                {/* Colored top accent strip on mobile, left strip on desktop */}
                 <div style={{
-                  position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-                  background: `linear-gradient(180deg, ${s.color}, ${s.color}60)`,
-                  borderRadius: '14px 0 0 14px',
+                  position: 'absolute',
+                  ...(isMobile
+                    ? { top: 0, left: 0, right: 0, height: 3 }
+                    : { left: 0, top: 0, bottom: 0, width: 3 }),
+                  background: `linear-gradient(${isMobile ? '90deg' : '180deg'}, ${s.color}, ${s.color}60)`,
+                  borderRadius: isMobile ? '12px 12px 0 0' : '14px 0 0 14px',
                 }} />
-                {/* Icon with gradient bg */}
-                <div style={{
-                  width: isMobile ? 38 : 42,
-                  height: isMobile ? 38 : 42,
-                  borderRadius: 12,
-                  background: `linear-gradient(135deg, ${s.color}22, ${s.color}10)`,
-                  border: `1px solid ${s.color}25`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <Icon size={18} color={s.color} strokeWidth={2.2} />
-                </div>
+                {/* Icon — hidden on mobile to save space */}
+                {!isMobile && (
+                  <div style={{
+                    width: 42, height: 42, borderRadius: 12,
+                    background: `linear-gradient(135deg, ${s.color}22, ${s.color}10)`,
+                    border: `1px solid ${s.color}25`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <Icon size={18} color={s.color} strokeWidth={2.2} />
+                  </div>
+                )}
+                {isMobile && <Icon size={14} color={s.color} strokeWidth={2} />}
                 <div>
-                  <div style={{ fontSize: isMobile ? 24 : 26, fontWeight: 900, color: T.text, letterSpacing: '-0.8px', lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 11, color: T.text2, marginTop: 3, fontWeight: 500 }}>{s.label}</div>
+                  <div style={{ fontSize: isMobile ? 20 : 26, fontWeight: 900, color: T.text, letterSpacing: '-0.6px', lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: isMobile ? 9 : 11, color: T.text2, marginTop: 2, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
                 </div>
               </motion.div>
             )
@@ -1025,23 +1032,50 @@ export default function Planification() {
           {/* KANBAN */}
           {vue === 'kanban' && (
             <motion.div key="kanban" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{
-                flex: 1,
-                display: 'flex',
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
+
+              {/* Mobile: onglets de colonnes */}
+              {isMobile && (
+                <div style={{ display: 'flex', gap: 6, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, padding: 4, flexShrink: 0 }}>
+                  {COLONNES.map(col => {
+                    const count = getTachesByStatut(col.id).length
+                    const active = kanbanActiveCol === col.id
+                    return (
+                      <motion.button key={col.id}
+                        onClick={() => setKanbanActiveCol(col.id)}
+                        style={{
+                          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          padding: '9px 8px',
+                          borderRadius: 8,
+                          background: active ? `linear-gradient(135deg, ${col.color}, ${col.color}cc)` : 'transparent',
+                          color: active ? '#fff' : T.text2,
+                          border: 'none', cursor: 'pointer',
+                          fontSize: 11, fontWeight: active ? 700 : 500,
+                          transition: 'all 0.18s',
+                        }}
+                        whileTap={{ scale: 0.96 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: active ? 'rgba(255,255,255,0.8)' : col.color }} />
+                        {col.label}
+                        <span style={{ fontSize: 10, background: active ? 'rgba(255,255,255,0.2)' : `${col.color}20`, color: active ? '#fff' : col.color, padding: '1px 6px', borderRadius: 99, fontWeight: 700 }}>
+                          {count}
+                        </span>
+                      </motion.button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Colonnes */}
+              <div style={{
+                flex: 1, minHeight: 0,
+                display: isMobile ? 'block' : 'grid',
+                gridTemplateColumns: isMobile ? undefined : 'repeat(3, 1fr)',
                 gap: 12,
-                alignItems: 'start',
-                overflowX: isMobile ? 'auto' : 'visible',
-                scrollSnapType: isMobile ? 'x mandatory' : 'none',
-                paddingBottom: isMobile ? 8 : 0,
+                overflowY: 'auto',
               }}>
-              {COLONNES.map((col, ci) => (
-                <div key={col.id} style={{
-                  flexShrink: 0,
-                  width: isMobile ? 'min(82vw, 320px)' : undefined,
-                  flex: isMobile ? 'none' : '1',
-                  scrollSnapAlign: isMobile ? 'start' : 'none',
-                }}>
+                {COLONNES.filter(col => !isMobile || col.id === kanbanActiveCol).map(col => (
                   <KanbanColumn
+                    key={col.id}
                     col={col}
                     tasks={getTachesByStatut(col.id)}
                     allCount={taches.length}
@@ -1055,14 +1089,14 @@ export default function Planification() {
                     onDrop={handleKanbanDrop}
                     onEstimate={setShowEstimer}
                   />
-                </div>
-              ))}
+                ))}
+              </div>
             </motion.div>
           )}
 
           {/* JOUR — calendrier sur une seule journée */}
           {vue === 'jour' && (
-            <motion.div key="jour" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <motion.div key="jour" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <CalendarGrid
                 planification={planification}
                 taches={taches}
@@ -1081,7 +1115,7 @@ export default function Planification() {
 
           {/* CALENDRIER */}
           {vue === 'calendrier' && (
-            <motion.div key="cal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <motion.div key="cal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <CalendarGrid
                 planification={planification}
                 taches={taches}

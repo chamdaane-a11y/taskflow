@@ -117,7 +117,7 @@ const CalendarGrid = memo(function CalendarGrid({
     : `${jours[0]?.num}–${jours[jours.length - 1]?.num} ${jours[jours.length - 1]?.mois}`
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: isMobile ? 10 : 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: isMobile ? 10 : 12 }}>
 
       {/* ── Navigation bar ──────────────────────────────────────────── */}
       <div style={{
@@ -294,6 +294,7 @@ const CalendarGrid = memo(function CalendarGrid({
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
+          minHeight: 0,
           scrollbarWidth: 'thin',
         }}>
 
@@ -408,7 +409,7 @@ const CalendarGrid = memo(function CalendarGrid({
           </div>
 
           {/* Scrollable body */}
-          <div style={{ overflowY: 'auto', flex: 1 }} ref={gridRef}>
+          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }} ref={gridRef}>
             <div style={{
               display: 'grid',
               gridTemplateColumns: gridCols,
