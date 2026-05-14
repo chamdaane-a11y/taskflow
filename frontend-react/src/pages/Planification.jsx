@@ -286,79 +286,114 @@ export default function Planification() {
     } catch (err) { console.error('Resize persist:', err) }
   }, [planification])
 
-  // ── Smart AI Scheduling ────────────────────────────────────────────
+  // ── Smart AI Scheduling — PROPOSITIONS UNIQUEMENT ──────────────────
+  // L'IA propose, l'user accepte/refuse. Pas de plannification automatique.
+  const [propositionsRejetees, setPropositionsRejetees] = useState(new Set())
+
   const planifierAvecIA = useCallback(async () => {
     setLoadingIA(true)
+    setPropositionsRejetees(new Set())
     try {
       const jours = getWeekDays(semaineOffset)
       const weekDates = jours.map(j => j.date)
 
-      // Build occupied slots from current planification
       const occupied = planification.map(p => ({
         date: p.date_planifiee?.split('T')[0] || p.date_planifiee,
         startMins: p.startMins,
         endMins: p.endMins,
       }))
 
-      // Score & sort tasks
       const toSchedule = sortedTaches.filter(t => !t.terminee)
 
-      // Bin packing algorithm
-      const scheduled = binPackTasks(toSchedule, weekDates, occupied, heuresDispo)
+      // Filtrer : ne pas proposer de tâches déjà planifiées
+      const dejaPlanifiees = new Set(planification.map(p => p.tache_id))
+      const candidats = toSchedule.filter(t => !dejaPlanifiees.has(t.id))
+
+      const scheduled = binPackTasks(candidats, weekDates, occupied, heuresDispo)
       setSmartResult(scheduled)
 
-      // Get LLM conseil
-      const res = await axios.post(`${API}/ia/planifier`, {
-        user_id: user.id,
-        heures_dispo: heuresDispo,
-      })
-      setConseil(res.data.conseil || '')
-
-      // Apply scheduled entries
-      const newEntries = []
-      for (const s of scheduled) {
-        const already = planification.some(p =>
-          p.tache_id === s.task.id &&
-          (p.date_planifiee?.split('T')[0] || p.date_planifiee) === s.date
-        )
-        if (already) continue
-
-        const entry = {
-          id: Date.now() + Math.random(),
-          tache_id: s.task.id,
-          titre: s.task.titre + (s.totalParts > 1 ? ` [Partie ${s.part}/${s.totalParts}]` : ''),
-          priorite: s.task.priorite,
-          date_planifiee: s.date,
-          startMins: s.startMins,
-          endMins: s.endMins,
-          heure_debut: minsToTime(s.startMins),
-          heure_fin: minsToTime(s.endMins),
-          part: s.part,
-          totalParts: s.totalParts,
-        }
-        newEntries.push(entry)
-      }
-
-      setPlanification(cur => [...cur, ...newEntries])
-
-      // Persist to backend (fire and forget per entry)
-      for (const s of scheduled) {
-        try {
-          await axios.post(`${API}/planification`, {
-            user_id: user.id,
-            tache_id: s.task.id,
-            date_planifiee: s.date,
-            heure_debut: minsToTime(s.startMins),
-            heure_fin: minsToTime(s.endMins),
-            charge_minutes: s.endMins - s.startMins,
-            genere_par_ia: true,
-          })
-        } catch { }
-      }
-
+      // Conseil IA en parallèle (non bloquant)
+      axios.post(`${API}/ia/planifier`, { user_id: user.id, heures_dispo: heuresDispo })
+        .then(res => setConseil(res.data.conseil || ''))
+        .catch(() => {})
     } catch (err) { console.error(err) }
     setLoadingIA(false)
   }, [sortedTaches, planification, semaineOffset, heuresDispo, user?.id])
+
+  // Accepter une proposition
+  const accepterProposition = useCallback(async (proposition, index) => {
+    const entry = {
+      id: Date.now() + Math.random(),
+      tache_id: proposition.task.id,
+      titre: proposition.task.titre,
+      priorite: proposition.task.priorite,
+      date_planifiee: proposition.date,
+      startMins: proposition.startMins,
+      endMins: proposition.endMins,
+      heure_debut: minsToTime(proposition.startMins),
+      heure_fin: minsToTime(proposition.endMins),
+    }
+    setPlanification(cur => [...cur, entry])
+    // Marquer comme acceptée → retirer de la liste
+    setSmartResult(cur => cur.filter((_, i) => i !== index))
+    try {
+      const res = await axios.post(`${API}/planification`, {
+        user_id: user.id,
+        tache_id: proposition.task.id,
+        date_planifiee: proposition.date,
+        heure_debut: minsToTime(proposition.startMins),
+        heure_fin: minsToTime(proposition.endMins),
+        charge_minutes: proposition.endMins - proposition.startMins,
+        genere_par_ia: true,
+      })
+      // Remplacer le tempId par le vrai id
+      if (res.data?.id) {
+        setPlanification(cur => cur.map(e => e.id === entry.id ? { ...e, id: res.data.id } : e))
+      }
+    } catch { /* rollback silencieux */ }
+  }, [user?.id])
+
+  // Refuser une proposition
+  const refuserProposition = useCallback((index) => {
+    setSmartResult(cur => cur.filter((_, i) => i !== index))
+  }, [])
+
+  // Tout accepter d'un coup
+  const accepterToutesPropositions = useCallback(async () => {
+    if (!smartResult || smartResult.length === 0) return
+    const propositions = [...smartResult]
+    setSmartResult([])
+    for (const p of propositions) {
+      try {
+        const entry = {
+          id: Date.now() + Math.random(),
+          tache_id: p.task.id,
+          titre: p.task.titre,
+          priorite: p.task.priorite,
+          date_planifiee: p.date,
+          startMins: p.startMins,
+          endMins: p.endMins,
+          heure_debut: minsToTime(p.startMins),
+          heure_fin: minsToTime(p.endMins),
+        }
+        setPlanification(cur => [...cur, entry])
+        const res = await axios.post(`${API}/planification`, {
+          user_id: user.id,
+          tache_id: p.task.id,
+          date_planifiee: p.date,
+          heure_debut: minsToTime(p.startMins),
+          heure_fin: minsToTime(p.endMins),
+          charge_minutes: p.endMins - p.startMins,
+          genere_par_ia: true,
+        })
+        if (res.data?.id) {
+          setPlanification(cur => cur.map(e => e.id === entry.id ? { ...e, id: res.data.id } : e))
+        }
+      } catch {}
+    }
+  }, [smartResult, user?.id])
+
+  const refuserToutesPropositions = useCallback(() => setSmartResult([]), [])
 
   // ── Estimate time with IA ──────────────────────────────────────────
   const estimerTempsIA = useCallback(async (task) => {
@@ -513,13 +548,9 @@ export default function Planification() {
             </div>
           </div>
 
-          {/* Smart result preview */}
-          {smartResult && (
+          {smartResult && smartResult.length > 0 && (
             <div style={{ marginBottom: 10, padding: '8px 10px', background: `${T.accent}08`, border: `1px solid ${T.accent}20`, borderRadius: 8, fontSize: 11, color: T.text2 }}>
-              <span style={{ color: T.accent, fontWeight: 700 }}>{smartResult.length}</span> créneaux planifiés
-              {smartResult.some(s => s.totalParts > 1) && (
-                <span style={{ marginLeft: 6, color: '#f59e0b' }}>• {smartResult.filter(s => s.totalParts > 1).length} tâche(s) divisées</span>
-              )}
+              <span style={{ color: T.accent, fontWeight: 700 }}>{smartResult.length}</span> proposition{smartResult.length > 1 ? 's' : ''} en attente
             </div>
           )}
 
@@ -529,7 +560,7 @@ export default function Planification() {
             whileHover={!loadingIA ? { scale: 1.02, y: -1 } : {}}
             whileTap={{ scale: 0.98 }}>
             <Sparkles size={12} />
-            {loadingIA ? 'Planification...' : 'Planifier (Bin Packing IA)'}
+            {loadingIA ? 'Analyse...' : 'Proposer un planning'}
           </motion.button>
         </div>
 
@@ -756,6 +787,74 @@ export default function Planification() {
             </div>
           </motion.div>
         )}
+
+        {/* ─── Propositions IA — l'user accepte ou refuse ─── */}
+        <AnimatePresence>
+          {smartResult && smartResult.length > 0 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ background: `linear-gradient(135deg, ${T.accent}12, #a855f708)`, border: `1px dashed ${T.accent}40`, borderRadius: 14, padding: isMobile ? 14 : '16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Brain size={15} color={T.accent} strokeWidth={2.2} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0 }}>L'IA te propose un planning</h2>
+                      <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 1 }}>Accepte ou refuse créneau par créneau — rien n'est appliqué sans ton accord.</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <motion.button onClick={refuserToutesPropositions} whileTap={{ scale: 0.95 }}
+                      style={{ padding: '6px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      Tout refuser
+                    </motion.button>
+                    <motion.button onClick={accepterToutesPropositions} whileTap={{ scale: 0.95 }}
+                      style={{ padding: '6px 12px', background: T.accent, border: 'none', borderRadius: 8, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', boxShadow: `0 3px 10px ${T.accent}35` }}>
+                      Tout accepter
+                    </motion.button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {smartResult.slice(0, 8).map((p, i) => {
+                    const dateLabel = new Date(p.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+                    return (
+                      <motion.div key={`${p.task.id}-${p.date}-${p.startMins}-${i}`}
+                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} transition={{ delay: i * 0.03 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: T.bg2, borderRadius: 10, border: `1px solid ${T.border}` }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, fontFamily: 'monospace', minWidth: 92, textTransform: 'capitalize' }}>
+                          {dateLabel}
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: T.text2, fontFamily: 'monospace', minWidth: 78 }}>
+                          {minsToTime(p.startMins).slice(0,5)} → {minsToTime(p.endMins).slice(0,5)}
+                        </div>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(p.task.priorite), flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 12.5, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.task.titre}{p.totalParts > 1 ? ` (${p.part}/${p.totalParts})` : ''}
+                        </span>
+                        <motion.button onClick={() => refuserProposition(i)} whileTap={{ scale: 0.92 }}
+                          title="Refuser"
+                          style={{ width: 26, height: 26, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <X size={12} />
+                        </motion.button>
+                        <motion.button onClick={() => accepterProposition(p, i)} whileTap={{ scale: 0.92 }}
+                          title="Accepter"
+                          style={{ width: 26, height: 26, borderRadius: 7, background: `${T.accent}20`, border: `1px solid ${T.accent}40`, color: T.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <CheckSquare size={12} />
+                        </motion.button>
+                      </motion.div>
+                    )
+                  })}
+                  {smartResult.length > 8 && (
+                    <p style={{ fontSize: 11, color: T.text2, textAlign: 'center', marginTop: 4, opacity: 0.7 }}>
+                      + {smartResult.length - 8} autre{smartResult.length - 8 > 1 ? 's' : ''} proposition{smartResult.length - 8 > 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ═══ VIEWS ═════════════════════════════════════════════════ */}
         <AnimatePresence mode="wait">
