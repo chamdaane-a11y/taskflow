@@ -12,7 +12,7 @@ import {
   Users, Plus, Copy, Check, X, Send, MessageCircle,
   LayoutDashboard, Bot, BarChart2, Calendar, HelpCircle, Layers,
   LogOut, Crown, Share2, Link2, UserPlus, MoreHorizontal, Clock,
-  PanelLeftClose, PanelLeftOpen, ChevronRight, ChevronLeft, ChevronUp, Star, Settings, User,
+  PanelLeftClose, PanelLeftOpen, ChevronRight, ChevronUp, Star, Settings, User,
   Sparkles, Flag, Target, CheckSquare, AlertTriangle, Activity, GripVertical,
   ShieldCheck, ShieldX, UserMinus, Edit3, Shield, Menu,
   TrendingUp, AlertCircle, Zap, Brain, ChevronDown, Loader
@@ -1316,26 +1316,6 @@ export default function Collaboration() {
 
         <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
 
-        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
-        {[
-          { val: 'toutes',   label: 'Toutes les tâches' },
-          { val: 'haute',    label: 'Priorité haute' },
-          { val: 'bloquee',  label: `Bloquées${bloquees > 0 ? ` (${bloquees})` : ''}` },
-          { val: 'terminee', label: 'Terminées' },
-        ].map(f => (
-          <motion.button key={f.val}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 10, color: filtre === f.val ? T.accent : T.text2, background: filtre === f.val ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: filtre === f.val ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
-            onClick={() => { setFiltre(f.val); if (isMobile) setSidebarOpen(false) }} whileHover={{ x: 2 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {f.val === 'bloquee' && <IconLock size={12} color={filtre === f.val ? T.accent : T.text2} />}
-              {f.label}
-            </span>
-            {filtre === f.val && <ChevronRight size={14} />}
-          </motion.button>
-        ))}
-
-        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
-
         {equipes.length > 0 && (
           <>
             <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>MES ÉQUIPES</p>
@@ -1441,24 +1421,12 @@ export default function Collaboration() {
         )}
       </AnimatePresence>
 
-      {/* Mobile top bar — logo + retour + hamburger */}
+      {/* Hamburger mobile — même style que IAChat */}
       {isMobile && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 52, zIndex: 210, background: T.bg2, borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-          <motion.button onClick={() => navigate('/dashboard')} whileTap={{ scale: 0.9 }}
-            style={{ width: 36, height: 36, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <ChevronLeft size={18} color={T.accent} strokeWidth={2.4} />
-          </motion.button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 7, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Layers size={13} color={T.bg} strokeWidth={2.5} />
-            </div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>GetShift</span>
-          </div>
-          <motion.button onClick={() => setSidebarOpen(true)} whileTap={{ scale: 0.9 }}
-            style={{ width: 36, height: 36, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <Menu size={18} color={T.text2} />
-          </motion.button>
-        </div>
+        <motion.button onClick={() => setSidebarOpen(p => !p)} whileTap={{ scale: 0.95 }}
+          style={{ position: 'fixed', top: 14, left: 14, zIndex: 200, width: 38, height: 38, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}>
+          <Menu size={17} />
+        </motion.button>
       )}
 
       {/* Toggle sidebar — desktop only */}
@@ -1474,7 +1442,7 @@ export default function Collaboration() {
 
       {/* MAIN */}
       <motion.main animate={{ marginLeft: mainMargin }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, paddingTop: isMobile ? 52 : 0 }}>
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
         {/* HEADER */}
         <div style={{ padding: '13px clamp(14px,3vw,24px)', borderBottom: `1px solid ${T.border}`, background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>
