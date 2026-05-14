@@ -244,11 +244,10 @@ const CalendarGrid = memo(function CalendarGrid({
             msOverflowStyle: 'none',
           }}>
             {unscheduled.slice(0, 12).map(task => (
-              <motion.div
+              <div
                 key={task.id}
                 draggable={!isMobile}
                 onDragStart={e => {
-                  if (isMobile) return
                   e.dataTransfer.setData('tacheId', String(task.id))
                   e.dataTransfer.effectAllowed = 'copy'
                   setChipDrag(task)
@@ -266,8 +265,7 @@ const CalendarGrid = memo(function CalendarGrid({
                   transition: 'all 0.15s',
                   flexShrink: 0,
                   userSelect: 'none',
-                }}
-                whileTap={{ scale: 0.97 }}>
+                }}>
                 <div style={{
                   width: 5, height: 5, borderRadius: '50%',
                   background: task.priorite === 'haute' ? '#ef4444' : task.priorite === 'moyenne' ? '#f59e0b' : '#10b981',
@@ -296,7 +294,7 @@ const CalendarGrid = memo(function CalendarGrid({
                     <Plus size={11} color="#fff" />
                   </motion.button>
                 )}
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -494,7 +492,7 @@ const CalendarGrid = memo(function CalendarGrid({
                         setDragOver(null)
                       }
                     }}
-                    onDrop={e => handleColumnDrop(e, jour.date, e.target.closest('[data-col]') || e.target)}
+                    onDrop={e => handleColumnDrop(e, jour.date, e.currentTarget)}
                   >
                     {/* Hour lines */}
                     {hours.map(h => (
