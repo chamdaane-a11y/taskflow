@@ -137,21 +137,23 @@ export default function Planification() {
   const chargerDonnees = useCallback(async () => {
     setLoading(true)
     try {
-      const [t, p, pr] = await Promise.all([
+      // Tâches + planification en parallèle → affichage immédiat
+      const [t, p] = await Promise.all([
         axios.get(`${API}/taches/${user.id}`),
         axios.get(`${API}/planification/${user.id}`),
-        axios.get(`${API}/taches/${user.id}/priorite-intelligente`),
       ])
-      // Normalize planification entries → add startMins/endMins
-      const normalized = t.data.map(task => ({
-        ...task,
-        _score: calcPriorityScore(task),
-      }))
-      setTaches(normalized)
+      setTaches(t.data.map(task => ({ ...task, _score: calcPriorityScore(task) })))
       setPlanification(normalizePlan(p.data))
-      setPriorities(pr.data.slice(0, 5))
-    } catch (err) { console.error(err) }
-    setLoading(false)
+      setLoading(false)
+
+      // Priorités chargées en arrière-plan — ne bloque pas l'affichage
+      axios.get(`${API}/taches/${user.id}/priorite-intelligente`)
+        .then(pr => setPriorities(pr.data.slice(0, 5)))
+        .catch(() => {})
+    } catch (err) {
+      console.error(err)
+      setLoading(false)
+    }
   }, [user?.id])
 
   function normalizePlan(entries) {

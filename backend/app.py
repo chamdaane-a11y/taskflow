@@ -1387,12 +1387,15 @@ def priorite_intelligente(user_id):
         curseur = db.cursor(dictionary=True)
         curseur.execute("SELECT id, titre, priorite, deadline, temps_estime, statut, DATEDIFF(deadline, CURDATE()) AS jours_restants FROM taches WHERE user_id=%s AND terminee=FALSE AND deadline IS NOT NULL ORDER BY deadline ASC", (user_id,))
         taches = curseur.fetchall()
+        updates = []
         for t in taches:
             jours = t['jours_restants'] or 99
             prio = {'haute': 3, 'moyenne': 2, 'basse': 1}.get(t['priorite'], 1)
             score = (prio * 3) + (1 / max(jours, 0.5)) * 10 + ((t['temps_estime'] or 30) / 60) + (20 if jours < 0 else 0)
             t['score_priorite'] = round(score, 2)
-            curseur.execute("UPDATE taches SET score_priorite=%s WHERE id=%s", (score, t['id']))
+            updates.append((score, t['id']))
+        if updates:
+            curseur.executemany("UPDATE taches SET score_priorite=%s WHERE id=%s", updates)
         db.commit(); db.close()
         taches.sort(key=lambda x: x['score_priorite'], reverse=True)
         return jsonify(taches)
