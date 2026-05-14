@@ -15,7 +15,8 @@ import {
   LogOut, Crown, Share2, Link2, UserPlus, MoreHorizontal, Clock,
   PanelLeftClose, PanelLeftOpen, ChevronRight, ChevronUp, Star, Settings, User,
   Sparkles, Flag, Target, CheckSquare, AlertTriangle, Activity, GripVertical,
-  ShieldCheck, ShieldX, UserMinus, Edit3, Shield
+  ShieldCheck, ShieldX, UserMinus, Edit3, Shield,
+  TrendingUp, AlertCircle, Zap, Brain, ChevronDown, Loader
 } from 'lucide-react'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -712,6 +713,307 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
   )
 }
 
+// ===== MINI BAR CHART CSS =====
+function MiniBar({ valeur, max, couleur, label, T }) {
+  const pct = max > 0 ? Math.round((valeur / max) * 100) : 0
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: 12, color: T.text2 }}>{label}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: couleur }}>{valeur}</span>
+      </div>
+      <div style={{ height: 6, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
+        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }}
+          style={{ height: '100%', background: couleur, borderRadius: 99 }} />
+      </div>
+    </div>
+  )
+}
+
+// ===== DRAWER ANALYTICS ÉQUIPE =====
+function DrawerAnalytiques({ T, equipe_id, onFermer }) {
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const charger = async () => {
+      try { const r = await axios.get(`${API}/equipes/${equipe_id}/stats`); setStats(r.data) } catch {}
+      setLoading(false)
+    }
+    charger()
+  }, [equipe_id])
+
+  const STATUT_COLOR = { todo: '#6c63ff', en_cours: '#e08a3c', termine: '#4caf82' }
+  const STATUT_LABEL = { todo: 'À faire', en_cours: 'En cours', termine: 'Terminé' }
+
+  return (
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(400px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)', overflowY: 'auto' }}
+      initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
+
+      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: T.bg2, zIndex: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={16} color={T.accent} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Analytics équipe</h3>
+            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>Vélocité & contribution</p>
+          </div>
+        </div>
+        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
+          <X size={13} />
+        </motion.button>
+      </div>
+
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: `3px solid ${T.border}`, borderTopColor: T.accent, margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        ) : !stats ? (
+          <p style={{ color: T.text2, fontSize: 13 }}>Erreur de chargement.</p>
+        ) : (
+          <>
+            {/* KPIs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              {[
+                { label: 'Total', valeur: stats.total, couleur: T.accent },
+                { label: 'Terminées', valeur: stats.par_statut?.termine || 0, couleur: '#4caf82' },
+                { label: 'En retard', valeur: stats.en_retard?.length || 0, couleur: stats.en_retard?.length > 0 ? '#e05c5c' : T.text2 },
+              ].map(k => (
+                <div key={k.label} style={{ padding: '12px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: k.couleur, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{k.valeur}</div>
+                  <div style={{ fontSize: 10, color: T.text2, marginTop: 2 }}>{k.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Taux completion anneau */}
+            <div style={{ padding: '16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ position: 'relative', width: 68, height: 68, flexShrink: 0 }}>
+                <svg width="68" height="68" viewBox="0 0 68 68">
+                  <circle cx="34" cy="34" r="28" fill="none" stroke={T.border} strokeWidth="7" />
+                  <motion.circle cx="34" cy="34" r="28" fill="none" stroke="#4caf82" strokeWidth="7"
+                    strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 28}`}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 28 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 28 * (1 - stats.taux_completion / 100) }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                    transform="rotate(-90 34 34)" />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#4caf82' }}>{stats.taux_completion}%</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Taux de complétion</div>
+                <div style={{ fontSize: 11, color: T.text2, marginTop: 3 }}>{stats.par_statut?.termine || 0} tâches terminées sur {stats.total}</div>
+              </div>
+            </div>
+
+            {/* Répartition par statut */}
+            <div style={{ padding: '16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 12 }}>RÉPARTITION</p>
+              {Object.entries(STATUT_LABEL).map(([statut, label]) => (
+                <MiniBar key={statut} T={T}
+                  valeur={stats.par_statut?.[statut] || 0}
+                  max={stats.total}
+                  couleur={STATUT_COLOR[statut]}
+                  label={label} />
+              ))}
+            </div>
+
+            {/* Contribution par membre */}
+            {stats.membres?.length > 0 && (
+              <div style={{ padding: '16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 12 }}>CHARGE PAR MEMBRE</p>
+                {stats.membres.map(m => (
+                  <div key={m.id} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 7, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent, flexShrink: 0 }}>
+                        {m.nom.charAt(0).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: T.text, flex: 1 }}>{m.nom}</span>
+                      <span style={{ fontSize: 11, color: T.text2 }}>{m.total || 0} tâches</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[['todo', '#6c63ff'], ['en_cours', '#e08a3c'], ['termine', '#4caf82']].map(([s, c]) => {
+                        const v = m[s] || 0
+                        return v > 0 ? (
+                          <div key={s} title={`${STATUT_LABEL[s]}: ${v}`}
+                            style={{ height: 5, flex: v, background: c, borderRadius: 99, transition: 'all 0.5s' }} />
+                        ) : null
+                      })}
+                      {(m.total || 0) === 0 && <div style={{ height: 5, flex: 1, background: T.border, borderRadius: 99 }} />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* En retard */}
+            {stats.en_retard?.length > 0 && (
+              <div style={{ padding: '16px', background: 'rgba(224,92,92,0.05)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                  <AlertCircle size={14} color="#e05c5c" />
+                  <p style={{ fontSize: 10, fontWeight: 700, color: '#e05c5c', letterSpacing: 1.2, margin: 0 }}>EN RETARD ({stats.en_retard.length})</p>
+                </div>
+                {stats.en_retard.map(t => (
+                  <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, padding: '8px 10px', background: 'rgba(224,92,92,0.04)', borderRadius: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: PRIORITE_COLOR[t.priorite] || '#e05c5c', marginTop: 5, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</div>
+                      <div style={{ fontSize: 10, color: T.text2, marginTop: 2 }}>
+                        {t.assignee_nom || 'Non assigné'} · {t.deadline ? new Date(t.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </motion.div>
+  )
+}
+
+// ===== DRAWER IA COACH D'ÉQUIPE =====
+const SUGGESTIONS_IA_EQUIPE = [
+  { icon: '🔍', text: 'Qui est surchargé dans l\'équipe ?' },
+  { icon: '⚡', text: 'Génère un sprint planning pour cette semaine' },
+  { icon: '⚠️', text: 'Quelles tâches sont en retard ?' },
+  { icon: '🔄', text: 'Comment répartir mieux les tâches ?' },
+]
+
+function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const endRef = useRef(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  const envoyer = async (texte) => {
+    const msg = texte || input.trim()
+    if (!msg || loading) return
+    setInput('')
+    const userMsg = { role: 'user', content: msg }
+    setMessages(p => [...p, userMsg])
+    setLoading(true)
+    try {
+      const r = await axios.post(`${API}/equipes/${equipe_id}/ia`, {
+        message: msg,
+        user_id: user.id,
+        historique: messages.slice(-8)
+      })
+      setMessages(p => [...p, { role: 'assistant', content: r.data.reponse }])
+    } catch {
+      setMessages(p => [...p, { role: 'assistant', content: 'Désolé, une erreur s\'est produite.' }])
+    }
+    setLoading(false)
+  }
+
+  return (
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
+      initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
+
+      {/* Header */}
+      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Brain size={18} color="white" />
+          </div>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Coach IA</h3>
+            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{equipe_nom}</p>
+          </div>
+        </div>
+        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
+          <X size={13} />
+        </motion.button>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {messages.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 24 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 18, background: `linear-gradient(135deg, ${T.accent}20, ${T.accent2 || '#a855f7'}20)`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+              <Brain size={26} color={T.accent} strokeWidth={1.5} />
+            </div>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: '0 0 4px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>Coach IA de l'équipe</h4>
+            <p style={{ fontSize: 12, color: T.text2, textAlign: 'center', lineHeight: 1.6, marginBottom: 20, maxWidth: 280 }}>Je connais toutes les tâches et membres de ton équipe. Demande-moi n'importe quoi.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
+              {SUGGESTIONS_IA_EQUIPE.map((s, i) => (
+                <motion.button key={i}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 12.5, cursor: 'pointer', textAlign: 'left' }}
+                  onClick={() => envoyer(s.text)} whileHover={{ borderColor: T.accent, x: 2 }}>
+                  <span style={{ fontSize: 16 }}>{s.icon}</span>
+                  <span>{s.text}</span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.map((m, i) => (
+          <div key={i} style={{ display: 'flex', gap: 10, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
+            {m.role === 'assistant' && (
+              <div style={{ width: 28, height: 28, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Brain size={13} color="white" />
+              </div>
+            )}
+            <div style={{
+              maxWidth: '80%', padding: '10px 13px', borderRadius: m.role === 'user' ? '12px 4px 12px 12px' : '4px 12px 12px 12px',
+              background: m.role === 'user' ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg3,
+              color: m.role === 'user' ? 'white' : T.text,
+              fontSize: 13, lineHeight: 1.55,
+              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            }}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+            <div style={{ width: 28, height: 28, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Brain size={13} color="white" />
+            </div>
+            <div style={{ padding: '12px 16px', background: T.bg3, borderRadius: '4px 12px 12px 12px', display: 'flex', gap: 5 }}>
+              {[0, 1, 2].map(d => (
+                <motion.div key={d} style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent }}
+                  animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, delay: d * 0.15, repeat: Infinity }} />
+              ))}
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ padding: '12px 16px 20px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+          <textarea ref={inputRef}
+            style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
+            placeholder="Demande au Coach IA d'équipe…" value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer() } }}
+            rows={1} />
+          <motion.button
+            style={{ width: 40, height: 40, borderRadius: 11, background: input.trim() && !loading ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg3, border: `1px solid ${input.trim() && !loading ? 'transparent' : T.border}`, color: input.trim() && !loading ? 'white' : T.text2, cursor: input.trim() && !loading ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}
+            onClick={() => envoyer()} whileTap={input.trim() && !loading ? { scale: 0.95 } : {}}>
+            {loading ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={15} />}
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // ===== PAGE PRINCIPALE =====
 export default function Collaboration() {
   const user = JSON.parse(localStorage.getItem('user'))
@@ -751,8 +1053,15 @@ export default function Collaboration() {
   const [showRejoindre, setShowRejoindre] = useState(false)
   const [showActivite, setShowActivite] = useState(false)
   const [showGestion, setShowGestion] = useState(false)
+  const [showAnalytiques, setShowAnalytiques] = useState(false)
+  const [showIAEquipe, setShowIAEquipe] = useState(false)
 
   const isAdmin = membres.some(m => m.id === user?.id && m.role === 'admin')
+
+  const fermerTousDrawers = () => {
+    setShowActivite(false); setShowGestion(false)
+    setShowAnalytiques(false); setShowIAEquipe(false)
+  }
 
   // Drag & Drop state
   const [activeId, setActiveId] = useState(null)
@@ -1170,15 +1479,27 @@ export default function Collaboration() {
           )}
 
           <div style={{ display: 'flex', gap: 7, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {equipeActive && (
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showIAEquipe ? `linear-gradient(135deg, ${T.accent}30, ${T.accent2 || '#a855f7'}30)` : T.bg3, border: `1px solid ${showIAEquipe ? T.accent + '55' : T.border}`, borderRadius: 9, color: showIAEquipe ? T.accent : T.text2, fontSize: 12, fontWeight: showIAEquipe ? 700 : 400, cursor: 'pointer' }}
+                onClick={() => { fermerTousDrawers(); setShowIAEquipe(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <Brain size={13} /> {!isMobile && 'Coach IA'}
+              </motion.button>
+            )}
+            {equipeActive && (
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showAnalytiques ? `${T.accent}18` : T.bg3, border: `1px solid ${showAnalytiques ? T.accent + '35' : T.border}`, borderRadius: 9, color: showAnalytiques ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+                onClick={() => { fermerTousDrawers(); setShowAnalytiques(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <TrendingUp size={13} /> {!isMobile && 'Stats'}
+              </motion.button>
+            )}
             {equipeActive && isAdmin && (
               <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showGestion ? `${T.accent}18` : T.bg3, border: `1px solid ${showGestion ? T.accent + '35' : T.border}`, borderRadius: 9, color: showGestion ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                onClick={() => { setShowGestion(p => !p); setShowActivite(false) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                onClick={() => { fermerTousDrawers(); setShowGestion(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
                 <Shield size={13} /> {!isMobile && 'Gérer'}
               </motion.button>
             )}
             {equipeActive && (
               <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showActivite ? `${T.accent}18` : T.bg3, border: `1px solid ${showActivite ? T.accent + '35' : T.border}`, borderRadius: 9, color: showActivite ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                onClick={() => { setShowActivite(p => !p); setShowGestion(false) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                onClick={() => { fermerTousDrawers(); setShowActivite(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
                 <Activity size={13} /> {!isMobile && 'Activité'}
               </motion.button>
             )}
@@ -1292,6 +1613,12 @@ export default function Collaboration() {
         )}
         {tacheCommentaires && (
           <PanneauCommentaires key="panel" T={T} tache={tacheCommentaires} user={user} membres={membres} onFermer={() => setTacheCommentaires(null)} />
+        )}
+        {showIAEquipe && equipeActive && (
+          <DrawerIAEquipe key="ia-equipe" T={T} equipe_id={equipeActive.id} equipe_nom={equipeActive.nom} user={user} onFermer={() => setShowIAEquipe(false)} />
+        )}
+        {showAnalytiques && equipeActive && (
+          <DrawerAnalytiques key="analytiques" T={T} equipe_id={equipeActive.id} onFermer={() => setShowAnalytiques(false)} />
         )}
         {showGestion && equipeActive && isAdmin && (
           <DrawerGestion key="gestion" T={T} equipe={equipeActive} membres={membres} user={user}

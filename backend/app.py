@@ -1737,6 +1737,130 @@ def renommer_equipe(equipe_id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+@app.route('/equipes/<int:equipe_id>/stats', methods=['GET'])
+def get_stats_equipe(equipe_id):
+    try:
+        db = connecter()
+        c = db.cursor(dictionary=True)
+        # Tâches par statut
+        c.execute("SELECT statut, COUNT(*) as n FROM taches_equipe WHERE equipe_id=%s GROUP BY statut", (equipe_id,))
+        par_statut = {r['statut']: r['n'] for r in c.fetchall()}
+        total = sum(par_statut.values())
+        taux = round(par_statut.get('termine', 0) / max(total, 1) * 100)
+
+        # Contribution par membre
+        c.execute("""
+            SELECT u.id, u.nom,
+                SUM(te.statut='todo') as todo,
+                SUM(te.statut='en_cours') as en_cours,
+                SUM(te.statut='termine') as termine,
+                COUNT(te.id) as total
+            FROM equipe_membres em
+            JOIN users u ON em.user_id=u.id
+            LEFT JOIN taches_equipe te ON te.assignee_id=u.id AND te.equipe_id=%s
+            WHERE em.equipe_id=%s
+            GROUP BY u.id, u.nom
+        """, (equipe_id, equipe_id))
+        membres = c.fetchall()
+
+        # En retard (deadline < aujourd'hui et pas terminé)
+        c.execute("""
+            SELECT te.id, te.titre, te.deadline, te.priorite, u.nom as assignee_nom
+            FROM taches_equipe te
+            LEFT JOIN users u ON te.assignee_id=u.id
+            WHERE te.equipe_id=%s AND te.statut != 'termine'
+              AND te.deadline IS NOT NULL AND te.deadline < CURDATE()
+            ORDER BY te.deadline ASC
+            LIMIT 10
+        """, (equipe_id,))
+        en_retard = c.fetchall()
+
+        # Activité récente (créations/modifs 7 derniers jours)
+        c.execute("""
+            SELECT DATE(created_at) as jour, COUNT(*) as n
+            FROM equipe_activites WHERE equipe_id=%s
+              AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(created_at) ORDER BY jour ASC
+        """, (equipe_id,))
+        activite_7j = c.fetchall()
+
+        db.close()
+        return jsonify({
+            "par_statut": par_statut, "total": total, "taux_completion": taux,
+            "membres": membres, "en_retard": en_retard, "activite_7j": activite_7j
+        })
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/<int:equipe_id>/ia', methods=['POST'])
+def ia_equipe(equipe_id):
+    try:
+        data = request.get_json()
+        message = data.get('message', '')
+        user_id = data.get('user_id')
+        historique = data.get('historique', [])
+
+        db = connecter()
+        c = db.cursor(dictionary=True)
+
+        # Contexte équipe
+        c.execute("SELECT nom, description FROM equipes WHERE id=%s", (equipe_id,))
+        equipe = c.fetchone()
+        c.execute("SELECT u.nom, em.role FROM equipe_membres em JOIN users u ON em.user_id=u.id WHERE em.equipe_id=%s", (equipe_id,))
+        membres = c.fetchall()
+        c.execute("""
+            SELECT te.titre, te.statut, te.priorite, te.deadline, u.nom as assignee_nom
+            FROM taches_equipe te LEFT JOIN users u ON te.assignee_id=u.id
+            WHERE te.equipe_id=%s ORDER BY te.created_at DESC LIMIT 50
+        """, (equipe_id,))
+        taches = c.fetchall()
+        db.close()
+
+        total = len(taches)
+        terminees = sum(1 for t in taches if t['statut'] == 'termine')
+        en_cours = sum(1 for t in taches if t['statut'] == 'en_cours')
+        en_retard = [t for t in taches if t['statut'] != 'termine' and t.get('deadline') and str(t['deadline']) < datetime.now().strftime('%Y-%m-%d')]
+
+        membres_txt = "\n".join(f"- {m['nom']} ({m['role']})" for m in membres)
+        retard_txt = "\n".join(f"  • {t['titre']} (assigné à {t['assignee_nom'] or 'personne'})" for t in en_retard[:5]) if en_retard else "  Aucune"
+        taches_actives = [t for t in taches if t['statut'] != 'termine']
+        taches_txt = "\n".join(f"  [{t['statut'].upper()}] {t['titre']} — {t['assignee_nom'] or 'non assigné'} {'⚠️ RETARD' if t in en_retard else ''}" for t in taches_actives[:20])
+
+        system = f"""Tu es le Coach IA de l'équipe GetShift. Tu aides l'équipe à être plus productive.
+━━━ ÉQUIPE : {equipe['nom']} ━━━
+{equipe.get('description', '')}
+
+━━━ MEMBRES ━━━
+{membres_txt}
+
+━━━ ÉTAT ACTUEL ━━━
+Total tâches : {total} | Terminées : {terminees} | En cours : {en_cours} | Taux completion : {round(terminees/max(total,1)*100)}%
+
+━━━ TÂCHES EN RETARD ━━━
+{retard_txt}
+
+━━━ TÂCHES ACTIVES ━━━
+{taches_txt}
+
+━━━ INSTRUCTIONS ━━━
+Réponds en français. Tu peux : analyser la charge de travail, identifier les blocages, suggérer des réassignations, générer un sprint planning, détecter qui est surchargé. Sois direct, actionnable, bienveillant. Maximum 3 paragraphes sauf si tu listes des tâches."""
+
+        messages = [{"role": "system", "content": system}]
+        for h in historique[-8:]:
+            messages.append({"role": h['role'], "content": h['content']})
+        messages.append({"role": "user", "content": message})
+
+        resp = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            max_tokens=800,
+            temperature=0.7
+        )
+        reponse = resp.choices[0].message.content
+        return jsonify({"reponse": reponse})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 @app.route('/equipes/<int:equipe_id>', methods=['DELETE'])
 def supprimer_equipe(equipe_id):
     try:
