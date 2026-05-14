@@ -12,6 +12,146 @@ import {
 import { minsToTime } from './calendarUtils'
 
 // ──────────────────────────────────────────────────────────────────────
+// DailyScore — anneau jour + bandes 7 derniers jours (streak visuel)
+// ──────────────────────────────────────────────────────────────────────
+export const DailyScore = memo(function DailyScore({
+  T, isMobile, planification, taches, heuresDispo
+}) {
+  const data = useMemo(() => {
+    const capaciteMin = heuresDispo * 60
+    const days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      const planMin = planification
+        .filter(p => (p.date_planifiee?.split('T')[0] || p.date_planifiee) === dateStr)
+        .reduce((s, p) => s + ((p.endMins || 0) - (p.startMins || 0)), 0)
+      const doneMin = planification
+        .filter(p => {
+          const date = p.date_planifiee?.split('T')[0] || p.date_planifiee
+          if (date !== dateStr) return false
+          const t = taches.find(t => t.id === p.tache_id)
+          return t && t.terminee
+        })
+        .reduce((s, p) => s + ((p.endMins || 0) - (p.startMins || 0)), 0)
+      const pct = capaciteMin > 0 ? Math.min(120, (planMin / capaciteMin) * 100) : 0
+      const donePct = capaciteMin > 0 ? Math.min(100, (doneMin / capaciteMin) * 100) : 0
+      days.push({
+        date: dateStr,
+        label: d.toLocaleDateString('fr-FR', { weekday: 'narrow' }),
+        pct,
+        donePct,
+        isToday: i === 0,
+      })
+    }
+    const today = days[6]
+    return { days, today, capaciteMin }
+  }, [planification, taches, heuresDispo])
+
+  const { today, capaciteMin } = data
+  const planMin = today.pct * capaciteMin / 100
+  const heures = (planMin / 60).toFixed(1)
+  const pct = Math.round(today.pct)
+
+  const ringColor =
+    pct === 0     ? T.text2 :
+    pct > 110     ? '#ef4444' :
+    pct >= 80     ? '#10b981' :
+    pct >= 40     ? T.accent :
+                    '#f59e0b'
+
+  const SIZE = isMobile ? 56 : 64
+  const STROKE = isMobile ? 5 : 6
+  const RADIUS = (SIZE - STROKE) / 2
+  const CIRCUM = 2 * Math.PI * RADIUS
+  const offset = CIRCUM * (1 - Math.min(100, pct) / 100)
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: isMobile ? 10 : 14,
+      padding: isMobile ? '8px 12px' : '10px 14px',
+      background: T.bg2,
+      border: `1px solid ${T.border}`,
+      borderRadius: 14,
+      flexShrink: 0,
+    }}>
+      {/* Anneau */}
+      <div style={{ position: 'relative', width: SIZE, height: SIZE, flexShrink: 0 }}>
+        <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)' }}>
+          <circle
+            cx={SIZE/2} cy={SIZE/2} r={RADIUS}
+            stroke={`${T.border}`} strokeWidth={STROKE} fill="none"
+          />
+          <motion.circle
+            cx={SIZE/2} cy={SIZE/2} r={RADIUS}
+            stroke={ringColor}
+            strokeWidth={STROKE}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={CIRCUM}
+            initial={{ strokeDashoffset: CIRCUM }}
+            animate={{ strokeDashoffset: offset }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+          />
+        </svg>
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          lineHeight: 1,
+        }}>
+          <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 900, color: T.text, letterSpacing: '-0.5px' }}>
+            {pct}%
+          </div>
+        </div>
+      </div>
+
+      {/* Texte */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, color: T.text2, letterSpacing: 1.4, textTransform: 'uppercase' }}>
+          Aujourd'hui
+        </div>
+        <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 800, color: T.text, letterSpacing: '-0.3px' }}>
+          {heures}h <span style={{ fontSize: 10, color: T.text2, fontWeight: 600 }}>/ {heuresDispo}h</span>
+        </div>
+        {/* Bandes 7 derniers jours */}
+        <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 16, marginTop: 2 }}>
+          {data.days.map((d, i) => {
+            const h = Math.max(2, (d.pct / 100) * 16)
+            const color = d.pct === 0 ? `${T.border}` :
+                          d.pct > 110 ? '#ef4444' :
+                          d.pct >= 80 ? '#10b981' :
+                          d.pct >= 40 ? T.accent : '#f59e0b'
+            return (
+              <motion.div
+                key={d.date}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: h, opacity: 1 }}
+                transition={{ delay: i * 0.04, duration: 0.4 }}
+                title={`${d.label} · ${Math.round(d.pct)}%`}
+                style={{
+                  width: 4,
+                  background: color,
+                  borderRadius: 1,
+                  border: d.isToday ? `1px solid ${T.text}` : 'none',
+                  boxShadow: d.isToday ? `0 0 4px ${color}80` : 'none',
+                }}
+              />
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+})
+
+// ──────────────────────────────────────────────────────────────────────
 // FocusBar — créneau en cours (sticky top, glow accent)
 // ──────────────────────────────────────────────────────────────────────
 export const FocusBar = memo(function FocusBar({

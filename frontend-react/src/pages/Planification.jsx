@@ -19,7 +19,9 @@ import {
 
 import CalendarGrid from './CalendarGrid'
 import KanbanColumn from './KanbanColumn'
-import { FocusBar, InsightCard } from './PlanificationInsights'
+import { FocusBar, InsightCard, DailyScore } from './PlanificationInsights'
+import { CoachFloat } from './CoachFloat'
+import { PomodoroWidget } from './PomodoroWidget'
 import {
   calcPriorityScore, binPackTasks, getGanttDays,
   minsToTime, timeToMins, pColor, pBg,
@@ -711,7 +713,7 @@ export default function Planification() {
 
         {/* Header */}
         <div style={{ marginBottom: isMobile ? 8 : 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: 12, marginBottom: 14, flexDirection: isMobile ? 'column' : 'row' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
                 <div style={{ width: 8, height: 28, borderRadius: 99, background: `linear-gradient(180deg, ${T.accent}, ${T.accent2 || T.accent})`, flexShrink: 0 }} />
@@ -721,6 +723,13 @@ export default function Planification() {
                 {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
             </div>
+            <DailyScore
+              T={T}
+              isMobile={isMobile}
+              planification={planification}
+              taches={taches}
+              heuresDispo={heuresDispo}
+            />
           </div>
 
           {/* View switcher — scrollable, always labeled */}
@@ -1407,6 +1416,22 @@ export default function Planification() {
         )}
       </AnimatePresence>
       {isMobile && <BottomNavMobile T={T} />}
+
+      {/* ─── Floating widgets : Coach + Pomodoro ─── */}
+      <CoachFloat
+        T={T}
+        isMobile={isMobile}
+        userId={user?.id}
+        planification={planification}
+        taches={taches}
+        heuresDispo={heuresDispo}
+      />
+      <PomodoroWidget
+        T={T}
+        isMobile={isMobile}
+        planification={planification}
+        taches={taches}
+      />
     </div>
   )
 }
