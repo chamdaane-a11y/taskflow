@@ -1421,9 +1421,9 @@ export default function Collaboration() {
         )}
       </AnimatePresence>
 
-      {/* Hamburger mobile — même style que IAChat */}
-      {isMobile && (
-        <motion.button onClick={() => setSidebarOpen(p => !p)} whileTap={{ scale: 0.95 }}
+      {/* Hamburger mobile — caché quand sidebar ouverte pour ne pas couvrir le logo */}
+      {isMobile && !sidebarOpen && (
+        <motion.button onClick={() => setSidebarOpen(true)} whileTap={{ scale: 0.95 }}
           style={{ position: 'fixed', top: 14, left: 14, zIndex: 200, width: 38, height: 38, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}>
           <Menu size={17} />
         </motion.button>
@@ -1445,7 +1445,7 @@ export default function Collaboration() {
         style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
         {/* HEADER */}
-        <div style={{ padding: '13px clamp(14px,3vw,24px)', borderBottom: `1px solid ${T.border}`, background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>
+        <div style={{ padding: '13px clamp(14px,3vw,24px)', paddingLeft: isMobile ? 62 : undefined, borderBottom: `1px solid ${T.border}`, background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>
           {equipeActive ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0 }}>
