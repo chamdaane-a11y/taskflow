@@ -287,6 +287,16 @@ export default function Planification() {
     } catch (err) { console.error('Resize persist:', err) }
   }, [planification])
 
+  // ── Quick schedule (mobile : bouton + sur les chips) ──────────────
+  const quickSchedule = useCallback((task) => {
+    const now = new Date()
+    const nowMins = now.getHours() * 60 + now.getMinutes()
+    const startMins = Math.ceil(nowMins / 15) * 15
+    const endMins = startMins + (task.temps_estime || 60)
+    const today = now.toISOString().split('T')[0]
+    handleCalendarDrop({ date: today, startMins, endMins, tacheId: task.id })
+  }, [handleCalendarDrop])
+
   // ── Smart AI Scheduling — PROPOSITIONS UNIQUEMENT ──────────────────
   // L'IA propose, l'user accepte/refuse. Pas de plannification automatique.
   const [propositionsRejetees, setPropositionsRejetees] = useState(new Set())
@@ -760,8 +770,8 @@ export default function Planification() {
           </div>
         </div>
 
-        {/* Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 0 }}>
+        {/* Stats — seulement en vue Liste */}
+        {vue === 'liste' && <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 0 }}>
           {stats.map((s, i) => {
             const Icon = s.Icon
             return (
@@ -812,7 +822,8 @@ export default function Planification() {
               </motion.div>
             )
           })}
-        </div>
+        </div>}
+        {/* END STATS (liste only) */}
         </div>
         {/* END STATIC TOP */}
 
@@ -1107,6 +1118,7 @@ export default function Planification() {
                 onMove={handleCalendarMove}
                 onResize={handleResize}
                 onResizeEnd={handleResizeEnd}
+                onQuickSchedule={quickSchedule}
                 daysToShow={1}
                 heuresDispo={heuresDispo}
               />
@@ -1126,6 +1138,7 @@ export default function Planification() {
                 onMove={handleCalendarMove}
                 onResize={handleResize}
                 onResizeEnd={handleResizeEnd}
+                onQuickSchedule={quickSchedule}
                 daysToShow={7}
                 heuresDispo={heuresDispo}
               />

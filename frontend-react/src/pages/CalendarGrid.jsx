@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════
 // CalendarGrid.jsx — Continuous timeline calendar (08:00–21:00)
 // ══════════════════════════════════════════════════════════════════════
-import { useRef, useState, useCallback, useMemo, memo } from 'react'
+import { useRef, useState, useCallback, useMemo, memo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
@@ -16,6 +16,7 @@ const CalendarGrid = memo(function CalendarGrid({
   planification, taches, T,
   semaineOffset, onOffsetChange,
   onDrop, onMove, onResize, onResizeEnd,
+  onQuickSchedule,
   daysToShow = 7,
   heuresDispo = 8,
 }) {
@@ -46,7 +47,16 @@ const CalendarGrid = memo(function CalendarGrid({
   }, [planification, jours])
 
   const capaciteMin = heuresDispo * 60
-  const hours = Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => DAY_START + i)
+  const hours = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i)
+
+  // Auto-scroll to current time on mount
+  useEffect(() => {
+    if (!gridRef.current) return
+    const now = new Date()
+    const nowMins = now.getHours() * 60 + now.getMinutes()
+    const scrollTop = Math.max(0, nowMins * PX_PER_MIN - 150)
+    gridRef.current.scrollTop = scrollTop
+  }, [])
 
   const resolvedByDate = useMemo(() => {
     const map = {}
@@ -236,8 +246,9 @@ const CalendarGrid = memo(function CalendarGrid({
             {unscheduled.slice(0, 12).map(task => (
               <motion.div
                 key={task.id}
-                draggable
+                draggable={!isMobile}
                 onDragStart={e => {
+                  if (isMobile) return
                   e.dataTransfer.setData('tacheId', String(task.id))
                   e.dataTransfer.effectAllowed = 'copy'
                   setChipDrag(task)
@@ -245,31 +256,45 @@ const CalendarGrid = memo(function CalendarGrid({
                 onDragEnd={() => setChipDrag(null)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 11px',
+                  padding: isMobile ? '6px 8px' : '5px 11px',
                   background: chipDrag?.id === task.id ? `${T.accent}20` : T.bg2,
                   border: `1px solid ${chipDrag?.id === task.id ? T.accent : T.border}`,
                   borderRadius: 99,
                   fontSize: 11,
-                  cursor: 'grab',
+                  cursor: isMobile ? 'default' : 'grab',
                   color: T.text,
                   transition: 'all 0.15s',
                   flexShrink: 0,
                   userSelect: 'none',
                 }}
-                whileHover={{ borderColor: T.accent, scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}>
                 <div style={{
                   width: 5, height: 5, borderRadius: '50%',
                   background: task.priorite === 'haute' ? '#ef4444' : task.priorite === 'moyenne' ? '#f59e0b' : '#10b981',
                   flexShrink: 0,
                 }} />
-                <span style={{ whiteSpace: 'nowrap', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ whiteSpace: 'nowrap', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {task.titre}
                 </span>
                 {task.temps_estime && (
                   <span style={{ fontSize: 9, color: T.accent, background: `${T.accent}15`, padding: '1px 5px', borderRadius: 99, flexShrink: 0 }}>
                     {task.temps_estime}m
                   </span>
+                )}
+                {/* Mobile : bouton Planifier maintenant (drag HTML5 inopérant sur tactile) */}
+                {isMobile && onQuickSchedule && (
+                  <motion.button
+                    onTap={() => onQuickSchedule(task)}
+                    style={{
+                      width: 20, height: 20, borderRadius: '50%',
+                      background: T.accent,
+                      border: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                    whileTap={{ scale: 0.85 }}>
+                    <Plus size={11} color="#fff" />
+                  </motion.button>
                 )}
               </motion.div>
             ))}

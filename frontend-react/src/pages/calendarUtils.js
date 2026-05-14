@@ -2,10 +2,10 @@
 // calendarUtils.js — Pure math, zero React, fully testable
 // ══════════════════════════════════════════════════════════════════════
 
-export const DAY_START  = 8            // 08:00
-export const DAY_END    = 21           // 21:00
-export const TOTAL_MINS = (DAY_END - DAY_START) * 60  // 780 minutes
-export const PX_PER_MIN = 2            // 1 minute = 2px → column height = 1560px
+export const DAY_START  = 0            // 00:00
+export const DAY_END    = 24           // 24:00
+export const TOTAL_MINS = 24 * 60      // 1440 minutes
+export const PX_PER_MIN = 2            // 1 minute = 2px → column height = 2880px
 export const SNAP_MINS  = 15           // snap grid
 export const COL_HEIGHT = TOTAL_MINS * PX_PER_MIN
 
