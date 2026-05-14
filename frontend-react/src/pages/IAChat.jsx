@@ -9,7 +9,7 @@ import {
   LogOut, Copy, Plus, X, ChevronRight, Layers, Menu,
   Users, Sparkles, Zap, Globe, CheckCircle, Trash2,
   Search, AlertCircle, Check, Brain, ChevronDown, Database,
-  Heart, Flame, BarChart, Target, Flag, Bot, HelpCircle, Paperclip,
+  Heart, Flame, BarChart, Target, Flag, Bot, HelpCircle, Paperclip, Bookmark,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -200,31 +200,65 @@ const SourcesWeb = memo(function SourcesWeb({ results, T }) {
 })
 
 // ── Carte action memoïsé ──────────────────────────────────────────────
+// Supporte 2 formats : ancien {type, ...} et nouveau tool format {tool, ok, ...}
 const CarteAction = memo(function CarteAction({ action, T }) {
   if (!action) return null
-  const configs = {
-    tache_creee:               { color: '#10b981', Icon: Plus,     label: 'Tâche créée'     },
-    tache_terminee:            { color: '#10b981', Icon: Check,    label: 'Terminée'        },
+  // Anciens formats (legacy)
+  const legacyConfigs = {
+    tache_creee:               { color: '#10b981', Icon: Plus,     label: 'Tâche créée' },
+    tache_terminee:            { color: '#10b981', Icon: Check,    label: 'Terminée' },
     redirect_tomorrow_builder: { color: '#f59e0b', Icon: Calendar, label: 'Tomorrow Builder' },
   }
-  const cfg = configs[action.type]
+  // Nouveaux formats (tool use)
+  const toolConfigs = {
+    creer_tache:        { color: '#10b981', Icon: Plus,        label: 'Tâche créée' },
+    creer_taches_lot:   { color: '#10b981', Icon: Layers,      label: 'Tâches créées' },
+    terminer_tache:     { color: '#10b981', Icon: CheckCircle, label: 'Terminée' },
+    supprimer_tache:    { color: '#ef4444', Icon: Trash2,      label: 'Supprimée' },
+    modifier_tache:     { color: '#f59e0b', Icon: Sparkles,    label: 'Modifiée' },
+    epingler_focus_jour:{ color: '#a855f7', Icon: Target,      label: 'Épinglée(s) au focus' },
+    lister_taches:      { color: '#6c63ff', Icon: Search,      label: 'Liste tâches' },
+    obtenir_stats:      { color: '#0ea5e9', Icon: BarChart2,   label: 'Stats récupérées' },
+    analyser_task_dna:  { color: '#a855f7', Icon: Brain,       label: 'Task DNA' },
+    rechercher_web:     { color: '#0ea5e9', Icon: Globe,       label: 'Web temps réel' },
+  }
+
+  const isToolFormat = !!action.tool
+  const cfg = isToolFormat ? toolConfigs[action.tool] : legacyConfigs[action.type]
   if (!cfg) return null
+
+  // Sous-titre intelligent selon le tool
+  let subtitle = null
+  if (isToolFormat) {
+    if (!action.ok) subtitle = action.erreur || 'Échec'
+    else if (action.tool === 'creer_tache') subtitle = `"${action.titre}"${action.priorite ? ` · ${action.priorite}` : ''}`
+    else if (action.tool === 'creer_taches_lot') subtitle = `${action.nb} tâches : ${(action.crees||[]).slice(0,3).map(t => `"${t.titre}"`).join(', ')}${action.nb > 3 ? '…' : ''}`
+    else if (action.tool === 'terminer_tache' || action.tool === 'supprimer_tache') subtitle = `"${action.titre}"`
+    else if (action.tool === 'epingler_focus_jour') subtitle = `${action.nb} tâche${action.nb > 1 ? 's' : ''} épinglée${action.nb > 1 ? 's' : ''}`
+    else if (action.tool === 'lister_taches') subtitle = `${action.nb} tâches (${action.filtre})`
+    else if (action.tool === 'obtenir_stats') subtitle = `${action.terminees_total}/${action.total} tâches · ${action.points} pts · streak ${action.streak}j`
+    else if (action.tool === 'analyser_task_dna') subtitle = `Score ${action.dna?.score_viabilite || '?'}/100`
+    else if (action.tool === 'rechercher_web') subtitle = `${action.nb} sources sur "${action.requete}"`
+  } else {
+    subtitle = action.titre ? `"${action.titre}"` : null
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-      style={{ marginTop: 12, padding: '10px 14px', background: `${cfg.color}12`, border: `1px solid ${cfg.color}30`, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+      style={{ marginTop: 8, padding: '10px 14px', background: `${cfg.color}12`, border: `1px solid ${cfg.color}30`, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
       <div style={{ width: 28, height: 28, borderRadius: 8, background: `${cfg.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <cfg.Icon size={14} color={cfg.color} />
       </div>
-      <div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: cfg.color, letterSpacing: '0.5px' }}>{cfg.label.toUpperCase()}</div>
-        {action.titre && <div style={{ fontSize: 12, color: T.text2, marginTop: 2 }}>"{action.titre}"</div>}
+        {subtitle && <div style={{ fontSize: 12, color: T.text2, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
       </div>
     </motion.div>
   )
 })
 
 // ── Bulle message memoïsé ─────────────────────────────────────────────
-const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, isMobile, copie, onCopy, onEnvoyer, onCreerTache, onForceSearch, T, coach }) {
+const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, isMobile, copie, onCopy, onEnvoyer, onCreerTache, onForceSearch, onPin, isPinned, T, coach }) {
   if (msg.role === 'systeme') return (
     <div style={{ display: 'flex', justifyContent: 'center' }}>
       <div style={{ padding: '5px 14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 99, fontSize: 11, color: '#10b981', fontWeight: 600 }}>
@@ -308,10 +342,13 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
               )}
             </>
           )}
-          {msg.action && <CarteAction action={msg.action} T={T} />}
+          {/* Actions multiples (tool use) ou action legacy */}
+          {Array.isArray(msg.actions) && msg.actions.length > 0
+            ? msg.actions.map((a, i) => <CarteAction key={i} action={a} T={T} />)
+            : msg.action && <CarteAction action={msg.action} T={T} />}
           {msg.search_results && <SourcesWeb results={msg.search_results} T={T} />}
           {msg.role === 'ia' && !msg.streaming && msg.content && (
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
               {[
                 { label: copie === idx ? 'Copié !' : 'Copier', Icon: Copy,         action: () => onCopy(msg.content, idx),                         color: copie === idx ? accent : null },
                 { label: 'Créer tâche',                         Icon: Plus,         action: () => onCreerTache(msg.content.substring(0, 80)),       color: null },
@@ -325,6 +362,14 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
                   <Icon size={10} />{label}
                 </motion.button>
               ))}
+              <motion.button
+                onClick={() => onPin(msg)}
+                title={isPinned ? 'Retirer des Insights' : 'Épingler dans Insights'}
+                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: isPinned ? `${accent}18` : 'transparent', border: `1px solid ${isPinned ? accent + '40' : T.border}`, borderRadius: 99, color: isPinned ? accent : T.text2, fontSize: 11, cursor: 'pointer' }}
+                whileHover={{ color: accent, borderColor: `${accent}50` }}>
+                <Bookmark size={10} fill={isPinned ? accent : 'none'} />
+                {isPinned ? 'Épinglé' : 'Insights'}
+              </motion.button>
             </div>
           )}
         </div>
@@ -332,6 +377,12 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
     </div>
   )
 })
+
+function detectWebSearch(text) {
+  const t = text.toLowerCase()
+  return /\b(actualit[eé]|news|dernier[es]?|r[eé]cent[es]?|prix de|combien co[uû]te|comparaison|versus|\bvs\b|tendance|classement|meilleur[es]? de|qu['’]est-ce que|quand est|quelle date|quel est le|où trouver|cherche|trouve moi|info sur|d['’]apr[eè]s|selon|statistique[s]?)\b/.test(t)
+    || /\b(2025|2026)\b/.test(t)
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // COMPOSANT PRINCIPAL
@@ -343,7 +394,7 @@ export default function IAChat() {
   const accent2 = T.accent2 || '#a855f7'
 
   const [prompt,            setPrompt]            = useState('')
-  const [modele,            setModele]            = useState('llama-3.3-70b-versatile')
+  const modele = 'llama-3.3-70b-versatile'
   const [messages,          setMessages]          = useState(() => {
     try { return JSON.parse(localStorage.getItem(`shift_msgs_${user?.id}`) || '[]') } catch { return [] }
   })
@@ -356,8 +407,10 @@ export default function IAChat() {
   const [forceSearch,       setForceSearch]       = useState(false)
   const [copie,             setCopie]             = useState(null)
   const [showSidebar,       setShowSidebar]       = useState(false)
-  const [showModeles,       setShowModeles]       = useState(false)
   const [memoryCount,       setMemoryCount]       = useState(0)
+  const [pinnedMessages,    setPinnedMessages]    = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`shift_pins_${user?.id}`) || '[]') } catch { return [] }
+  })
   // Coach persona — lien avec le drawer Coach du Dashboard
   const [coachStyle,        setCoachStyle]        = useState(() => {
     try { return localStorage.getItem('getshift_coach_style') || 'bienveillant' } catch { return 'bienveillant' }
@@ -409,6 +462,10 @@ export default function IAChat() {
   useEffect(() => {
     if (user) localStorage.setItem(`shift_msgs_${user.id}`, JSON.stringify(messages.slice(-80)))
   }, [messages])
+
+  useEffect(() => {
+    if (user) localStorage.setItem(`shift_pins_${user.id}`, JSON.stringify(pinnedMessages.slice(-30)))
+  }, [pinnedMessages])
 
   // ── Loaders (fire & forget) ───────────────────────────────────────
   const chargerProfil      = useCallback(async () => { try { const r = await axios.get(`${API}/users/${user.id}`);          setProfil(r.data)                                  } catch {} }, [user?.id])
@@ -502,7 +559,7 @@ export default function IAChat() {
     if (!texte || loading) return
 
     // 1. OPTIMISTIC — message user apparaît immédiatement
-    const msgUser = { role: 'user', content: texte }
+    const msgUser = { role: 'user', content: texte, timestamp: Date.now() }
     setMessages(p => [...p, msgUser])
     setPrompt('')
     setLoading(true)
@@ -519,16 +576,16 @@ export default function IAChat() {
       modele,
       historique:     hist,
       tache_id:       tacheSelectionnee || null,
-      force_search:   forceSearch,
+      force_search:   forceSearch || detectWebSearch(texte),
       coach_style:    coachStyle,
       attachment_text: attachment?.texte || '',
     }
     const localAttachment = attachment
     setAttachment(null) // reset après envoi
 
-    // Détection rapide d'une intention "action" → on bascule sur l'endpoint non-stream
+    // Détection d'une intention "tool use" → endpoint non-stream (seul à avoir GETSHIFT_TOOLS)
     const lowerMsg = texte.toLowerCase()
-    const looksLikeAction = /\b(crée|créer|cree|ajoute|nouvelle? tâche|nouvelle? tache|terminée|terminer|fini|planifie|planifier|tomorrow)\b/.test(lowerMsg)
+    const looksLikeAction = /\b(cr[eé][eé]|ajoute|nouvelle? tâche|nouvelle? tache|terminée?|terminer|fini[s]?|marque|planifie|planifier|tomorrow|supprime|supprimer|efface|modifie|modifier|change|mets? [àa] jour|renomme|liste|montre|affiche|donne.moi|quelles? sont|mes stats|mes points|mon streak|mon niveau|[eé]pingle|focus du jour|analyse|task dna|d[eé]place|repousse|deadline)\b/.test(lowerMsg)
 
     if (looksLikeAction) {
       // Mode classique non-stream pour gérer les actions
@@ -536,13 +593,20 @@ export default function IAChat() {
         const { data } = await axios.post(`${API}/ia/assistant`, payload)
         setMessages(p => [...p, {
           role: 'ia', content: data.reponse, modele: data.modele || modele,
-          intention: data.intention, action: data.action || null,
+          intention: data.intention, action: data.action || null, actions: data.actions || [],
           search_results: data.search_results || null, web_searched: data.web_searched || false,
           abrev_expandees: data.abrev_expandees, message_original: data.message_original,
-          message_expande: data.message_expande, coach_style: coachStyle,
+          message_expande: data.message_expande, coach_style: coachStyle, timestamp: Date.now(),
         }])
-        if (data.action?.type === 'tache_creee' || data.action?.type === 'tache_terminee') {
+        // Réactions aux tool actions (nouveau format) + legacy
+        const toolsDone = (data.actions || []).filter(a => a.ok)
+        const toolNames = toolsDone.map(a => a.tool)
+        const taskMutatingTools = ['creer_tache', 'creer_taches_lot', 'terminer_tache', 'supprimer_tache', 'modifier_tache', 'epingler_focus_jour']
+        const celebrationTools  = ['creer_tache', 'creer_taches_lot', 'terminer_tache']
+        if (toolNames.some(t => celebrationTools.includes(t)) || data.action?.type === 'tache_creee' || data.action?.type === 'tache_terminee') {
           confetti({ particleCount: 70, spread: 55, origin: { y: 0.65 }, colors: [accent, '#10b981', accent2] })
+        }
+        if (toolNames.some(t => taskMutatingTools.includes(t)) || data.action?.type === 'tache_creee' || data.action?.type === 'tache_terminee') {
           chargerTaches()
         }
         if (data.action?.type === 'redirect_tomorrow_builder')
@@ -561,7 +625,7 @@ export default function IAChat() {
     let placeholderIdx = null
     setMessages(p => {
       placeholderIdx = p.length
-      return [...p, { role: 'ia', content: '', streaming: true, coach_style: coachStyle }]
+      return [...p, { role: 'ia', content: '', streaming: true, coach_style: coachStyle, timestamp: Date.now() }]
     })
 
     try {
@@ -655,7 +719,7 @@ export default function IAChat() {
     if (tacheSelectionnee) setTacheSelectionnee(null)
     chargerHistorique(); chargerMemoire()
     setLoading(false)
-  }, [prompt, loading, modele, tacheSelectionnee, forceSearch, user?.id, accent, accent2, navigate, chargerTaches, chargerHistorique, chargerMemoire, chargerSuggestions, coachStyle, attachment])
+  }, [prompt, loading, tacheSelectionnee, forceSearch, user?.id, accent, accent2, navigate, chargerTaches, chargerHistorique, chargerMemoire, chargerSuggestions, coachStyle, attachment])
   // Note: messages retiré des dépendances — on utilise messagesRef à la place
 
   const creerTache = useCallback(async (titre) => {
@@ -685,8 +749,15 @@ export default function IAChat() {
 
   const handleForceSearch = useCallback(() => setForceSearch(true), [])
 
+  const togglePin = useCallback((msg) => {
+    setPinnedMessages(prev => {
+      const exists = prev.find(p => p.content === msg.content && p.timestamp === msg.timestamp)
+      if (exists) return prev.filter(p => !(p.content === msg.content && p.timestamp === msg.timestamp))
+      return [...prev, { content: msg.content, coach_style: msg.coach_style, timestamp: msg.timestamp || Date.now() }]
+    })
+  }, [])
+
   // ── Computed ──────────────────────────────────────────────────────
-  const modeleActuel  = useMemo(() => MODELES.find(m => m.id === modele) || MODELES[0], [modele])
   const tachesEnCours = useMemo(() => taches.filter(t => !t.terminee), [taches])
 
   // ══════════════════════════════════════════════════════════════════
@@ -767,31 +838,36 @@ export default function IAChat() {
 
         <div style={{ height: 1, background: T.bg3, margin: '16px 0' }} />
 
-        {/* Modèle */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>MODÈLE IA</div>
-        <motion.button className="glass" style={{ width: '100%', padding: '9px 12px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}
-          onClick={() => setShowModeles(!showModeles)}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{modeleActuel.nom}</div>
-            <div style={{ fontSize: 10, color: accent, marginTop: 1 }}>{modeleActuel.tag}</div>
+        {/* Insights — messages épinglés */}
+        <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Bookmark size={9} />INSIGHTS {pinnedMessages.length > 0 && <span style={{ background: `${accent}20`, color: accent, borderRadius: 99, padding: '1px 6px', fontSize: 8 }}>{pinnedMessages.length}</span>}
+        </div>
+        {pinnedMessages.length === 0 ? (
+          <div style={{ padding: '7px 10px', fontSize: 11, color: T.text2, fontStyle: 'italic', opacity: 0.6 }}>
+            Épingle un message IA pour le retrouver ici.
           </div>
-          <ChevronDown size={13} color={T.text2} style={{ transform: showModeles ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-        </motion.button>
-        <AnimatePresence>
-          {showModeles && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 8 }}>
-              {MODELES.filter(m => m.id !== modele).map(m => (
-                <motion.button key={m.id}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 9, background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: T.text2, cursor: 'pointer', fontSize: 12, textAlign: 'left', marginBottom: 4 }}
-                  onClick={() => { setModele(m.id); setShowModeles(false) }}
-                  whileHover={{ color: T.text, borderColor: `${accent}50`, background: `${accent}08` }}>
-                  <span style={{ fontWeight: 500 }}>{m.nom}</span>
-                  <span style={{ fontSize: 10, color: accent, marginLeft: 8 }}>{m.tag}</span>
-                </motion.button>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        ) : (
+          <div style={{ maxHeight: 160, overflowY: 'auto', marginBottom: 6 }}>
+            {pinnedMessages.slice().reverse().map((p, i) => (
+              <motion.div key={i}
+                style={{ padding: '7px 10px', borderRadius: 8, background: `${accent}08`, border: `1px solid ${accent}18`, marginBottom: 4, cursor: 'default' }}
+                whileHover={{ background: `${accent}12` }}>
+                <div style={{ fontSize: 10, color: T.text, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                  {p.content}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 5 }}>
+                  <span style={{ fontSize: 9, color: T.text2 }}>{new Date(p.timestamp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                  <motion.button
+                    onClick={() => togglePin(p)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, display: 'flex', padding: 0 }}
+                    whileHover={{ color: '#ef4444' }}>
+                    <X size={10} />
+                  </motion.button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <div style={{ height: 1, background: T.bg3, margin: '4px 0 16px' }} />
 
@@ -842,11 +918,14 @@ export default function IAChat() {
               <coach.Icon size={11} color={coach.color} strokeWidth={2.4} fill={coach.id === 'motivateur' ? coach.color : 'none'} />
               <span style={{ fontSize: 11, fontWeight: 700, color: coach.color, whiteSpace: 'nowrap', fontFamily: "'Clash Display', sans-serif" }}>{coach.nom} · {coach.tag}</span>
             </div>
-            <motion.button
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: forceSearch ? 'rgba(14,165,233,0.15)' : 'transparent', border: `1px solid ${forceSearch ? '#0ea5e9' : T.border}`, borderRadius: 99, color: forceSearch ? '#0ea5e9' : T.text2, cursor: 'pointer', fontSize: 11, fontWeight: forceSearch ? 700 : 400, whiteSpace: 'nowrap' }}
-              onClick={() => setForceSearch(!forceSearch)} whileHover={{ borderColor: '#0ea5e9', color: '#0ea5e9' }}>
-              <Globe size={10} />{!isMobile && 'Web'}{forceSearch && ' ON'}
-            </motion.button>
+            <AnimatePresence>
+              {forceSearch && (
+                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.35)', borderRadius: 99, color: '#0ea5e9', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  <Globe size={10} />Web ON
+                </motion.div>
+              )}
+            </AnimatePresence>
             {tacheSelectionnee && (
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', background: `${accent}12`, border: `1px solid ${accent}28`, borderRadius: 99 }}>
@@ -1010,6 +1089,8 @@ export default function IAChat() {
                   onEnvoyer={envoyer}
                   onCreerTache={creerTache}
                   onForceSearch={handleForceSearch}
+                  onPin={togglePin}
+                  isPinned={pinnedMessages.some(p => p.content === msg.content && p.timestamp === msg.timestamp)}
                   T={T}
                   coach={coach}
                 />
@@ -1077,13 +1158,13 @@ export default function IAChat() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
             {/* Bouton attache fichier */}
             <input type="file" ref={fileInputRef} style={{ display: 'none' }}
-              accept=".txt,.md,.markdown,.pdf,.png,.jpg,.jpeg,.webp,.gif"
+              accept=".txt,.md,.markdown,.pdf,.xlsx,.xls,.csv,.docx,.png,.jpg,.jpeg,.webp,.gif"
               onChange={e => { handleFileUpload(e.target.files?.[0]); e.target.value = '' }} />
             <motion.button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading || !!attachment}
               whileTap={{ scale: 0.92 }}
-              title="Joindre un fichier (PDF, image, txt)"
+              title="Joindre un fichier (PDF, Word, Excel, CSV, image, txt)"
               style={{
                 width: 50, height: 50,
                 background: attachment ? `${accent}18` : T.bg3,
@@ -1190,7 +1271,7 @@ export default function IAChat() {
             </motion.button>
           </div>
           <p style={{ fontSize: 10, color: T.text2, marginTop: 8, letterSpacing: '0.3px' }}>
-            Entrée pour envoyer · Shift+Entrée nouvelle ligne · Globe pour la recherche web
+            Entrée pour envoyer · Shift+Entrée nouvelle ligne · /web pour forcer la recherche
           </p>
         </div>
       </main>

@@ -2887,6 +2887,10 @@ IMPORTANT : tu réponds comme {coach['nom']}, pas comme un assistant générique
 
     base_identity = f"Tu es {COACH_STYLES[coach_style]['nom']}, le coach IA de {user_row['nom']} sur GetShift." if coach_style and coach_style in COACH_STYLES else f"Tu es GetShift AI — l'assistant IA de {user_row['nom']} sur GetShift."
 
+    now = datetime.now()
+    date_str = now.strftime("%A %d %B %Y")
+    heure_str = now.strftime("%H:%M")
+
     return f"""{persona_block}{base_identity}
 
 Tu n'es pas un assistant générique. Tu es le spécialiste absolu de la productivité personnelle. Tu combines :
@@ -2894,6 +2898,15 @@ Tu n'es pas un assistant générique. Tu es le spécialiste absolu de la product
 - La précision d'un analyste comportemental qui lit les patterns
 - L'intelligence d'un assistant qui connaît vraiment {user_row['nom']}
 - L'accès au web temps réel via Tavily Search
+
+━━━ DATE & HEURE ACTUELLES ━━━
+Aujourd'hui : {date_str} | Heure : {heure_str}
+Tu connais la date et l'heure exactes. Si on te demande "on est quel jour ?" ou "quelle heure est-il ?", réponds avec ces valeurs. Ne jamais dire que tu ne sais pas.
+
+━━━ À PROPOS DE GETSHIFT ━━━
+GetShift est une application SaaS de productivité IA, fondée par Hamdaane CHITOU (étudiant en data science).
+Mission : aider les étudiants et travailleurs à performer davantage grâce à l'IA. Différenciateurs clés : Task DNA (scoring IA), Bin Packing AI, Coach IA (Alex/Max/Nova), gamification (points/niveaux/streak), sync Google Calendar, vues Kanban/Gantt/Calendrier.
+Si l'utilisateur te demande qui a créé GetShift, qui est le fondateur, ou des infos sur l'app, réponds avec ces informations.
 
 ━━━ PROFIL ━━━
 Nom : {user_row['nom']} | Niveau : {user_row.get('niveau', 1)} | Points : {user_row.get('points', 0)} | Streak : {user_row.get('streak', 0)}j
@@ -2916,8 +2929,371 @@ Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours
 7. LANGUE — Français par défaut
 8. LONGUEUR — Question simple = réponse percutante ; complexe = analyse complète mais sans bavardage
 9. PERSONA — Si tu joues un coach (Alex/Max/Nova), garde son ton dans CHAQUE phrase, pas seulement la première
+10. DATE — Tu connais toujours la date et l'heure actuelles (voir bloc DATE & HEURE ci-dessus). Ne jamais prétendre l'ignorer.
 
 Prouve à chaque réponse que tu es le meilleur assistant de productivité qui existe."""
+
+# ════════════════════════════════════════════════════════════════════
+# TOOL USE / FUNCTION CALLING — IA agent qui peut appeler des fonctions
+# ════════════════════════════════════════════════════════════════════
+
+GETSHIFT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "creer_tache",
+            "description": "Crée une nouvelle tâche dans la liste de l'utilisateur. À utiliser dès que l'utilisateur veut créer/ajouter une tâche, même implicitement.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "titre": {"type": "string", "description": "Titre de la tâche, court et actionnable"},
+                    "priorite": {"type": "string", "enum": ["haute", "moyenne", "basse"], "description": "Priorité (déduite du contexte)"},
+                    "deadline_iso": {"type": "string", "description": "Deadline au format ISO 8601 (ex 2026-05-12T15:00:00) ou null si non précisée"},
+                    "epingler_focus_jour": {"type": "boolean", "description": "Si true, épingle au focus du jour (max 3 par jour)"}
+                },
+                "required": ["titre"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "creer_taches_lot",
+            "description": "Crée PLUSIEURS tâches d'un coup. À utiliser quand l'utilisateur décrit plusieurs tâches dans un même message.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "taches": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "titre": {"type": "string"},
+                                "priorite": {"type": "string", "enum": ["haute", "moyenne", "basse"]},
+                                "deadline_iso": {"type": "string"}
+                            },
+                            "required": ["titre"]
+                        }
+                    }
+                },
+                "required": ["taches"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "terminer_tache",
+            "description": "Marque une tâche comme terminée. Utilise tache_id si connu, sinon recherche par mots-clés.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tache_id": {"type": "integer", "description": "ID de la tâche (préférer si dispo)"},
+                    "recherche": {"type": "string", "description": "Mots-clés pour identifier la tâche si pas d'ID"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "supprimer_tache",
+            "description": "Supprime définitivement une tâche.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tache_id": {"type": "integer"},
+                    "recherche": {"type": "string"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "modifier_tache",
+            "description": "Modifie le titre, la priorité ou la deadline d'une tâche existante.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tache_id": {"type": "integer"},
+                    "recherche": {"type": "string", "description": "Si pas d'ID, mots-clés pour la trouver"},
+                    "nouveau_titre": {"type": "string"},
+                    "nouvelle_priorite": {"type": "string", "enum": ["haute", "moyenne", "basse"]},
+                    "nouvelle_deadline_iso": {"type": "string"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "epingler_focus_jour",
+            "description": "Épingle 1 à 3 tâches au Focus du jour (les priorités du jour).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tache_ids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Liste d'IDs (max 3 au total déjà épinglés)"
+                    }
+                },
+                "required": ["tache_ids"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "lister_taches",
+            "description": "Liste les tâches de l'utilisateur avec filtres optionnels.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filtre": {"type": "string", "enum": ["actives", "terminees", "haute", "en_retard", "focus_jour", "toutes"], "description": "Filtre à appliquer"},
+                    "limite": {"type": "integer", "description": "Nombre max à retourner (défaut 10)"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "obtenir_stats",
+            "description": "Récupère les stats de productivité (niveau, points, streak, taux, points semaine).",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "analyser_task_dna",
+            "description": "Analyse Task DNA d'une tâche : score de viabilité 0-100 + conseils + facteurs succès/risque.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tache_id": {"type": "integer"},
+                    "recherche": {"type": "string"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "rechercher_web",
+            "description": "Recherche web temps réel via Tavily. À utiliser pour info actuelle, dates récentes, news.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "requete": {"type": "string"}
+                },
+                "required": ["requete"]
+            }
+        }
+    },
+]
+
+
+def trouver_tache_par_recherche(curseur, user_id: int, recherche: str):
+    """Trouve la première tâche active matchant les mots-clés (au moins 1 mot commun)."""
+    if not recherche:
+        return None
+    mots_recherche = set(recherche.lower().split())
+    curseur.execute("SELECT id, titre, priorite, deadline FROM taches WHERE user_id=%s AND terminee=0 ORDER BY created_at DESC LIMIT 50", (user_id,))
+    for t in curseur.fetchall():
+        mots_titre = set((t['titre'] or '').lower().split())
+        if len(mots_recherche & mots_titre) >= 1:
+            return t
+    return None
+
+
+def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
+    """Exécute un tool appelé par l'IA et retourne le résultat structuré."""
+    try:
+        db = connecter()
+        cur = db.cursor(dictionary=True)
+        result = {"tool": nom_fonction, "ok": True}
+
+        if nom_fonction == "creer_tache":
+            titre = (arguments.get('titre') or '').strip()
+            if not titre:
+                db.close()
+                return {"tool": nom_fonction, "ok": False, "erreur": "Titre vide"}
+            priorite = arguments.get('priorite', 'moyenne')
+            deadline = arguments.get('deadline_iso')
+            focus = arguments.get('epingler_focus_jour', False)
+            cur.execute("INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)", (titre, priorite, deadline, user_id))
+            db.commit()
+            new_id = cur.lastrowid
+            if focus:
+                # vérifie qu'on a < 3
+                cur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND focus_date=CURDATE() AND terminee=0", (user_id,))
+                nb = (cur.fetchone() or {}).get('nb', 0)
+                if nb < 3:
+                    cur.execute("UPDATE taches SET focus_date=CURDATE() WHERE id=%s", (new_id,))
+                    db.commit()
+            result.update({"id": new_id, "titre": titre, "priorite": priorite, "deadline": deadline, "focus": focus})
+
+        elif nom_fonction == "creer_taches_lot":
+            taches = arguments.get('taches', [])[:10]
+            crees = []
+            for t in taches:
+                titre = (t.get('titre') or '').strip()
+                if not titre: continue
+                cur.execute("INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)",
+                           (titre, t.get('priorite', 'moyenne'), t.get('deadline_iso'), user_id))
+                crees.append({"id": cur.lastrowid, "titre": titre, "priorite": t.get('priorite', 'moyenne'), "deadline": t.get('deadline_iso')})
+            db.commit()
+            result.update({"crees": crees, "nb": len(crees)})
+
+        elif nom_fonction == "terminer_tache":
+            tache_id = arguments.get('tache_id')
+            if not tache_id:
+                t = trouver_tache_par_recherche(cur, user_id, arguments.get('recherche', ''))
+                if not t:
+                    db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche introuvable"}
+                tache_id = t['id']; titre = t['titre']
+            else:
+                cur.execute("SELECT titre FROM taches WHERE id=%s AND user_id=%s", (tache_id, user_id))
+                row = cur.fetchone()
+                if not row: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche non trouvée"}
+                titre = row['titre']
+            cur.execute("UPDATE taches SET terminee=TRUE WHERE id=%s AND user_id=%s", (tache_id, user_id))
+            cur.execute("UPDATE users SET points = COALESCE(points,0) + 20 WHERE id=%s", (user_id,))
+            db.commit()
+            result.update({"id": tache_id, "titre": titre})
+
+        elif nom_fonction == "supprimer_tache":
+            tache_id = arguments.get('tache_id')
+            if not tache_id:
+                t = trouver_tache_par_recherche(cur, user_id, arguments.get('recherche', ''))
+                if not t: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche introuvable"}
+                tache_id = t['id']; titre = t['titre']
+            else:
+                cur.execute("SELECT titre FROM taches WHERE id=%s AND user_id=%s", (tache_id, user_id))
+                row = cur.fetchone()
+                if not row: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche non trouvée"}
+                titre = row['titre']
+            cur.execute("DELETE FROM taches WHERE id=%s AND user_id=%s", (tache_id, user_id))
+            db.commit()
+            result.update({"id": tache_id, "titre": titre})
+
+        elif nom_fonction == "modifier_tache":
+            tache_id = arguments.get('tache_id')
+            if not tache_id:
+                t = trouver_tache_par_recherche(cur, user_id, arguments.get('recherche', ''))
+                if not t: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche introuvable"}
+                tache_id = t['id']
+            updates, params = [], []
+            if arguments.get('nouveau_titre'):    updates.append("titre=%s");    params.append(arguments['nouveau_titre'])
+            if arguments.get('nouvelle_priorite'):updates.append("priorite=%s"); params.append(arguments['nouvelle_priorite'])
+            if arguments.get('nouvelle_deadline_iso'): updates.append("deadline=%s"); params.append(arguments['nouvelle_deadline_iso'])
+            if not updates:
+                db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Aucune modification précisée"}
+            params.extend([tache_id, user_id])
+            cur.execute(f"UPDATE taches SET {', '.join(updates)} WHERE id=%s AND user_id=%s", tuple(params))
+            db.commit()
+            cur.execute("SELECT titre, priorite, deadline FROM taches WHERE id=%s", (tache_id,))
+            new = cur.fetchone() or {}
+            if new.get('deadline'): new['deadline'] = str(new['deadline'])
+            result.update({"id": tache_id, "modifications": new})
+
+        elif nom_fonction == "epingler_focus_jour":
+            ids = (arguments.get('tache_ids') or [])[:3]
+            cur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND focus_date=CURDATE() AND terminee=0", (user_id,))
+            deja = (cur.fetchone() or {}).get('nb', 0)
+            disponible = max(0, 3 - deja)
+            ids = ids[:disponible]
+            for tid in ids:
+                cur.execute("UPDATE taches SET focus_date=CURDATE() WHERE id=%s AND user_id=%s AND terminee=0", (tid, user_id))
+            db.commit()
+            result.update({"epinglees": ids, "nb": len(ids)})
+
+        elif nom_fonction == "lister_taches":
+            filtre = arguments.get('filtre', 'actives')
+            limite = min(arguments.get('limite', 10), 30)
+            where = "user_id=%s"
+            if filtre == "actives":     where += " AND terminee=0"
+            elif filtre == "terminees": where += " AND terminee=1"
+            elif filtre == "haute":     where += " AND terminee=0 AND priorite='haute'"
+            elif filtre == "en_retard": where += " AND terminee=0 AND deadline < NOW()"
+            elif filtre == "focus_jour":where += " AND focus_date=CURDATE() AND terminee=0"
+            cur.execute(f"SELECT id, titre, priorite, deadline, terminee, focus_date FROM taches WHERE {where} ORDER BY created_at DESC LIMIT %s", (user_id, limite))
+            rows = cur.fetchall()
+            for r in rows:
+                if r.get('deadline'): r['deadline'] = str(r['deadline'])
+                if r.get('focus_date'): r['focus_date'] = str(r['focus_date'])
+            result.update({"filtre": filtre, "taches": rows, "nb": len(rows)})
+
+        elif nom_fonction == "obtenir_stats":
+            cur.execute("SELECT points, niveau, streak FROM users WHERE id=%s", (user_id,))
+            u = cur.fetchone() or {}
+            cur.execute("""SELECT
+                COUNT(CASE WHEN terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
+                COUNT(CASE WHEN terminee=1 THEN 1 END) as terminees_total,
+                COUNT(*) as total,
+                COUNT(CASE WHEN terminee=0 AND deadline < NOW() THEN 1 END) as en_retard
+                FROM taches WHERE user_id=%s""", (user_id,))
+            cnt = cur.fetchone() or {}
+            result.update({
+                "points": u.get('points') or 0, "niveau": u.get('niveau') or 1, "streak": u.get('streak') or 0,
+                "terminees_semaine": cnt.get('terminees_semaine') or 0,
+                "terminees_total": cnt.get('terminees_total') or 0,
+                "total": cnt.get('total') or 0,
+                "en_retard": cnt.get('en_retard') or 0,
+                "points_semaine": (cnt.get('terminees_semaine') or 0) * 10,
+            })
+
+        elif nom_fonction == "analyser_task_dna":
+            tache_id = arguments.get('tache_id')
+            if not tache_id:
+                t = trouver_tache_par_recherche(cur, user_id, arguments.get('recherche', ''))
+                if not t: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche introuvable"}
+                tache_id = t['id']; titre = t['titre']; priorite = t['priorite']
+            else:
+                cur.execute("SELECT titre, priorite FROM taches WHERE id=%s AND user_id=%s", (tache_id, user_id))
+                row = cur.fetchone()
+                if not row: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche non trouvée"}
+                titre = row['titre']; priorite = row['priorite']
+            # Stats utilisateur
+            cur.execute("SELECT COUNT(*) as total, SUM(CASE WHEN terminee=1 THEN 1 ELSE 0 END) as done FROM taches WHERE user_id=%s", (user_id,))
+            s = cur.fetchone() or {}
+            taux = round((s.get('done') or 0) / max(s.get('total') or 1, 1) * 100)
+            duree = estimer_duree_tache(titre, priorite or 'moyenne') if 'estimer_duree_tache' in globals() else 30
+            prompt = f"Analyse cette tache: \"{titre}\" priorite {priorite}. Taux user {taux}%. Reponds JSON: {{\"score_viabilite\":0-100, \"conseil_principal\":\"\", \"facteurs_succes\":[], \"facteurs_risque\":[]}}"
+            try:
+                resp = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role":"user","content":prompt}], max_tokens=500, temperature=0.5)
+                contenu = resp.choices[0].message.content.strip()
+                if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
+                elif '```' in contenu:    contenu = contenu.split('```')[1].split('```')[0].strip()
+                dna = json.loads(contenu)
+            except Exception as e:
+                dna = {"score_viabilite": 60, "conseil_principal": "DNA indisponible", "facteurs_succes": [], "facteurs_risque": []}
+            result.update({"id": tache_id, "titre": titre, "dna": dna})
+
+        elif nom_fonction == "rechercher_web":
+            requete = arguments.get('requete', '').strip()
+            if not requete: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Requête vide"}
+            results_web = web_search_tavily(requete, max_results=5)
+            result.update({"requete": requete, "results": results_web, "nb": len(results_web)})
+
+        else:
+            db.close()
+            return {"tool": nom_fonction, "ok": False, "erreur": f"Outil inconnu : {nom_fonction}"}
+
+        cur.close(); db.close()
+        return result
+    except Exception as e:
+        try: db.close()
+        except: pass
+        import traceback
+        return {"tool": nom_fonction, "ok": False, "erreur": str(e)[:200], "trace": traceback.format_exc()[:300]}
+
 
 @app.route('/ia/assistant', methods=['POST'])
 def assistant_augmente():
@@ -2985,39 +3361,8 @@ def assistant_augmente():
         # 3. Mémoire
         memoire = charger_memoire(user_id)
 
-        # 4. Intention
+        # 4. Intention (kept pour debug/UI, mais les ACTIONS sont déléguées au tool calling)
         intention = detecter_intention(message)
-
-        # Action : créer tâche
-        if intention == "action_creer":
-            titre = extraire_titre_tache(message)
-            curseur.execute("INSERT INTO taches (titre, priorite, user_id) VALUES (%s, 'moyenne', %s)", (titre, user_id))
-            db.commit()
-            tache_creee_id = curseur.lastrowid
-            db.close()
-            threading.Thread(target=extraire_et_sauvegarder_memoire, args=(user_id, message_raw, f"Tâche créée: {titre}"), daemon=True).start()
-            return jsonify({"reponse": f"## Tâche créée\n\n**\"{titre}\"** a été ajoutée à ta liste avec priorité moyenne.\n\nModifie-la depuis ton dashboard si nécessaire.", "intention": "action_creer", "action": {"type": "tache_creee", "id": tache_creee_id, "titre": titre}, "abrev_expandees": abrev_expandees, "message_original": message_raw, "modele": modele})
-
-        # Action : terminer tâche
-        if intention == "action_terminer":
-            taches_actives = [t for t in taches if not t['terminee']]
-            tache_cible = None
-            if tache_id:
-                tache_cible = next((t for t in taches_actives if t['id'] == tache_id), None)
-            else:
-                for t in taches_actives:
-                    if len(set(t['titre'].lower().split()) & set(message.lower().split())) >= 2:
-                        tache_cible = t; break
-            if tache_cible:
-                curseur.execute("UPDATE taches SET terminee=TRUE WHERE id=%s", (tache_cible['id'],))
-                db.commit(); db.close()
-                return jsonify({"reponse": f"## Tâche terminée !\n\n**\"{tache_cible['titre']}\"** est complétée. Excellent travail !\n\nQuel est ton prochain objectif ?", "intention": "action_terminer", "action": {"type": "tache_terminee", "id": tache_cible['id'], "titre": tache_cible['titre']}, "abrev_expandees": abrev_expandees, "modele": modele})
-            intention = "chat"
-
-        # Action : planifier
-        if intention == "action_planifier":
-            db.close()
-            return jsonify({"reponse": "## Tomorrow Builder\n\nJe te redirige vers le planificateur intelligent...\n\nIl va analyser tes tâches et ton niveau d'énergie pour construire le planning optimal de demain.", "intention": "action_planifier", "action": {"type": "redirect_tomorrow_builder"}, "abrev_expandees": abrev_expandees, "modele": modele})
 
         db.close()
 
@@ -3051,9 +3396,52 @@ def assistant_augmente():
             user_content = f"[FICHIER UPLOADÉ — voici son contenu :]\n\n{attachment_text}\n\n[FIN DU FICHIER]\n\n{message}"
         messages_api.append({"role": "user", "content": user_content})
 
-        # 8. Appel Groq
-        completion = groq_client.chat.completions.create(model=modele, messages=messages_api, max_tokens=2000, temperature=0.72)
-        reponse = completion.choices[0].message.content.strip()
+        # 8. Appel Groq AVEC TOOL USE — l'IA peut appeler nos fonctions GetShift
+        # Loop : modèle → tool_calls? → exécuter → re-call avec résultats → ... jusqu'à done
+        actions_executees = []
+        max_tours = 5  # garde-fou anti-loop infini
+        tour = 0
+        while tour < max_tours:
+            tour += 1
+            completion = groq_client.chat.completions.create(
+                model=modele, messages=messages_api,
+                tools=GETSHIFT_TOOLS, tool_choice="auto",
+                max_tokens=2000, temperature=0.6,
+            )
+            choice = completion.choices[0]
+            msg = choice.message
+
+            # Si l'IA appelle des outils → exécuter et re-prompter
+            if msg.tool_calls:
+                # Ajouter le message assistant (avec ses tool_calls) à l'historique
+                messages_api.append({
+                    "role": "assistant",
+                    "content": msg.content or "",
+                    "tool_calls": [
+                        {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
+                        for tc in msg.tool_calls
+                    ]
+                })
+                # Exécuter chaque tool call
+                for tc in msg.tool_calls:
+                    fn_name = tc.function.name
+                    try: fn_args = json.loads(tc.function.arguments or '{}')
+                    except: fn_args = {}
+                    res = executer_outil(fn_name, fn_args, user_id)
+                    actions_executees.append(res)
+                    # Renvoyer le résultat au modèle
+                    messages_api.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": json.dumps(res, default=str)[:3000],
+                    })
+                continue  # Boucle pour qu'il termine sa réponse
+
+            # Pas de tool call → réponse finale
+            reponse = (msg.content or "").strip()
+            break
+        else:
+            reponse = "(L'IA a effectué plusieurs actions mais n'a pas pu finaliser la réponse texte.)"
 
         # 9. Historique + mémoire
         try:
@@ -3066,7 +3454,27 @@ def assistant_augmente():
 
         threading.Thread(target=extraire_et_sauvegarder_memoire, args=(user_id, message_raw, reponse), daemon=True).start()
 
-        return jsonify({"reponse": reponse, "intention": "search" if (faire_search or force_search) else "chat", "action": None, "abrev_expandees": abrev_expandees, "message_original": message_raw, "message_expande": message if abrev_expandees else None, "search_results": search_results if search_results else None, "web_searched": bool(search_results), "modele": modele})
+        # Détecter intention principale à partir des actions
+        intention_finale = "chat"
+        if any(a.get('tool') == 'creer_tache' or a.get('tool') == 'creer_taches_lot' for a in actions_executees):
+            intention_finale = "action_creer"
+        elif any(a.get('tool') == 'terminer_tache' for a in actions_executees):
+            intention_finale = "action_terminer"
+        elif any(a.get('tool') == 'rechercher_web' for a in actions_executees) or faire_search or force_search:
+            intention_finale = "search"
+
+        return jsonify({
+            "reponse": reponse,
+            "intention": intention_finale,
+            "action": None,
+            "actions": actions_executees,  # NOUVEAU : liste de toutes les actions tool exécutées
+            "abrev_expandees": abrev_expandees,
+            "message_original": message_raw,
+            "message_expande": message if abrev_expandees else None,
+            "search_results": search_results if search_results else None,
+            "web_searched": bool(search_results) or any(a.get('tool') == 'rechercher_web' for a in actions_executees),
+            "modele": modele,
+        })
 
     except Exception as e:
         import traceback
@@ -3088,8 +3496,9 @@ def assistant_stream():
         message_raw  = data.get('message', '').strip()
         modele       = data.get('modele', 'llama-3.3-70b-versatile')
         historique   = data.get('historique', [])
-        force_search = data.get('force_search', False)
-        coach_style  = data.get('coach_style')
+        force_search    = data.get('force_search', False)
+        coach_style     = data.get('coach_style')
+        attachment_text = data.get('attachment_text', '')
 
         if not message_raw or not user_id:
             return jsonify({"erreur": "user_id et message requis"}), 400
@@ -3397,6 +3806,38 @@ def ia_upload_extract():
                 except Exception:
                     return jsonify({"erreur": "PDF non supportable côté serveur (lib manquante)"}), 500
 
+        # ── EXCEL ─────────────────────────────────────────────────
+        elif filename.endswith(('.xlsx', '.xls')):
+            try:
+                import openpyxl, io
+                wb = openpyxl.load_workbook(io.BytesIO(f.read()), read_only=True, data_only=True)
+                lignes = []
+                for sheet in wb.worksheets:
+                    lignes.append(f"=== Feuille : {sheet.title} ===")
+                    for row in sheet.iter_rows(values_only=True):
+                        if any(cell is not None for cell in row):
+                            lignes.append("\t".join("" if cell is None else str(cell) for cell in row))
+                contenu_extrait = "\n".join(lignes)
+            except Exception as e:
+                return jsonify({"erreur": f"Lecture Excel impossible : {str(e)[:200]}"}), 500
+
+        # ── CSV ────────────────────────────────────────────────────
+        elif filename.endswith('.csv'):
+            import csv, io as sio
+            text = f.read().decode('utf-8', errors='replace')
+            reader = csv.reader(sio.StringIO(text))
+            contenu_extrait = "\n".join("\t".join(row) for row in reader)
+
+        # ── WORD ──────────────────────────────────────────────────
+        elif filename.endswith('.docx'):
+            try:
+                from docx import Document
+                import io
+                doc = Document(io.BytesIO(f.read()))
+                contenu_extrait = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+            except Exception as e:
+                return jsonify({"erreur": f"Lecture Word impossible : {str(e)[:200]}"}), 500
+
         # ── IMAGE → Groq Vision ───────────────────────────────────
         elif filename.endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif')):
             try:
@@ -3421,7 +3862,8 @@ def ia_upload_extract():
             except Exception as e:
                 return jsonify({"erreur": f"Vision IA indisponible : {str(e)[:200]}"}), 500
         else:
-            return jsonify({"erreur": f"Type non supporté ({filename.split('.')[-1] if '.' in filename else 'inconnu'})"}), 400
+            ext = filename.rsplit('.', 1)[-1] if '.' in filename else 'inconnu'
+            return jsonify({"erreur": f"Type non supporté (.{ext}). Formats acceptés : PDF, Word, Excel, CSV, TXT, MD, images."}), 400
 
         # Limiter la taille
         if len(contenu_extrait) > 12000:
