@@ -19,6 +19,7 @@ import {
 
 import CalendarGrid from './CalendarGrid'
 import KanbanColumn from './KanbanColumn'
+import { FocusBar, InsightCard } from './PlanificationInsights'
 import {
   calcPriorityScore, binPackTasks, getGanttDays,
   minsToTime, timeToMins, pColor, pBg,
@@ -769,6 +770,24 @@ export default function Planification() {
             ))}
           </div>
         </div>
+
+        {/* ─── FOCUS BAR (créneau en cours) + INSIGHT IA (proactif) ─── */}
+        <FocusBar
+          planification={planification}
+          taches={taches}
+          T={T}
+          isMobile={isMobile}
+          onComplete={terminerTache}
+        />
+        <InsightCard
+          taches={taches}
+          planification={planification}
+          T={T}
+          isMobile={isMobile}
+          heuresDispo={heuresDispo}
+          onPlanIA={planifierAvecIA}
+          loadingIA={loadingIA}
+        />
 
         {/* Stats — seulement en vue Liste */}
         {vue === 'liste' && <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 0 }}>
