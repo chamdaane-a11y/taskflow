@@ -14,7 +14,8 @@ import {
   LayoutDashboard, Bot, BarChart2, Calendar, HelpCircle, Layers,
   LogOut, Crown, Share2, Link2, UserPlus, MoreHorizontal, Clock,
   PanelLeftClose, PanelLeftOpen, ChevronRight, ChevronUp, Star, Settings, User,
-  Sparkles, Flag, Target, CheckSquare, AlertTriangle, Activity, GripVertical
+  Sparkles, Flag, Target, CheckSquare, AlertTriangle, Activity, GripVertical,
+  ShieldCheck, ShieldX, UserMinus, Edit3, Shield
 } from 'lucide-react'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -292,11 +293,28 @@ function ModaleTache({ T, membres, tache, user, onFermer, onSauvegarder }) {
   )
 }
 
-// ===== PANNEAU COMMENTAIRES =====
+// Highlight @mentions dans un texte
+function HighlightMentions({ texte, T }) {
+  const parts = texte.split(/(@\w[\w\s]*?)(?=\s|$|@)/g)
+  return (
+    <span>
+      {parts.map((p, i) =>
+        p.startsWith('@') ? (
+          <span key={i} style={{ color: T.accent, fontWeight: 700, background: `${T.accent}18`, borderRadius: 4, padding: '0 3px' }}>{p}</span>
+        ) : p
+      )}
+    </span>
+  )
+}
+
+// ===== PANNEAU COMMENTAIRES avec @mentions =====
 function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
   const [commentaires, setCommentaires] = useState([])
   const [texte, setTexte] = useState('')
+  const [mentionQuery, setMentionQuery] = useState(null)
+  const [mentionIdx, setMentionIdx] = useState(0)
   const endRef = useRef(null)
+  const textareaRef = useRef(null)
 
   useEffect(() => { charger() }, [tache.id])
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [commentaires])
@@ -304,16 +322,52 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
   const charger = async () => {
     try { const r = await axios.get(`${API}/equipes/taches/${tache.id}/commentaires`); setCommentaires(r.data) } catch {}
   }
+
   const envoyer = async () => {
     if (!texte.trim()) return
     try {
       await axios.post(`${API}/equipes/taches/commentaires`, {
-        tache_id: tache.id, user_id: user.id, contenu: texte,
-        equipe_id: tache.equipe_id
+        tache_id: tache.id, user_id: user.id, contenu: texte, equipe_id: tache.equipe_id
       })
-      setTexte(''); charger()
+      setTexte(''); setMentionQuery(null); charger()
     } catch {}
   }
+
+  const handleTexteChange = (e) => {
+    const val = e.target.value
+    setTexte(val)
+    const cursor = e.target.selectionStart
+    const before = val.slice(0, cursor)
+    const match = before.match(/@(\w[\w ]*)$/)
+    if (match) { setMentionQuery(match[1]); setMentionIdx(0) }
+    else setMentionQuery(null)
+  }
+
+  const mentionsSuggerees = mentionQuery !== null
+    ? membres.filter(m => m.id !== user.id && m.nom.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 5)
+    : []
+
+  const insererMention = (membre) => {
+    const ta = textareaRef.current
+    const cursor = ta.selectionStart
+    const before = texte.slice(0, cursor)
+    const after = texte.slice(cursor)
+    const newBefore = before.replace(/@(\w[\w ]*)$/, `@${membre.nom} `)
+    setTexte(newBefore + after)
+    setMentionQuery(null)
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(newBefore.length, newBefore.length) }, 0)
+  }
+
+  const handleKeyDown = (e) => {
+    if (mentionsSuggerees.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIdx(i => Math.min(i + 1, mentionsSuggerees.length - 1)); return }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIdx(i => Math.max(i - 1, 0)); return }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insererMention(mentionsSuggerees[mentionIdx]); return }
+      if (e.key === 'Escape') { setMentionQuery(null); return }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer() }
+  }
+
   const assignee = membres.find(m => m.id === tache.assignee_id)
   const col = COLONNES.find(c => c.id === tache.statut)
 
@@ -345,11 +399,12 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
           </div>
         )}
       </div>
+
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {commentaires.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 48 }}>
             <MessageCircle size={26} color={T.border} strokeWidth={1.2} style={{ margin: '0 auto 10px', display: 'block' }} />
-            <p style={{ fontSize: 12, color: T.text2 }}>Aucun commentaire.</p>
+            <p style={{ fontSize: 12, color: T.text2 }}>Aucun commentaire. Tape @ pour mentionner quelqu'un.</p>
           </div>
         ) : commentaires.map(c => (
           <div key={c.id} style={{ display: 'flex', gap: 10 }}>
@@ -361,17 +416,43 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
                 <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{c.nom}</span>
                 <span style={{ fontSize: 10, color: T.text2 }}>{new Date(c.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-              <div style={{ padding: '9px 12px', background: T.bg3, borderRadius: '4px 12px 12px 12px', fontSize: 13, color: T.text, lineHeight: 1.55 }}>{c.contenu}</div>
+              <div style={{ padding: '9px 12px', background: T.bg3, borderRadius: '4px 12px 12px 12px', fontSize: 13, color: T.text, lineHeight: 1.55 }}>
+                <HighlightMentions texte={c.contenu} T={T} />
+              </div>
             </div>
           </div>
         ))}
         <div ref={endRef} />
       </div>
+
       <div style={{ padding: '12px 16px 20px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+        {/* Popup @mentions */}
+        <AnimatePresence>
+          {mentionsSuggerees.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, padding: '4px', marginBottom: 8, boxShadow: '0 -8px 24px rgba(0,0,0,0.2)' }}>
+              {mentionsSuggerees.map((m, i) => (
+                <motion.div key={m.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: i === mentionIdx ? `${T.accent}15` : 'transparent' }}
+                  onClick={() => insererMention(m)}
+                  onMouseEnter={() => setMentionIdx(i)}>
+                  <div style={{ width: 22, height: 22, borderRadius: 7, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent, flexShrink: 0 }}>
+                    {m.nom.charAt(0).toUpperCase()}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: i === mentionIdx ? T.accent : T.text }}>{m.nom}</span>
+                  {m.role === 'admin' && <Crown size={10} color={T.accent} style={{ marginLeft: 'auto' }} />}
+                </motion.div>
+              ))}
+              <div style={{ padding: '3px 10px 4px', fontSize: 10, color: T.text2 }}>↑↓ naviguer · Enter sélectionner · Esc annuler</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <textarea style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
-            placeholder="Écrire un commentaire…" value={texte} onChange={e => setTexte(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer() } }} rows={1} />
+          <textarea ref={textareaRef}
+            style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
+            placeholder="Écrire un commentaire… (@ pour mentionner)" value={texte}
+            onChange={handleTexteChange} onKeyDown={handleKeyDown} rows={1} />
           <motion.button style={{ width: 40, height: 40, borderRadius: 11, background: texte.trim() ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg3, border: `1px solid ${texte.trim() ? 'transparent' : T.border}`, color: texte.trim() ? 'white' : T.text2, cursor: texte.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}
             onClick={envoyer} whileTap={texte.trim() ? { scale: 0.95 } : {}}>
             <Send size={15} />
@@ -477,6 +558,160 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
   )
 }
 
+// ===== DRAWER GESTION ÉQUIPE (admin) =====
+function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, onMembreExclu, onRoleChange }) {
+  const [nomEdit, setNomEdit] = useState(equipe.nom)
+  const [editingNom, setEditingNom] = useState(false)
+  const [confirmKick, setConfirmKick] = useState(null)
+  const [loadingAction, setLoadingAction] = useState(null)
+
+  const renommer = async () => {
+    if (!nomEdit.trim() || nomEdit === equipe.nom) { setEditingNom(false); return }
+    setLoadingAction('nom')
+    try {
+      await axios.patch(`${API}/equipes/${equipe.id}/nom`, { user_id: user.id, nom: nomEdit.trim() })
+      onEquipeRenommee(nomEdit.trim())
+      setEditingNom(false)
+    } catch {}
+    setLoadingAction(null)
+  }
+
+  const exclure = async (membreId) => {
+    setLoadingAction('kick-' + membreId)
+    try {
+      await axios.delete(`${API}/equipes/${equipe.id}/membres/${membreId}`, { data: { user_id: user.id } })
+      onMembreExclu(membreId)
+      setConfirmKick(null)
+    } catch {}
+    setLoadingAction(null)
+  }
+
+  const changerRole = async (membreId, nouveauRole) => {
+    setLoadingAction('role-' + membreId)
+    try {
+      await axios.patch(`${API}/equipes/${equipe.id}/membres/${membreId}/role`, { user_id: user.id, role: nouveauRole })
+      onRoleChange(membreId, nouveauRole)
+    } catch {}
+    setLoadingAction(null)
+  }
+
+  return (
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
+      initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
+
+      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Shield size={16} color={T.accent} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Gérer l'équipe</h3>
+            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>Paramètres admin</p>
+          </div>
+        </div>
+        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
+          <X size={13} />
+        </motion.button>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+        {/* Renommer l'équipe */}
+        <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.3, marginBottom: 10 }}>NOM DE L'ÉQUIPE</p>
+        {editingNom ? (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+            <input style={{ flex: 1, padding: '9px 12px', background: T.bg3, border: `1px solid ${T.accent}50`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none' }}
+              value={nomEdit} onChange={e => setNomEdit(e.target.value)} autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') renommer(); if (e.key === 'Escape') setEditingNom(false) }} />
+            <motion.button style={{ padding: '9px 14px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 10, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: loadingAction === 'nom' ? 0.7 : 1 }}
+              onClick={renommer} whileTap={{ scale: 0.97 }}>
+              {loadingAction === 'nom' ? '…' : <Check size={14} />}
+            </motion.button>
+            <motion.button style={{ padding: '9px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 12, cursor: 'pointer' }}
+              onClick={() => { setEditingNom(false); setNomEdit(equipe.nom) }}>
+              <X size={14} />
+            </motion.button>
+          </div>
+        ) : (
+          <motion.div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, marginBottom: 24, cursor: 'pointer' }}
+            onClick={() => setEditingNom(true)} whileHover={{ borderColor: T.accent }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{nomEdit}</span>
+            <Edit3 size={13} color={T.text2} />
+          </motion.div>
+        )}
+
+        {/* Liste membres */}
+        <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.3, marginBottom: 10 }}>MEMBRES ({membres.length})</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {membres.map(m => {
+            const isMe = m.id === user.id
+            const isCreateur = m.id === equipe.createur_id
+            return (
+              <div key={m.id}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}90, ${T.accent2 || '#4caf82'}90)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                    {m.nom.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {m.nom}{isMe ? ' (moi)' : ''}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: m.role === 'admin' ? T.accent : T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                        {m.role === 'admin' ? <><Crown size={9} /> Admin</> : 'Membre'}
+                      </div>
+                      {isCreateur && <span style={{ fontSize: 9, background: `${T.accent}18`, color: T.accent, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>CRÉATEUR</span>}
+                    </div>
+                  </div>
+                  {!isMe && !isCreateur && (
+                    <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                      <motion.button title={m.role === 'admin' ? 'Rétrograder' : 'Promouvoir admin'}
+                        style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: loadingAction === 'role-' + m.id ? 0.5 : 1 }}
+                        onClick={() => changerRole(m.id, m.role === 'admin' ? 'membre' : 'admin')}
+                        whileHover={{ borderColor: T.accent, color: T.accent }}>
+                        {m.role === 'admin' ? <ShieldX size={12} /> : <ShieldCheck size={12} />}
+                      </motion.button>
+                      <motion.button title="Exclure"
+                        style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: loadingAction === 'kick-' + m.id ? 0.5 : 1 }}
+                        onClick={() => setConfirmKick(m)}
+                        whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
+                        <UserMinus size={12} />
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Confirm kick */}
+                <AnimatePresence>
+                  {confirmKick?.id === m.id && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      style={{ overflow: 'hidden' }}>
+                      <div style={{ padding: '10px 12px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.2)', borderTop: 'none', borderRadius: '0 0 12px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ fontSize: 12, color: '#e05c5c' }}>Exclure <strong>{m.nom}</strong> ?</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <motion.button style={{ padding: '5px 10px', background: 'rgba(224,92,92,0.12)', border: '1px solid rgba(224,92,92,0.3)', borderRadius: 7, color: '#e05c5c', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                            onClick={() => exclure(m.id)} whileTap={{ scale: 0.97 }}>
+                            Exclure
+                          </motion.button>
+                          <motion.button style={{ padding: '5px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 7, color: T.text2, fontSize: 11, cursor: 'pointer' }}
+                            onClick={() => setConfirmKick(null)}>
+                            Annuler
+                          </motion.button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // ===== PAGE PRINCIPALE =====
 export default function Collaboration() {
   const user = JSON.parse(localStorage.getItem('user'))
@@ -515,6 +750,9 @@ export default function Collaboration() {
   const [showCreer, setShowCreer] = useState(false)
   const [showRejoindre, setShowRejoindre] = useState(false)
   const [showActivite, setShowActivite] = useState(false)
+  const [showGestion, setShowGestion] = useState(false)
+
+  const isAdmin = membres.some(m => m.id === user?.id && m.role === 'admin')
 
   // Drag & Drop state
   const [activeId, setActiveId] = useState(null)
@@ -932,9 +1170,15 @@ export default function Collaboration() {
           )}
 
           <div style={{ display: 'flex', gap: 7, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {equipeActive && isAdmin && (
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showGestion ? `${T.accent}18` : T.bg3, border: `1px solid ${showGestion ? T.accent + '35' : T.border}`, borderRadius: 9, color: showGestion ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+                onClick={() => { setShowGestion(p => !p); setShowActivite(false) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <Shield size={13} /> {!isMobile && 'Gérer'}
+              </motion.button>
+            )}
             {equipeActive && (
               <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showActivite ? `${T.accent}18` : T.bg3, border: `1px solid ${showActivite ? T.accent + '35' : T.border}`, borderRadius: 9, color: showActivite ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                onClick={() => setShowActivite(p => !p)} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                onClick={() => { setShowActivite(p => !p); setShowGestion(false) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
                 <Activity size={13} /> {!isMobile && 'Activité'}
               </motion.button>
             )}
@@ -1048,6 +1292,24 @@ export default function Collaboration() {
         )}
         {tacheCommentaires && (
           <PanneauCommentaires key="panel" T={T} tache={tacheCommentaires} user={user} membres={membres} onFermer={() => setTacheCommentaires(null)} />
+        )}
+        {showGestion && equipeActive && isAdmin && (
+          <DrawerGestion key="gestion" T={T} equipe={equipeActive} membres={membres} user={user}
+            onFermer={() => setShowGestion(false)}
+            onEquipeRenommee={(nom) => {
+              setEquipeActive(e => ({ ...e, nom }))
+              setEquipes(es => es.map(e => e.id === equipeActive.id ? { ...e, nom } : e))
+              addToast(`Équipe renommée → ${nom}`, '✏️')
+            }}
+            onMembreExclu={(membreId) => {
+              setMembres(ms => ms.filter(m => m.id !== membreId))
+              addToast('Membre exclu', '🚪')
+            }}
+            onRoleChange={(membreId, role) => {
+              setMembres(ms => ms.map(m => m.id === membreId ? { ...m, role } : m))
+              addToast(role === 'admin' ? 'Promu admin' : 'Rétrogradé membre', role === 'admin' ? '👑' : '👤')
+            }}
+          />
         )}
         {showPartage && <ModalePartage key="partage" T={T} equipe={showPartage} onFermer={() => setShowPartage(null)} />}
         {showModaleTache && equipeActive && (

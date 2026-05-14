@@ -1649,10 +1649,91 @@ def ajouter_commentaire_equipe():
         db.commit()
         curseur.execute("SELECT te.titre, te.equipe_id, u.nom FROM taches_equipe te JOIN users u ON u.id=%s WHERE te.id=%s", (data['user_id'], data['tache_id']))
         info = curseur.fetchone()
-        db.close()
         if info:
             log_activite(info['equipe_id'], data['user_id'], info['nom'], 'a commenté sur', info['titre'], data['tache_id'])
+            # Traiter les @mentions
+            contenu = data.get('contenu', '')
+            mentions = re.findall(r'@(\w[\w\s]*?)(?=\s|$|@)', contenu)
+            if mentions:
+                curseur.execute("SELECT u.id, u.nom, u.email FROM equipe_membres em JOIN users u ON em.user_id=u.id WHERE em.equipe_id=%s", (info['equipe_id'],))
+                membres = curseur.fetchall()
+                auteur = info['nom']
+                tache_titre = info['titre']
+                for m in mentions:
+                    mentionné = next((mb for mb in membres if mb['nom'].lower().startswith(m.lower()) and mb['id'] != data['user_id']), None)
+                    if mentionné:
+                        html = f"""<div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+<div style="background:linear-gradient(135deg,#6c63ff,#a855f7);padding:20px 24px;border-radius:12px 12px 0 0">
+<h2 style="color:white;margin:0;font-size:18px">💬 Nouvelle mention — GetShift</h2></div>
+<div style="background:#f8f8ff;padding:20px 24px;border-radius:0 0 12px 12px;border:1px solid #e8e8f0">
+<p style="color:#333;font-size:14px"><strong>{auteur}</strong> t'a mentionné dans un commentaire sur la tâche <strong>« {tache_titre} »</strong> :</p>
+<div style="background:white;border-left:3px solid #6c63ff;padding:12px 16px;border-radius:0 8px 8px 0;color:#555;font-size:14px;line-height:1.6">{contenu}</div>
+<a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;margin-top:18px;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:13px">Répondre →</a>
+</div></div>"""
+                        envoyer_email(mentionné['email'], f"💬 {auteur} t'a mentionné sur GetShift", html)
+        db.close()
         return jsonify({"message": "Commentaire ajoute"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/<int:equipe_id>/membres/<int:target_id>/role', methods=['PATCH'])
+def changer_role_membre(equipe_id, target_id):
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        nouveau_role = data.get('role')
+        if nouveau_role not in ('admin', 'membre'):
+            return jsonify({"erreur": "Role invalide"}), 400
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT role FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe_id, user_id))
+        row = curseur.fetchone()
+        if not row or row['role'] != 'admin':
+            return jsonify({"erreur": "Non autorise"}), 403
+        curseur.execute("UPDATE equipe_membres SET role=%s WHERE equipe_id=%s AND user_id=%s", (nouveau_role, equipe_id, target_id))
+        db.commit(); db.close()
+        return jsonify({"message": "Role mis a jour"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/<int:equipe_id>/membres/<int:target_id>', methods=['DELETE'])
+def exclure_membre(equipe_id, target_id):
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT role FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe_id, user_id))
+        row = curseur.fetchone()
+        if not row or row['role'] != 'admin':
+            return jsonify({"erreur": "Non autorise"}), 403
+        curseur.execute("SELECT createur_id FROM equipes WHERE id=%s", (equipe_id,))
+        equipe = curseur.fetchone()
+        if equipe and equipe['createur_id'] == target_id:
+            return jsonify({"erreur": "Impossible d'exclure le createur"}), 400
+        curseur.execute("DELETE FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe_id, target_id))
+        db.commit(); db.close()
+        return jsonify({"message": "Membre exclu"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/equipes/<int:equipe_id>/nom', methods=['PATCH'])
+def renommer_equipe(equipe_id):
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        nouveau_nom = data.get('nom', '').strip()
+        if not nouveau_nom:
+            return jsonify({"erreur": "Nom vide"}), 400
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT role FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe_id, user_id))
+        row = curseur.fetchone()
+        if not row or row['role'] != 'admin':
+            return jsonify({"erreur": "Non autorise"}), 403
+        curseur.execute("UPDATE equipes SET nom=%s WHERE id=%s", (nouveau_nom, equipe_id))
+        db.commit(); db.close()
+        return jsonify({"message": "Equipe renommee", "nom": nouveau_nom})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
