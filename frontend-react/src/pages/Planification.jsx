@@ -403,6 +403,33 @@ export default function Planification() {
     { label: 'Planifiées', value: planification.length, color: '#8b5cf6', Icon: Calendar },
   ]), [taches, planification])
 
+  // ── Bloc "Aujourd'hui" — créneaux planifiés du jour + actions rapides ──
+  const aujourdHui = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    return planification
+      .filter(p => (p.date_planifiee?.split('T')[0] || p.date_planifiee) === today)
+      .map(p => {
+        const tache = taches.find(t => t.id === p.tache_id)
+        return { ...p, tache }
+      })
+      .filter(p => p.tache && !p.tache.terminee)
+      .sort((a, b) => (a.startMins || 0) - (b.startMins || 0))
+  }, [planification, taches])
+
+  const demarrerTache = useCallback(async (tacheId) => {
+    const prev = taches.slice()
+    setTaches(cur => cur.map(t => t.id === tacheId ? { ...t, statut: 'en_cours' } : t))
+    try { await axios.patch(`${API}/taches/${tacheId}/statut`, { statut: 'en_cours' }) }
+    catch { setTaches(prev) }
+  }, [taches])
+
+  const terminerTache = useCallback(async (tacheId) => {
+    const prev = taches.slice()
+    setTaches(cur => cur.map(t => t.id === tacheId ? { ...t, terminee: true } : t))
+    try { await axios.put(`${API}/taches/${tacheId}`, { terminee: true }) }
+    catch { setTaches(prev) }
+  }, [taches])
+
   // ── Loading state ──────────────────────────────────────────────────
   if (loading) return (
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -660,7 +687,7 @@ export default function Planification() {
         </div>
 
         {/* Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 12, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 12, marginBottom: 16 }}>
           {stats.map((s, i) => {
             const Icon = s.Icon
             return (
@@ -679,6 +706,56 @@ export default function Planification() {
             )
           })}
         </div>
+
+        {/* ─── Bloc "Aujourd'hui" — quick actions ─── */}
+        {aujourdHui.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            style={{ background: `linear-gradient(135deg, ${T.accent}10, ${T.accent2 || '#a855f7'}08)`, border: `1px solid ${T.accent}25`, borderRadius: 14, padding: isMobile ? 14 : '16px 20px', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Flame size={15} color={T.accent} strokeWidth={2.2} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.2px' }}>Aujourd'hui</h2>
+                <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 1 }}>{aujourdHui.length} créneau{aujourdHui.length > 1 ? 'x' : ''} planifié{aujourdHui.length > 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {aujourdHui.slice(0, 6).map((entry, i) => {
+                const enCours = entry.tache.statut === 'en_cours'
+                return (
+                  <motion.div key={entry.id}
+                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: T.bg2, borderRadius: 10, border: `1px solid ${enCours ? '#f59e0b40' : T.border}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, fontFamily: 'monospace', minWidth: 76, opacity: 0.9 }}>
+                      {entry.heure_debut?.slice(0,5) || minsToTime(entry.startMins).slice(0,5)} → {entry.heure_fin?.slice(0,5) || minsToTime(entry.endMins).slice(0,5)}
+                    </div>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(entry.tache.priorite), flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: 12.5, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.tache.titre}</span>
+                    {enCours && <span style={{ fontSize: 9, color: '#f59e0b', background: '#f59e0b18', padding: '2px 7px', borderRadius: 99, fontWeight: 700, letterSpacing: 0.5 }}>EN COURS</span>}
+                    {!enCours && (
+                      <motion.button onClick={() => demarrerTache(entry.tache.id)} whileTap={{ scale: 0.92 }}
+                        title="Commencer"
+                        style={{ width: 26, height: 26, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: T.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Zap size={12} />
+                      </motion.button>
+                    )}
+                    <motion.button onClick={() => terminerTache(entry.tache.id)} whileTap={{ scale: 0.92 }}
+                      title="Marquer terminée"
+                      style={{ width: 26, height: 26, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CheckSquare size={12} />
+                    </motion.button>
+                  </motion.div>
+                )
+              })}
+              {aujourdHui.length > 6 && (
+                <p style={{ fontSize: 11, color: T.text2, textAlign: 'center', marginTop: 4, opacity: 0.7 }}>
+                  + {aujourdHui.length - 6} autre{aujourdHui.length - 6 > 1 ? 's' : ''} créneau{aujourdHui.length - 6 > 1 ? 'x' : ''}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
 
         {/* ═══ VIEWS ═════════════════════════════════════════════════ */}
         <AnimatePresence mode="wait">
