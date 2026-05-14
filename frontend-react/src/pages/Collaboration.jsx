@@ -8,14 +8,13 @@ import { CSS } from '@dnd-kit/utilities'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
-import MobileBackButton from '../components/MobileBackButton'
 import {
   Users, Plus, Copy, Check, X, Send, MessageCircle,
   LayoutDashboard, Bot, BarChart2, Calendar, HelpCircle, Layers,
   LogOut, Crown, Share2, Link2, UserPlus, MoreHorizontal, Clock,
-  PanelLeftClose, PanelLeftOpen, ChevronRight, ChevronUp, Star, Settings, User,
+  PanelLeftClose, PanelLeftOpen, ChevronRight, ChevronLeft, ChevronUp, Star, Settings, User,
   Sparkles, Flag, Target, CheckSquare, AlertTriangle, Activity, GripVertical,
-  ShieldCheck, ShieldX, UserMinus, Edit3, Shield,
+  ShieldCheck, ShieldX, UserMinus, Edit3, Shield, Menu,
   TrendingUp, AlertCircle, Zap, Brain, ChevronDown, Loader
 } from 'lucide-react'
 
@@ -1087,6 +1086,7 @@ export default function Collaboration() {
 
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   const profileMenuRef = useRef(null)
 
   const [filtre, setFiltre] = useState('toutes')
@@ -1441,21 +1441,43 @@ export default function Collaboration() {
         )}
       </AnimatePresence>
 
-      {/* Toggle sidebar */}
-      <motion.button onClick={toggleSidebar}
-        animate={{ left: !isMobile && sidebarOpen ? SIDEBAR_W + 12 : 12 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ position: 'fixed', top: 14, zIndex: 200, width: 36, height: 36, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-        whileHover={{ color: T.accent, borderColor: T.accent }}>
-        {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-      </motion.button>
+      {/* Mobile top bar — logo + retour + hamburger */}
+      {isMobile && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 52, zIndex: 210, background: T.bg2, borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+          <motion.button onClick={() => navigate('/dashboard')} whileTap={{ scale: 0.9 }}
+            style={{ width: 36, height: 36, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <ChevronLeft size={18} color={T.accent} strokeWidth={2.4} />
+          </motion.button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Layers size={13} color={T.bg} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>GetShift</span>
+          </div>
+          <motion.button onClick={() => setSidebarOpen(true)} whileTap={{ scale: 0.9 }}
+            style={{ width: 36, height: 36, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <Menu size={18} color={T.text2} />
+          </motion.button>
+        </div>
+      )}
+
+      {/* Toggle sidebar — desktop only */}
+      {!isMobile && (
+        <motion.button onClick={toggleSidebar}
+          animate={{ left: sidebarOpen ? SIDEBAR_W + 12 : 12 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+          style={{ position: 'fixed', top: 14, zIndex: 200, width: 36, height: 36, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+          whileHover={{ color: T.accent, borderColor: T.accent }}>
+          {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+        </motion.button>
+      )}
 
       {/* MAIN */}
       <motion.main animate={{ marginLeft: mainMargin }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, paddingTop: isMobile ? 52 : 0 }}>
 
         {/* HEADER */}
-        <div style={{ padding: '13px clamp(14px,3vw,24px)', borderBottom: `1px solid ${T.border}`, background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
+        <div style={{ padding: '13px clamp(14px,3vw,24px)', borderBottom: `1px solid ${T.border}`, background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>
           {equipeActive ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0 }}>
@@ -1478,52 +1500,105 @@ export default function Collaboration() {
             <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0 }}>Collaboration</h1>
           )}
 
-          <div style={{ display: 'flex', gap: 7, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {equipeActive && (
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showIAEquipe ? `linear-gradient(135deg, ${T.accent}30, ${T.accent2 || '#a855f7'}30)` : T.bg3, border: `1px solid ${showIAEquipe ? T.accent + '55' : T.border}`, borderRadius: 9, color: showIAEquipe ? T.accent : T.text2, fontSize: 12, fontWeight: showIAEquipe ? 700 : 400, cursor: 'pointer' }}
-                onClick={() => { fermerTousDrawers(); setShowIAEquipe(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
-                <Brain size={13} /> {!isMobile && 'Coach IA'}
+          {isMobile ? (
+            /* Mobile — +Tâche + ••• overflow */
+            <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
+              {equipeActive && (
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `${T.accent}18`, border: `1px solid ${T.accent}35`, borderRadius: 9, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileTap={{ scale: 0.95 }}>
+                  <Plus size={14} />
+                </motion.button>
+              )}
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showMoreMenu ? `${T.accent}18` : T.bg3, border: `1px solid ${showMoreMenu ? T.accent + '55' : T.border}`, borderRadius: 9, color: showMoreMenu ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+                onClick={() => setShowMoreMenu(p => !p)} whileTap={{ scale: 0.95 }}>
+                <MoreHorizontal size={14} />
               </motion.button>
-            )}
-            {equipeActive && (
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showAnalytiques ? `${T.accent}18` : T.bg3, border: `1px solid ${showAnalytiques ? T.accent + '35' : T.border}`, borderRadius: 9, color: showAnalytiques ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                onClick={() => { fermerTousDrawers(); setShowAnalytiques(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
-                <TrendingUp size={13} /> {!isMobile && 'Stats'}
-              </motion.button>
-            )}
-            {equipeActive && isAdmin && (
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showGestion ? `${T.accent}18` : T.bg3, border: `1px solid ${showGestion ? T.accent + '35' : T.border}`, borderRadius: 9, color: showGestion ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                onClick={() => { fermerTousDrawers(); setShowGestion(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
-                <Shield size={13} /> {!isMobile && 'Gérer'}
-              </motion.button>
-            )}
-            {equipeActive && (
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showActivite ? `${T.accent}18` : T.bg3, border: `1px solid ${showActivite ? T.accent + '35' : T.border}`, borderRadius: 9, color: showActivite ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                onClick={() => { fermerTousDrawers(); setShowActivite(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
-                <Activity size={13} /> {!isMobile && 'Activité'}
-              </motion.button>
-            )}
-            {equipeActive && (
+              <AnimatePresence>
+                {showMoreMenu && (
+                  <>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      style={{ position: 'fixed', inset: 0, zIndex: 290 }} onClick={() => setShowMoreMenu(false)} />
+                    <motion.div initial={{ opacity: 0, y: -8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 300, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, boxShadow: '0 16px 48px rgba(0,0,0,0.28)', minWidth: 200, padding: 6 }}>
+                      {equipeActive && [
+                        { icon: Brain, label: 'Coach IA', active: showIAEquipe, onClick: () => { fermerTousDrawers(); setShowIAEquipe(p => !p); setShowMoreMenu(false) } },
+                        { icon: TrendingUp, label: 'Stats', active: showAnalytiques, onClick: () => { fermerTousDrawers(); setShowAnalytiques(p => !p); setShowMoreMenu(false) } },
+                        ...(isAdmin ? [{ icon: Shield, label: 'Gérer', active: showGestion, onClick: () => { fermerTousDrawers(); setShowGestion(p => !p); setShowMoreMenu(false) } }] : []),
+                        { icon: Activity, label: 'Activité', active: showActivite, onClick: () => { fermerTousDrawers(); setShowActivite(p => !p); setShowMoreMenu(false) } },
+                        { icon: Share2, label: 'Inviter', active: false, onClick: () => { setShowPartage(equipeActive); setShowMoreMenu(false) } },
+                      ].map(({ icon: Icon, label, active, onClick }) => (
+                        <motion.button key={label} onClick={onClick}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: active ? `${T.accent}12` : 'transparent', border: 'none', color: active ? T.accent : T.text, cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400 }}
+                          whileHover={{ background: `${T.accent}12` }}>
+                          <Icon size={15} color={active ? T.accent : T.text2} />
+                          {label}
+                        </motion.button>
+                      ))}
+                      <div style={{ height: 1, background: T.border, margin: '4px 0' }} />
+                      <motion.button onClick={() => { setShowRejoindre(true); setErreur(''); setShowMoreMenu(false) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: 'transparent', border: 'none', color: T.text, cursor: 'pointer', fontSize: 13 }}
+                        whileHover={{ background: `${T.accent}12` }}>
+                        <UserPlus size={15} color={T.text2} />Rejoindre
+                      </motion.button>
+                      <motion.button onClick={() => { setShowCreer(true); setErreur(''); setShowMoreMenu(false) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: 'transparent', border: 'none', color: T.accent, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                        whileHover={{ background: `${T.accent}12` }}>
+                        <Plus size={15} />+ Équipe
+                      </motion.button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            /* Desktop — tous les boutons */
+            <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
+              {equipeActive && (
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showIAEquipe ? `linear-gradient(135deg, ${T.accent}30, ${T.accent2 || '#a855f7'}30)` : T.bg3, border: `1px solid ${showIAEquipe ? T.accent + '55' : T.border}`, borderRadius: 9, color: showIAEquipe ? T.accent : T.text2, fontSize: 12, fontWeight: showIAEquipe ? 700 : 400, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowIAEquipe(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                  <Brain size={13} /> Coach IA
+                </motion.button>
+              )}
+              {equipeActive && (
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showAnalytiques ? `${T.accent}18` : T.bg3, border: `1px solid ${showAnalytiques ? T.accent + '35' : T.border}`, borderRadius: 9, color: showAnalytiques ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowAnalytiques(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                  <TrendingUp size={13} /> Stats
+                </motion.button>
+              )}
+              {equipeActive && isAdmin && (
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showGestion ? `${T.accent}18` : T.bg3, border: `1px solid ${showGestion ? T.accent + '35' : T.border}`, borderRadius: 9, color: showGestion ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowGestion(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                  <Shield size={13} /> Gérer
+                </motion.button>
+              )}
+              {equipeActive && (
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showActivite ? `${T.accent}18` : T.bg3, border: `1px solid ${showActivite ? T.accent + '35' : T.border}`, borderRadius: 9, color: showActivite ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowActivite(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                  <Activity size={13} /> Activité
+                </motion.button>
+              )}
+              {equipeActive && (
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => setShowPartage(equipeActive)} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                  <Share2 size={13} /> Inviter
+                </motion.button>
+              )}
+              {equipeActive && (
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `${T.accent}18`, border: `1px solid ${T.accent}35`, borderRadius: 9, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileHover={{ scale: 1.02 }}>
+                  <Plus size={13} /> Tâche
+                </motion.button>
+              )}
               <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, cursor: 'pointer' }}
-                onClick={() => setShowPartage(equipeActive)} whileHover={{ borderColor: T.accent, color: T.accent }}>
-                <Share2 size={13} /> {!isMobile && 'Inviter'}
+                onClick={() => { setShowRejoindre(true); setErreur('') }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <UserPlus size={13} /> Rejoindre
               </motion.button>
-            )}
-            {equipeActive && (
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `${T.accent}18`, border: `1px solid ${T.accent}35`, borderRadius: 9, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileHover={{ scale: 1.02 }}>
-                <Plus size={13} /> {!isMobile && 'Tâche'}
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 9, color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: `0 3px 10px ${T.accent}25` }}
+                onClick={() => { setShowCreer(true); setErreur('') }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Plus size={13} /> Équipe
               </motion.button>
-            )}
-            <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, cursor: 'pointer' }}
-              onClick={() => { setShowRejoindre(true); setErreur('') }} whileHover={{ borderColor: T.accent, color: T.accent }}>
-              <UserPlus size={13} /> {!isMobile && 'Rejoindre'}
-            </motion.button>
-            <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 9, color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: `0 3px 10px ${T.accent}25` }}
-              onClick={() => { setShowCreer(true); setErreur('') }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Plus size={13} /> {!isMobile && 'Équipe'}
-            </motion.button>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* CONTENU */}
@@ -1565,9 +1640,9 @@ export default function Collaboration() {
             {/* KANBAN avec DnD */}
             <DndContext sensors={sensors} collisionDetection={closestCenter}
               onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', overflow: isMobile ? 'auto' : 'hidden' }}>
+              <div style={{ flex: 1, display: isMobile ? 'flex' : 'grid', gridTemplateColumns: isMobile ? undefined : 'repeat(3, 1fr)', flexDirection: isMobile ? 'row' : undefined, overflowX: isMobile ? 'auto' : undefined, overflowY: isMobile ? 'hidden' : 'hidden', scrollSnapType: isMobile ? 'x mandatory' : undefined, WebkitOverflowScrolling: 'touch' }}>
                 {COLONNES.map((col, i) => (
-                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', borderRight: !isMobile && i < 2 ? `1px solid ${T.border}` : 'none', overflow: 'hidden' }}>
+                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', borderRight: !isMobile && i < 2 ? `1px solid ${T.border}` : 'none', overflow: 'hidden', ...(isMobile ? { minWidth: '85vw', maxWidth: '85vw', scrollSnapAlign: 'start', flexShrink: 0, borderRight: i < 2 ? `1px solid ${T.border}` : 'none' } : {}) }}>
                     <div style={{ padding: '13px 14px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.couleur }} />
@@ -1736,7 +1811,6 @@ export default function Collaboration() {
         )}
       </AnimatePresence>
 
-      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
