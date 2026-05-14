@@ -1371,8 +1371,38 @@ def ajouter_planification():
         db = connecter()
         curseur = db.cursor()
         curseur.execute("INSERT INTO planification (user_id, tache_id, date_planifiee, heure_debut, heure_fin, charge_minutes, genere_par_ia) VALUES (%s, %s, %s, %s, %s, %s, %s)", (data['user_id'], data['tache_id'], data['date_planifiee'], data.get('heure_debut'), data.get('heure_fin'), data.get('charge_minutes', 0), data.get('genere_par_ia', False)))
+        new_id = curseur.lastrowid
         db.commit(); db.close()
-        return jsonify({"message": "Planification ajoutee !"})
+        return jsonify({"message": "Planification ajoutee !", "id": new_id})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/planification/<int:entry_id>', methods=['PATCH'])
+def modifier_planification(entry_id):
+    """Met à jour un bloc existant — évite les duplications lors d'un drag/move."""
+    try:
+        data = request.get_json() or {}
+        sets, vals = [], []
+        for f in ('date_planifiee', 'heure_debut', 'heure_fin', 'charge_minutes'):
+            if f in data:
+                sets.append(f"{f}=%s"); vals.append(data[f])
+        if not sets:
+            return jsonify({"erreur": "aucun champ à modifier"}), 400
+        vals.append(entry_id)
+        db = connecter(); curseur = db.cursor()
+        curseur.execute(f"UPDATE planification SET {', '.join(sets)} WHERE id=%s", tuple(vals))
+        db.commit(); db.close()
+        return jsonify({"message": "Bloc déplacé"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/planification/<int:entry_id>', methods=['DELETE'])
+def supprimer_planification(entry_id):
+    try:
+        db = connecter(); curseur = db.cursor()
+        curseur.execute("DELETE FROM planification WHERE id=%s", (entry_id,))
+        db.commit(); db.close()
+        return jsonify({"message": "Bloc supprimé"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 

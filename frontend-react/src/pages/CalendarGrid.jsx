@@ -8,7 +8,7 @@ import TimeBlock from './TimeBlock'
 import {
   DAY_START, DAY_END, COL_HEIGHT, PX_PER_MIN,
   pxToMins, minsToPx, minsToTime, clampMins,
-  resolveCollisions, SNAP_MINS, getWeekDays
+  resolveCollisions, SNAP_MINS, getWeekDays, getSingleDay
 } from './calendarUtils'
 
 /**
@@ -29,6 +29,8 @@ const CalendarGrid = memo(function CalendarGrid({
   planification, taches, T,
   semaineOffset, onOffsetChange,
   onDrop, onMove, onResize, onResizeEnd,
+  daysToShow = 7,
+  heuresDispo = 8,
 }) {
   const gridRef = useRef(null)
   const [dragOver, setDragOver] = useState(null)  // { date, startMins }
@@ -36,7 +38,27 @@ const CalendarGrid = memo(function CalendarGrid({
   const [chipDrag, setChipDrag] = useState(null)  // unscheduled task being dragged
   const [ghostPos, setGhostPos] = useState(null)  // { date, startMins, endMins }
 
-  const jours = useMemo(() => getWeekDays(semaineOffset), [semaineOffset])
+  const jours = useMemo(
+    () => daysToShow === 1 ? getSingleDay(semaineOffset) : getWeekDays(semaineOffset),
+    [semaineOffset, daysToShow]
+  )
+
+  // Charge totale par jour (minutes planifiées) → indicateur visuel
+  const chargeParJour = useMemo(() => {
+    const map = {}
+    for (const j of jours) {
+      const total = planification
+        .filter(p => (p.date_planifiee?.split('T')[0] || p.date_planifiee) === j.date)
+        .reduce((sum, p) => {
+          const dur = (p.endMins ?? 0) - (p.startMins ?? 0)
+          return sum + (dur > 0 ? dur : (p.charge_minutes || 0))
+        }, 0)
+      map[j.date] = total
+    }
+    return map
+  }, [planification, jours])
+
+  const capaciteMin = heuresDispo * 60
 
   // Hour markers: 08 → 21
   const hours = Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => DAY_START + i)
@@ -172,8 +194,10 @@ const CalendarGrid = memo(function CalendarGrid({
           onClick={() => onOffsetChange(1)} whileHover={{ borderColor: T.accent }}>
           <ChevronRight size={14} />
         </motion.button>
-        <span style={{ fontSize: 12, color: T.text2, marginLeft: 4 }}>
-          {jours[0]?.mois} – {jours[6]?.mois}
+        <span style={{ fontSize: 12, color: T.text2, marginLeft: 4, textTransform: 'capitalize' }}>
+          {daysToShow === 1
+            ? `${jours[0]?.label} ${jours[0]?.num} ${jours[0]?.mois}`
+            : `${jours[0]?.mois} – ${jours[jours.length - 1]?.mois}`}
         </span>
       </div>
 
@@ -191,36 +215,53 @@ const CalendarGrid = memo(function CalendarGrid({
         {/* Day headers */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: `48px repeat(7, 1fr)`,
+          gridTemplateColumns: `48px repeat(${jours.length}, 1fr)`,
           borderBottom: `1px solid ${T.border}`,
           background: T.bg2,
           flexShrink: 0,
           position: 'sticky', top: 0, zIndex: 30,
         }}>
           <div />
-          {jours.map(j => (
-            <div key={j.date} style={{ padding: '10px 6px', textAlign: 'center', borderLeft: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 10, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
-                {j.label}
+          {jours.map(j => {
+            const charge = chargeParJour[j.date] || 0
+            const pct = Math.min(100, Math.round((charge / capaciteMin) * 100))
+            const overload = charge > capaciteMin
+            const chargeColor = overload ? '#ef4444' : pct > 75 ? '#f59e0b' : '#10b981'
+            return (
+              <div key={j.date} style={{ padding: '10px 6px', textAlign: 'center', borderLeft: `1px solid ${T.border}` }}>
+                <div style={{ fontSize: 10, color: T.text2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+                  {j.label}
+                </div>
+                <div style={{
+                  width: 30, height: 30, borderRadius: '50%',
+                  background: j.isToday ? T.accent : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto',
+                  fontSize: 14, fontWeight: 700,
+                  color: j.isToday ? '#fff' : T.text,
+                  boxShadow: j.isToday ? `0 4px 12px ${T.accent}50` : 'none',
+                }}>
+                  {j.num}
+                </div>
+                {/* Indicateur de charge */}
+                <div title={`${Math.round(charge/60*10)/10}h planifiées / ${heuresDispo}h dispo`}
+                  style={{ marginTop: 6, height: 3, background: `${T.border}80`, borderRadius: 99, overflow: 'hidden', position: 'relative' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }}
+                    style={{ height: '100%', background: chargeColor, borderRadius: 99 }} />
+                </div>
+                {charge > 0 && (
+                  <div style={{ fontSize: 8, color: overload ? '#ef4444' : T.text2, marginTop: 3, fontWeight: overload ? 700 : 500, opacity: overload ? 1 : 0.7 }}>
+                    {overload ? `+${Math.round((charge - capaciteMin)/60*10)/10}h` : `${Math.round(charge/60*10)/10}h`}
+                  </div>
+                )}
               </div>
-              <div style={{
-                width: 30, height: 30, borderRadius: '50%',
-                background: j.isToday ? T.accent : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto',
-                fontSize: 14, fontWeight: 700,
-                color: j.isToday ? '#fff' : T.text,
-                boxShadow: j.isToday ? `0 4px 12px ${T.accent}50` : 'none',
-              }}>
-                {j.num}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Scrollable body */}
         <div style={{ overflowY: 'auto', flex: 1 }} ref={gridRef}>
-          <div style={{ display: 'grid', gridTemplateColumns: `48px repeat(7, 1fr)`, position: 'relative' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `48px repeat(${jours.length}, 1fr)`, position: 'relative' }}>
 
             {/* Time gutter */}
             <div style={{ position: 'relative', height: COL_HEIGHT }}>

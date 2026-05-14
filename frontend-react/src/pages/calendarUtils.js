@@ -239,6 +239,19 @@ export function getWeekDays(offset = 0) {
   })
 }
 
+/** Vue jour — retourne un seul jour avec offset en jours */
+export function getSingleDay(offset = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  return [{
+    date:    d.toISOString().split('T')[0],
+    label:   d.toLocaleDateString('fr-FR', { weekday: 'long' }),
+    num:     d.getDate(),
+    mois:    d.toLocaleDateString('fr-FR', { month: 'short' }),
+    isToday: offset === 0,
+  }]
+}
+
 export function getGanttDays(n = 30, offsetDays = -5) {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date()

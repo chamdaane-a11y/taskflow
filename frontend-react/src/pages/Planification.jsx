@@ -100,7 +100,8 @@ export default function Planification() {
   const [heuresDispo, setHeuresDispo] = useState(8)
 
   // ── UI state ───────────────────────────────────────────────────────
-  const [vue, setVue] = useState('kanban')
+  // Sur mobile, la vue jour est par défaut (semaine illisible sur 7 colonnes)
+  const [vue, setVue] = useState(() => isMobile ? 'jour' : 'kanban')
   const [showEstimer, setShowEstimer] = useState(null)
   const [loadingEstime, setLoadingEstime] = useState(false)
   const [semaineOffset, setSemaineOffset] = useState(0)
@@ -255,15 +256,11 @@ export default function Planification() {
         : e
     ))
     try {
-      // Backend doesn't have a move endpoint, recreate
-      await axios.post(`${API}/planification`, {
-        user_id: user.id,
-        tache_id: prev.find(e => e.id === entryId)?.tache_id,
+      await axios.patch(`${API}/planification/${entryId}`, {
         date_planifiee: date,
         heure_debut: minsToTime(startMins),
         heure_fin: minsToTime(endMins),
         charge_minutes: endMins - startMins,
-        genere_par_ia: false,
       })
     } catch (err) {
       console.error('Rollback move:', err)
@@ -279,10 +276,15 @@ export default function Planification() {
   }, [])
 
   const handleResizeEnd = useCallback(async ({ entryId, newEndMins }) => {
-    // Already updated optimistically, now persist
-    // (Backend doesn't have update planification endpoint — store locally for now)
-    console.log('Resize persisted:', entryId, minsToTime(newEndMins))
-  }, [])
+    const entry = planification.find(e => e.id === entryId)
+    if (!entry) return
+    try {
+      await axios.patch(`${API}/planification/${entryId}`, {
+        heure_fin: minsToTime(newEndMins),
+        charge_minutes: newEndMins - (entry.startMins ?? 0),
+      })
+    } catch (err) { console.error('Resize persist:', err) }
+  }, [planification])
 
   // ── Smart AI Scheduling ────────────────────────────────────────────
   const planifierAvecIA = useCallback(async () => {
@@ -469,27 +471,6 @@ export default function Planification() {
 
         <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
 
-        {/* FILTRES (exactement comme dans Dashboard) */}
-        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
-        {[
-          { val: 'toutes',   label: 'Toutes les tâches' },
-          { val: 'haute',    label: 'Priorité haute' },
-          { val: 'bloquee',  label: `Bloquées${bloquees > 0 ? ` (${bloquees})` : ''}` },
-          { val: 'terminee', label: 'Terminées' },
-        ].map(f => (
-          <motion.button key={f.val}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 10, color: filtre === f.val ? T.accent : T.text2, background: filtre === f.val ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: filtre === f.val ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
-            onClick={() => { setFiltre(f.val); if (isMobile) setSidebarOpen(false) }} whileHover={{ x: 2 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {f.val === 'bloquee' && <IconLock size={12} color={filtre === f.val ? T.accent : T.text2} />}
-              {f.label}
-            </span>
-            {filtre === f.val && <ChevronRight size={14} />}
-          </motion.button>
-        ))}
-
-        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
-
         {/* IA Planner (contenu original de la sidebar de planification) */}
         <div style={{ background: `linear-gradient(135deg, ${T.accent}12, ${T.accent2 || '#a855f7'}08)`, border: `1px solid ${T.accent}20`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
@@ -661,15 +642,16 @@ export default function Planification() {
           </div>
 
           {/* View switcher */}
-          <div style={{ display: 'flex', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 11, padding: 4, gap: 2 }}>
+          <div style={{ display: 'flex', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 11, padding: 4, gap: 2, flexWrap: 'wrap' }}>
             {[
               { id: 'kanban', label: 'Kanban', Icon: Columns },
-              { id: 'calendrier', label: 'Calendrier', Icon: Calendar },
+              { id: 'jour', label: 'Jour', Icon: Target },
+              { id: 'calendrier', label: 'Semaine', Icon: Calendar },
               { id: 'gantt', label: 'Gantt', Icon: BarChart },
             ].map(({ id, label, Icon }) => (
               <motion.button key={id}
                 style={{ display: 'flex', alignItems: 'center', gap: 5, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 7, background: vue === id ? T.accent : 'transparent', color: vue === id ? '#fff' : T.text2, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: vue === id ? 700 : 400, transition: 'all 0.15s' }}
-                onClick={() => setVue(id)} whileTap={{ scale: 0.95 }}>
+                onClick={() => { setVue(id); setSemaineOffset(0) }} whileTap={{ scale: 0.95 }}>
                 <Icon size={13} />
                 {!isMobile && <span>{label}</span>}
               </motion.button>
@@ -725,6 +707,25 @@ export default function Planification() {
             </motion.div>
           )}
 
+          {/* JOUR — calendrier sur une seule journée */}
+          {vue === 'jour' && (
+            <motion.div key="jour" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <CalendarGrid
+                planification={planification}
+                taches={taches}
+                T={T}
+                semaineOffset={semaineOffset}
+                onOffsetChange={(delta, reset) => setSemaineOffset(reset ? 0 : s => s + delta)}
+                onDrop={handleCalendarDrop}
+                onMove={handleCalendarMove}
+                onResize={handleResize}
+                onResizeEnd={handleResizeEnd}
+                daysToShow={1}
+                heuresDispo={heuresDispo}
+              />
+            </motion.div>
+          )}
+
           {/* CALENDRIER */}
           {vue === 'calendrier' && (
             <motion.div key="cal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -738,6 +739,8 @@ export default function Planification() {
                 onMove={handleCalendarMove}
                 onResize={handleResize}
                 onResizeEnd={handleResizeEnd}
+                daysToShow={7}
+                heuresDispo={heuresDispo}
               />
             </motion.div>
           )}
