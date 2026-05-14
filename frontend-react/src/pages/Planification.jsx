@@ -11,7 +11,7 @@ import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import {
   LayoutDashboard, Bot, BarChart2, Calendar, LogOut, Layers, Sparkles,
-  Menu, HelpCircle, Columns, BarChart, CheckSquare, Zap, Target, X,
+  Menu, HelpCircle, Columns, BarChart, CheckSquare, Check, Zap, Target, X,
   TrendingUp, AlertTriangle, Brain, PanelLeftClose, PanelLeftOpen,
   ChevronRight, ChevronUp, Settings, User, Star, Flame, Flag, Users,
   Plus, Trash2, Copy, Link2, Crown, Share2, UserPlus, MoreHorizontal, MessageCircle
@@ -702,6 +702,7 @@ export default function Planification() {
           {/* View switcher */}
           <div style={{ display: 'flex', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 11, padding: 4, gap: 2, flexWrap: 'wrap' }}>
             {[
+              { id: 'liste', label: 'Liste', Icon: CheckSquare },
               { id: 'kanban', label: 'Kanban', Icon: Columns },
               { id: 'jour', label: 'Jour', Icon: Target },
               { id: 'calendrier', label: 'Semaine', Icon: Calendar },
@@ -858,6 +859,85 @@ export default function Planification() {
 
         {/* ═══ VIEWS ═════════════════════════════════════════════════ */}
         <AnimatePresence mode="wait">
+
+          {/* LISTE — vue minimaliste, pour qui ne veut ni kanban ni calendrier */}
+          {vue === 'liste' && (
+            <motion.div key="liste" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {(() => {
+                const today = new Date().toISOString().split('T')[0]
+                const dans7j = new Date(); dans7j.setDate(dans7j.getDate() + 7)
+                const dans7jStr = dans7j.toISOString().split('T')[0]
+                const open = sortedTaches.filter(t => !t.terminee)
+                const byDeadline = (t) => t.deadline?.split('T')[0]
+                const aujourdhuiL = open.filter(t => byDeadline(t) === today)
+                const cetteSemaine = open.filter(t => byDeadline(t) && byDeadline(t) > today && byDeadline(t) <= dans7jStr)
+                const sansDeadline = open.filter(t => !t.deadline)
+                const plusTard = open.filter(t => byDeadline(t) && byDeadline(t) > dans7jStr)
+                const termineesRecentes = sortedTaches.filter(t => t.terminee).slice(0, 5)
+                const sections = [
+                  { titre: "Aujourd'hui", items: aujourdhuiL, color: '#ef4444', emptyMsg: null },
+                  { titre: 'Cette semaine', items: cetteSemaine, color: '#f59e0b', emptyMsg: null },
+                  { titre: 'Plus tard', items: plusTard, color: '#6366f1', emptyMsg: null },
+                  { titre: 'Sans deadline', items: sansDeadline, color: T.text2, emptyMsg: null },
+                  { titre: 'Terminées récemment', items: termineesRecentes, color: '#10b981', emptyMsg: null, dim: true },
+                ].filter(s => s.items.length > 0)
+
+                if (open.length === 0 && termineesRecentes.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '60px 24px', background: T.bg2, borderRadius: 16, border: `1px solid ${T.border}` }}>
+                      <CheckSquare size={40} color={T.border} strokeWidth={1} style={{ margin: '0 auto 16px' }} />
+                      <p style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Aucune tâche pour le moment</p>
+                      <p style={{ fontSize: 12, color: T.text2 }}>Crée ta première tâche depuis le Dashboard</p>
+                    </div>
+                  )
+                }
+
+                return sections.map(sec => (
+                  <div key={sec.titre}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '0 4px' }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: sec.color }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 1.5, textTransform: 'uppercase' }}>{sec.titre}</span>
+                      <span style={{ fontSize: 10, color: T.text2, opacity: 0.6 }}>{sec.items.length}</span>
+                    </div>
+                    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden' }}>
+                      {sec.items.map((t, i) => (
+                        <motion.div key={t.id}
+                          initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '10px 12px' : '12px 16px', borderBottom: i < sec.items.length - 1 ? `1px solid ${T.border}` : 'none', opacity: sec.dim ? 0.55 : 1 }}>
+                          <motion.button onClick={() => t.terminee ? null : terminerTache(t.id)} whileTap={{ scale: 0.85 }}
+                            disabled={t.terminee}
+                            style={{ width: 22, height: 22, borderRadius: 6, background: t.terminee ? '#10b981' : 'transparent', border: `1.5px solid ${t.terminee ? '#10b981' : T.border}`, cursor: t.terminee ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {t.terminee && <Check size={12} color="#fff" strokeWidth={3} />}
+                          </motion.button>
+                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(t.priorite), flexShrink: 0 }} />
+                          <span style={{ flex: 1, fontSize: 13, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: t.terminee ? 'line-through' : 'none' }}>{t.titre}</span>
+                          {t.deadline && !t.terminee && (
+                            <span style={{ fontSize: 10, color: T.text2, background: T.bg3, padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+                              {new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                            </span>
+                          )}
+                          {t.temps_estime && !t.terminee && (
+                            <span style={{ fontSize: 10, color: T.accent, fontWeight: 600, whiteSpace: 'nowrap' }}>{t.temps_estime}m</span>
+                          )}
+                          {!t.terminee && t.statut !== 'en_cours' && (
+                            <motion.button onClick={() => demarrerTache(t.id)} whileTap={{ scale: 0.9 }}
+                              title="Commencer"
+                              style={{ width: 24, height: 24, borderRadius: 6, background: T.bg3, border: `1px solid ${T.border}`, color: T.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Zap size={11} />
+                            </motion.button>
+                          )}
+                          {t.statut === 'en_cours' && !t.terminee && (
+                            <span style={{ fontSize: 9, color: '#f59e0b', background: '#f59e0b18', padding: '2px 7px', borderRadius: 99, fontWeight: 700, letterSpacing: 0.5 }}>EN COURS</span>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              })()}
+            </motion.div>
+          )}
 
           {/* KANBAN */}
           {vue === 'kanban' && (
