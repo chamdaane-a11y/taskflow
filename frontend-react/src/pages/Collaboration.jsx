@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -9,9 +12,9 @@ import MobileBackButton from '../components/MobileBackButton'
 import {
   Users, Plus, Copy, Check, X, Send, MessageCircle,
   LayoutDashboard, Bot, BarChart2, Calendar, HelpCircle, Layers,
-  LogOut, Menu, Crown, Share2, Link2, UserPlus, MoreHorizontal, Clock,
+  LogOut, Crown, Share2, Link2, UserPlus, MoreHorizontal, Clock,
   PanelLeftClose, PanelLeftOpen, ChevronRight, ChevronUp, Star, Settings, User,
-  Sparkles, Flag, Target, CheckSquare, AlertTriangle
+  Sparkles, Flag, Target, CheckSquare, AlertTriangle, Activity, GripVertical
 } from 'lucide-react'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -34,6 +37,28 @@ const COLONNES = [
 ]
 const PRIORITE_COLOR = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
 
+// ===== TOAST =====
+function Toast({ toasts, removeToast }) {
+  return (
+    <div style={{ position: 'fixed', bottom: 80, right: 20, zIndex: 9000, display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320 }}>
+      <AnimatePresence>
+        {toasts.map(t => (
+          <motion.div key={t.id}
+            initial={{ opacity: 0, x: 60, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 60, scale: 0.9 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.bg || '#1a1a2e', border: `1px solid ${t.border || '#6c63ff44'}`, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', cursor: 'pointer' }}
+            onClick={() => removeToast(t.id)}>
+            <div style={{ fontSize: 15 }}>{t.icon || '🔔'}</div>
+            <span style={{ fontSize: 12.5, color: t.color || '#e2e2ff', lineHeight: 1.4, flex: 1 }}>{t.message}</span>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ===== QR CODE via API publique =====
 function QRCode({ value, size = 160 }) {
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=ffffff&color=111111&margin=2&format=png`
@@ -49,33 +74,13 @@ function ModalePartage({ T, equipe, onFermer }) {
   const lienEnc = encodeURIComponent(lien)
 
   const reseaux = [
-    {
-      nom: 'WhatsApp', couleur: '#25D366',
-      url: `https://wa.me/?text=${texteEnc}%20${lienEnc}`,
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-    },
-    {
-      nom: 'Facebook', couleur: '#1877F2',
-      url: `https://www.facebook.com/sharer/sharer.php?u=${lienEnc}`,
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-    },
-    {
-      nom: 'Twitter / X', couleur: '#000000',
-      url: `https://twitter.com/intent/tweet?text=${texteEnc}&url=${lienEnc}`,
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-    },
-    {
-      nom: 'Instagram', couleur: '#E1306C',
-      url: null,
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-    },
+    { nom: 'WhatsApp', couleur: '#25D366', url: `https://wa.me/?text=${texteEnc}%20${lienEnc}`, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> },
+    { nom: 'Facebook', couleur: '#1877F2', url: `https://www.facebook.com/sharer/sharer.php?u=${lienEnc}`, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> },
+    { nom: 'Twitter / X', couleur: '#000000', url: `https://twitter.com/intent/tweet?text=${texteEnc}&url=${lienEnc}`, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+    { nom: 'Instagram', couleur: '#E1306C', url: null, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg> },
   ]
 
-  const copierLien = () => {
-    navigator.clipboard.writeText(lien)
-    setCopie(true)
-    setTimeout(() => setCopie(false), 2500)
-  }
+  const copierLien = () => { navigator.clipboard.writeText(lien); setCopie(true); setTimeout(() => setCopie(false), 2500) }
 
   return (
     <motion.div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
@@ -84,7 +89,6 @@ function ModalePartage({ T, equipe, onFermer }) {
       <motion.div style={{ background: T.bg2, borderRadius: 22, width: 'min(440px, 100%)', position: 'relative', border: `1px solid ${T.border}`, boxShadow: '0 40px 100px rgba(0,0,0,0.35)', overflow: 'hidden' }}
         initial={{ y: 28, scale: 0.96 }} animate={{ y: 0, scale: 1 }} exit={{ y: 28, scale: 0.96 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}>
-
         <div style={{ padding: '22px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0 }}>Inviter dans l'équipe</h3>
@@ -95,7 +99,6 @@ function ModalePartage({ T, equipe, onFermer }) {
             <X size={14} />
           </motion.button>
         </div>
-
         <div style={{ display: 'flex', gap: 4, padding: '16px 24px 0' }}>
           {[{ id: 'lien', label: 'Lien' }, { id: 'qr', label: 'QR Code' }, { id: 'reseaux', label: 'Réseaux' }].map(o => (
             <motion.button key={o.id}
@@ -105,7 +108,6 @@ function ModalePartage({ T, equipe, onFermer }) {
             </motion.button>
           ))}
         </div>
-
         <div style={{ padding: '20px 24px 24px', minHeight: 200 }}>
           <AnimatePresence mode="wait">
             {onglet === 'lien' && (
@@ -163,44 +165,72 @@ function ModalePartage({ T, equipe, onFermer }) {
   )
 }
 
-// ===== CARTE TÂCHE KANBAN =====
-function CarteTache({ T, tache, membres, onModifier, onOuvrir }) {
+// ===== CARTE TÂCHE — DRAGGABLE =====
+function CarteTache({ T, tache, membres, onModifier, onOuvrir, isDragOverlay = false }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(tache.id) })
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging && !isDragOverlay ? 0.35 : 1,
+    cursor: isDragOverlay ? 'grabbing' : 'grab',
+    touchAction: 'none',
+  }
   const assignee = membres.find(m => m.id === tache.assignee_id)
   const col = COLONNES.find(c => c.id === tache.statut)
+
   return (
-    <motion.div layout
-      style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 12, padding: '12px 14px', cursor: 'pointer', marginBottom: 8 }}
-      whileHover={{ borderColor: col?.couleur + '55', y: -1, boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}
-      onClick={() => onOuvrir(tache)}
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITE_COLOR[tache.priorite], flexShrink: 0, marginTop: 5 }} />
-        <p style={{ fontSize: 13, fontWeight: 600, color: T.text, lineHeight: 1.4, flex: 1, margin: 0 }}>{tache.titre}</p>
-        <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 2, flexShrink: 0 }}
-          onClick={e => { e.stopPropagation(); onModifier(tache) }} whileHover={{ color: T.accent }}>
-          <MoreHorizontal size={14} />
-        </motion.button>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          {assignee && (
-            <div style={{ width: 22, height: 22, borderRadius: 7, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent }} title={assignee.nom}>
-              {assignee.nom.charAt(0).toUpperCase()}
-            </div>
-          )}
-          {tache.deadline && (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <motion.div layout
+        style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 12, padding: '12px 14px', marginBottom: 8, boxShadow: isDragOverlay ? '0 12px 40px rgba(0,0,0,0.28)' : 'none' }}
+        whileHover={!isDragging ? { borderColor: col?.couleur + '55', y: -1, boxShadow: '0 4px 20px rgba(0,0,0,0.12)' } : {}}
+        onClick={() => !isDragging && onOuvrir(tache)}
+        initial={isDragOverlay ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+          <div {...listeners} style={{ cursor: 'grab', flexShrink: 0, color: T.text2, paddingTop: 3 }} onClick={e => e.stopPropagation()}>
+            <GripVertical size={12} />
+          </div>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITE_COLOR[tache.priorite], flexShrink: 0, marginTop: 5 }} />
+          <p style={{ fontSize: 13, fontWeight: 600, color: T.text, lineHeight: 1.4, flex: 1, margin: 0 }}>{tache.titre}</p>
+          <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 2, flexShrink: 0 }}
+            onClick={e => { e.stopPropagation(); onModifier(tache) }} whileHover={{ color: T.accent }}>
+            <MoreHorizontal size={14} />
+          </motion.button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            {assignee && (
+              <div style={{ width: 22, height: 22, borderRadius: 7, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent }} title={assignee.nom}>
+                {assignee.nom.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {tache.deadline && (
+              <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                <Clock size={9} />{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+              </span>
+            )}
+          </div>
+          {tache.nb_commentaires > 0 && (
             <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Clock size={9} />{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+              <MessageCircle size={9} />{tache.nb_commentaires}
             </span>
           )}
         </div>
-        {tache.nb_commentaires > 0 && (
-          <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
-            <MessageCircle size={9} />{tache.nb_commentaires}
-          </span>
-        )}
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ===== COLONNE DROPPABLE =====
+function ColonneDroppable({ T, col, children, isOver }) {
+  const { setNodeRef } = useDroppable({ id: col.id })
+  return (
+    <div ref={setNodeRef} style={{
+      flex: 1, overflowY: 'auto', padding: '4px 12px 16px',
+      background: isOver ? col.bg : 'transparent',
+      transition: 'background 0.2s',
+      borderRadius: 8,
+    }}>
+      {children}
+    </div>
   )
 }
 
@@ -262,7 +292,7 @@ function ModaleTache({ T, membres, tache, user, onFermer, onSauvegarder }) {
   )
 }
 
-// ===== PANNEAU COMMENTAIRES (slide from right) =====
+// ===== PANNEAU COMMENTAIRES =====
 function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
   const [commentaires, setCommentaires] = useState([])
   const [texte, setTexte] = useState('')
@@ -276,7 +306,13 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
   }
   const envoyer = async () => {
     if (!texte.trim()) return
-    try { await axios.post(`${API}/equipes/taches/commentaires`, { tache_id: tache.id, user_id: user.id, contenu: texte }); setTexte(''); charger() } catch {}
+    try {
+      await axios.post(`${API}/equipes/taches/commentaires`, {
+        tache_id: tache.id, user_id: user.id, contenu: texte,
+        equipe_id: tache.equipe_id
+      })
+      setTexte(''); charger()
+    } catch {}
   }
   const assignee = membres.find(m => m.id === tache.assignee_id)
   const col = COLONNES.find(c => c.id === tache.statut)
@@ -285,7 +321,6 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
     <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
-
       <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -302,7 +337,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
           </motion.button>
         </div>
         {assignee && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '6px 10px', background: T.bg3, borderRadius: 8, display: 'inline-flex' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '6px 10px', background: T.bg3, borderRadius: 8 }}>
             <div style={{ width: 20, height: 20, borderRadius: 6, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent }}>
               {assignee.nom.charAt(0).toUpperCase()}
             </div>
@@ -310,7 +345,6 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
           </div>
         )}
       </div>
-
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {commentaires.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 48 }}>
@@ -333,7 +367,6 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
         ))}
         <div ref={endRef} />
       </div>
-
       <div style={{ padding: '12px 16px 20px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
@@ -349,6 +382,101 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
   )
 }
 
+// ===== DRAWER ACTIVITÉ =====
+function DrawerActivite({ T, equipe_id, onFermer }) {
+  const [activites, setActivites] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const charger = async () => {
+      try {
+        const r = await axios.get(`${API}/equipes/${equipe_id}/activites`)
+        setActivites(r.data)
+      } catch {}
+      setLoading(false)
+    }
+    charger()
+    const iv = setInterval(charger, 10000)
+    return () => clearInterval(iv)
+  }, [equipe_id])
+
+  const ACTION_ICON = {
+    'a créé la tâche': '✅',
+    'a modifié la tâche': '✏️',
+    'a commenté sur': '💬',
+    'a déplacé vers À faire': '📋',
+    'a déplacé vers En cours': '⚡',
+    'a déplacé vers Terminé': '🎉',
+  }
+
+  const tempsRelatif = (iso) => {
+    const diff = (Date.now() - new Date(iso)) / 1000
+    if (diff < 60) return 'à l\'instant'
+    if (diff < 3600) return `il y a ${Math.floor(diff / 60)}min`
+    if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
+    return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+  }
+
+  return (
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(360px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
+      initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
+      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Activity size={16} color={T.accent} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Activité</h3>
+            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>30 dernières actions</p>
+          </div>
+        </div>
+        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
+          <X size={13} />
+        </motion.button>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', paddingTop: 60 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: `3px solid ${T.border}`, borderTopColor: T.accent, margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
+            <p style={{ fontSize: 12, color: T.text2 }}>Chargement…</p>
+          </div>
+        ) : activites.length === 0 ? (
+          <div style={{ textAlign: 'center', paddingTop: 60 }}>
+            <Activity size={28} color={T.border} strokeWidth={1.2} style={{ margin: '0 auto 12px', display: 'block' }} />
+            <p style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>Aucune activité</p>
+            <p style={{ fontSize: 12, color: T.text2, lineHeight: 1.6 }}>Les actions de l'équipe apparaîtront ici.</p>
+          </div>
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <div style={{ position: 'absolute', left: 15, top: 0, bottom: 0, width: 1, background: T.border }} />
+            {activites.map((a, i) => (
+              <motion.div key={a.id}
+                initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03 }}
+                style={{ display: 'flex', gap: 14, marginBottom: 18, paddingLeft: 4 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: T.bg3, border: `2px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0, zIndex: 1, marginTop: 2 }}>
+                  {ACTION_ICON[a.action] || '🔹'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, color: T.text, lineHeight: 1.45, margin: 0, marginBottom: 2 }}>
+                    <strong>{a.nom_user}</strong>{' '}{a.action}
+                    {a.cible && <span style={{ color: T.text2 }}> « {a.cible} »</span>}
+                  </p>
+                  <span style={{ fontSize: 10.5, color: T.text2 }}>{tempsRelatif(a.created_at)}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </motion.div>
+  )
+}
+
 // ===== PAGE PRINCIPALE =====
 export default function Collaboration() {
   const user = JSON.parse(localStorage.getItem('user'))
@@ -357,7 +485,6 @@ export default function Collaboration() {
   const isMobile = useMediaQuery('(max-width: 768px)')
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
 
-  // Sidebar toggle persistant (comme Dashboard)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('collab_sidebar_open') !== 'false' }
     catch { return true }
@@ -378,6 +505,8 @@ export default function Collaboration() {
   const [equipeActive, setEquipeActive] = useState(null)
   const [membres, setMembres] = useState([])
   const [taches, setTaches] = useState([])
+  const tachesRef = useRef(taches)
+  tachesRef.current = taches
 
   const [showPartage, setShowPartage] = useState(null)
   const [showModaleTache, setShowModaleTache] = useState(false)
@@ -385,6 +514,23 @@ export default function Collaboration() {
   const [tacheCommentaires, setTacheCommentaires] = useState(null)
   const [showCreer, setShowCreer] = useState(false)
   const [showRejoindre, setShowRejoindre] = useState(false)
+  const [showActivite, setShowActivite] = useState(false)
+
+  // Drag & Drop state
+  const [activeId, setActiveId] = useState(null)
+  const [overCol, setOverCol] = useState(null)
+
+  // Toasts
+  const [toasts, setToasts] = useState([])
+  const toastIdRef = useRef(0)
+
+  const addToast = useCallback((message, icon = '🔔', color) => {
+    const id = ++toastIdRef.current
+    setToasts(p => [...p, { id, message, icon, color }])
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4500)
+  }, [])
+
+  const removeToast = useCallback((id) => setToasts(p => p.filter(t => t.id !== id)), [])
 
   const [nomEquipe, setNomEquipe] = useState('')
   const [descEquipe, setDescEquipe] = useState('')
@@ -392,14 +538,18 @@ export default function Collaboration() {
   const [erreur, setErreur] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Profile menu state
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const profileMenuRef = useRef(null)
 
-  // Filtres (inutilisés dans collaboration mais présents pour la sidebar identique)
   const [filtre, setFiltre] = useState('toutes')
   const bloquees = 0
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+  )
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -414,18 +564,66 @@ export default function Collaboration() {
   useEffect(() => {
     if (!user) { navigate('/'); return }
     chargerEquipes()
-    
     const params = new URLSearchParams(window.location.hash.split('?')[1] || '')
     const codeUrl = params.get('code')
-    if (codeUrl) {
-      setCodeRejoint(codeUrl)
-      setShowRejoindre(true)
-    }
+    if (codeUrl) { setCodeRejoint(codeUrl); setShowRejoindre(true) }
   }, [])
 
   useEffect(() => {
     if (equipeActive) { chargerMembres(equipeActive.id); chargerTaches(equipeActive.id) }
   }, [equipeActive])
+
+  // ===== POLLING INTELLIGENT =====
+  const pollingRef = useRef(null)
+  const isVisibleRef = useRef(true)
+
+  const chargerTachesSilent = useCallback(async (equipe_id) => {
+    try {
+      const r = await axios.get(`${API}/equipes/${equipe_id}/taches`)
+      const nouvelles = r.data
+      const anciennes = tachesRef.current
+
+      // Détecter les changements
+      if (anciennes.length > 0 && nouvelles.length !== anciennes.length) {
+        const diff = nouvelles.length - anciennes.length
+        if (diff > 0) addToast(`${diff} nouvelle${diff > 1 ? 's' : ''} tâche${diff > 1 ? 's' : ''} ajoutée${diff > 1 ? 's' : ''}`, '✅', '#4caf82')
+      } else if (anciennes.length > 0) {
+        const changed = nouvelles.find(n => {
+          const old = anciennes.find(a => a.id === n.id)
+          return old && old.statut !== n.statut
+        })
+        if (changed) {
+          const labels = { todo: 'À faire', en_cours: 'En cours', termine: 'Terminé' }
+          addToast(`"${changed.titre}" → ${labels[changed.statut]}`, '🔄', '#6c63ff')
+        }
+      }
+
+      setTaches(nouvelles)
+    } catch {}
+  }, [addToast])
+
+  useEffect(() => {
+    if (!equipeActive) return
+
+    const demarrerPolling = () => {
+      pollingRef.current = setInterval(() => {
+        if (isVisibleRef.current) chargerTachesSilent(equipeActive.id)
+      }, 8000)
+    }
+
+    const handleVisibility = () => {
+      isVisibleRef.current = !document.hidden
+      if (!document.hidden) chargerTachesSilent(equipeActive.id)
+    }
+
+    demarrerPolling()
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(pollingRef.current)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [equipeActive, chargerTachesSilent])
 
   const chargerEquipes = async () => {
     try { const r = await axios.get(`${API}/equipes/user/${user.id}`); setEquipes(r.data); if (r.data.length > 0) setEquipeActive(r.data[0]) } catch {}
@@ -456,33 +654,71 @@ export default function Collaboration() {
 
   const sauvegarderTache = async (form) => {
     try {
-      if (tacheAModifier) await axios.put(`${API}/equipes/taches/${tacheAModifier.id}`, form)
-      else await axios.post(`${API}/equipes/taches`, { ...form, equipe_id: equipeActive.id, createur_id: user.id })
-      chargerTaches(equipeActive.id); setShowModaleTache(false); setTacheAModifier(null)
+      if (tacheAModifier) {
+        await axios.put(`${API}/equipes/taches/${tacheAModifier.id}`, {
+          ...form, user_id: user.id, nom_user: user.nom
+        })
+      } else {
+        await axios.post(`${API}/equipes/taches`, { ...form, equipe_id: equipeActive.id, createur_id: user.id })
+      }
+      chargerTaches(equipeActive.id)
+      setShowModaleTache(false); setTacheAModifier(null)
     } catch {}
   }
 
-  const tachesCol = (statut) => taches.filter(t => t.statut === statut)
+  // ===== DRAG & DROP HANDLERS =====
+  const handleDragStart = ({ active }) => setActiveId(active.id)
+
+  const handleDragOver = ({ over }) => setOverCol(over?.id || null)
+
+  const handleDragEnd = async ({ active, over }) => {
+    setActiveId(null)
+    setOverCol(null)
+    if (!over) return
+
+    const tacheId = parseInt(active.id)
+    const newStatut = over.id
+    const tache = taches.find(t => t.id === tacheId)
+    if (!tache || tache.statut === newStatut) return
+
+    // Optimistic update
+    setTaches(prev => prev.map(t => t.id === tacheId ? { ...t, statut: newStatut } : t))
+
+    try {
+      await axios.put(`${API}/equipes/taches/${tacheId}`, {
+        statut: newStatut,
+        user_id: user.id,
+        nom_user: user.nom
+      })
+    } catch {
+      // Rollback
+      setTaches(prev => prev.map(t => t.id === tacheId ? { ...t, statut: tache.statut } : t))
+      addToast('Erreur lors du déplacement', '❌', '#e05c5c')
+    }
+  }
+
+  const tachesCol = (statut) => {
+    let list = taches.filter(t => t.statut === statut)
+    if (filtre === 'haute') list = list.filter(t => t.priorite === 'haute')
+    if (filtre === 'terminee') list = list.filter(t => t.statut === 'termine')
+    return list
+  }
+  const tacheActive = activeId ? taches.find(t => t.id === parseInt(activeId)) : null
 
   const SIDEBAR_W = 248
-  const sidebarLeft = isMobile
-    ? (sidebarOpen ? 0 : '-100%')
-    : (sidebarOpen ? 0 : -SIDEBAR_W)
+  const sidebarLeft = isMobile ? (sidebarOpen ? 0 : '-100%') : (sidebarOpen ? 0 : -SIDEBAR_W)
   const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
 
-  // Mock user data for profile
   const userData = { nom: user?.nom || 'Utilisateur', email: user?.email || 'user@example.com' }
-  const points = 1250
-  const niveau = 3
+  const points = 1250; const niveau = 3
   const niveauActuel = { label: 'Productif' }
-  const pctNiveau = 42
-  const streak = 5
+  const pctNiveau = 42; const streak = 5
 
   const IconLock = ({ size = 14, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-  </svg>
-)
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  )
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif", overflow: 'hidden' }}>
@@ -494,15 +730,12 @@ export default function Collaboration() {
         select option { background: ${T.bg2}; }
       `}</style>
 
-      {/* ══════════════════════════════════════════════════════════════
-          SIDEBAR — IDENTIQUE AU DASHBOARD (avec filtres)
-      ══════════════════════════════════════════════════════════════ */}
+      {/* SIDEBAR */}
       <motion.aside
         animate={{ left: sidebarLeft, width: SIDEBAR_W }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         style={{ width: SIDEBAR_W, background: T.bg2, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', padding: 'clamp(16px,3vh,24px) clamp(12px,2vw,16px)', position: 'fixed', top: 0, height: '100vh', zIndex: 150, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 80 }}>
 
-        {/* Logo + bouton fermer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(24px,4vh,32px)', padding: '0 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -513,18 +746,16 @@ export default function Collaboration() {
           {!isMobile && (
             <motion.button onClick={toggleSidebar}
               style={{ width: 28, height: 28, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-              whileHover={{ color: T.accent, borderColor: T.accent }}
-              title="Réduire la sidebar">
+              whileHover={{ color: T.accent, borderColor: T.accent }}>
               <PanelLeftClose size={14} />
             </motion.button>
           )}
         </div>
 
-        {/* Navigation */}
         <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
         {NAV_ITEMS.filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path)).map(item => {
           const Icon = item.icon
-          const active = window.location.pathname === item.path || (item.path === '/collaboration' && window.location.pathname.includes('collaboration'))
+          const active = item.path === '/collaboration'
           return (
             <motion.button key={item.path}
               style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, color: active ? T.accent : T.text2, background: active ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
@@ -538,7 +769,6 @@ export default function Collaboration() {
 
         <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
 
-        {/* FILTRES (exactement comme dans Dashboard) */}
         <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
         {[
           { val: 'toutes',   label: 'Toutes les tâches' },
@@ -559,7 +789,6 @@ export default function Collaboration() {
 
         <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
 
-        {/* Mes équipes */}
         {equipes.length > 0 && (
           <>
             <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>MES ÉQUIPES</p>
@@ -580,7 +809,7 @@ export default function Collaboration() {
           </>
         )}
 
-        {/* Avatar avec menu déroulant (comme Dashboard) */}
+        {/* Avatar */}
         <div style={{ position: 'relative', marginTop: 'auto', paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
           <motion.button onClick={() => setShowProfileMenu(p => !p)}
             style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 12, background: showProfileMenu ? `${T.accent}15` : T.bg3, border: `1.5px solid ${showProfileMenu ? T.accent + '60' : T.border}`, cursor: 'pointer', textAlign: 'left' }}
@@ -665,21 +894,17 @@ export default function Collaboration() {
         )}
       </AnimatePresence>
 
-      {/* Bouton toggle sidebar flottant */}
-      <motion.button
-        onClick={toggleSidebar}
+      {/* Toggle sidebar */}
+      <motion.button onClick={toggleSidebar}
         animate={{ left: !isMobile && sidebarOpen ? SIDEBAR_W + 12 : 12 }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         style={{ position: 'fixed', top: 14, zIndex: 200, width: 36, height: 36, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-        whileHover={{ color: T.accent, borderColor: T.accent }}
-        title={sidebarOpen ? 'Fermer la sidebar' : 'Ouvrir la sidebar'}>
+        whileHover={{ color: T.accent, borderColor: T.accent }}>
         {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
       </motion.button>
 
       {/* MAIN */}
-      <motion.main
-        animate={{ marginLeft: mainMargin }}
-        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+      <motion.main animate={{ marginLeft: mainMargin }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
         {/* HEADER */}
@@ -707,6 +932,12 @@ export default function Collaboration() {
           )}
 
           <div style={{ display: 'flex', gap: 7, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {equipeActive && (
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showActivite ? `${T.accent}18` : T.bg3, border: `1px solid ${showActivite ? T.accent + '35' : T.border}`, borderRadius: 9, color: showActivite ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+                onClick={() => setShowActivite(p => !p)} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <Activity size={13} /> {!isMobile && 'Activité'}
+              </motion.button>
+            )}
             {equipeActive && (
               <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, cursor: 'pointer' }}
                 onClick={() => setShowPartage(equipeActive)} whileHover={{ borderColor: T.accent, color: T.accent }}>
@@ -766,45 +997,58 @@ export default function Collaboration() {
               ))}
             </div>
 
-            {/* Kanban 3 colonnes */}
-            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', overflow: isMobile ? 'auto' : 'hidden' }}>
-              {COLONNES.map((col, i) => (
-                <div key={col.id} style={{ display: 'flex', flexDirection: 'column', borderRight: !isMobile && i < 2 ? `1px solid ${T.border}` : 'none', overflow: 'hidden' }}>
-                  <div style={{ padding: '13px 14px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.couleur }} />
-                      <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{col.label}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: col.bg, color: col.couleur }}>{tachesCol(col.id).length}</span>
-                    </div>
-                    <motion.button style={{ width: 24, height: 24, borderRadius: 7, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileHover={{ borderColor: col.couleur, color: col.couleur }}>
-                      <Plus size={12} />
-                    </motion.button>
-                  </div>
-                  <div style={{ flex: 1, overflowY: 'auto', padding: '4px 12px 16px' }}>
-                    <AnimatePresence>
-                      {tachesCol(col.id).map(t => (
-                        <CarteTache key={t.id} T={T} tache={t} membres={membres}
-                          onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
-                          onOuvrir={setTacheCommentaires} />
-                      ))}
-                    </AnimatePresence>
-                    {tachesCol(col.id).length === 0 && (
-                      <div style={{ padding: '24px 0', textAlign: 'center' }}>
-                        <p style={{ fontSize: 11, color: T.text2, opacity: 0.4 }}>Vide</p>
+            {/* KANBAN avec DnD */}
+            <DndContext sensors={sensors} collisionDetection={closestCenter}
+              onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', overflow: isMobile ? 'auto' : 'hidden' }}>
+                {COLONNES.map((col, i) => (
+                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', borderRight: !isMobile && i < 2 ? `1px solid ${T.border}` : 'none', overflow: 'hidden' }}>
+                    <div style={{ padding: '13px 14px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.couleur }} />
+                        <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{col.label}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: col.bg, color: col.couleur }}>{tachesCol(col.id).length}</span>
                       </div>
-                    )}
+                      <motion.button style={{ width: 24, height: 24, borderRadius: 7, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileHover={{ borderColor: col.couleur, color: col.couleur }}>
+                        <Plus size={12} />
+                      </motion.button>
+                    </div>
+                    <ColonneDroppable T={T} col={col} isOver={overCol === col.id}>
+                      <AnimatePresence>
+                        {tachesCol(col.id).map(t => (
+                          <CarteTache key={t.id} T={T} tache={t} membres={membres}
+                            onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
+                            onOuvrir={setTacheCommentaires} />
+                        ))}
+                      </AnimatePresence>
+                      {tachesCol(col.id).length === 0 && (
+                        <div style={{ padding: '24px 0', textAlign: 'center', border: `2px dashed ${overCol === col.id ? col.couleur + '60' : T.border}`, borderRadius: 10, transition: 'border-color 0.2s' }}>
+                          <p style={{ fontSize: 11, color: overCol === col.id ? col.couleur : T.text2, opacity: 0.6 }}>
+                            {overCol === col.id ? '↓ Déposer ici' : 'Vide'}
+                          </p>
+                        </div>
+                      )}
+                    </ColonneDroppable>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </DndContext>
           </div>
         )}
       </motion.main>
 
+      {/* TOASTS */}
+      <Toast toasts={toasts} removeToast={removeToast} />
+
       {/* MODALES */}
       <AnimatePresence>
-        {tacheCommentaires && <PanneauCommentaires key="panel" T={T} tache={tacheCommentaires} user={user} membres={membres} onFermer={() => setTacheCommentaires(null)} />}
+        {showActivite && equipeActive && (
+          <DrawerActivite key="activite" T={T} equipe_id={equipeActive.id} onFermer={() => setShowActivite(false)} />
+        )}
+        {tacheCommentaires && (
+          <PanneauCommentaires key="panel" T={T} tache={tacheCommentaires} user={user} membres={membres} onFermer={() => setTacheCommentaires(null)} />
+        )}
         {showPartage && <ModalePartage key="partage" T={T} equipe={showPartage} onFermer={() => setShowPartage(null)} />}
         {showModaleTache && equipeActive && (
           <ModaleTache key="tache" T={T} membres={membres} tache={tacheAModifier} user={user}
@@ -902,6 +1146,7 @@ export default function Collaboration() {
           </>
         )}
       </AnimatePresence>
+
       {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </div>

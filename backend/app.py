@@ -1450,6 +1450,51 @@ def get_analytics(user_id):
 # COLLABORATION
 # ============================================
 
+def _init_equipe_activites(curseur):
+    curseur.execute("""
+        CREATE TABLE IF NOT EXISTS equipe_activites (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            equipe_id INT NOT NULL,
+            user_id INT NOT NULL,
+            nom_user VARCHAR(100) NOT NULL,
+            action VARCHAR(80) NOT NULL,
+            cible VARCHAR(200) DEFAULT '',
+            cible_id INT DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_equipe (equipe_id)
+        )
+    """)
+
+def log_activite(equipe_id, user_id, nom_user, action, cible='', cible_id=None):
+    try:
+        db = connecter()
+        c = db.cursor()
+        _init_equipe_activites(c)
+        c.execute(
+            "INSERT INTO equipe_activites (equipe_id, user_id, nom_user, action, cible, cible_id) VALUES (%s,%s,%s,%s,%s,%s)",
+            (equipe_id, user_id, nom_user, action, cible, cible_id)
+        )
+        db.commit()
+        db.close()
+    except Exception:
+        pass
+
+@app.route('/equipes/<int:equipe_id>/activites', methods=['GET'])
+def get_activites_equipe(equipe_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        _init_equipe_activites(curseur)
+        curseur.execute(
+            "SELECT * FROM equipe_activites WHERE equipe_id=%s ORDER BY created_at DESC LIMIT 30",
+            (equipe_id,)
+        )
+        activites = curseur.fetchall()
+        db.close()
+        return jsonify(activites)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 @app.route('/equipes', methods=['POST'])
 def creer_equipe():
     try:
@@ -1547,6 +1592,8 @@ def creer_tache_equipe():
         curseur.execute("SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom FROM taches_equipe te JOIN users u1 ON te.createur_id=u1.id LEFT JOIN users u2 ON te.assignee_id=u2.id WHERE te.id=%s", (tache_id,))
         tache = curseur.fetchone()
         db.close()
+        nom_user = tache.get('createur_nom', 'Quelqu\'un') if tache else 'Quelqu\'un'
+        log_activite(data['equipe_id'], data['createur_id'], nom_user, 'a créé la tâche', data['titre'], tache_id)
         return jsonify(tache)
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -1556,7 +1603,7 @@ def modifier_tache_equipe(tache_id):
     try:
         data = request.get_json()
         db = connecter()
-        curseur = db.cursor()
+        curseur = db.cursor(dictionary=True)
         fields, vals = [], []
         for key in ['titre', 'statut', 'priorite', 'assignee_id', 'deadline', 'description']:
             if key in data:
@@ -1566,7 +1613,16 @@ def modifier_tache_equipe(tache_id):
             vals.append(tache_id)
             curseur.execute(f"UPDATE taches_equipe SET {', '.join(fields)} WHERE id=%s", vals)
             db.commit()
+        curseur.execute("SELECT titre, equipe_id FROM taches_equipe WHERE id=%s", (tache_id,))
+        tache_info = curseur.fetchone()
         db.close()
+        if tache_info and data.get('user_id') and data.get('nom_user'):
+            statut_labels = {'todo': 'À faire', 'en_cours': 'En cours', 'termine': 'Terminé'}
+            if 'statut' in data:
+                action = f"a déplacé vers {statut_labels.get(data['statut'], data['statut'])}"
+            else:
+                action = 'a modifié la tâche'
+            log_activite(tache_info['equipe_id'], data['user_id'], data['nom_user'], action, tache_info['titre'], tache_id)
         return jsonify({"message": "Tache mise a jour"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -1588,9 +1644,14 @@ def ajouter_commentaire_equipe():
     try:
         data = request.get_json()
         db = connecter()
-        curseur = db.cursor()
+        curseur = db.cursor(dictionary=True)
         curseur.execute("INSERT INTO commentaires_tache (tache_id, user_id, contenu) VALUES (%s, %s, %s)", (data['tache_id'], data['user_id'], data['contenu']))
-        db.commit(); db.close()
+        db.commit()
+        curseur.execute("SELECT te.titre, te.equipe_id, u.nom FROM taches_equipe te JOIN users u ON u.id=%s WHERE te.id=%s", (data['user_id'], data['tache_id']))
+        info = curseur.fetchone()
+        db.close()
+        if info:
+            log_activite(info['equipe_id'], data['user_id'], info['nom'], 'a commenté sur', info['titre'], data['tache_id'])
         return jsonify({"message": "Commentaire ajoute"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
