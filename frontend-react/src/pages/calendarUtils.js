@@ -268,3 +268,36 @@ export function getGanttDays(n = 30, offsetDays = -5) {
 
 export const pColor = (p) => ({ haute: '#ef4444', moyenne: '#f59e0b', basse: '#10b981' })[p] ?? '#6366f1'
 export const pBg    = (p) => ({ haute: '#ef444415', moyenne: '#f59e0b15', basse: '#10b98115' })[p] ?? '#6366f115'
+
+// ── Month helpers ─────────────────────────────────────────────────────
+
+export function getMonthDays(monthOffset = 0) {
+  const ref = new Date()
+  ref.setDate(1)
+  ref.setMonth(ref.getMonth() + monthOffset)
+  const year  = ref.getFullYear()
+  const month = ref.getMonth()
+  const today = new Date().toISOString().split('T')[0]
+
+  const firstDay = new Date(year, month, 1)
+  // Week starts Monday: dow 0=Sun → shift to 6, else dow-1
+  const startDow = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1
+  const gridStart = new Date(firstDay)
+  gridStart.setDate(gridStart.getDate() - startDow)
+
+  const days = Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(gridStart)
+    d.setDate(d.getDate() + i)
+    const dateStr = d.toISOString().split('T')[0]
+    return {
+      date: dateStr,
+      num: d.getDate(),
+      isToday: dateStr === today,
+      isCurrentMonth: d.getMonth() === month,
+      isWeekend: d.getDay() === 0 || d.getDay() === 6,
+    }
+  })
+
+  const monthLabel = firstDay.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+  return { days, monthLabel }
+}

@@ -10,10 +10,10 @@ import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import {
-  LayoutDashboard, Bot, BarChart2, Calendar, LogOut, Layers, Sparkles,
+  LayoutDashboard, Bot, BarChart2, Calendar, CalendarDays, LogOut, Layers, Sparkles,
   Menu, HelpCircle, Columns, BarChart, CheckSquare, Check, Zap, Target, X,
   TrendingUp, AlertTriangle, Brain, PanelLeftClose, PanelLeftOpen,
-  ChevronRight, ChevronUp, Settings, User, Star, Flame, Flag, Users,
+  ChevronRight, ChevronLeft, ChevronUp, Settings, User, Star, Flame, Flag, Users,
   Plus, Trash2, Copy, Link2, Crown, Share2, UserPlus, MoreHorizontal, MessageCircle
 } from 'lucide-react'
 
@@ -22,7 +22,7 @@ import KanbanColumn from './KanbanColumn'
 import {
   calcPriorityScore, binPackTasks, getGanttDays,
   minsToTime, timeToMins, pColor, pBg,
-  getWeekDays
+  getWeekDays, getMonthDays
 } from './calendarUtils'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -465,20 +465,19 @@ export default function Planification() {
     catch { setTaches(prev) }
   }, [taches])
 
-  // ── Loading state ──────────────────────────────────────────────────
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-        <Target size={28} color={T.accent} />
-      </motion.div>
-    </div>
+  // ── Month data ─────────────────────────────────────────────────────
+  const { days: monthDays, monthLabel } = useMemo(
+    () => getMonthDays(semaineOffset),
+    [semaineOffset]
   )
 
   // ══════════════════════════════════════════════════════════════════
-  // RENDER
+  // RENDER — pas de spinner bloquant, page s'affiche immédiatement
   // ══════════════════════════════════════════════════════════════════
+  const isCalView = vue === 'jour' || vue === 'calendrier'
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -486,7 +485,7 @@ export default function Planification() {
         ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 99px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
-          main { margin-left: 0 !important; padding: 14px !important; padding-top: 56px !important; }
+          main { margin-left: 0 !important; padding: 0 !important; }
         }
       `}</style>
 
@@ -689,10 +688,17 @@ export default function Planification() {
       <motion.main
         animate={{ marginLeft: mainMargin }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, padding: 'clamp(16px, 3vw, 32px)', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+
+        {/* ═══ STATIC TOP — stats + header toujours visibles, ne scroll jamais ═══ */}
+        <div style={{
+          flexShrink: 0,
+          padding: isMobile ? '10px 14px 8px' : 'clamp(16px,3vw,28px) clamp(16px,3vw,32px) 10px',
+          paddingTop: isMobile ? 54 : 'clamp(20px,3vh,32px)',
+        }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: isMobile ? 10 : 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
@@ -723,6 +729,7 @@ export default function Planification() {
               { id: 'kanban', label: 'Kanban', Icon: Columns },
               { id: 'jour', label: 'Jour', Icon: Target },
               { id: 'calendrier', label: 'Semaine', Icon: Calendar },
+              { id: 'mois', label: 'Mois', Icon: CalendarDays },
               { id: 'gantt', label: 'Gantt', Icon: BarChart },
             ].map(({ id, label, Icon }) => (
               <motion.button key={id}
@@ -799,9 +806,23 @@ export default function Planification() {
             )
           })}
         </div>
+        </div>
+        {/* END STATIC TOP */}
 
-        {/* ─── Bloc "Aujourd'hui" — quick actions ─── */}
-        {aujourdHui.length > 0 && (
+        {/* ═══ CONTENT AREA — liste/kanban/gantt scrollable, calendrier fixe ═══ */}
+        <div style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: isCalView ? 'hidden' : 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: isMobile
+            ? `0 14px ${isCalView ? '8px' : '72px'}`
+            : `0 clamp(16px,3vw,32px) clamp(10px,2vw,24px)`,
+        }}>
+
+        {/* ─── Bloc "Aujourd'hui" — masqué en vue calendrier (visible sur la grille) ─── */}
+        {!isCalView && aujourdHui.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             style={{ background: `linear-gradient(135deg, ${T.accent}10, ${T.accent2 || '#a855f7'}08)`, border: `1px solid ${T.accent}25`, borderRadius: 14, padding: isMobile ? 14 : '16px 20px', marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -850,9 +871,9 @@ export default function Planification() {
           </motion.div>
         )}
 
-        {/* ─── Propositions IA — l'user accepte ou refuse ─── */}
+        {/* ─── Propositions IA — masquées en vue calendrier ─── */}
         <AnimatePresence>
-          {smartResult && smartResult.length > 0 && (
+          {!isCalView && smartResult && smartResult.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               style={{ overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ background: `linear-gradient(135deg, ${T.accent}12, #a855f708)`, border: `1px dashed ${T.accent}40`, borderRadius: 14, padding: isMobile ? 14 : '16px 20px' }}>
@@ -919,6 +940,7 @@ export default function Planification() {
         </AnimatePresence>
 
         {/* ═══ VIEWS ═════════════════════════════════════════════════ */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <AnimatePresence mode="wait">
 
           {/* LISTE — vue minimaliste, pour qui ne veut ni kanban ni calendrier */}
@@ -1076,6 +1098,81 @@ export default function Planification() {
             </motion.div>
           )}
 
+          {/* MOIS */}
+          {vue === 'mois' && (
+            <motion.div key="mois" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              {/* Navigation mois */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: isMobile ? '10px 12px' : '8px 12px', flexShrink: 0 }}>
+                <motion.button style={{ width: isMobile ? 44 : 32, height: isMobile ? 44 : 32, borderRadius: 10, background: T.bg, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} onClick={() => setSemaineOffset(s => s - 1)} whileHover={{ borderColor: T.accent, color: T.accent }} whileTap={{ scale: 0.92 }}>
+                  <ChevronLeft size={isMobile ? 20 : 15} />
+                </motion.button>
+                <div style={{ flex: 1, textAlign: 'center', fontSize: isMobile ? 15 : 13, fontWeight: 800, color: T.text, letterSpacing: '-0.3px', textTransform: 'capitalize' }}>
+                  {monthLabel}
+                </div>
+                <motion.button style={{ padding: isMobile ? '10px 12px' : '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', fontSize: isMobile ? 12 : 11, fontWeight: 600, flexShrink: 0 }} onClick={() => setSemaineOffset(0)} whileHover={{ borderColor: T.accent, color: T.accent }} whileTap={{ scale: 0.92 }}>
+                  Auj.
+                </motion.button>
+                <motion.button style={{ width: isMobile ? 44 : 32, height: isMobile ? 44 : 32, borderRadius: 10, background: T.bg, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} onClick={() => setSemaineOffset(s => s + 1)} whileHover={{ borderColor: T.accent, color: T.accent }} whileTap={{ scale: 0.92 }}>
+                  <ChevronRight size={isMobile ? 20 : 15} />
+                </motion.button>
+              </div>
+
+              {/* Grille mois */}
+              <div style={{ flex: 1, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+                {/* Jours de la semaine */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: `1px solid ${T.border}`, flexShrink: 0, position: 'sticky', top: 0, background: T.bg2, zIndex: 10 }}>
+                  {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((d, i) => (
+                    <div key={d} style={{ padding: isMobile ? '8px 4px' : '10px 8px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: i >= 5 ? T.accent : T.text2, letterSpacing: 0.8, textTransform: 'uppercase' }}>{d}</div>
+                  ))}
+                </div>
+                {/* Cellules */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', flex: 1 }}>
+                  {monthDays.map(day => {
+                    const dayPlan = planification.filter(p => (p.date_planifiee?.split('T')[0] || p.date_planifiee) === day.date)
+                    return (
+                      <div key={day.date} style={{
+                        minHeight: isMobile ? 60 : 80,
+                        padding: isMobile ? '4px' : '6px',
+                        borderRight: `1px solid ${T.border}20`,
+                        borderBottom: `1px solid ${T.border}20`,
+                        background: day.isToday ? `${T.accent}08` : day.isWeekend && day.isCurrentMonth ? `${T.bg}` : 'transparent',
+                        opacity: day.isCurrentMonth ? 1 : 0.35,
+                      }}>
+                        <div style={{
+                          width: day.isToday ? (isMobile ? 22 : 26) : 'auto',
+                          height: day.isToday ? (isMobile ? 22 : 26) : 'auto',
+                          borderRadius: '50%',
+                          background: day.isToday ? T.accent : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: isMobile ? 11 : 12,
+                          fontWeight: day.isToday ? 800 : day.isCurrentMonth ? 500 : 400,
+                          color: day.isToday ? '#fff' : T.text,
+                          marginBottom: 3,
+                          flexShrink: 0,
+                        }}>
+                          {day.num}
+                        </div>
+                        {dayPlan.slice(0, isMobile ? 1 : 3).map(p => {
+                          const t = taches.find(t => t.id === p.tache_id)
+                          return (
+                            <div key={p.id} style={{ fontSize: 9, padding: '1px 4px', borderRadius: 3, background: pBg(p.priorite || t?.priorite), color: pColor(p.priorite || t?.priorite), marginBottom: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderLeft: `2px solid ${pColor(p.priorite || t?.priorite)}` }}>
+                              {p.titre || t?.titre || '—'}
+                            </div>
+                          )
+                        })}
+                        {dayPlan.length > (isMobile ? 1 : 3) && (
+                          <div style={{ fontSize: 8, color: T.accent, fontWeight: 600, paddingLeft: 2 }}>+{dayPlan.length - (isMobile ? 1 : 3)}</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* GANTT */}
           {vue === 'gantt' && (
             <motion.div key="gantt" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, overflow: 'auto' }}>
@@ -1146,6 +1243,10 @@ export default function Planification() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
+        {/* END VIEWS WRAPPER */}
+        </div>
+        {/* END CONTENT AREA */}
       </motion.main>
 
       {/* ── MODAL ESTIMATION ────────────────────────────────────────── */}

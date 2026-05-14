@@ -280,13 +280,13 @@ const CalendarGrid = memo(function CalendarGrid({
       {/* ── Calendar grid ── */}
       <div style={{
         flex: 1,
+        minHeight: 0,
         background: T.bg2,
         border: `1px solid ${T.border}`,
         borderRadius: 16,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: isMobile ? 480 : 500,
       }}>
         {/* Horizontal scroll wrapper for 7-day on mobile */}
         <div style={{
