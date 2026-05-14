@@ -484,8 +484,9 @@ export default function Planification() {
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 99px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
-          main { margin-left: 0 !important; padding: 16px !important; padding-top: 60px !important; }
+          main { margin-left: 0 !important; padding: 14px !important; padding-top: 56px !important; }
         }
       `}</style>
 
@@ -691,16 +692,32 @@ export default function Planification() {
         style={{ flex: 1, padding: 'clamp(16px, 3vw, 32px)', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12, paddingTop: isMobile ? 52 : 0 }}>
-          <div>
-            <h1 style={{ fontSize: 'clamp(20px, 4vw, 25px)', fontWeight: 800, letterSpacing: '-0.6px', marginBottom: 3 }}>Planification</h1>
-            <p style={{ color: T.text2, fontSize: 12, textTransform: 'capitalize' }}>
-              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </p>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
+                <div style={{ width: 8, height: 28, borderRadius: 99, background: `linear-gradient(180deg, ${T.accent}, ${T.accent2 || T.accent})`, flexShrink: 0 }} />
+                <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 900, letterSpacing: '-0.7px', margin: 0, background: `linear-gradient(135deg, ${T.text}, ${T.text2})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Planification</h1>
+              </div>
+              <p style={{ color: T.text2, fontSize: 12, textTransform: 'capitalize', paddingLeft: 18, margin: 0 }}>
+                {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+            </div>
           </div>
 
-          {/* View switcher */}
-          <div style={{ display: 'flex', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 11, padding: 4, gap: 2, flexWrap: 'wrap' }}>
+          {/* View switcher — scrollable, always labeled */}
+          <div style={{
+            display: 'flex',
+            background: T.bg2,
+            border: `1px solid ${T.border}`,
+            borderRadius: 12,
+            padding: 4,
+            gap: 3,
+            overflowX: 'auto',
+            flexWrap: 'nowrap',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}>
             {[
               { id: 'liste', label: 'Liste', Icon: CheckSquare },
               { id: 'kanban', label: 'Kanban', Icon: Columns },
@@ -709,30 +726,74 @@ export default function Planification() {
               { id: 'gantt', label: 'Gantt', Icon: BarChart },
             ].map(({ id, label, Icon }) => (
               <motion.button key={id}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 7, background: vue === id ? T.accent : 'transparent', color: vue === id ? '#fff' : T.text2, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: vue === id ? 700 : 400, transition: 'all 0.15s' }}
-                onClick={() => { setVue(id); setSemaineOffset(0) }} whileTap={{ scale: 0.95 }}>
-                <Icon size={13} />
-                {!isMobile && <span>{label}</span>}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  background: vue === id
+                    ? `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`
+                    : 'transparent',
+                  color: vue === id ? '#fff' : T.text2,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: vue === id ? 700 : 500,
+                  boxShadow: vue === id ? `0 4px 12px ${T.accent}40` : 'none',
+                  transition: 'all 0.18s',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
+                }}
+                onClick={() => { setVue(id); setSemaineOffset(0) }}
+                whileTap={{ scale: 0.95 }}>
+                <Icon size={13} strokeWidth={vue === id ? 2.5 : 1.8} />
+                <span>{label}</span>
               </motion.button>
             ))}
           </div>
         </div>
 
         {/* Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 12, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 12, marginBottom: 20 }}>
           {stats.map((s, i) => {
             const Icon = s.Icon
             return (
               <motion.div key={i}
-                style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 13, padding: isMobile ? 12 : '14px 16px', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                whileHover={{ y: -2 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: s.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon size={17} color={s.color} strokeWidth={2} />
+                style={{
+                  background: T.bg2,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 14,
+                  padding: isMobile ? '12px 14px' : '14px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: isMobile ? 10 : 14,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07 }}
+                whileHover={{ y: -2, boxShadow: `0 6px 20px ${s.color}18` }}>
+                {/* Colored left accent strip */}
+                <div style={{
+                  position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+                  background: `linear-gradient(180deg, ${s.color}, ${s.color}60)`,
+                  borderRadius: '14px 0 0 14px',
+                }} />
+                {/* Icon with gradient bg */}
+                <div style={{
+                  width: isMobile ? 38 : 42,
+                  height: isMobile ? 38 : 42,
+                  borderRadius: 12,
+                  background: `linear-gradient(135deg, ${s.color}22, ${s.color}10)`,
+                  border: `1px solid ${s.color}25`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Icon size={18} color={s.color} strokeWidth={2.2} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.5px', lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 11, color: T.text2, marginTop: 3 }}>{s.label}</div>
+                  <div style={{ fontSize: isMobile ? 24 : 26, fontWeight: 900, color: T.text, letterSpacing: '-0.8px', lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: T.text2, marginTop: 3, fontWeight: 500 }}>{s.label}</div>
                 </div>
               </motion.div>
             )
@@ -942,23 +1003,37 @@ export default function Planification() {
           {/* KANBAN */}
           {vue === 'kanban' && (
             <motion.div key="kanban" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16, alignItems: 'start' }}>
+              style={{
+                flex: 1,
+                display: 'flex',
+                gap: 12,
+                alignItems: 'start',
+                overflowX: isMobile ? 'auto' : 'visible',
+                scrollSnapType: isMobile ? 'x mandatory' : 'none',
+                paddingBottom: isMobile ? 8 : 0,
+              }}>
               {COLONNES.map((col, ci) => (
-                <KanbanColumn
-                  key={col.id}
-                  col={col}
-                  tasks={getTachesByStatut(col.id)}
-                  allCount={taches.length}
-                  dragging={kanbanDrag}
-                  dragOver={kanbanDragOver}
-                  T={T}
-                  onDragStart={setKanbanDrag}
-                  onDragEnd={() => { setKanbanDrag(null); setKanbanDragOver(null) }}
-                  onDragOver={setKanbanDragOver}
-                  onDragLeave={() => setKanbanDragOver(null)}
-                  onDrop={handleKanbanDrop}
-                  onEstimate={setShowEstimer}
-                />
+                <div key={col.id} style={{
+                  flexShrink: 0,
+                  width: isMobile ? 'min(82vw, 320px)' : undefined,
+                  flex: isMobile ? 'none' : '1',
+                  scrollSnapAlign: isMobile ? 'start' : 'none',
+                }}>
+                  <KanbanColumn
+                    col={col}
+                    tasks={getTachesByStatut(col.id)}
+                    allCount={taches.length}
+                    dragging={kanbanDrag}
+                    dragOver={kanbanDragOver}
+                    T={T}
+                    onDragStart={setKanbanDrag}
+                    onDragEnd={() => { setKanbanDrag(null); setKanbanDragOver(null) }}
+                    onDragOver={setKanbanDragOver}
+                    onDragLeave={() => setKanbanDragOver(null)}
+                    onDrop={handleKanbanDrop}
+                    onEstimate={setShowEstimer}
+                  />
+                </div>
               ))}
             </motion.div>
           )}
