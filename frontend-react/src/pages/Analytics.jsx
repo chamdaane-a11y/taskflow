@@ -374,6 +374,252 @@ const ChartCard = memo(({ title, subtitle, children, delay = 0, style = {} }) =>
 })
 
 // ══════════════════════════════════════════════════════════════════════
+// GAMIFICATION BAR — niveau, XP, streak, focus ring
+// ══════════════════════════════════════════════════════════════════════
+const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, T, loading, isMobile }) => {
+  const streak = stats?.streak || 0
+  const focusScore = stats?.focusScore || 0
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 }}
+      style={{
+        background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14,
+        padding: isMobile ? '12px 14px' : '14px 20px', marginBottom: 16,
+        display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 20,
+        flexWrap: isMobile ? 'wrap' : 'nowrap', position: 'relative', overflow: 'hidden',
+      }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${T.accent}, #a855f7, #e08a3c)` }} />
+
+      {/* Niveau */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px ${T.accent}40` }}>
+          <Crown size={16} color="#fff" strokeWidth={2.5} />
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: T.text2, fontWeight: 600, letterSpacing: 0.5 }}>NIVEAU {niveau}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{niveauActuel.label}</div>
+        </div>
+      </div>
+
+      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0 }} />
+
+      {/* XP bar */}
+      <div style={{ flex: isMobile ? '1 1 100px' : 1, minWidth: 80 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+          <span style={{ fontSize: 10, color: T.text2 }}>Progression XP</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: T.accent }}>{points} pts</span>
+        </div>
+        <div style={{ height: 5, borderRadius: 99, background: T.border, overflow: 'hidden' }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${pctNiveau}%` }}
+            transition={{ duration: 0.9, delay: 0.2, ease: 'easeOut' }}
+            style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${T.accent}, #a855f7)` }}
+          />
+        </div>
+        <div style={{ fontSize: 9, color: T.text2, marginTop: 3 }}>{pctNiveau}% vers niveau {niveau + 1}</div>
+      </div>
+
+      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0 }} />
+
+      {/* Streak */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <motion.div
+          animate={streak >= 3 ? { scale: [1, 1.12, 1] } : {}}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
+          <Flame size={20} color={streak >= 3 ? '#e08a3c' : T.text2} strokeWidth={2} />
+        </motion.div>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: streak >= 3 ? '#e08a3c' : T.text, lineHeight: 1 }}>
+            {streak}<span style={{ fontSize: 10, fontWeight: 600 }}>j</span>
+          </div>
+          <div style={{ fontSize: 10, color: T.text2 }}>streak</div>
+        </div>
+      </div>
+
+      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0 }} />
+
+      {/* Focus ring SVG */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <svg width={38} height={38} viewBox="0 0 38 38">
+          <circle cx="19" cy="19" r="14" fill="none" stroke={T.border} strokeWidth="3.5" />
+          <motion.circle
+            cx="19" cy="19" r="14" fill="none"
+            stroke={focusScore > 75 ? '#4caf82' : focusScore > 40 ? '#e08a3c' : '#e05c5c'}
+            strokeWidth="3.5"
+            strokeDasharray={`${2 * Math.PI * 14}`}
+            initial={{ strokeDashoffset: 2 * Math.PI * 14 }}
+            animate={{ strokeDashoffset: 2 * Math.PI * 14 * (1 - focusScore / 100) }}
+            transition={{ duration: 0.9, delay: 0.3, ease: 'easeOut' }}
+            strokeLinecap="round"
+            transform="rotate(-90 19 19)"
+          />
+          <text x="19" y="23" textAnchor="middle" fontSize="9" fontWeight="800"
+            fill={focusScore > 75 ? '#4caf82' : focusScore > 40 ? '#e08a3c' : '#e05c5c'}>
+            {loading ? '?' : focusScore}
+          </text>
+        </svg>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: T.text }}>Focus</div>
+          <div style={{ fontSize: 10, color: T.text2 }}>
+            {focusScore > 75 ? '🎯 Excellent' : focusScore > 40 ? 'Correct' : '↑ À améliorer'}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+})
+
+// ══════════════════════════════════════════════════════════════════════
+// ALERT BANNER — burnout / 80-20, dismissable par jour
+// ══════════════════════════════════════════════════════════════════════
+const AlertBanner = memo(({ stats, T }) => {
+  const todayKey = new Date().toISOString().split('T')[0]
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem('analytics_alert_dismissed') === todayKey }
+    catch { return false }
+  })
+
+  let alert = null
+  if (!dismissed && stats) {
+    if (stats.burnoutRisk) {
+      alert = {
+        Icon: Flame, color: '#e05c5c',
+        title: '⚠️ Risque de burnout détecté',
+        text: 'Forte activité 3 jours de suite suivie d\'une chute. Planifie une pause intentionnelle aujourd\'hui.',
+      }
+    } else if (stats.lowRatio > 70) {
+      alert = {
+        Icon: AlertTriangle, color: '#e08a3c',
+        title: `Règle 80/20 — ${stats.lowRatio}% de tâches à faible priorité`,
+        text: 'La majorité de tes efforts vont sur des tâches à faible impact. Concentre-toi sur la priorité haute.',
+      }
+    }
+  }
+
+  return (
+    <AnimatePresence>
+      {alert && (
+        <motion.div
+          key="alert-banner"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
+          exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+          transition={{ duration: 0.25 }}
+          style={{
+            background: alert.color + '10', border: `1px solid ${alert.color}35`,
+            borderRadius: 12, padding: '12px 14px',
+            display: 'flex', alignItems: 'flex-start', gap: 12, overflow: 'hidden',
+          }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: alert.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+            <alert.Icon size={14} color={alert.color} strokeWidth={2.2} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: alert.color, marginBottom: 2 }}>{alert.title}</div>
+            <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.5 }}>{alert.text}</div>
+          </div>
+          <motion.button
+            onClick={() => {
+              setDismissed(true)
+              try { localStorage.setItem('analytics_alert_dismissed', todayKey) } catch {}
+            }}
+            whileTap={{ scale: 0.85 }}
+            style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <X size={13} />
+          </motion.button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+})
+
+// ══════════════════════════════════════════════════════════════════════
+// TRAJECTORY CARD — projection en avant + sparkline 7j
+// ══════════════════════════════════════════════════════════════════════
+const TrajectoryCard = memo(({ stats, T, loading, isMobile }) => {
+  if (loading || !stats) return null
+
+  const { velocity, wow, streak, total, current } = stats
+  const isAccel = wow > 10
+  const isDecel = wow < -10
+
+  const projectedMonth = Math.round(velocity * 22)
+  let milestoneStr = ''
+  if (isAccel && velocity > 0) {
+    const daysNeeded = Math.ceil(total / velocity)
+    const d = new Date()
+    d.setDate(d.getDate() + daysNeeded)
+    milestoneStr = ` Tu doubles ta période vers le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`
+  }
+
+  const trendColor = isAccel ? '#4caf82' : isDecel ? '#e05c5c' : T.accent
+  const TrendIcon = isAccel ? TrendingUp : isDecel ? TrendingDown : Activity
+  const headline = isAccel
+    ? `Tu accélères de +${wow}%`
+    : isDecel
+    ? `Rythme en baisse (${wow}%)`
+    : `Rythme stable — ${velocity}/j actif`
+  const subline = isAccel
+    ? `À ce rythme : ~${projectedMonth} tâches ce mois.${milestoneStr}`
+    : isDecel
+    ? `Série de ${streak}j en cours. Identifie ce qui a changé pour retrouver ta vitesse.`
+    : streak >= 3
+    ? `🔥 ${streak} jours de série — un effort ciblé aujourd'hui ancre l'habitude.`
+    : `Régularité beats intensité. Un effort ciblé aujourd'hui changera la courbe de demain.`
+
+  const last7 = current.slice(-7)
+  const maxL7 = Math.max(...last7, 1)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 }}
+      style={{
+        background: T.bg2, border: `1px solid ${trendColor}30`, borderRadius: 14,
+        padding: '14px 18px', marginBottom: 20,
+        display: 'flex', alignItems: 'center', gap: 14,
+        position: 'relative', overflow: 'hidden',
+      }}>
+      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${trendColor}, ${trendColor}40)`, borderRadius: '3px 0 0 3px' }} />
+
+      <div style={{ width: 38, height: 38, borderRadius: 11, background: trendColor + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 8 }}>
+        <TrendIcon size={18} color={trendColor} strokeWidth={2.2} />
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: trendColor, marginBottom: 2 }}>{headline}</div>
+        <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.5 }}>{subline}</div>
+      </div>
+
+      {/* Mini sparkline 7j */}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 32, flexShrink: 0, paddingRight: 4 }}>
+          {last7.map((v, i) => (
+            <motion.div
+              key={i}
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ delay: i * 0.05, duration: 0.25 }}
+              style={{
+                width: 5,
+                height: `${Math.max((v / maxL7) * 100, 8)}%`,
+                background: i === last7.length - 1 ? trendColor : trendColor + '55',
+                borderRadius: 2,
+                transformOrigin: 'bottom',
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </motion.div>
+  )
+})
+
+// ══════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════════════
 export default function Analytics() {
@@ -826,6 +1072,16 @@ export default function Analytics() {
           </div>
         </div>
 
+        {/* Gamification Bar */}
+        <GamificationBar
+          stats={stats} points={points} niveau={niveau}
+          niveauActuel={niveauActuel} pctNiveau={pctNiveau}
+          T={T} loading={loading} isMobile={isMobile}
+        />
+
+        {/* Alert Banner — burnout ou 80/20 */}
+        {!loading && stats && <AlertBanner stats={stats} T={T} />}
+
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 0 }}>
           {tabs.map(tab => {
@@ -847,6 +1103,9 @@ export default function Analytics() {
           {/* ── TAB: OVERVIEW ── */}
           {activeTab === 'overview' && (
             <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+
+              {/* Trajectory Card */}
+              <TrajectoryCard stats={stats} T={T} loading={loading} isMobile={isMobile} />
 
               {/* KPI Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : 4}, 1fr)`, gap: 14, marginBottom: 24 }}>
