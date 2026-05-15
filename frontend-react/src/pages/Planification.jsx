@@ -308,22 +308,33 @@ export default function Planification() {
     setLoadingIA(true)
     setPropositionsRejetees(new Set())
     try {
-      const jours = getWeekDays(semaineOffset)
-      const weekDates = jours.map(j => j.date)
+      // ── Bornes : aujourd'hui → +14 jours (jamais dans le passé) ──
+      const now = new Date()
+      const todayStr = now.toISOString().split('T')[0]
+      const nowMins = now.getHours() * 60 + now.getMinutes()
+      const snappedNow = Math.ceil(nowMins / 15) * 15
 
-      const occupied = planification.map(p => ({
-        date: p.date_planifiee?.split('T')[0] || p.date_planifiee,
-        startMins: p.startMins,
-        endMins: p.endMins,
-      }))
+      const futureDates = Array.from({ length: 14 }, (_, i) => {
+        const d = new Date()
+        d.setDate(d.getDate() + i)
+        return d.toISOString().split('T')[0]
+      })
+
+      // Heures déjà passées d'aujourd'hui = occupé (phantom block)
+      const occupied = [
+        ...planification.map(p => ({
+          date: p.date_planifiee?.split('T')[0] || p.date_planifiee,
+          startMins: p.startMins,
+          endMins: p.endMins,
+        })),
+        { date: todayStr, startMins: 0, endMins: snappedNow },
+      ]
 
       const toSchedule = sortedTaches.filter(t => !t.terminee)
-
-      // Filtrer : ne pas proposer de tâches déjà planifiées
       const dejaPlanifiees = new Set(planification.map(p => p.tache_id))
       const candidats = toSchedule.filter(t => !dejaPlanifiees.has(t.id))
 
-      const scheduled = binPackTasks(candidats, weekDates, occupied, heuresDispo)
+      const scheduled = binPackTasks(candidats, futureDates, occupied, heuresDispo)
       setSmartResult(scheduled)
 
       // Conseil IA en parallèle (non bloquant)
@@ -332,7 +343,7 @@ export default function Planification() {
         .catch(() => {})
     } catch (err) { console.error(err) }
     setLoadingIA(false)
-  }, [sortedTaches, planification, semaineOffset, heuresDispo, user?.id])
+  }, [sortedTaches, planification, heuresDispo, user?.id])
 
   // Accepter une proposition
   const accepterProposition = useCallback(async (proposition, index) => {
