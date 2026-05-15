@@ -711,26 +711,28 @@ export default function Planification() {
           paddingTop: isMobile ? 54 : 'clamp(20px,3vh,32px)',
         }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: isMobile ? 8 : 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: 12, marginBottom: 14, flexDirection: isMobile ? 'column' : 'row' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
-                <div style={{ width: 8, height: 28, borderRadius: 99, background: `linear-gradient(180deg, ${T.accent}, ${T.accent2 || T.accent})`, flexShrink: 0 }} />
-                <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 900, letterSpacing: '-0.7px', margin: 0, background: `linear-gradient(135deg, ${T.text}, ${T.text2})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Planification</h1>
+        {/* Header — masqué sur mobile en vue calendrier pour libérer la grille */}
+        <div style={{ marginBottom: isMobile && isCalView ? 6 : (isMobile ? 8 : 14) }}>
+          {!(isMobile && isCalView) && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: 12, marginBottom: 14, flexDirection: isMobile ? 'column' : 'row' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
+                  <div style={{ width: 8, height: 28, borderRadius: 99, background: `linear-gradient(180deg, ${T.accent}, ${T.accent2 || T.accent})`, flexShrink: 0 }} />
+                  <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 900, letterSpacing: '-0.7px', margin: 0, background: `linear-gradient(135deg, ${T.text}, ${T.text2})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Planification</h1>
+                </div>
+                <p style={{ color: T.text2, fontSize: 12, textTransform: 'capitalize', paddingLeft: 18, margin: 0 }}>
+                  {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
               </div>
-              <p style={{ color: T.text2, fontSize: 12, textTransform: 'capitalize', paddingLeft: 18, margin: 0 }}>
-                {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </p>
+              <DailyScore
+                T={T}
+                isMobile={isMobile}
+                planification={planification}
+                taches={taches}
+                heuresDispo={heuresDispo}
+              />
             </div>
-            <DailyScore
-              T={T}
-              isMobile={isMobile}
-              planification={planification}
-              taches={taches}
-              heuresDispo={heuresDispo}
-            />
-          </div>
+          )}
 
           {/* View switcher — scrollable, always labeled */}
           <div style={{
@@ -781,6 +783,7 @@ export default function Planification() {
         </div>
 
         {/* ─── FOCUS BAR (créneau en cours) + INSIGHT IA (proactif) ─── */}
+        {/* FocusBar visible partout : essentielle quand une tâche tourne */}
         <FocusBar
           planification={planification}
           taches={taches}
@@ -788,15 +791,18 @@ export default function Planification() {
           isMobile={isMobile}
           onComplete={terminerTache}
         />
-        <InsightCard
-          taches={taches}
-          planification={planification}
-          T={T}
-          isMobile={isMobile}
-          heuresDispo={heuresDispo}
-          onPlanIA={planifierAvecIA}
-          loadingIA={loadingIA}
-        />
+        {/* InsightCard masquée sur mobile en vue calendrier (libère la grille) */}
+        {!(isMobile && isCalView) && (
+          <InsightCard
+            taches={taches}
+            planification={planification}
+            T={T}
+            isMobile={isMobile}
+            heuresDispo={heuresDispo}
+            onPlanIA={planifierAvecIA}
+            loadingIA={loadingIA}
+          />
+        )}
 
         {/* Stats — seulement en vue Liste */}
         {vue === 'liste' && <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 0 }}>
@@ -863,7 +869,7 @@ export default function Planification() {
           display: 'flex',
           flexDirection: 'column',
           padding: isMobile
-            ? `0 14px ${isCalView ? '8px' : '72px'}`
+            ? `0 14px 72px`
             : `0 clamp(16px,3vw,32px) clamp(10px,2vw,24px)`,
         }}>
 
@@ -1417,21 +1423,25 @@ export default function Planification() {
       </AnimatePresence>
       {isMobile && <BottomNavMobile T={T} />}
 
-      {/* ─── Floating widgets : Coach + Pomodoro ─── */}
-      <CoachFloat
-        T={T}
-        isMobile={isMobile}
-        userId={user?.id}
-        planification={planification}
-        taches={taches}
-        heuresDispo={heuresDispo}
-      />
-      <PomodoroWidget
-        T={T}
-        isMobile={isMobile}
-        planification={planification}
-        taches={taches}
-      />
+      {/* ─── Floating widgets : Coach + Pomodoro (masqués sur mobile en cal view) ─── */}
+      {!(isMobile && isCalView) && (
+        <>
+          <CoachFloat
+            T={T}
+            isMobile={isMobile}
+            userId={user?.id}
+            planification={planification}
+            taches={taches}
+            heuresDispo={heuresDispo}
+          />
+          <PomodoroWidget
+            T={T}
+            isMobile={isMobile}
+            planification={planification}
+            taches={taches}
+          />
+        </>
+      )}
     </div>
   )
 }
