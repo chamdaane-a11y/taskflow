@@ -166,9 +166,82 @@ function ModalePartage({ T, equipe, onFermer }) {
   )
 }
 
+// ===== QUICK ADD INLINE (en haut de chaque colonne) =====
+function QuickAddInline({ T, col, onAdd }) {
+  const [open, setOpen] = useState(false)
+  const [titre, setTitre] = useState('')
+  const inputRef = useRef(null)
+
+  useEffect(() => { if (open) inputRef.current?.focus() }, [open])
+
+  const submit = () => {
+    const v = titre.trim()
+    if (v) onAdd(v)
+    setTitre('')
+    setOpen(false)
+  }
+
+  if (open) {
+    return (
+      <motion.input
+        ref={inputRef}
+        initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+        value={titre}
+        onChange={e => setTitre(e.target.value)}
+        onBlur={submit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') { e.preventDefault(); submit() }
+          else if (e.key === 'Escape') { setTitre(''); setOpen(false) }
+        }}
+        placeholder={`+ Tâche en ${col.label.toLowerCase()}…`}
+        style={{
+          width: '100%',
+          padding: '9px 11px',
+          background: T.bg,
+          border: `1.5px solid ${col.couleur}`,
+          borderRadius: 8,
+          color: T.text,
+          fontSize: 12.5,
+          outline: 'none',
+          marginBottom: 8,
+          fontFamily: 'inherit',
+          boxShadow: `0 0 0 3px ${col.couleur}15`,
+        }}
+      />
+    )
+  }
+  return (
+    <motion.button
+      onClick={() => setOpen(true)}
+      whileHover={{ borderColor: col.couleur, color: col.couleur }}
+      whileTap={{ scale: 0.98 }}
+      style={{
+        width: '100%',
+        padding: '7px 11px',
+        background: 'transparent',
+        border: `1px dashed ${T.border}`,
+        borderRadius: 8,
+        color: T.text2,
+        fontSize: 11,
+        fontWeight: 600,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 5,
+        marginBottom: 8,
+        transition: 'all 0.15s',
+      }}>
+      <Plus size={11} /> Ajouter une tâche
+    </motion.button>
+  )
+}
+
 // ===== CARTE TÂCHE — DRAGGABLE =====
-function CarteTache({ T, tache, membres, onModifier, onOuvrir, isDragOverlay = false }) {
+function CarteTache({ T, tache, membres, onModifier, onOuvrir, onAssign, isDragOverlay = false }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(tache.id) })
+  const [assignOpen, setAssignOpen] = useState(false)
+  const popRef = useRef(null)
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging && !isDragOverlay ? 0.35 : 1,
@@ -178,8 +251,15 @@ function CarteTache({ T, tache, membres, onModifier, onOuvrir, isDragOverlay = f
   const assignee = membres.find(m => m.id === tache.assignee_id)
   const col = COLONNES.find(c => c.id === tache.statut)
 
+  useEffect(() => {
+    if (!assignOpen) return
+    const close = (e) => { if (popRef.current && !popRef.current.contains(e.target)) setAssignOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [assignOpen])
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={{ ...style, position: 'relative' }} {...attributes}>
       <motion.div layout
         style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 12, padding: '12px 14px', marginBottom: 8, boxShadow: isDragOverlay ? '0 12px 40px rgba(0,0,0,0.28)' : 'none' }}
         whileHover={!isDragging ? { borderColor: col?.couleur + '55', y: -1, boxShadow: '0 4px 20px rgba(0,0,0,0.12)' } : {}}
@@ -198,11 +278,24 @@ function CarteTache({ T, tache, membres, onModifier, onOuvrir, isDragOverlay = f
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            {assignee && (
-              <div style={{ width: 22, height: 22, borderRadius: 7, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent }} title={assignee.nom}>
-                {assignee.nom.charAt(0).toUpperCase()}
-              </div>
-            )}
+            {/* Avatar cliquable : assigner / désassigner rapidement */}
+            <motion.button
+              onClick={e => { e.stopPropagation(); setAssignOpen(o => !o) }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              title={assignee ? `Assigné à ${assignee.nom} — cliquer pour changer` : 'Cliquer pour assigner'}
+              style={{
+                width: 22, height: 22, borderRadius: 7,
+                background: assignee ? `${T.accent}22` : 'transparent',
+                border: assignee ? 'none' : `1px dashed ${T.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 10, fontWeight: 700,
+                color: assignee ? T.accent : T.text2,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}>
+              {assignee ? assignee.nom.charAt(0).toUpperCase() : <Plus size={10} />}
+            </motion.button>
             {tache.deadline && (
               <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
                 <Clock size={9} />{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
@@ -216,9 +309,71 @@ function CarteTache({ T, tache, membres, onModifier, onOuvrir, isDragOverlay = f
           )}
         </div>
       </motion.div>
+
+      {/* Popup assignation rapide */}
+      <AnimatePresence>
+        {assignOpen && (
+          <motion.div
+            ref={popRef}
+            initial={{ opacity: 0, y: -6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              bottom: 'calc(100% - 4px)',
+              left: 12,
+              background: T.bg2,
+              border: `1px solid ${T.border}`,
+              borderRadius: 10,
+              padding: 4,
+              minWidth: 180,
+              maxHeight: 220,
+              overflowY: 'auto',
+              zIndex: 50,
+              boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
+            }}>
+            <p style={{ fontSize: 9, fontWeight: 800, color: T.text2, letterSpacing: 1.4, padding: '6px 10px 4px', margin: 0 }}>ASSIGNER À</p>
+            <button
+              onClick={() => { onAssign?.(tache.id, null); setAssignOpen(false) }}
+              style={popItemStyle(T, tache.assignee_id === null)}>
+              <div style={{ width: 20, height: 20, borderRadius: 6, border: `1px dashed ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <X size={9} color={T.text2} />
+              </div>
+              <span>Non assigné</span>
+            </button>
+            {membres.map(m => (
+              <button
+                key={m.id}
+                onClick={() => { onAssign?.(tache.id, m.id); setAssignOpen(false) }}
+                style={popItemStyle(T, tache.assignee_id === m.id)}>
+                <div style={{ width: 20, height: 20, borderRadius: 6, background: `${T.accent}22`, color: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
+                  {m.nom.charAt(0).toUpperCase()}
+                </div>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nom}</span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
+
+const popItemStyle = (T, active) => ({
+  display: 'flex', alignItems: 'center', gap: 8,
+  width: '100%', padding: '7px 10px',
+  background: active ? `${T.accent}15` : 'transparent',
+  border: 'none',
+  borderRadius: 7,
+  color: T.text,
+  fontSize: 12,
+  cursor: 'pointer',
+  textAlign: 'left',
+  fontFamily: 'inherit',
+  transition: 'background 0.12s',
+})
 
 // ===== COLONNE DROPPABLE =====
 function ColonneDroppable({ T, col, children, isOver }) {
@@ -1040,6 +1195,8 @@ export default function Collaboration() {
   const [equipes, setEquipes] = useState([])
   const [equipeActive, setEquipeActive] = useState(null)
   const [membres, setMembres] = useState([])
+  const membresRef = useRef([])
+  membresRef.current = membres
   const [taches, setTaches] = useState([])
   const tachesRef = useRef(taches)
   tachesRef.current = taches
@@ -1149,18 +1306,38 @@ export default function Collaboration() {
     } catch {}
   }, [addToast])
 
+  // ── Polling MEMBRES (détecte nouveaux arrivants live) ──
+  const chargerMembresSilent = useCallback(async (equipe_id) => {
+    try {
+      const r = await axios.get(`${API}/equipes/${equipe_id}/membres`)
+      const nouveaux = r.data
+      const anciens = membresRef.current
+      if (anciens.length > 0) {
+        const arrivants = nouveaux.filter(n => !anciens.some(a => a.id === n.id))
+        arrivants.forEach(m => addToast(`${m.nom} a rejoint l'équipe`, '👋', '#4caf82'))
+        const partis = anciens.filter(a => !nouveaux.some(n => n.id === a.id))
+        partis.forEach(m => addToast(`${m.nom} a quitté l'équipe`, '👋', '#888'))
+      }
+      setMembres(nouveaux)
+    } catch {}
+  }, [addToast])
+
   useEffect(() => {
     if (!equipeActive) return
 
+    const refreshAll = () => {
+      if (!isVisibleRef.current) return
+      chargerTachesSilent(equipeActive.id)
+      chargerMembresSilent(equipeActive.id)
+    }
+
     const demarrerPolling = () => {
-      pollingRef.current = setInterval(() => {
-        if (isVisibleRef.current) chargerTachesSilent(equipeActive.id)
-      }, 8000)
+      pollingRef.current = setInterval(refreshAll, 8000)
     }
 
     const handleVisibility = () => {
       isVisibleRef.current = !document.hidden
-      if (!document.hidden) chargerTachesSilent(equipeActive.id)
+      if (!document.hidden) refreshAll()
     }
 
     demarrerPolling()
@@ -1170,7 +1347,7 @@ export default function Collaboration() {
       clearInterval(pollingRef.current)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [equipeActive, chargerTachesSilent])
+  }, [equipeActive, chargerTachesSilent, chargerMembresSilent])
 
   const chargerEquipes = async () => {
     try { const r = await axios.get(`${API}/equipes/user/${user.id}`); setEquipes(r.data); if (r.data.length > 0) setEquipeActive(r.data[0]) } catch {}
@@ -1212,6 +1389,46 @@ export default function Collaboration() {
       setShowModaleTache(false); setTacheAModifier(null)
     } catch {}
   }
+
+  // ── Création rapide inline (titre + statut, defaults pour le reste) ──
+  const creerTacheRapide = useCallback(async (titre, statut) => {
+    if (!titre.trim() || !equipeActive) return
+    const tempId = `temp-${Date.now()}`
+    const optimistic = {
+      id: tempId, titre: titre.trim(), description: '', priorite: 'moyenne',
+      statut, assignee_id: null, deadline: null, createur_id: user.id,
+      nb_commentaires: 0,
+    }
+    setTaches(p => [...p, optimistic])
+    try {
+      const r = await axios.post(`${API}/equipes/taches`, {
+        titre: titre.trim(), description: '', priorite: 'moyenne', statut,
+        equipe_id: equipeActive.id, createur_id: user.id,
+      })
+      const real = r.data?.id ? r.data : { ...optimistic, id: r.data }
+      setTaches(p => p.map(t => t.id === tempId ? real : t))
+    } catch {
+      setTaches(p => p.filter(t => t.id !== tempId))
+      addToast('Erreur création tâche', '❌', '#e05c5c')
+    }
+  }, [equipeActive, user, addToast])
+
+  // ── Assignation rapide depuis la carte (sans modale) ──
+  const quickAssigner = useCallback(async (tacheId, assigneeId) => {
+    const prev = tachesRef.current
+    setTaches(p => p.map(t => t.id === tacheId ? { ...t, assignee_id: assigneeId } : t))
+    try {
+      await axios.put(`${API}/equipes/taches/${tacheId}`, {
+        assignee_id: assigneeId, user_id: user.id, nom_user: user.nom,
+      })
+      const assignee = membresRef.current.find(m => m.id === assigneeId)
+      if (assignee) addToast(`Assignée à ${assignee.nom}`, '👤', '#6c63ff')
+      else addToast('Tâche désassignée', '👤', '#888')
+    } catch {
+      setTaches(prev)
+      addToast('Erreur assignation', '❌', '#e05c5c')
+    }
+  }, [user, addToast])
 
   // ===== DRAG & DROP HANDLERS =====
   const handleDragStart = ({ active }) => setActiveId(active.id)
@@ -1623,11 +1840,13 @@ export default function Collaboration() {
                       </motion.button>
                     </div>
                     <ColonneDroppable T={T} col={col} isOver={overCol === col.id}>
+                      <QuickAddInline T={T} col={col} onAdd={(titre) => creerTacheRapide(titre, col.id)} />
                       <AnimatePresence>
                         {tachesCol(col.id).map(t => (
                           <CarteTache key={t.id} T={T} tache={t} membres={membres}
                             onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
-                            onOuvrir={setTacheCommentaires} />
+                            onOuvrir={setTacheCommentaires}
+                            onAssign={quickAssigner} />
                         ))}
                       </AnimatePresence>
                       {tachesCol(col.id).length === 0 && (
