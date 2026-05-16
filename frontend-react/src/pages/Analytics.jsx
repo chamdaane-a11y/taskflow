@@ -50,6 +50,30 @@ const IconLock = ({ size = 14, color = 'currentColor' }) => (
 // ══════════════════════════════════════════════════════════════════════
 // HOOK: useAnalyticsData — Fetching & caching
 // ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// HOOK: useGamification — niveau/points/streak réels du backend
+// ══════════════════════════════════════════════════════════════════════
+function useGamification(userId) {
+  const [data, setData] = useState(null)
+  useEffect(() => {
+    if (!userId) return
+    const cacheKey = `gamification_${userId}`
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null')
+      if (cached && Date.now() - cached.ts < 2 * 60 * 1000) {
+        setData(cached.data); return
+      }
+    } catch {}
+    axios.get(`${API}/users/${userId}/gamification`)
+      .then(r => {
+        setData(r.data)
+        try { localStorage.setItem(cacheKey, JSON.stringify({ data: r.data, ts: Date.now() })) } catch {}
+      })
+      .catch(() => {})
+  }, [userId])
+  return data
+}
+
 function useAnalyticsData(userId, jours) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -416,6 +440,114 @@ const ChartCard = memo(({ title, subtitle, children, delay = 0, style = {} }) =>
 })
 
 // ══════════════════════════════════════════════════════════════════════
+// WEEK RECAP — phrase storytelling en haut, action contextuelle
+// ══════════════════════════════════════════════════════════════════════
+const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) => {
+  if (!stats) return null
+  const total = stats.total || 0
+  const velocity = stats.velocity || 0
+  const streak = gamification?.streak ?? stats.streak ?? 0
+  const wow = stats.wow || 0
+  const burnoutRisk = stats.burnoutRisk
+  const lowRatio = stats.lowRatio || 0
+  const focusScore = stats.focusScore || 0
+  const periodLabel = jours === 7 ? 'cette semaine' : jours === 30 ? 'ce mois' : 'ces 90 jours'
+
+  // Action contextuelle (priorité aux signaux les plus forts)
+  let actionPhrase, ctaLabel, ctaAction
+  if (burnoutRisk) {
+    actionPhrase = `Aujourd'hui, ralentis et accorde-toi une vraie pause`
+    ctaLabel = 'Allège la semaine'
+    ctaAction = () => navigate('/planification')
+  } else if (lowRatio > 70) {
+    actionPhrase = `Cette semaine, attaque tes tâches prio haute`
+    ctaLabel = 'Voir prio haute'
+    ctaAction = () => {
+      try { sessionStorage.setItem('dashboard_init_filter', 'haute') } catch {}
+      navigate('/dashboard')
+    }
+  } else if (streak >= 5) {
+    actionPhrase = `Encore 1 jour pour ancrer définitivement l'habitude`
+    ctaLabel = 'Planifier demain'
+    ctaAction = () => navigate('/planification')
+  } else if (wow > 20) {
+    actionPhrase = `Maintiens ce momentum, planifie déjà demain`
+    ctaLabel = 'Planifier'
+    ctaAction = () => navigate('/planification')
+  } else if (total === 0) {
+    actionPhrase = `On démarre la semaine — planifie ta première tâche`
+    ctaLabel = 'Commencer'
+    ctaAction = () => navigate('/planification')
+  } else if (focusScore > 75) {
+    actionPhrase = `Tu priorises bien — continue d'attaquer l'impact`
+    ctaLabel = 'Mes tâches'
+    ctaAction = () => navigate('/dashboard')
+  } else {
+    actionPhrase = `Une tâche haute priorité aujourd'hui changera la courbe`
+    ctaLabel = 'Choisir'
+    ctaAction = () => navigate('/dashboard')
+  }
+
+  // Emoji vibe
+  const vibe = burnoutRisk ? '😮‍💨' : streak >= 5 ? '🔥' : wow > 20 ? '🚀' : total > 0 ? '💪' : '✨'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.02 }}
+      style={{
+        background: `linear-gradient(135deg, ${T.bg2}, ${T.accent}08)`,
+        border: `1px solid ${T.accent}25`,
+        borderRadius: 16,
+        padding: isMobile ? '14px 16px' : '16px 22px',
+        marginBottom: 14,
+        display: 'flex',
+        alignItems: isMobile ? 'flex-start' : 'center',
+        gap: isMobile ? 10 : 16,
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+      {/* Halo accent décoratif */}
+      <div style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, ${T.accent}15, transparent 70%)`, pointerEvents: 'none' }} />
+
+      <div style={{ fontSize: isMobile ? 26 : 32, flexShrink: 0, lineHeight: 1 }}>{vibe}</div>
+
+      <div style={{ flex: 1, minWidth: isMobile ? '70%' : 0 }}>
+        <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 800, color: T.text, marginBottom: 4, letterSpacing: '-0.2px' }}>
+          Bilan {periodLabel} : <span style={{ color: T.accent }}>✓ {total} tâches</span>
+          {streak > 0 && <span style={{ color: '#e08a3c' }}> · 🔥 {streak}j</span>}
+          {wow !== 0 && <span style={{ color: wow > 0 ? '#4caf82' : '#e05c5c' }}> · {wow > 0 ? '+' : ''}{wow}%</span>}
+          {velocity > 0 && <span style={{ color: T.text2, fontWeight: 600 }}> · {velocity}/j</span>}
+        </div>
+        <div style={{ fontSize: 12.5, color: T.text2, lineHeight: 1.5 }}>
+          → {actionPhrase}
+        </div>
+      </div>
+
+      <motion.button
+        onClick={ctaAction}
+        whileHover={{ scale: 1.04, y: -1 }}
+        whileTap={{ scale: 0.96 }}
+        style={{
+          padding: isMobile ? '8px 14px' : '10px 18px',
+          borderRadius: 10,
+          background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`,
+          color: '#fff', border: 'none',
+          fontSize: 12.5, fontWeight: 700,
+          cursor: 'pointer', whiteSpace: 'nowrap',
+          boxShadow: `0 6px 16px ${T.accent}45`,
+          flexShrink: 0,
+          marginLeft: isMobile ? 'auto' : 0,
+        }}>
+        {ctaLabel} →
+      </motion.button>
+    </motion.div>
+  )
+})
+
+// ══════════════════════════════════════════════════════════════════════
 // GAMIFICATION BAR — niveau, XP, streak, focus ring
 // ══════════════════════════════════════════════════════════════════════
 const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, T, loading, isMobile }) => {
@@ -518,7 +650,8 @@ const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, 
 // ══════════════════════════════════════════════════════════════════════
 // ALERT BANNER — burnout / 80-20, dismissable par jour
 // ══════════════════════════════════════════════════════════════════════
-const AlertBanner = memo(({ stats, T }) => {
+const AlertBanner = memo(({ stats, T, isMobile }) => {
+  const navigate = useNavigate()
   const todayKey = new Date().toISOString().split('T')[0]
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem('analytics_alert_dismissed') === todayKey }
@@ -531,13 +664,28 @@ const AlertBanner = memo(({ stats, T }) => {
       alert = {
         Icon: Flame, color: '#e05c5c',
         title: '⚠️ Risque de burnout détecté',
-        text: 'Forte activité 3 jours de suite suivie d\'une chute. Planifie une pause intentionnelle aujourd\'hui.',
+        text: 'Forte activité 3 jours de suite suivie d\'une chute. Planifie une vraie pause aujourd\'hui.',
+        ctaLabel: 'Allège ma semaine',
+        ctaAction: () => navigate('/planification?action=lighten'),
       }
     } else if (stats.lowRatio > 70) {
       alert = {
         Icon: AlertTriangle, color: '#e08a3c',
         title: `Règle 80/20 — ${stats.lowRatio}% de tâches à faible priorité`,
         text: 'La majorité de tes efforts vont sur des tâches à faible impact. Concentre-toi sur la priorité haute.',
+        ctaLabel: 'Voir mes prio haute',
+        ctaAction: () => {
+          try { sessionStorage.setItem('dashboard_init_filter', 'haute') } catch {}
+          navigate('/dashboard')
+        },
+      }
+    } else if (stats.streak >= 5) {
+      alert = {
+        Icon: Flame, color: '#4caf82',
+        title: `🔥 Streak de ${stats.streak} jours — momentum exceptionnel`,
+        text: 'Maintiens cette lancée. Planifie demain pour ne pas casser la chaîne.',
+        ctaLabel: 'Planifier demain',
+        ctaAction: () => navigate('/planification?date=tomorrow'),
       }
     }
   }
@@ -554,24 +702,42 @@ const AlertBanner = memo(({ stats, T }) => {
           style={{
             background: alert.color + '10', border: `1px solid ${alert.color}35`,
             borderRadius: 12, padding: '12px 14px',
-            display: 'flex', alignItems: 'flex-start', gap: 12, overflow: 'hidden',
+            display: 'flex', alignItems: 'flex-start',
+            gap: 12, overflow: 'hidden',
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
           }}>
           <div style={{ width: 30, height: 30, borderRadius: 8, background: alert.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
             <alert.Icon size={14} color={alert.color} strokeWidth={2.2} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: alert.color, marginBottom: 2 }}>{alert.title}</div>
             <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.5 }}>{alert.text}</div>
           </div>
-          <motion.button
-            onClick={() => {
-              setDismissed(true)
-              try { localStorage.setItem('analytics_alert_dismissed', todayKey) } catch {}
-            }}
-            whileTap={{ scale: 0.85 }}
-            style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <X size={13} />
-          </motion.button>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center', marginLeft: isMobile ? 'auto' : 0 }}>
+            <motion.button
+              onClick={alert.ctaAction}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              style={{
+                padding: '7px 12px', borderRadius: 8,
+                background: alert.color, color: '#fff',
+                border: 'none', fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', whiteSpace: 'nowrap',
+                boxShadow: `0 4px 12px ${alert.color}40`,
+              }}>
+              {alert.ctaLabel} →
+            </motion.button>
+            <motion.button
+              onClick={() => {
+                setDismissed(true)
+                try { localStorage.setItem('analytics_alert_dismissed', todayKey) } catch {}
+              }}
+              whileTap={{ scale: 0.85 }}
+              title="Masquer pour aujourd'hui"
+              style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <X size={13} />
+            </motion.button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -705,6 +871,7 @@ export default function Analytics() {
   const jours = parseInt(periode)
   const { data, loading } = useAnalyticsData(user?.id, jours)
   const stats = useStatistics(data, jours)
+  const gamification = useGamification(user?.id)
 
   const periodes = [
     { id: '7',  label: '7J'  },
@@ -722,13 +889,13 @@ export default function Analytics() {
   const [filtre, setFiltre] = useState('toutes')
   const bloquees = 0
 
-  // Mock user data for profile
+  // Profil + gamification — données RÉELLES du backend (avec fallback pendant le fetch)
   const userData = { nom: user?.nom || 'Utilisateur', email: user?.email || 'user@example.com' }
-  const points = 1250
-  const niveau = 3
-  const niveauActuel = { label: 'Productif' }
-  const pctNiveau = 42
-  const streak = 5
+  const points = gamification?.points ?? 0
+  const niveau = gamification?.niveau ?? 1
+  const niveauActuel = { label: gamification?.label || 'Débutant' }
+  const pctNiveau = gamification?.pctNiveau ?? 0
+  const streak = gamification?.streak ?? (stats?.streak || 0)
 
   const SIDEBAR_W = 248
   const sidebarLeft = isMobile
@@ -1118,6 +1285,14 @@ export default function Analytics() {
           </div>
         </div>
 
+        {/* Week Recap — bilan storytelling avec action contextuelle */}
+        {!loading && stats && (
+          <WeekRecap
+            stats={stats} gamification={gamification}
+            T={T} isMobile={isMobile} navigate={navigate} jours={jours}
+          />
+        )}
+
         {/* Gamification Bar */}
         <GamificationBar
           stats={stats} points={points} niveau={niveau}
@@ -1125,8 +1300,8 @@ export default function Analytics() {
           T={T} loading={loading} isMobile={isMobile}
         />
 
-        {/* Alert Banner — burnout ou 80/20 */}
-        {!loading && stats && <AlertBanner stats={stats} T={T} />}
+        {/* Alert Banner — burnout / 80-20 / streak avec CTA actionnable */}
+        {!loading && stats && <AlertBanner stats={stats} T={T} isMobile={isMobile} />}
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 0 }}>

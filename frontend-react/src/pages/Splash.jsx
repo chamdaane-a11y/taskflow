@@ -37,7 +37,6 @@ export default function Splash() {
       color: '#0f172a',
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .gradient-text {
           background: linear-gradient(135deg, #6C63FF, #00C896);

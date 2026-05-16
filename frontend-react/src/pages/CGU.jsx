@@ -196,7 +196,6 @@ export default function CGU() {
   return (
     <div style={{ minHeight: '100vh', background: '#F8F9FC', fontFamily: "'DM Sans', sans-serif", color: '#1a1a2e' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
         @media (max-width: 768px) {

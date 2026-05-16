@@ -67,7 +67,6 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rapport GetShift — ${nomUtilisateur}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:wght@600;700;800&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: ${C.bg}; color: ${C.text}; min-height: 100vh; }
   .page { max-width: 860px; margin: 0 auto; padding: clamp(24px, 5vw, 56px) clamp(16px, 4vw, 48px); }

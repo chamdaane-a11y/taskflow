@@ -771,6 +771,44 @@ def update_theme(id):
     db.commit(); db.close()
     return jsonify({"message": "Theme mis a jour !"})
 
+@app.route('/users/<int:id>/gamification', methods=['GET'])
+def get_gamification(id):
+    """État complet de la gamification : niveau, points, % vers niveau suivant, label, streak."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT points, niveau, streak FROM users WHERE id=%s", (id,))
+        u = curseur.fetchone()
+        db.close()
+        if not u:
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        points = u['points'] or 0
+        niveau_db = u['niveau'] or 1
+        streak = u['streak'] or 0
+        paliers = [(1,0),(2,100),(3,250),(4,500),(5,1000),(6,2000),(7,5000),(8,10000)]
+        labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende",7:"Mythique",8:"Immortel"}
+        # Recalcule niveau à la volée pour cohérence (au cas où la BDD aurait dérivé)
+        niveau = max([n for n, m in paliers if points >= m])
+        # Seuils niveau actuel et suivant
+        seuil_actuel = next(m for n, m in paliers if n == niveau)
+        seuil_suivant = next((m for n, m in paliers if n == niveau + 1), seuil_actuel + 1)
+        delta = max(seuil_suivant - seuil_actuel, 1)
+        pct_niveau = round((points - seuil_actuel) / delta * 100)
+        pct_niveau = max(0, min(100, pct_niveau))
+        return jsonify({
+            "points": points,
+            "niveau": niveau,
+            "label": labels.get(niveau, f"Niveau {niveau}"),
+            "pctNiveau": pct_niveau,
+            "pointsToNext": max(seuil_suivant - points, 0),
+            "streak": streak,
+            "seuilActuel": seuil_actuel,
+            "seuilSuivant": seuil_suivant,
+        })
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
 @app.route('/users/<int:id>/points', methods=['PUT'])
 def update_points(id):
     data = request.get_json()

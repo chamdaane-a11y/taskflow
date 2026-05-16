@@ -114,7 +114,6 @@ export default function Landing() {
   return (
     <div style={{ minHeight: '100vh', background: '#F8F9FC', color: '#1a1a2e', fontFamily: "'DM Sans', sans-serif", overflowX: 'hidden' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .gradient-text { background: linear-gradient(135deg, #6C63FF, #00C896); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         html { scroll-behavior: smooth; }
@@ -403,3 +402,4 @@ export default function Landing() {
     </div>
   )
 }
+

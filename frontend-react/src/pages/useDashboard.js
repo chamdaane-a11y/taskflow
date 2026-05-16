@@ -42,7 +42,17 @@ export function useDashboard() {
   // ── Tâches ─────────────────────────────────────────────────────────
   const [taches,  setTaches]  = useState([])
   const [loading, setLoading] = useState(true)
-  const [filtre,  setFiltre]  = useState('toutes')
+  const [filtre,  setFiltre]  = useState(() => {
+    // Lit un filtre initial depuis sessionStorage (set par Analytics CTA)
+    try {
+      const init = sessionStorage.getItem('dashboard_init_filter')
+      if (init) {
+        sessionStorage.removeItem('dashboard_init_filter')
+        return init
+      }
+    } catch {}
+    return 'toutes'
+  })
 
   // ── Formulaire ─────────────────────────────────────────────────────
   const [titre,      setTitre]      = useState('')

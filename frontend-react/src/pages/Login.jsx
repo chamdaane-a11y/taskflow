@@ -76,7 +76,6 @@ function LoginInner() {
       position: 'relative', overflowX: 'hidden',
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap');
         * { box-sizing: border-box; }
         .gradient-text { background: linear-gradient(135deg, #6C63FF, #00C896); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .tf-input { width: 100%; padding: 13px 16px; background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
