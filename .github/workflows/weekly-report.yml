@@ -1,0 +1,39 @@
+name: Weekly Report Email
+
+# Tourne chaque vendredi à 17h UTC (= 18h Paris heure d'hiver, 19h heure d'été)
+# Garantit la livraison du rapport hebdo même si le backend Render dort.
+on:
+  schedule:
+    - cron: '0 17 * * 5'
+  workflow_dispatch:  # déclenchement manuel possible depuis l'UI GitHub
+
+jobs:
+  send-weekly-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up Render backend
+        run: |
+          echo "Waking up backend (Render free tier sleeps after 15min)…"
+          for i in 1 2 3; do
+            if curl -sf --max-time 30 https://getshift-backend.onrender.com/health; then
+              echo "✓ Backend awake on try $i"
+              break
+            fi
+            echo "Try $i failed, waiting 20s…"
+            sleep 20
+          done
+
+      - name: Wait for backend to be fully warm
+        run: sleep 15
+
+      - name: Trigger weekly email report
+        run: |
+          echo "Triggering /email/resume-hebdo…"
+          RESPONSE=$(curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/email/resume-hebdo)
+          echo "Response: $RESPONSE"
+          if echo "$RESPONSE" | grep -q "déclenchés"; then
+            echo "✓ Weekly reports successfully triggered"
+          else
+            echo "✗ Unexpected response — check backend logs"
+            exit 1
+          fi

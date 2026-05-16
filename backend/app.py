@@ -315,26 +315,45 @@ def _html_resume_hebdo(nom, stats):
     niveau_label = niveaux_labels.get(niveau, f"Niveau {niveau}")
     xp_semaine = xp_par_prio.get("haute", 0)*50 + xp_par_prio.get("moyenne", 0)*25 + xp_par_prio.get("basse", 0)*10
 
-    # ── Vibe emoji storytelling ──
-    if en_retard >= 3: vibe = "😮‍💨"
-    elif streak >= 5: vibe = "🔥"
+    # ── Vibe emoji : performance, pas confort ──
+    if terminees == 0: vibe = "⚡"
+    elif en_retard >= 3: vibe = "⚠️"
+    elif streak >= 7: vibe = "🏆"
+    elif streak >= 3: vibe = "🔥"
     elif diff > 5: vibe = "🚀"
-    elif terminees > 0: vibe = "💪"
-    else: vibe = "✨"
+    elif diff < -5: vibe = "📉"
+    else: vibe = "💪"
 
-    # ── Phrase d'accroche storytelling ──
+    # ── Calcul du défi semaine prochaine (objectif challengeant) ──
+    jour_top = max([j.get("count", 0) for j in jours_actifs] + [0]) if jours_actifs else 0
+    potentiel_semaine = jour_top * 5  # 5 jours actifs au lieu de 7 = réaliste
     if terminees == 0:
-        accroche = "Une semaine calme — c'est aussi le moment de respirer et préparer la suite."
-    elif streak >= 5:
-        accroche = f"Tu enchaînes {streak} jours d'affilée — ton momentum est exceptionnel."
-    elif diff > 5:
-        accroche = f"+{diff} tâches vs semaine dernière, ton rythme s'accélère franchement."
+        objectif_semaine_prochaine = max(7, 5)  # plancher 7 ou plus
     elif diff < -5:
-        accroche = f"{diff} vs semaine dernière. Pas de panique, identifie ce qui a changé."
-    elif taux >= 70:
-        accroche = f"Excellent taux de complétion ({taux}%) — tu transformes ce que tu décides."
+        objectif_semaine_prochaine = max(terminees_prec, terminees + 5)  # retour à la précédente +5
+    elif terminees < potentiel_semaine * 0.7 and jour_top > 0:
+        objectif_semaine_prochaine = potentiel_semaine  # vise ton potentiel
     else:
-        accroche = f"Semaine régulière : {terminees} tâche{'s' if terminees > 1 else ''} bouclée{'s' if terminees > 1 else ''}."
+        objectif_semaine_prochaine = int(terminees * 1.3)  # +30% sur ton actuel
+    challenge_gap = max(0, objectif_semaine_prochaine - terminees)
+
+    # ── Phrase d'accroche CHALLENGER (pousse, ne console pas) ──
+    if terminees == 0:
+        accroche = f"Zéro tâche cette semaine. Le top 10% en fait déjà {potentiel_semaine if potentiel_semaine > 7 else 15}. À toi de jouer."
+    elif diff < -5:
+        accroche = f"{diff} tâches vs semaine dernière. Tu redescends — identifie ce qui a changé et reprends le contrôle."
+    elif streak >= 7:
+        accroche = f"{streak} jours consécutifs — c'est de l'identité, pas de la chance. Pousse jusqu'à 14j."
+    elif streak >= 3:
+        accroche = f"{streak} jours d'affilée. Tu construis quelque chose — ne casse pas la chaîne maintenant."
+    elif jour_top > 0 and terminees < potentiel_semaine * 0.7:
+        accroche = f"Ton meilleur jour : {jour_top} tâches. Sur 5 jours ça fait {potentiel_semaine}. Tu es à {terminees}. Réveille-toi."
+    elif diff > 5:
+        accroche = f"+{diff} vs semaine dernière. Tu accélères. Garde le rythme et passe au seuil suivant."
+    elif taux >= 70:
+        accroche = f"Taux {taux}% — tu transformes ce que tu décides. Augmente le volume maintenant."
+    else:
+        accroche = f"{terminees} tâches bouclées. C'est correct, pas exceptionnel. Vise +30% la semaine prochaine."
 
     periode_label = f"{semaine_debut} → {semaine_fin}" if semaine_debut else "7 derniers jours"
 
@@ -502,6 +521,48 @@ def _html_resume_hebdo(nom, stats):
         </div>
         """
 
+    # ── SECTION 11.5 : DÉFI SEMAINE PROCHAINE (challenger) ──
+    section_defi = ""
+    if objectif_semaine_prochaine > 0:
+        gap_text = f"+{challenge_gap}" if challenge_gap > 0 else "égaler"
+        progress_pct = min(100, int(terminees / max(objectif_semaine_prochaine, 1) * 100))
+        # Calcul tâches/jour requis sur 5 jours
+        tpj = round(objectif_semaine_prochaine / 5, 1)
+        section_defi = f"""
+        <div style="background:linear-gradient(135deg,#ef444412,#e08a3c12);border:1px solid #ef444430;border-radius:14px;padding:20px;margin-bottom:18px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,#ef444420,transparent 70%);"></div>
+          <div style="font-size:11px;font-weight:700;color:#ef4444;letter-spacing:1.5px;margin-bottom:6px;">🎯 TON DÉFI SEMAINE PROCHAINE</div>
+          <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:4px;">{objectif_semaine_prochaine} tâches</div>
+          <div style="font-size:12.5px;color:#c8c8e8;line-height:1.5;margin-bottom:12px;">
+            Soit <strong style="color:#ef4444;">{gap_text}</strong> tâches vs cette semaine. Sur 5 jours actifs, c'est <strong>{tpj} tâches/jour</strong>. Précis, atteignable, exigeant.
+          </div>
+          <div style="height:6px;background:#ffffff10;border-radius:99px;overflow:hidden;">
+            <div style="height:6px;width:{progress_pct}%;background:linear-gradient(90deg,#ef4444,#e08a3c);border-radius:99px;"></div>
+          </div>
+          <div style="font-size:10px;color:#8888a8;margin-top:6px;">Semaine actuelle : {terminees}/{objectif_semaine_prochaine}</div>
+        </div>
+        """
+
+    # ── SECTION 11.7 : POTENTIEL NON EXPLOITÉ ──
+    section_potentiel = ""
+    if jours_actifs:
+        max_jour = max(jours_actifs, key=lambda x: x.get("count", 0))
+        jour_top_count = max_jour.get("count", 0)
+        if jour_top_count >= 3 and terminees < jour_top_count * 5:
+            jours_fr = {0:"lundi",1:"mardi",2:"mercredi",3:"jeudi",4:"vendredi",5:"samedi",6:"dimanche"}
+            jour_nom = jours_fr.get(max_jour.get("dow", 0), "")
+            section_potentiel = f"""
+            <div style="background:#0f0f18;border:1px solid #a855f725;border-radius:14px;padding:16px;margin-bottom:16px;">
+              <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1.5px;margin-bottom:8px;">⚡ TON POTENTIEL NON EXPLOITÉ</div>
+              <div style="font-size:13px;color:#e8e8f0;line-height:1.6;">
+                Ton meilleur jour ({jour_nom}) : <strong style="color:#a855f7;">{jour_top_count} tâches</strong>.
+                Tu sais que tu en es capable. Si tu reproduis ça 5 jours/semaine, c'est <strong style="color:#a855f7;">{jour_top_count * 5} tâches</strong>
+                — tu n'en es qu'à {terminees}.
+                <br><span style="color:#8888a8;">Le potentiel est en toi, pas dans une nouvelle méthode.</span>
+              </div>
+            </div>
+            """
+
     # ── SECTION 12 : CTAs ──
     section_cta = """
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
@@ -521,7 +582,12 @@ def _html_resume_hebdo(nom, stats):
     </table>
     """
 
-    contenu = section_header + section_kpi + section_progression + section_taux + section_activite + section_top_done + section_attente + section_categories + section_calibration + section_badges + section_conseil + section_cta
+    contenu = (
+        section_header + section_kpi + section_progression + section_taux
+        + section_activite + section_top_done + section_attente
+        + section_categories + section_calibration + section_badges
+        + section_potentiel + section_defi + section_conseil + section_cta
+    )
     return _base_email(contenu, "Bilan hebdomadaire — GetShift")
 
 # ============================================
@@ -761,11 +827,12 @@ def job_email_resume_hebdo():
                     model="llama-3.3-70b-versatile",
                     messages=[{"role": "user", "content": (
                         f"{contexte}\n\nÉcris une analyse personnalisée en 4-5 phrases. Structure :\n"
-                        f"1) Reconnais une réussite concrète (cite une tâche ou un chiffre).\n"
-                        f"2) Note une tendance (positive ou point d'attention).\n"
-                        f"3) Donne 1 conseil actionnable pour la semaine prochaine.\n"
-                        f"4) Termine sur un encouragement court.\n"
-                        f"Ton : bienveillant, précis, jamais générique. Pas de markdown."
+                        f"1) Constat factuel (cite une tâche ou un chiffre précis).\n"
+                        f"2) Ce qui marche / ce qui cloche (sois honnête, pas complaisant).\n"
+                        f"3) Un conseil ACTIONNABLE et exigeant pour la semaine prochaine — pousse au-delà du confort.\n"
+                        f"4) Termine par un challenge concret, pas un câlin.\n"
+                        f"Ton : direct, exigeant, comme un coach de haut niveau qui croit en ton potentiel. "
+                        f"Pas de blabla bienveillant générique. Pas de markdown. Tutoiement."
                     )}],
                     max_tokens=400, temperature=0.75
                 )

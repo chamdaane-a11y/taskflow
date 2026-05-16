@@ -805,43 +805,68 @@ const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) =
   const focusScore = stats.focusScore || 0
   const periodLabel = jours === 7 ? 'cette semaine' : jours === 30 ? 'ce mois' : 'ces 90 jours'
 
-  // Action contextuelle (priorité aux signaux les plus forts)
+  // ── TON CHALLENGER : pousse, ne console pas ──
+  // Cible projetée = potentiel basé sur meilleur jour × 7
+  const maxDay = stats.maxVal || 0
+  const potentielSemaine = maxDay * 7
+  const ecartPotentiel = Math.max(0, potentielSemaine - total)
+
   let actionPhrase, ctaLabel, ctaAction
-  if (burnoutRisk) {
-    actionPhrase = `Aujourd'hui, ralentis et accorde-toi une vraie pause`
-    ctaLabel = 'Allège la semaine'
+  if (total === 0) {
+    actionPhrase = `Zéro tâche. Le top 10% en fait déjà 15. Démarre maintenant.`
+    ctaLabel = 'Attaquer'
+    ctaAction = () => navigate('/planification')
+  } else if (burnoutRisk) {
+    // Même en burnout : on pousse à la stratégie, pas au repos passif
+    actionPhrase = `Tu pousses fort mais mal réparti. Étale, garde l'intensité.`
+    ctaLabel = 'Réorganiser'
     ctaAction = () => navigate('/planification')
   } else if (lowRatio > 70) {
-    actionPhrase = `Cette semaine, attaque tes tâches prio haute`
+    actionPhrase = `${lowRatio}% de vanité. Le travail qui compte est ailleurs — vas-y.`
     ctaLabel = 'Voir prio haute'
     ctaAction = () => {
       try { sessionStorage.setItem('dashboard_init_filter', 'haute') } catch {}
       navigate('/dashboard')
     }
-  } else if (streak >= 5) {
-    actionPhrase = `Encore 1 jour pour ancrer définitivement l'habitude`
-    ctaLabel = 'Planifier demain'
+  } else if (ecartPotentiel >= maxDay && maxDay > 0) {
+    actionPhrase = `Ton meilleur jour : ${maxDay}. Sur 7j ça fait ${potentielSemaine}. Tu es à ${total}. Réveille-toi.`
+    ctaLabel = 'Pousser'
+    ctaAction = () => navigate('/planification')
+  } else if (wow < -10) {
+    actionPhrase = `${wow}% vs sem dernière. Tu redescends. Reprends le contrôle aujourd'hui.`
+    ctaLabel = 'Reprendre'
+    ctaAction = () => navigate('/planification')
+  } else if (streak >= 7) {
+    actionPhrase = `${streak} jours d'affilée. Pousse à 14j — c'est là que ça devient identité.`
+    ctaLabel = 'Planifier J+1'
+    ctaAction = () => navigate('/planification')
+  } else if (streak >= 3) {
+    actionPhrase = `Série de ${streak}j. Ne casse pas la chaîne — planifie demain MAINTENANT.`
+    ctaLabel = 'Planifier J+1'
     ctaAction = () => navigate('/planification')
   } else if (wow > 20) {
-    actionPhrase = `Maintiens ce momentum, planifie déjà demain`
-    ctaLabel = 'Planifier'
-    ctaAction = () => navigate('/planification')
-  } else if (total === 0) {
-    actionPhrase = `On démarre la semaine — planifie ta première tâche`
-    ctaLabel = 'Commencer'
+    actionPhrase = `+${wow}% — tu accélères. Tiens le rythme et passe le seuil suivant.`
+    ctaLabel = 'Continuer'
     ctaAction = () => navigate('/planification')
   } else if (focusScore > 75) {
-    actionPhrase = `Tu priorises bien — continue d'attaquer l'impact`
-    ctaLabel = 'Mes tâches'
+    actionPhrase = `Focus ${focusScore}/100 — tu priorises bien. Augmente le volume maintenant.`
+    ctaLabel = 'Volumiser'
     ctaAction = () => navigate('/dashboard')
   } else {
-    actionPhrase = `Une tâche haute priorité aujourd'hui changera la courbe`
-    ctaLabel = 'Choisir'
-    ctaAction = () => navigate('/dashboard')
+    actionPhrase = `${total} tâches. Vise +30% cette semaine — c'est ${Math.round(total * 1.3)} au lieu de ${total}.`
+    ctaLabel = 'Viser haut'
+    ctaAction = () => navigate('/planification')
   }
 
-  // Emoji vibe
-  const vibe = burnoutRisk ? '😮‍💨' : streak >= 5 ? '🔥' : wow > 20 ? '🚀' : total > 0 ? '💪' : '✨'
+  // Emoji vibe — vise la performance, pas le confort
+  const vibe = total === 0 ? '⚡'
+    : burnoutRisk ? '⚠️'
+    : streak >= 7 ? '🏆'
+    : streak >= 3 ? '🔥'
+    : wow > 20 ? '🚀'
+    : wow < -10 ? '📉'
+    : ecartPotentiel >= maxDay ? '🎯'
+    : '💪'
 
   return (
     <motion.div
@@ -1015,17 +1040,17 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
     if (stats.burnoutRisk) {
       alert = {
         Icon: Flame, color: '#e05c5c',
-        title: '⚠️ Risque de burnout détecté',
-        text: 'Forte activité 3 jours de suite suivie d\'une chute. Planifie une vraie pause aujourd\'hui.',
-        ctaLabel: 'Allège ma semaine',
-        ctaAction: () => navigate('/planification?action=lighten'),
+        title: '⚠️ Pattern burnout : tu pousses mal',
+        text: 'Tu sprintes 3 jours puis tu craches. Étale l\'intensité — garde le rythme, pas l\'épuisement.',
+        ctaLabel: 'Réorganiser →',
+        ctaAction: () => navigate('/planification'),
       }
     } else if (stats.lowRatio > 70) {
       alert = {
         Icon: AlertTriangle, color: '#e08a3c',
-        title: `Règle 80/20 — ${stats.lowRatio}% de tâches à faible priorité`,
-        text: 'La majorité de tes efforts vont sur des tâches à faible impact. Concentre-toi sur la priorité haute.',
-        ctaLabel: 'Voir mes prio haute',
+        title: `⚡ ${stats.lowRatio}% de vanité — le vrai impact est ailleurs`,
+        text: 'Tu coches des cases faciles mais tu n\'avances pas sur ce qui compte. Attaque tes haute prio MAINTENANT.',
+        ctaLabel: 'Attaquer prio haute →',
         ctaAction: () => {
           try { sessionStorage.setItem('dashboard_init_filter', 'haute') } catch {}
           navigate('/dashboard')
@@ -1033,11 +1058,19 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
       }
     } else if (stats.streak >= 5) {
       alert = {
-        Icon: Flame, color: '#4caf82',
-        title: `🔥 Streak de ${stats.streak} jours — momentum exceptionnel`,
-        text: 'Maintiens cette lancée. Planifie demain pour ne pas casser la chaîne.',
-        ctaLabel: 'Planifier demain',
-        ctaAction: () => navigate('/planification?date=tomorrow'),
+        Icon: Flame, color: '#e08a3c',
+        title: `🔥 Streak ${stats.streak}j — ne casse pas la chaîne`,
+        text: `Tu as construit ${stats.streak} jours d'identité. Une journée vide et tout repart de zéro. Planifie demain MAINTENANT.`,
+        ctaLabel: 'Planifier J+1 →',
+        ctaAction: () => navigate('/planification'),
+      }
+    } else if (stats.wow < -15) {
+      alert = {
+        Icon: TrendingDown, color: '#e05c5c',
+        title: `📉 ${stats.wow}% vs semaine dernière — tu redescends`,
+        text: 'Identifie ce qui a changé et reprends le contrôle aujourd\'hui. Pas demain. Aujourd\'hui.',
+        ctaLabel: 'Reprendre →',
+        ctaAction: () => navigate('/planification'),
       }
     }
   }
