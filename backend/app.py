@@ -3527,6 +3527,25 @@ def get_saved_planning(user_id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+@app.route('/ia/tomorrow-builder/<int:user_id>/update', methods=['PATCH'])
+def update_tomorrow_plan(user_id):
+    try:
+        data = request.get_json()
+        planning_data = data.get('planning')
+        if not planning_data:
+            return jsonify({"erreur": "planning requis"}), 400
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT id FROM tomorrow_plans WHERE user_id=%s ORDER BY cree_le DESC LIMIT 1", (user_id,))
+        row = curseur.fetchone()
+        if row:
+            curseur.execute("UPDATE tomorrow_plans SET planning_json=%s WHERE id=%s", (json.dumps(planning_data), row['id']))
+            db.commit()
+        db.close()
+        return jsonify({"message": "Planning mis à jour"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 @app.route('/ia/checkin-soir/<int:user_id>/today', methods=['GET'])
 def get_checkin_today(user_id):
     try:

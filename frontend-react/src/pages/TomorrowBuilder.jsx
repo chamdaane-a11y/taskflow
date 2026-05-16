@@ -7,7 +7,8 @@ import {
   ArrowLeft, Sparkles, Zap, Clock, AlertTriangle, CheckCircle,
   Coffee, Brain, Target, TrendingUp, ChevronDown, ChevronUp,
   RefreshCw, Moon, Sun, Flame, Battery, BatteryLow, BatteryMedium,
-  SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare
+  SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare,
+  Play, Pause, X
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -57,9 +58,17 @@ function EnergyGauge({ score, T }) {
   )
 }
 
+// ---- Helper décalage heure ----
+function decalerHeure(heureStr, minutesAjouter) {
+  const [h, m] = heureStr.split(':').map(Number)
+  const total = h * 60 + m + minutesAjouter
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
 // ---- Composant card tâche planning ----
-function PlanningCard({ item, index, T }) {
+function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, showDecalerMenu, onToggleDecalerMenu }) {
   const [expanded, setExpanded] = useState(false)
+  const isEnCours = statut === 'en_cours'
 
   if (item.type === 'pause') {
     return (
@@ -82,40 +91,49 @@ function PlanningCard({ item, index, T }) {
 
   const prioriteColor = item.priorite === 'haute' ? '#e05c5c' : item.priorite === 'moyenne' ? '#e08a3c' : '#4caf82'
   const energieColor = item.energie_requise === 'élevée' ? '#e05c5c' : item.energie_requise === 'moyenne' ? '#e08a3c' : '#4caf82'
+  const barreColor = isEnCours ? '#4caf82' : `linear-gradient(180deg, ${prioriteColor}, ${prioriteColor}80)`
 
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.06 }}
-      style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, marginBottom: 8, overflow: 'hidden' }}>
-      {/* Barre priorité gauche */}
-      <div style={{ display: 'flex' }}>
-        <div style={{ width: 4, background: `linear-gradient(180deg, ${prioriteColor}, ${prioriteColor}80)`, flexShrink: 0, borderRadius: '14px 0 0 14px' }} />
-        <div style={{ flex: 1, padding: '12px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            {/* Numéro ordre */}
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: `${T.accent}20`, border: `2px solid ${T.accent}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 800, color: T.accent }}>
-              {item.ordre}
-            </div>
+      exit={{ opacity: 0, x: 40, scale: 0.95 }}
+      transition={{ delay: index * 0.05, layout: { duration: 0.2 } }}
+      style={{ background: T.bg2, border: `1.5px solid ${isEnCours ? '#4caf82' : T.border}`, borderRadius: 14, marginBottom: 8, transition: 'border-color 0.25s' }}>
+      <div style={{ display: 'flex', borderRadius: 13, overflow: 'hidden' }}>
+        {/* Barre priorité / en cours */}
+        <div style={{ width: 4, background: barreColor, flexShrink: 0 }}>
+          {isEnCours && (
+            <motion.div
+              animate={{ y: ['0%', '100%', '0%'] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              style={{ width: '100%', height: '30%', background: 'rgba(255,255,255,0.4)', borderRadius: 99 }} />
+          )}
+        </div>
+        <div style={{ flex: 1, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            {/* Badge En cours / Numéro */}
+            {isEnCours
+              ? <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.4, repeat: Infinity }}
+                  style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(76,175,130,0.2)', border: '2px solid #4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Play size={11} color="#4caf82" fill="#4caf82" />
+                </motion.div>
+              : <div style={{ width: 28, height: 28, borderRadius: '50%', background: `${T.accent}20`, border: `2px solid ${T.accent}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 800, color: T.accent }}>
+                  {item.ordre}
+                </div>
+            }
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4 }}>{item.titre}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                {/* Heure */}
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: T.accent, fontWeight: 600 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: isEnCours ? '#4caf82' : T.accent, fontWeight: 600 }}>
                   <Clock size={11} />{item.heure_debut} → {item.heure_fin}
                 </span>
-                {/* Durée */}
                 <span style={{ fontSize: 11, color: T.text2 }}>⏱ {item.duree_minutes} min</span>
-                {/* Priorité */}
                 <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${prioriteColor}18`, color: prioriteColor, fontWeight: 700 }}>{item.priorite}</span>
-                {/* Énergie requise */}
-                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${energieColor}12`, color: energieColor, fontWeight: 600 }}>
-                  ⚡ {item.energie_requise}
-                </span>
+                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${energieColor}12`, color: energieColor, fontWeight: 600 }}>⚡ {item.energie_requise}</span>
               </div>
             </div>
-            {/* Bouton expand */}
             <motion.button
               style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4, flexShrink: 0 }}
               onClick={() => setExpanded(!expanded)}
@@ -132,7 +150,7 @@ function PlanningCard({ item, index, T }) {
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
-                style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+                style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
                 {item.raison_placement && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <Info size={13} color={T.text2} style={{ flexShrink: 0, marginTop: 1 }} />
@@ -144,14 +162,62 @@ function PlanningCard({ item, index, T }) {
                 {item.tips && (
                   <div style={{ display: 'flex', gap: 8, padding: '8px 12px', background: `${T.accent}10`, borderRadius: 8, border: `1px solid ${T.accent}20` }}>
                     <Sparkles size={13} color={T.accent} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ fontSize: 12, color: T.text, margin: 0, lineHeight: 1.5 }}>
-                      {item.tips}
-                    </p>
+                    <p style={{ fontSize: 12, color: T.text, margin: 0, lineHeight: 1.5 }}>{item.tips}</p>
                   </div>
                 )}
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* ACTIONS ROW */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
+
+            {/* Lancer / Pause */}
+            <motion.button
+              onClick={onLancer}
+              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${isEnCours ? '#4caf82' : T.border}`, background: isEnCours ? 'rgba(76,175,130,0.12)' : T.bg3, color: isEnCours ? '#4caf82' : T.text2, fontSize: 11, fontWeight: isEnCours ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s' }}>
+              {isEnCours ? <><Pause size={11} /> En cours</> : <><Play size={11} /> Lancer</>}
+            </motion.button>
+
+            {/* Décaler */}
+            <div style={{ flex: 1, position: 'relative' }}>
+              <motion.button
+                onClick={onToggleDecalerMenu}
+                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${showDecalerMenu ? T.accent : T.border}`, background: showDecalerMenu ? `${T.accent}12` : T.bg3, color: showDecalerMenu ? T.accent : T.text2, fontSize: 11, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}>
+                <Clock size={11} /> Décaler
+              </motion.button>
+              <AnimatePresence>
+                {showDecalerMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    style={{ position: 'absolute', bottom: '110%', left: 0, right: 0, zIndex: 50, background: T.bg3, border: `1.5px solid ${T.border}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+                    {[[30, '+30 min'], [60, '+1 h'], [120, '+2 h'], [180, '+3 h']].map(([min, label]) => (
+                      <motion.button key={min}
+                        onClick={() => onDecaler(min)}
+                        whileHover={{ background: `${T.accent}15`, color: T.accent }}
+                        style={{ display: 'block', width: '100%', padding: '9px 14px', border: 'none', background: 'transparent', color: T.text2, fontSize: 12, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s' }}>
+                        {label}
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Skip */}
+            <motion.button
+              onClick={onSkip}
+              whileHover={{ scale: 1.03, borderColor: '#e05c5c', color: '#e05c5c' }}
+              whileTap={{ scale: 0.97 }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${T.border}`, background: T.bg3, color: T.text2, fontSize: 11, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}>
+              <X size={11} /> Skip
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -297,6 +363,42 @@ export default function TomorrowBuilder() {
   const [showTachesReportees, setShowTachesReportees] = useState(false)
   const [erreur, setErreur] = useState(null)
   const [derniereGen, setDerniereGen] = useState(null)
+
+  const [statutsActions, setStatutsActions] = useState({})
+  const [showDecalerIdx, setShowDecalerIdx] = useState(null)
+
+  const handleLancer = (idx) => {
+    setStatutsActions(prev => ({ ...prev, [idx]: prev[idx] === 'en_cours' ? null : 'en_cours' }))
+    setShowDecalerIdx(null)
+  }
+
+  const handleDecaler = (idx, minutes) => {
+    setPlanning(prev => {
+      const items = [...prev.planning]
+      const item = { ...items[idx] }
+      item.heure_debut = decalerHeure(item.heure_debut, minutes)
+      item.heure_fin = decalerHeure(item.heure_fin, minutes)
+      items[idx] = item
+      const updated = { ...prev, planning: items }
+      axios.patch(`${API}/ia/tomorrow-builder/${user.id}/update`, { planning: updated }).catch(() => {})
+      return updated
+    })
+    setShowDecalerIdx(null)
+  }
+
+  const handleSkip = (idx) => {
+    setPlanning(prev => {
+      const items = [...prev.planning]
+      const tache = items[idx]
+      const newItems = items.filter((_, i) => i !== idx)
+      const newReportees = [...(prev.taches_reportees || []), { titre: tache.titre, raison: 'Décalé manuellement' }]
+      const updated = { ...prev, planning: newItems, taches_reportees: newReportees }
+      axios.patch(`${API}/ia/tomorrow-builder/${user.id}/update`, { planning: updated }).catch(() => {})
+      return updated
+    })
+    setStatutsActions(prev => { const n = { ...prev }; delete n[idx]; return n })
+    setShowDecalerIdx(null)
+  }
 
   const [checkinTaches, setCheckinTaches] = useState([])
   const [checkinFait, setCheckinFait] = useState(false)
@@ -600,9 +702,17 @@ export default function TomorrowBuilder() {
                     </h3>
                     <span style={{ fontSize: 11, color: T.text2 }}>{planning.planning?.length} créneaux</span>
                   </div>
-                  {planning.planning?.map((item, i) => (
-                    <PlanningCard key={i} item={item} index={i} T={T} />
-                  ))}
+                  <AnimatePresence mode="popLayout">
+                    {planning.planning?.map((item, i) => (
+                      <PlanningCard key={`${item.titre}-${item.heure_debut}`} item={item} index={i} T={T}
+                        statut={statutsActions[i]}
+                        onLancer={() => handleLancer(i)}
+                        onDecaler={(min) => handleDecaler(i, min)}
+                        onSkip={() => handleSkip(i)}
+                        showDecalerMenu={showDecalerIdx === i}
+                        onToggleDecalerMenu={() => setShowDecalerIdx(prev => prev === i ? null : i)} />
+                    ))}
+                  </AnimatePresence>
 
                   {/* Tâches reportées */}
                   {planning.taches_reportees?.length > 0 && (
