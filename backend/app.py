@@ -771,6 +771,108 @@ def update_theme(id):
     db.commit(); db.close()
     return jsonify({"message": "Theme mis a jour !"})
 
+@app.route('/users/<int:id>/calibration', methods=['GET'])
+def get_calibration(id):
+    """Task DNA — calibration : ratio temps_reel/temps_estime par catégorie ou priorité.
+    Retourne top 3 sous-estimés (ratio > 1) et top 3 sur-estimés (ratio < 1)."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""
+            SELECT t.priorite, t.temps_estime, t.temps_reel, c.nom AS categorie_nom
+            FROM taches t
+            LEFT JOIN categories c ON t.categorie_id = c.id
+            WHERE t.user_id=%s
+              AND t.terminee=TRUE
+              AND t.temps_estime IS NOT NULL AND t.temps_estime > 0
+              AND t.temps_reel IS NOT NULL AND t.temps_reel > 0
+        """, (id,))
+        rows = curseur.fetchall()
+        db.close()
+
+        if not rows:
+            return jsonify({
+                "totalAnalyses": 0, "calibrationGlobale": None,
+                "sousEstimes": [], "surEstimes": [],
+                "message": "Pas assez de données. Termine des tâches en notant temps_reel."
+            })
+
+        # Groupage par catégorie (ou priorité si pas de catégorie)
+        groups = {}
+        for r in rows:
+            key = r['categorie_nom'] or f"Priorité {r['priorite']}"
+            groups.setdefault(key, []).append({
+                "estime": r['temps_estime'], "reel": r['temps_reel'],
+                "ratio": r['temps_reel'] / r['temps_estime']
+            })
+
+        analyses = []
+        for nom, items in groups.items():
+            if len(items) < 2:  # min 2 tâches pour être fiable
+                continue
+            ratio_moyen = sum(i['ratio'] for i in items) / len(items)
+            ecart_pct = round((ratio_moyen - 1) * 100)
+            analyses.append({
+                "categorie": nom, "ratio": round(ratio_moyen, 2),
+                "ecartPct": ecart_pct, "nbTaches": len(items),
+            })
+
+        # Tri : sous-estimés (ecart > 0) descendant, sur-estimés (ecart < 0) ascendant
+        sous_estimes = sorted([a for a in analyses if a['ecartPct'] > 10], key=lambda x: -x['ecartPct'])[:3]
+        sur_estimes = sorted([a for a in analyses if a['ecartPct'] < -10], key=lambda x: x['ecartPct'])[:3]
+
+        # Score calibration globale : pourcentage de tâches dans la zone ±20% du temps estimé
+        total_taches = len(rows)
+        bien_calibrees = sum(1 for r in rows if 0.8 <= (r['temps_reel'] / r['temps_estime']) <= 1.2)
+        calibration_globale = round(bien_calibrees / total_taches * 100) if total_taches > 0 else 0
+
+        return jsonify({
+            "totalAnalyses": total_taches,
+            "calibrationGlobale": calibration_globale,
+            "sousEstimes": sous_estimes,
+            "surEstimes": sur_estimes,
+        })
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/users/<int:id>/taches-jour/<date>', methods=['GET'])
+def get_taches_jour(id, date):
+    """Drill-down : tâches actives ou terminées un jour donné (format YYYY-MM-DD)."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        # Tâches terminées ce jour-là (basé sur updated_at quand terminee=TRUE)
+        # OU créées ce jour
+        # OU planifiées ce jour
+        curseur.execute("""
+            SELECT DISTINCT t.id, t.titre, t.priorite, t.terminee,
+                   DATE(t.updated_at) AS terminee_le,
+                   DATE(t.created_at) AS creee_le,
+                   c.nom AS categorie
+            FROM taches t
+            LEFT JOIN categories c ON t.categorie_id = c.id
+            LEFT JOIN planification p ON p.tache_id = t.id AND DATE(p.date_planifiee) = %s
+            WHERE t.user_id = %s
+              AND (
+                (t.terminee = TRUE AND DATE(t.updated_at) = %s)
+                OR DATE(t.created_at) = %s
+                OR p.id IS NOT NULL
+              )
+            ORDER BY t.terminee DESC, t.priorite DESC
+        """, (date, id, date, date))
+        rows = curseur.fetchall()
+        db.close()
+        # Conversion dates pour JSON
+        for r in rows:
+            for key in ['terminee_le', 'creee_le']:
+                if r.get(key):
+                    r[key] = r[key].isoformat() if hasattr(r[key], 'isoformat') else str(r[key])
+        return jsonify({"date": date, "taches": rows, "total": len(rows)})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
 @app.route('/users/<int:id>/gamification', methods=['GET'])
 def get_gamification(id):
     """État complet de la gamification : niveau, points, % vers niveau suivant, label, streak."""

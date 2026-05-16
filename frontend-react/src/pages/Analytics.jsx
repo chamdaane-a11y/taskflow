@@ -251,7 +251,119 @@ const Skeleton = memo(({ width = '100%', height = 20, radius = 8, style = {} }) 
 // ══════════════════════════════════════════════════════════════════════
 // GITHUB HEATMAP
 // ══════════════════════════════════════════════════════════════════════
-const GitHubHeatmap = memo(({ parJour, T }) => {
+// ══════════════════════════════════════════════════════════════════════
+// DAY DRILL-DOWN MODAL — liste tâches d'un jour (cliqué sur heatmap)
+// ══════════════════════════════════════════════════════════════════════
+const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!date || !userId) return
+    setLoading(true)
+    axios.get(`${API}/users/${userId}/taches-jour/${date}`)
+      .then(r => setData(r.data))
+      .catch(() => setData({ taches: [], total: 0 }))
+      .finally(() => setLoading(false))
+  }, [date, userId])
+
+  if (!date) return null
+
+  const dateFmt = new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const prioColor = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <motion.div
+          onClick={e => e.stopPropagation()}
+          initial={{ scale: 0.92, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 12 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 280 }}
+          style={{
+            background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 18,
+            width: isMobile ? '100%' : 460, maxWidth: '100%',
+            maxHeight: '85vh', overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          }}>
+          {/* Header */}
+          <div style={{ padding: '16px 18px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12, background: `linear-gradient(135deg, ${T.accent}15, transparent)` }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Calendar size={18} color="#fff" strokeWidth={2.4} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: T.text, textTransform: 'capitalize' }}>{dateFmt}</div>
+              <div style={{ fontSize: 11, color: T.text2 }}>
+                {loading ? '...' : `${data?.total || 0} tâche${(data?.total || 0) > 1 ? 's' : ''}`}
+              </div>
+            </div>
+            <motion.button onClick={onClose} whileTap={{ scale: 0.9 }}
+              style={{ width: 30, height: 30, borderRadius: 8, background: T.bg3 || 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={14} />
+            </motion.button>
+          </div>
+
+          {/* Body */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[1, 2, 3].map(i => <Skeleton key={i} height={50} radius={10} />)}
+              </div>
+            ) : !data?.taches?.length ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: T.text2, fontSize: 13 }}>
+                Aucune tâche enregistrée ce jour.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {data.taches.map(t => {
+                  const c = prioColor[t.priorite] || T.accent
+                  return (
+                    <motion.div
+                      key={t.id}
+                      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 12px',
+                        background: t.terminee ? '#4caf820d' : T.bg3 || T.bg,
+                        border: `1px solid ${t.terminee ? '#4caf8230' : T.border}`,
+                        borderLeft: `3px solid ${c}`,
+                        borderRadius: 10,
+                      }}>
+                      {/* Statut */}
+                      <div style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        border: `2px solid ${t.terminee ? '#4caf82' : T.border}`,
+                        background: t.terminee ? '#4caf82' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        {t.terminee && <CheckSquare size={12} color="#fff" strokeWidth={3} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, textDecoration: t.terminee ? 'line-through' : 'none', opacity: t.terminee ? 0.7 : 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {t.titre}
+                        </div>
+                        <div style={{ fontSize: 10, color: T.text2, marginTop: 2, display: 'flex', gap: 8 }}>
+                          <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.priorite}</span>
+                          {t.categorie && <span>· {t.categorie}</span>}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+})
+
+const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
   const weeks = 18
 
   // Formatte une date en YYYY-MM-DD en heure LOCALE (pas UTC)
@@ -331,9 +443,11 @@ const GitHubHeatmap = memo(({ parJour, T }) => {
             {col.map(({ key, val, intensity, date, isFuture }) => (
               <motion.div
                 key={key}
+                onClick={isFuture ? undefined : () => onDayClick?.(key)}
                 title={isFuture ? '' : `${date.toLocaleDateString('fr-FR')} : ${val} tâche${val !== 1 ? 's' : ''}`}
-                style={{ width: 12, height: 12, borderRadius: 3, background: getColor(intensity, isFuture), cursor: isFuture ? 'default' : 'default', flexShrink: 0 }}
-                whileHover={isFuture ? {} : { scale: 1.4 }}
+                style={{ width: 12, height: 12, borderRadius: 3, background: getColor(intensity, isFuture), cursor: isFuture ? 'default' : 'pointer', flexShrink: 0 }}
+                whileHover={isFuture ? {} : { scale: 1.5, zIndex: 2 }}
+                whileTap={isFuture ? {} : { scale: 0.9 }}
                 transition={{ duration: 0.1 }}
               />
             ))}
@@ -419,6 +533,66 @@ const InsightCard = memo(({ icon: Icon, color, text, delay = 0 }) => {
 })
 
 // ══════════════════════════════════════════════════════════════════════
+// CHART CAROUSEL — mobile uniquement, scroll-snap horizontal + dots
+// ══════════════════════════════════════════════════════════════════════
+const ChartCarousel = ({ T, children }) => {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const scrollRef = useRef(null)
+  const cards = (Array.isArray(children) ? children : [children]).flat().filter(Boolean)
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return
+    const { scrollLeft, clientWidth } = scrollRef.current
+    setActiveIdx(Math.round(scrollLeft / clientWidth))
+  }
+
+  const goTo = (i) => {
+    if (!scrollRef.current) return
+    scrollRef.current.scrollTo({ left: i * scrollRef.current.clientWidth, behavior: 'smooth' })
+  }
+
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        style={{
+          display: 'flex',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          gap: 0,
+          paddingBottom: 4,
+          marginBottom: 10,
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+        }}>
+        <style>{`.chart-carousel-track::-webkit-scrollbar { display: none; }`}</style>
+        {cards.map((c, i) => (
+          <div key={i} style={{ minWidth: '100%', scrollSnapAlign: 'center', flexShrink: 0, padding: '0 2px' }}>
+            {c}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+        {cards.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            style={{
+              width: i === activeIdx ? 22 : 6, height: 6, borderRadius: 99,
+              background: i === activeIdx ? T.accent : T.border,
+              border: 'none', padding: 0, cursor: 'pointer',
+              transition: 'width 0.25s, background 0.25s',
+            }}
+            aria-label={`Graphe ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // CHART CARD WRAPPER
 // ══════════════════════════════════════════════════════════════════════
 const ChartCard = memo(({ title, subtitle, children, delay = 0, style = {} }) => {
@@ -435,6 +609,147 @@ const ChartCard = memo(({ title, subtitle, children, delay = 0, style = {} }) =>
         {subtitle && <p style={{ fontSize: 12, color: T.text2, marginTop: 3, marginBottom: 0 }}>{subtitle}</p>}
       </div>
       {children}
+    </motion.div>
+  )
+})
+
+// ══════════════════════════════════════════════════════════════════════
+// TASK DNA CARD — calibration des durées (sous/sur-estimation)
+// ══════════════════════════════════════════════════════════════════════
+function useCalibration(userId) {
+  const [data, setData] = useState(null)
+  useEffect(() => {
+    if (!userId) return
+    const cacheKey = `calibration_${userId}`
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null')
+      if (cached && Date.now() - cached.ts < 10 * 60 * 1000) {
+        setData(cached.data); return
+      }
+    } catch {}
+    axios.get(`${API}/users/${userId}/calibration`)
+      .then(r => {
+        setData(r.data)
+        try { localStorage.setItem(cacheKey, JSON.stringify({ data: r.data, ts: Date.now() })) } catch {}
+      })
+      .catch(() => {})
+  }, [userId])
+  return data
+}
+
+const TaskDNACard = memo(({ calibration, T, isMobile }) => {
+  if (!calibration) return null
+  const { calibrationGlobale, sousEstimes = [], surEstimes = [], totalAnalyses, message } = calibration
+
+  if (totalAnalyses < 2) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        style={{
+          background: T.bg2, border: `1px solid ${T.border}`,
+          borderRadius: 14, padding: '18px 20px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: T.accent + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Brain size={18} color={T.accent} strokeWidth={2.2} />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>Task DNA — Calibration</div>
+          <div style={{ fontSize: 12, color: T.text2 }}>{message || 'Termine plus de tâches en notant le temps réel pour activer.'}</div>
+        </div>
+      </motion.div>
+    )
+  }
+
+  const ringColor = calibrationGlobale > 70 ? '#4caf82' : calibrationGlobale > 40 ? '#e08a3c' : '#e05c5c'
+  const verdict = calibrationGlobale > 75 ? 'Tu calibres très bien'
+    : calibrationGlobale > 50 ? 'Calibration correcte'
+    : 'Marge de progression'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: T.bg2, border: `1px solid ${T.border}`,
+        borderRadius: 14, padding: '18px 20px', marginBottom: 16,
+      }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px ${T.accent}40` }}>
+          <Brain size={16} color="#fff" strokeWidth={2.4} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.text, letterSpacing: '-0.2px' }}>Task DNA — Calibration</div>
+          <div style={{ fontSize: 11, color: T.text2 }}>Estimation vs réalité sur {totalAnalyses} tâches mesurées</div>
+        </div>
+      </div>
+
+      {/* Score global + verdict */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 14px', background: ringColor + '0d', border: `1px solid ${ringColor}25`, borderRadius: 10, marginBottom: 16 }}>
+        {/* Anneau SVG */}
+        <svg width={56} height={56} viewBox="0 0 56 56" style={{ flexShrink: 0 }}>
+          <circle cx="28" cy="28" r="22" fill="none" stroke={T.border} strokeWidth="5" />
+          <motion.circle
+            cx="28" cy="28" r="22" fill="none"
+            stroke={ringColor} strokeWidth="5"
+            strokeDasharray={`${2 * Math.PI * 22}`}
+            initial={{ strokeDashoffset: 2 * Math.PI * 22 }}
+            animate={{ strokeDashoffset: 2 * Math.PI * 22 * (1 - calibrationGlobale / 100) }}
+            transition={{ duration: 0.9, delay: 0.2, ease: 'easeOut' }}
+            strokeLinecap="round" transform="rotate(-90 28 28)"
+          />
+          <text x="28" y="33" textAnchor="middle" fontSize="14" fontWeight="800" fill={ringColor}>
+            {calibrationGlobale}%
+          </text>
+        </svg>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: ringColor, marginBottom: 2 }}>{verdict}</div>
+          <div style={{ fontSize: 11.5, color: T.text2, lineHeight: 1.45 }}>
+            % de tâches dans la zone ±20% du temps estimé
+          </div>
+        </div>
+      </div>
+
+      {/* Sous-estimés / Sur-estimés */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+        {sousEstimes.length > 0 && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#e05c5c', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <TrendingUp size={11} /> TU SOUS-ESTIMES
+            </div>
+            {sousEstimes.map((s, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: '#e05c5c0d', borderRadius: 8, marginBottom: 6, border: `1px solid #e05c5c20` }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.categorie}</div>
+                  <div style={{ fontSize: 10, color: T.text2 }}>{s.nbTaches} tâches</div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#e05c5c', flexShrink: 0, marginLeft: 8 }}>+{s.ecartPct}%</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {surEstimes.length > 0 && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#4caf82', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <TrendingDown size={11} /> TU SUR-ESTIMES
+            </div>
+            {surEstimes.map((s, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: '#4caf820d', borderRadius: 8, marginBottom: 6, border: `1px solid #4caf8220` }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.categorie}</div>
+                  <div style={{ fontSize: 10, color: T.text2 }}>{s.nbTaches} tâches</div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#4caf82', flexShrink: 0, marginLeft: 8 }}>{s.ecartPct}%</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {sousEstimes.length === 0 && surEstimes.length === 0 && (
+          <div style={{ gridColumn: '1 / -1', fontSize: 12, color: T.text2, textAlign: 'center', padding: 20 }}>
+            ✨ Tes estimations sont remarquablement justes — pas d'écart significatif détecté.
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 })
@@ -835,6 +1150,7 @@ export default function Analytics() {
   const [activeTab, setActiveTab] = useState('overview')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [drillDownDate, setDrillDownDate] = useState(null)
   const profileMenuRef = useRef(null)
 
   const navigate = useNavigate()
@@ -872,6 +1188,7 @@ export default function Analytics() {
   const { data, loading } = useAnalyticsData(user?.id, jours)
   const stats = useStatistics(data, jours)
   const gamification = useGamification(user?.id)
+  const calibration = useCalibration(user?.id)
 
   const periodes = [
     { id: '7',  label: '7J'  },
@@ -1350,77 +1667,109 @@ export default function Analytics() {
                 </motion.div>
               )}
 
-              {/* Line chart: évolution + dotted prev */}
-              <ChartCard title="Évolution quotidienne" subtitle="Cette période · Période précédente · Moyenne mobile 7J" delay={0.1}>
-                {loading ? <Skeleton height={isMobile ? 200 : 280} radius={10} /> : (
-                  <div style={{ height: isMobile ? 200 : 280, position: 'relative' }}>
-                    {lineChartData && <Line data={lineChartData} options={lineOptionsWithLegend} />}
-                  </div>
-                )}
-              </ChartCard>
-
-              {/* Row: Bar + Cumulative */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginTop: 16 }}>
-                <ChartCard title="Distribution par jour" subtitle="Le jour le plus actif est mis en avant" delay={0.2}>
-                  {loading ? <Skeleton height={isMobile ? 170 : 220} radius={10} /> : (
-                    <div style={{ height: isMobile ? 170 : 220, position: 'relative' }}>
-                      {barData && <Bar data={barData} options={baseOptions} />}
-                    </div>
-                  )}
-                </ChartCard>
-
-                <ChartCard title="Courbe de croissance" subtitle="Tâches cumulées sur la période" delay={0.25}>
-                  {loading ? <Skeleton height={isMobile ? 170 : 220} radius={10} /> : (
-                    <div style={{ height: isMobile ? 170 : 220, position: 'relative' }}>
-                      {cumulativeData && <Line data={cumulativeData} options={{ ...baseOptions, plugins: { ...baseOptions.plugins, legend: { display: false } } }} />}
-                    </div>
-                  )}
-                </ChartCard>
-              </div>
-
-              {/* Row: Chronotype + Doughnut */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: 16, marginTop: 16 }}>
-                <ChartCard title="Chronotype productif" subtitle="Quand êtes-vous le plus efficace ?" delay={0.3}>
-                  {loading ? <Skeleton height={isMobile ? 160 : 220} radius={10} /> : (
-                    <>
-                      <div style={{ height: isMobile ? 160 : 200, position: 'relative' }}>
-                        {chronoData && <Bar data={chronoData} options={baseOptions} />}
+              {(() => {
+                // ── Cartes graphes définies une fois, rendues différemment mobile/desktop ──
+                const lineCard = (
+                  <ChartCard title="Évolution quotidienne" subtitle="Cette période · Précédente · Moy. mobile 7J" delay={0.1}>
+                    {loading ? <Skeleton height={isMobile ? 200 : 280} radius={10} /> : (
+                      <div style={{ height: isMobile ? 200 : 280, position: 'relative' }}>
+                        {lineChartData && <Line data={lineChartData} options={lineOptionsWithLegend} />}
                       </div>
-                      {stats && (
-                        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
-                          <div style={{ padding: '8px 18px', borderRadius: 99, background: T.accent + '15', border: `1px solid ${T.accent}30`, fontSize: 13, color: T.accent, fontWeight: 600 }}>
-                            Pic de productivité : {stats.peakHour}h — {stats.chronotype}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </ChartCard>
-
-                <ChartCard title="Répartition priorités" subtitle="Vanité vs Impact" delay={0.35}>
-                  {loading ? <Skeleton height={isMobile ? 180 : 220} radius={10} /> : (
-                    <>
-                      <div style={{ height: isMobile ? 150 : 180, position: 'relative' }}>
-                        {doughnutData && <Doughnut data={doughnutData} options={doughnutOptions} />}
+                    )}
+                  </ChartCard>
+                )
+                const barCard = (
+                  <ChartCard title="Distribution par jour" subtitle="Le jour le plus actif est mis en avant" delay={0.2}>
+                    {loading ? <Skeleton height={isMobile ? 200 : 220} radius={10} /> : (
+                      <div style={{ height: isMobile ? 200 : 220, position: 'relative' }}>
+                        {barData && <Bar data={barData} options={baseOptions} />}
                       </div>
-                      {stats && (
-                        <div style={{ marginTop: 10, textAlign: 'center' }}>
-                          <div style={{ fontSize: 11, color: T.text2 }}>Score de focus</div>
-                          <div style={{ fontSize: 22, fontWeight: 800, color: stats.focusScore > 60 ? '#4caf82' : '#e08a3c' }}>
-                            {stats.focusScore}/100
-                          </div>
+                    )}
+                  </ChartCard>
+                )
+                const cumulCard = (
+                  <ChartCard title="Courbe de croissance" subtitle="Tâches cumulées sur la période" delay={0.25}>
+                    {loading ? <Skeleton height={isMobile ? 200 : 220} radius={10} /> : (
+                      <div style={{ height: isMobile ? 200 : 220, position: 'relative' }}>
+                        {cumulativeData && <Line data={cumulativeData} options={{ ...baseOptions, plugins: { ...baseOptions.plugins, legend: { display: false } } }} />}
+                      </div>
+                    )}
+                  </ChartCard>
+                )
+                const chronoCard = (
+                  <ChartCard title="Chronotype productif" subtitle="Quand es-tu le plus efficace ?" delay={0.3}>
+                    {loading ? <Skeleton height={isMobile ? 200 : 220} radius={10} /> : (
+                      <>
+                        <div style={{ height: isMobile ? 180 : 200, position: 'relative' }}>
+                          {chronoData && <Bar data={chronoData} options={baseOptions} />}
                         </div>
-                      )}
-                    </>
-                  )}
-                </ChartCard>
-              </div>
+                        {stats && (
+                          <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
+                            <div style={{ padding: '8px 18px', borderRadius: 99, background: T.accent + '15', border: `1px solid ${T.accent}30`, fontSize: 13, color: T.accent, fontWeight: 600 }}>
+                              Pic : {stats.peakHour}h — {stats.chronotype}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </ChartCard>
+                )
+                const doughnutCard = (
+                  <ChartCard title="Répartition priorités" subtitle="Vanité vs Impact" delay={0.35}>
+                    {loading ? <Skeleton height={isMobile ? 200 : 220} radius={10} /> : (
+                      <>
+                        <div style={{ height: 180, position: 'relative' }}>
+                          {doughnutData && <Doughnut data={doughnutData} options={doughnutOptions} />}
+                        </div>
+                        {stats && (
+                          <div style={{ marginTop: 10, textAlign: 'center' }}>
+                            <div style={{ fontSize: 11, color: T.text2 }}>Score de focus</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: stats.focusScore > 60 ? '#4caf82' : '#e08a3c' }}>
+                              {stats.focusScore}/100
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </ChartCard>
+                )
+
+                // Mobile : tout en carrousel swipeable. Desktop : grilles existantes.
+                if (isMobile) {
+                  return (
+                    <ChartCarousel T={T}>
+                      {lineCard}
+                      {barCard}
+                      {cumulCard}
+                      {chronoCard}
+                      {doughnutCard}
+                    </ChartCarousel>
+                  )
+                }
+                return (
+                  <>
+                    {lineCard}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+                      {barCard}
+                      {cumulCard}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginTop: 16 }}>
+                      {chronoCard}
+                      {doughnutCard}
+                    </div>
+                  </>
+                )
+              })()}
             </motion.div>
           )}
 
           {/* ── TAB: INSIGHTS ── */}
           {activeTab === 'insights' && (
             <motion.div key="insights" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+
+              {/* Task DNA — calibration des durées (feature signature) */}
+              <TaskDNACard calibration={calibration} T={T} isMobile={isMobile} />
+
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 24 }}>
                 <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px' }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: T.text2, letterSpacing: '1px', marginBottom: 14 }}>MÉTRIQUES AVANCÉES</p>
@@ -1500,9 +1849,9 @@ export default function Analytics() {
           {/* ── TAB: HEATMAP ── */}
           {activeTab === 'heatmap' && (
             <motion.div key="heatmap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ChartCard title="Heatmap de productivité" subtitle="Intensité quotidienne sur les 4 derniers mois — style GitHub">
+              <ChartCard title="Heatmap de productivité" subtitle="Intensité quotidienne · 4 derniers mois · clique un jour pour voir le détail">
                 {loading ? <Skeleton height={140} radius={10} /> : (
-                  <GitHubHeatmap parJour={data?.par_jour} T={T} />
+                  <GitHubHeatmap parJour={data?.par_jour} T={T} onDayClick={setDrillDownDate} />
                 )}
               </ChartCard>
 
@@ -1581,6 +1930,17 @@ export default function Analytics() {
           userId={user?.id}
           analyticsStats={stats}
           defaultStyle="nova"
+        />
+      )}
+
+      {/* Drill-down jour : modal des tâches d'une date cliquée */}
+      {drillDownDate && (
+        <DayDrillModal
+          userId={user?.id}
+          date={drillDownDate}
+          T={T}
+          isMobile={isMobile}
+          onClose={() => setDrillDownDate(null)}
         />
       )}
 
