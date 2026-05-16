@@ -121,6 +121,17 @@ function useStatistics(data, jours) {
       return `${y}-${m}-${day}`
     }
 
+    // Parse robuste : gère ISO date "YYYY-MM-DD", ISO datetime, RFC 1123 (Flask jsonify)
+    const toLocalKey = (raw) => {
+      if (!raw) return null
+      const s = String(raw)
+      // ISO date YYYY-MM-DD ou YYYY-MM-DDTxxx
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+      // Sinon parse avec Date (RFC 1123 "Sat, 16 May 2026 ...") et formate en local
+      const d = new Date(s)
+      return isNaN(d) ? s : localKey(d)
+    }
+
     const buildDays = (offset = 0) =>
       Array.from({ length: n }, (_, i) => {
         const d = new Date()
@@ -133,7 +144,7 @@ function useStatistics(data, jours) {
 
     const getCount = (keys, parJour) =>
       keys.map(k => {
-        const found = parJour?.find(p => String(p.jour).split('T')[0] === k)
+        const found = parJour?.find(p => toLocalKey(p.jour) === k)
         return found ? found.count : 0
       })
 
@@ -380,8 +391,19 @@ const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
   const data = useMemo(() => {
     const map = {}
     parJour?.forEach(p => {
-      // Prend la partie date brute sans conversion UTC
-      const k = String(p.jour).split('T')[0]
+      const raw = String(p.jour)
+      // ISO date "YYYY-MM-DD..." direct, sinon parse Date (RFC 1123 Flask) → local
+      let k
+      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+        k = raw.slice(0, 10)
+      } else {
+        const d = new Date(raw)
+        if (!isNaN(d)) {
+          k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        } else {
+          k = raw
+        }
+      }
       map[k] = (map[k] || 0) + p.count
     })
     return map
