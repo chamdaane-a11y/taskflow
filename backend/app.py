@@ -508,6 +508,10 @@ run_migrations()
 
 GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleusercontent.com'
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'}), 200
+
 @app.route('/auth/google', methods=['POST'])
 @limiter.limit("20 per minute")
 def auth_google():

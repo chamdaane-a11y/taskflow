@@ -56,9 +56,19 @@ function useAnalyticsData(userId, jours) {
 
   useEffect(() => {
     if (!userId) return
+    const cacheKey = `analytics_${userId}_${jours}`
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null')
+      if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
+        setData(cached.data); setLoading(false); return
+      }
+    } catch {}
     setLoading(true)
     axios.get(`${API}/analytics/${userId}?jours=${jours}`)
-      .then(r => { setData(r.data); setError(null) })
+      .then(r => {
+        setData(r.data); setError(null)
+        try { localStorage.setItem(cacheKey, JSON.stringify({ data: r.data, ts: Date.now() })) } catch {}
+      })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [userId, jours])
@@ -75,12 +85,19 @@ function useStatistics(data, jours) {
 
     const n = Math.min(jours, 90)
 
-    // Build daily arrays
+    // Heure locale — évite le décalage UTC (ex: UTC+2 → minuit = veille en UTC)
+    const localKey = (d) => {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+
     const buildDays = (offset = 0) =>
       Array.from({ length: n }, (_, i) => {
         const d = new Date()
         d.setDate(d.getDate() - (n - 1 - i) - offset)
-        return d.toISOString().split('T')[0]
+        return localKey(d)
       })
 
     const currentKeys = buildDays(0)
@@ -88,9 +105,7 @@ function useStatistics(data, jours) {
 
     const getCount = (keys, parJour) =>
       keys.map(k => {
-        const found = parJour?.find(p =>
-          new Date(p.jour).toISOString().split('T')[0] === k
-        )
+        const found = parJour?.find(p => String(p.jour).split('T')[0] === k)
         return found ? found.count : 0
       })
 
@@ -900,7 +915,6 @@ export default function Analytics() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
