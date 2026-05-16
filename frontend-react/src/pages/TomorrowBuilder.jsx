@@ -7,7 +7,7 @@ import {
   ArrowLeft, Sparkles, Zap, Clock, AlertTriangle, CheckCircle,
   Coffee, Brain, Target, TrendingUp, ChevronDown, ChevronUp,
   RefreshCw, Moon, Sun, Flame, Battery, BatteryLow, BatteryMedium,
-  SkipForward, Info
+  SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -181,6 +181,106 @@ function AlerteProcrastination({ alerte, T }) {
   )
 }
 
+// ---- Composant card check-in tâche ----
+function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOnly }) {
+  const statut = reponse?.statut || null
+  const couleur = statut === 'fait' ? '#4caf82' : statut === 'partiel' ? '#e08a3c' : statut === 'pas_fait' ? '#e05c5c' : T.border
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      style={{ background: T.bg2, border: `1.5px solid ${statut ? couleur : T.border}`, borderRadius: 14, marginBottom: 10, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+      <div style={{ display: 'flex' }}>
+        <div style={{ width: 4, background: statut ? couleur : T.bg3, flexShrink: 0, borderRadius: '14px 0 0 14px', transition: 'background 0.3s' }} />
+        <div style={{ flex: 1, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 8, background: `${T.accent}20`, border: `1.5px solid ${T.accent}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 800, color: T.accent }}>
+              {tache.ordre}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 3 }}>{tache.titre}</div>
+              <div style={{ fontSize: 11, color: T.text2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Clock size={10} />
+                {tache.heure_debut} → {tache.heure_fin} · {tache.duree_minutes} min prévu
+              </div>
+            </div>
+          </div>
+
+          {!readOnly && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: statut && statut !== 'pas_fait' ? 12 : 0 }}>
+              {[['fait', '✅', 'Fait', '#4caf82'], ['partiel', '🔄', 'Partiel', '#e08a3c'], ['pas_fait', '❌', 'Pas fait', '#e05c5c']].map(([val, ico, label, color]) => (
+                <motion.button key={val}
+                  onClick={() => onChange({ ...reponse, statut: statut === val ? null : val, duree_reelle: reponse?.duree_reelle ?? tache.duree_minutes })}
+                  whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: isMobile ? '9px 4px' : '8px 0', borderRadius: 10, border: `1.5px solid ${statut === val ? color : T.border}`, background: statut === val ? `${color}18` : T.bg3, color: statut === val ? color : T.text2, fontWeight: statut === val ? 700 : 500, fontSize: isMobile ? 11 : 12, cursor: 'pointer', transition: 'all 0.15s' }}>
+                  <span>{ico}</span>
+                  <span>{label}</span>
+                </motion.button>
+              ))}
+            </div>
+          )}
+
+          {readOnly && statut && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 99, background: `${couleur}15`, border: `1px solid ${couleur}30`, color: couleur, fontSize: 12, fontWeight: 700 }}>
+              {statut === 'fait' ? '✅ Fait' : statut === 'partiel' ? '🔄 Partiel' : '❌ Pas fait'}
+              {reponse?.duree_reelle && statut !== 'pas_fait' && <span style={{ fontWeight: 400, color: T.text2 }}>· {reponse.duree_reelle} min</span>}
+            </div>
+          )}
+
+          <AnimatePresence>
+            {!readOnly && (statut === 'fait' || statut === 'partiel') && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                <div style={{ paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, color: T.text2, fontWeight: 600 }}>⏱ Durée réelle</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{reponse?.duree_reelle ?? tache.duree_minutes} min</span>
+                  </div>
+                  <input type="range" min={5} max={240} step={5}
+                    value={reponse?.duree_reelle ?? tache.duree_minutes}
+                    onChange={e => onChange({ ...reponse, duree_reelle: parseInt(e.target.value) })}
+                    style={{ width: '100%', accentColor: T.accent }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.text2, marginTop: 3 }}>
+                    <span>5 min</span><span>2h</span><span>4h</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// ---- Composant slider énergie ressentie ----
+function EnergySliderCheckin({ value, onChange, T }) {
+  const emoji = value >= 80 ? '⚡' : value >= 60 ? '🌤' : value >= 40 ? '😐' : value >= 20 ? '😴' : '💀'
+  const label = value >= 80 ? 'En feu !' : value >= 60 ? 'Bonne journée' : value >= 40 ? 'Correct' : value >= 20 ? 'Fatigué' : 'À plat'
+  const color = value >= 70 ? '#4caf82' : value >= 40 ? '#e08a3c' : '#e05c5c'
+
+  return (
+    <div style={{ background: `${color}08`, border: `1.5px solid ${color}25`, borderRadius: 16, padding: '18px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1, marginBottom: 2 }}>ÉNERGIE RESSENTIE</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: T.text, letterSpacing: '-0.5px' }}>
+            {emoji} {value}<span style={{ fontSize: 13, color: T.text2, fontWeight: 400 }}>/100</span>
+          </div>
+        </div>
+        <div style={{ padding: '6px 16px', borderRadius: 99, background: `${color}20`, color, fontSize: 13, fontWeight: 700 }}>{label}</div>
+      </div>
+      <input type="range" min={0} max={100} step={5} value={value}
+        onChange={e => onChange(parseInt(e.target.value))}
+        style={{ width: '100%', accentColor: color, cursor: 'pointer' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.text2, marginTop: 5 }}>
+        <span>💀 À plat</span><span>😐 Moyen</span><span>⚡ En feu</span>
+      </div>
+    </div>
+  )
+}
+
 // ======= COMPOSANT PRINCIPAL =======
 export default function TomorrowBuilder() {
   const navigate = useNavigate()
@@ -198,6 +298,15 @@ export default function TomorrowBuilder() {
   const [erreur, setErreur] = useState(null)
   const [derniereGen, setDerniereGen] = useState(null)
 
+  const [checkinTaches, setCheckinTaches] = useState([])
+  const [checkinFait, setCheckinFait] = useState(false)
+  const [checkinReponses, setCheckinReponses] = useState({})
+  const [checkinEnergie, setCheckinEnergie] = useState(60)
+  const [checkinNote, setCheckinNote] = useState('')
+  const [showNoteLibre, setShowNoteLibre] = useState(false)
+  const [checkinLoading, setCheckinLoading] = useState(false)
+  const [checkinSuccess, setCheckinSuccess] = useState(false)
+
   const demain = new Date()
   demain.setDate(demain.getDate() + 1)
   const demainStr = demain.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -206,7 +315,53 @@ export default function TomorrowBuilder() {
     if (!user) { navigate('/'); return }
     chargerSavedPlan()
     chargerProcrastination()
+    chargerCheckinToday()
   }, [])
+
+  const chargerCheckinToday = async () => {
+    try {
+      const res = await axios.get(`${API}/ia/checkin-soir/${user.id}/today`)
+      if (res.data.taches?.length > 0) {
+        setCheckinTaches(res.data.taches)
+        setCheckinFait(res.data.checkin_fait)
+        if (res.data.checkin_fait && res.data.checkin_data) {
+          const rep = {}
+          res.data.checkin_data.forEach((t, i) => {
+            rep[i] = {
+              statut: t.fait ? 'fait' : t.partiel ? 'partiel' : 'pas_fait',
+              duree_reelle: t.duree_reelle
+            }
+          })
+          setCheckinReponses(rep)
+        }
+      }
+    } catch {}
+  }
+
+  const soumettreCheckin = async () => {
+    setCheckinLoading(true)
+    try {
+      const tachesPayload = checkinTaches.map((t, i) => ({
+        titre: t.titre,
+        duree_prevue: t.duree_minutes,
+        fait: checkinReponses[i]?.statut === 'fait',
+        partiel: checkinReponses[i]?.statut === 'partiel',
+        duree_reelle: checkinReponses[i]?.duree_reelle ?? t.duree_minutes,
+      }))
+      await axios.post(`${API}/ia/checkin-soir`, {
+        user_id: user.id,
+        taches: tachesPayload,
+        score_energie_reel: checkinEnergie,
+        note_libre: checkinNote.trim(),
+      })
+      setCheckinFait(true)
+      setCheckinSuccess(true)
+      setTimeout(() => setCheckinSuccess(false), 4000)
+    } catch {
+      setErreur('Erreur lors de l\'enregistrement du check-in')
+    }
+    setCheckinLoading(false)
+  }
 
   const chargerSavedPlan = async () => {
     try {
@@ -287,6 +442,28 @@ export default function TomorrowBuilder() {
               style={{ background: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.3)', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
               <AlertTriangle size={16} color="#e05c5c" />
               <span style={{ fontSize: 13, color: '#e05c5c' }}>{erreur}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* BANDEAU CHECK-IN DU JOUR */}
+        <AnimatePresence>
+          {checkinTaches.length > 0 && !checkinFait && activeTab !== 'checkin' && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              style={{ background: `${T.accent}10`, border: `1.5px solid ${T.accent}30`, borderRadius: 14, padding: '13px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckSquare size={18} color={T.accent} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>Check-in du soir disponible ✅</div>
+                <div style={{ fontSize: 12, color: T.text2 }}>Tu avais planifié {checkinTaches.length} tâche{checkinTaches.length > 1 ? 's' : ''} pour aujourd'hui — retour d'expérience en 1 min.</div>
+              </div>
+              <motion.button
+                onClick={() => setActiveTab('checkin')}
+                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                style={{ padding: '8px 16px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, border: 'none', borderRadius: 10, color: T.bg, fontWeight: 700, cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
+                Commencer
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -398,10 +575,15 @@ export default function TomorrowBuilder() {
             </div>
 
             {/* TABS */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: T.bg2, padding: 6, borderRadius: 12, border: `1px solid ${T.border}`, width: 'fit-content' }}>
-              {[['planning', 'Planning', Sparkles], ['energie', 'Énergie', Zap], ['procrastination', `Alertes ${procrastination.length > 0 ? `(${procrastination.length})` : ''}`, AlertTriangle]].map(([val, label, Icon]) => (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: T.bg2, padding: 6, borderRadius: 12, border: `1px solid ${T.border}`, width: 'fit-content', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+              {[
+                ['planning', 'Planning', Sparkles],
+                ['energie', 'Énergie', Zap],
+                ['procrastination', `Alertes${procrastination.length > 0 ? ` (${procrastination.length})` : ''}`, AlertTriangle],
+                ...(checkinTaches.length > 0 ? [['checkin', `Check-in${checkinFait ? ' ✓' : ''}`, CheckSquare]] : [])
+              ].map(([val, label, Icon]) => (
                 <motion.button key={val}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: activeTab === val ? T.accent : 'transparent', border: 'none', borderRadius: 8, color: activeTab === val ? T.bg : T.text2, fontSize: 13, fontWeight: activeTab === val ? 700 : 400, cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: activeTab === val ? T.accent : 'transparent', border: val === 'checkin' && !checkinFait ? `1px solid ${T.accent}40` : 'none', borderRadius: 8, color: activeTab === val ? T.bg : val === 'checkin' && !checkinFait ? T.accent : T.text2, fontSize: 13, fontWeight: activeTab === val ? 700 : val === 'checkin' && !checkinFait ? 600 : 400, cursor: 'pointer' }}
                   onClick={() => setActiveTab(val)} whileHover={{ color: activeTab === val ? T.bg : T.accent }}>
                   <Icon size={13} />{label}
                 </motion.button>
@@ -551,6 +733,144 @@ export default function TomorrowBuilder() {
                 )}
               </motion.div>
             )}
+            {/* TAB CHECK-IN */}
+            {activeTab === 'checkin' && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+
+                {/* SUCCÈS */}
+                <AnimatePresence>
+                  {checkinSuccess && (
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                      style={{ textAlign: 'center', padding: '48px 20px', background: 'rgba(76,175,130,0.06)', border: '1.5px solid rgba(76,175,130,0.25)', borderRadius: 20, marginBottom: 20 }}>
+                      <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 0.5 }}
+                        style={{ fontSize: 56, marginBottom: 16 }}>🎉</motion.div>
+                      <h3 style={{ fontSize: 20, fontWeight: 800, color: '#4caf82', marginBottom: 8 }}>Check-in enregistré !</h3>
+                      <p style={{ fontSize: 13, color: T.text2, maxWidth: 340, margin: '0 auto' }}>L'IA utilisera ce retour pour améliorer le planning de demain.</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* RÉSUMÉ (déjà fait) */}
+                {checkinFait && !checkinSuccess && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(76,175,130,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CheckCircle size={18} color="#4caf82" />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#4caf82' }}>Check-in déjà fait aujourd'hui</div>
+                          <div style={{ fontSize: 11, color: T.text2 }}>Tu peux le refaire si quelque chose a changé</div>
+                        </div>
+                      </div>
+                      <motion.button
+                        onClick={() => { setCheckinFait(false); setCheckinReponses({}); setCheckinNote('') }}
+                        whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        <RefreshCw size={13} /> Refaire
+                      </motion.button>
+                    </div>
+                    {checkinTaches.map((t, i) => (
+                      <CheckinTacheCard key={i} tache={t} index={i} reponse={checkinReponses[i]} onChange={() => {}} T={T} isMobile={isMobile} readOnly />
+                    ))}
+                  </div>
+                )}
+
+                {/* FORMULAIRE */}
+                {!checkinFait && !checkinSuccess && (
+                  <div>
+                    <div style={{ marginBottom: 20 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: '0 0 4px' }}>
+                        📋 Comment s'est passée ta journée ?
+                      </h3>
+                      <p style={{ fontSize: 12, color: T.text2, margin: 0 }}>
+                        {checkinTaches.length} tâche{checkinTaches.length > 1 ? 's' : ''} planifiée{checkinTaches.length > 1 ? 's' : ''} — dis à l'IA ce qui s'est vraiment passé.
+                      </p>
+                    </div>
+
+                    {/* Barre de progression complétion */}
+                    {(() => {
+                      const repondues = Object.values(checkinReponses).filter(r => r?.statut).length
+                      const pct = Math.round(repondues / checkinTaches.length * 100)
+                      return (
+                        <div style={{ marginBottom: 20, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <span style={{ fontSize: 11, color: T.text2, fontWeight: 600 }}>PROGRESSION</span>
+                            <span style={{ fontSize: 11, color: T.accent, fontWeight: 700 }}>{repondues}/{checkinTaches.length} évaluées</span>
+                          </div>
+                          <ProgressBar value={pct} color={T.accent} height={6} />
+                        </div>
+                      )
+                    })()}
+
+                    {/* Cards tâches */}
+                    {checkinTaches.map((t, i) => (
+                      <CheckinTacheCard key={i} tache={t} index={i} reponse={checkinReponses[i]}
+                        onChange={rep => setCheckinReponses(prev => ({ ...prev, [i]: rep }))}
+                        T={T} isMobile={isMobile} readOnly={false} />
+                    ))}
+
+                    {/* Slider énergie */}
+                    <div style={{ marginTop: 20 }}>
+                      <EnergySliderCheckin value={checkinEnergie} onChange={setCheckinEnergie} T={T} />
+                    </div>
+
+                    {/* Note libre */}
+                    <div style={{ marginTop: 12 }}>
+                      <motion.button
+                        onClick={() => setShowNoteLibre(!showNoteLibre)}
+                        whileHover={{ color: T.accent }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, color: T.text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
+                        <Pencil size={13} />
+                        <span style={{ flex: 1, textAlign: 'left' }}>Ajouter une note (optionnel)</span>
+                        {showNoteLibre ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                      </motion.button>
+                      <AnimatePresence>
+                        {showNoteLibre && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                            <textarea
+                              value={checkinNote}
+                              onChange={e => setCheckinNote(e.target.value)}
+                              placeholder="Ex: j'ai été interrompu 3 fois, la tâche X m'a pris bien plus que prévu..."
+                              maxLength={200}
+                              style={{ width: '100%', marginTop: 6, padding: '12px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderTop: 'none', borderRadius: '0 0 12px 12px', color: T.text, fontSize: 13, lineHeight: 1.5, resize: 'none', outline: 'none', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box', minHeight: 80 }}
+                            />
+                            <div style={{ textAlign: 'right', fontSize: 10, color: T.text2, marginTop: 3 }}>{checkinNote.length}/200</div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Bouton valider */}
+                    <motion.button
+                      onClick={soumettreCheckin}
+                      disabled={checkinLoading || Object.values(checkinReponses).filter(r => r?.statut).length === 0}
+                      whileHover={!checkinLoading ? { scale: 1.02 } : {}}
+                      whileTap={!checkinLoading ? { scale: 0.98 } : {}}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                        width: '100%', marginTop: 16, padding: '15px 0',
+                        background: checkinLoading || Object.values(checkinReponses).filter(r => r?.statut).length === 0
+                          ? T.bg3
+                          : `linear-gradient(135deg, ${T.accent}, ${T.accent2})`,
+                        border: 'none', borderRadius: 14,
+                        color: checkinLoading || Object.values(checkinReponses).filter(r => r?.statut).length === 0 ? T.text2 : T.bg,
+                        fontWeight: 700, fontSize: 15, cursor: checkinLoading ? 'wait' : Object.values(checkinReponses).filter(r => r?.statut).length === 0 ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s'
+                      }}>
+                      {checkinLoading
+                        ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={16} /></motion.span> Enregistrement...</>
+                        : <><Send size={16} /> Valider mon check-in</>
+                      }
+                    </motion.button>
+                    {Object.values(checkinReponses).filter(r => r?.statut).length === 0 && (
+                      <p style={{ textAlign: 'center', fontSize: 11, color: T.text2, marginTop: 8 }}>Évalue au moins une tâche pour valider</p>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
           </motion.div>
         )}
       </div>

@@ -3480,8 +3480,22 @@ def tomorrow_builder(user_id):
         niveau_energie = "élevé" if score_energie >= 70 else "moyen" if score_energie >= 40 else "faible"
         demain = (datetime.now() + timedelta(days=1)).strftime('%A %d %B %Y')
         prompt_taches = "\n".join([f"- [{t['priorite'].upper()}] {t['titre']} | {t['duree_estimee']}min | {t.get('deadline', 'non définie')}" for t in taches[:10]])
+        checkin_context = ""
+        try:
+            curseur.execute("SELECT taux_completion, score_energie_reel, taches_json, note_libre FROM checkin_soir WHERE user_id=%s ORDER BY cree_le DESC LIMIT 1", (user_id,))
+            dernier_checkin = curseur.fetchone()
+            if dernier_checkin:
+                taux = dernier_checkin['taux_completion']
+                energie_reel = dernier_checkin['score_energie_reel']
+                taches_checkin = json.loads(dernier_checkin['taches_json'] or '[]')
+                depassements = [f"{t['titre']} ({t.get('duree_reelle',0)}min vs {t.get('duree_prevue',0)}min)" for t in taches_checkin if t.get('duree_reelle',0) > t.get('duree_prevue',0) * 1.3]
+                checkin_context = f"\nContexte hier: completion {taux}%, énergie ressentie {energie_reel}/100"
+                if depassements: checkin_context += f", dépassements: {', '.join(depassements[:2])}"
+                if dernier_checkin.get('note_libre'): checkin_context += f". Note user: {dernier_checkin['note_libre'][:80]}"
+        except:
+            pass
         prompt = f"""Crée le planning optimal pour demain ({demain}).
-Score énergie: {score_energie}/100 ({niveau_energie}), heure productive: {heure_productive}h
+Score énergie: {score_energie}/100 ({niveau_energie}), heure productive: {heure_productive}h{checkin_context}
 Tâches: {prompt_taches}
 Réponds UNIQUEMENT en JSON: {{"score_energie": {score_energie}, "niveau_energie": "{niveau_energie}", "heure_productive": {heure_productive}, "duree_totale_planifiee": 0, "conseil_journee": "", "alerte_burnout": false, "message_alerte": null, "planning": [{{"ordre": 1, "heure_debut": "09:00", "heure_fin": "10:00", "type": "tache", "titre": "", "priorite": "haute", "duree_minutes": 60, "raison_placement": "", "energie_requise": "élevée", "tips": ""}}], "taches_reportees": [], "resume_global": ""}}"""
         response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], max_tokens=2000, temperature=0.7)
@@ -3510,6 +3524,77 @@ def get_saved_planning(user_id):
         if row:
             return jsonify({"planning": json.loads(row['planning_json']), "cree_le": str(row['cree_le']), "date_planifiee": str(row['date_planifiee'])})
         return jsonify({"planning": None})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/ia/checkin-soir/<int:user_id>/today', methods=['GET'])
+def get_checkin_today(user_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""CREATE TABLE IF NOT EXISTS checkin_soir (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            date_checkin DATE NOT NULL,
+            taches_json LONGTEXT,
+            score_energie_reel INT,
+            note_libre TEXT,
+            taux_completion INT,
+            cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )""")
+        today = datetime.now().strftime('%Y-%m-%d')
+        curseur.execute("SELECT * FROM tomorrow_plans WHERE user_id=%s AND date_planifiee=%s ORDER BY cree_le DESC LIMIT 1", (user_id, today))
+        row = curseur.fetchone()
+        curseur.execute("SELECT * FROM checkin_soir WHERE user_id=%s AND date_checkin=%s LIMIT 1", (user_id, today))
+        checkin_existant = curseur.fetchone()
+        db.close()
+        if not row:
+            return jsonify({"taches": [], "date_planifiee": today, "checkin_fait": bool(checkin_existant)})
+        planning_data = json.loads(row['planning_json'])
+        taches = [p for p in (planning_data.get('planning') or []) if p.get('type') == 'tache']
+        return jsonify({
+            "taches": taches,
+            "date_planifiee": str(row['date_planifiee']),
+            "checkin_fait": bool(checkin_existant),
+            "checkin_data": json.loads(checkin_existant['taches_json']) if checkin_existant else None
+        })
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/ia/checkin-soir', methods=['POST'])
+def soumettre_checkin():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        taches = data.get('taches', [])
+        score_energie_reel = data.get('score_energie_reel', 60)
+        note_libre = data.get('note_libre', '')
+        if not user_id:
+            return jsonify({"erreur": "user_id requis"}), 400
+        faites = sum(1 for t in taches if t.get('fait') or t.get('partiel'))
+        taux_completion = round(faites / len(taches) * 100) if taches else 0
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""CREATE TABLE IF NOT EXISTS checkin_soir (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            date_checkin DATE NOT NULL,
+            taches_json LONGTEXT,
+            score_energie_reel INT,
+            note_libre TEXT,
+            taux_completion INT,
+            cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )""")
+        today = datetime.now().strftime('%Y-%m-%d')
+        curseur.execute("DELETE FROM checkin_soir WHERE user_id=%s AND date_checkin=%s", (user_id, today))
+        curseur.execute(
+            "INSERT INTO checkin_soir (user_id, date_checkin, taches_json, score_energie_reel, note_libre, taux_completion) VALUES (%s,%s,%s,%s,%s,%s)",
+            (user_id, today, json.dumps(taches), score_energie_reel, note_libre, taux_completion)
+        )
+        db.commit(); db.close()
+        return jsonify({"message": "Check-in enregistré", "taux_completion": taux_completion})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
