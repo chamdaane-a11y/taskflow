@@ -421,7 +421,7 @@ const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, 
         </div>
       </div>
 
-      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0 }} />
+      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
 
       {/* XP bar */}
       <div style={{ flex: isMobile ? '1 1 100px' : 1, minWidth: 80 }}>
@@ -440,7 +440,7 @@ const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, 
         <div style={{ fontSize: 9, color: T.text2, marginTop: 3 }}>{pctNiveau}% vers niveau {niveau + 1}</div>
       </div>
 
-      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0 }} />
+      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
 
       {/* Streak */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -457,7 +457,7 @@ const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, 
         </div>
       </div>
 
-      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0 }} />
+      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
 
       {/* Focus ring SVG */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -721,8 +721,8 @@ export default function Analytics() {
         backgroundColor: T.bg2 || '#1a1a2e',
         titleColor: T.text || '#fff',
         bodyColor: T.text2 || '#888',
-        borderColor: T.border || '#333',
-        borderWidth: 1,
+        borderColor: 'transparent',
+        borderWidth: 0,
         padding: 12,
         cornerRadius: 10,
       }
@@ -731,12 +731,12 @@ export default function Analytics() {
       x: {
         ticks: { color: T.text2 || '#888', font: { size: 11 }, maxTicksLimit: jours <= 7 ? 7 : 10 },
         grid: { display: false },
-        border: { display: false }
+        border: { display: false, color: 'transparent' }
       },
       y: {
         ticks: { color: T.text2 || '#888', font: { size: 11 }, stepSize: 1, callback: v => Number.isInteger(v) ? v : null },
-        grid: { color: (T.border || '#333') + '0d', drawBorder: false },
-        border: { display: false },
+        grid: { color: T.border ? T.border + '10' : 'rgba(128,128,128,0.06)', drawBorder: false },
+        border: { display: false, color: 'transparent' },
         beginAtZero: true
       }
     }
@@ -763,7 +763,7 @@ export default function Analytics() {
         {
           label: 'Période précédente',
           data: stats.previous,
-          borderColor: T.text2 + '60',
+          borderColor: T.text2 + '30',
           backgroundColor: 'transparent',
           borderWidth: 1.5,
           borderDash: [5, 4],
@@ -809,10 +809,12 @@ export default function Analytics() {
       datasets: [{
         data: stats.current,
         backgroundColor: stats.current.map((v, i) =>
-          i === stats.maxIdx ? T.accent : T.accent + '55'
+          i === stats.maxIdx ? T.accent : T.accent + 'cc'
         ),
-        borderRadius: 6,
+        borderRadius: 8,
         borderSkipped: false,
+        borderColor: 'transparent',
+        borderWidth: 0,
       }]
     }
   }, [stats, T])
@@ -828,12 +830,15 @@ export default function Analytics() {
       labels: Array.from({ length: 8 }, (_, i) => `${i * 3}h`),
       datasets: [{
         data: compressed,
-        backgroundColor: compressed.map((v, i) => {
+        backgroundColor: compressed.map((v) => {
           const max = Math.max(...compressed)
           const intensity = max > 0 ? v / max : 0
-          return `rgba(108, 99, 255, ${0.2 + intensity * 0.7})`
+          return `rgba(108, 99, 255, ${0.35 + intensity * 0.65})`
         }),
         borderRadius: 8,
+        borderSkipped: false,
+        borderColor: 'transparent',
+        borderWidth: 0,
       }]
     }
   }, [stats])
@@ -845,8 +850,8 @@ export default function Analytics() {
       datasets: [{
         data: [stats.priorites?.haute || 0, stats.priorites?.moyenne || 0, stats.priorites?.basse || 0],
         backgroundColor: ['#e05c5c', '#e08a3c', '#4caf82'],
-        borderColor: [T.bg2, T.bg2, T.bg2],
-        borderWidth: 4,
+        borderColor: [T.bg, T.bg, T.bg],
+        borderWidth: 2,
       }]
     }
   }, [stats, T])
@@ -1058,7 +1063,7 @@ export default function Analytics() {
       <motion.main
         animate={{ marginLeft: mainMargin }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, padding: 'clamp(20px,4vw,36px)', overflowX: 'hidden' }}>
+        style={{ flex: 1, padding: 'clamp(20px,4vw,36px)', paddingTop: isMobile ? 56 : 'clamp(20px,4vw,36px)', paddingBottom: isMobile ? 90 : 'clamp(20px,4vw,36px)', overflowX: 'hidden' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
@@ -1148,8 +1153,8 @@ export default function Analytics() {
 
               {/* Line chart: évolution + dotted prev */}
               <ChartCard title="Évolution quotidienne" subtitle="Cette période · Période précédente · Moyenne mobile 7J" delay={0.1}>
-                {loading ? <Skeleton height={280} radius={10} /> : (
-                  <div style={{ height: 280, position: 'relative' }}>
+                {loading ? <Skeleton height={isMobile ? 200 : 280} radius={10} /> : (
+                  <div style={{ height: isMobile ? 200 : 280, position: 'relative' }}>
                     {lineChartData && <Line data={lineChartData} options={lineOptionsWithLegend} />}
                   </div>
                 )}
@@ -1158,16 +1163,16 @@ export default function Analytics() {
               {/* Row: Bar + Cumulative */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginTop: 16 }}>
                 <ChartCard title="Distribution par jour" subtitle="Le jour le plus actif est mis en avant" delay={0.2}>
-                  {loading ? <Skeleton height={220} radius={10} /> : (
-                    <div style={{ height: 220, position: 'relative' }}>
+                  {loading ? <Skeleton height={isMobile ? 170 : 220} radius={10} /> : (
+                    <div style={{ height: isMobile ? 170 : 220, position: 'relative' }}>
                       {barData && <Bar data={barData} options={baseOptions} />}
                     </div>
                   )}
                 </ChartCard>
 
                 <ChartCard title="Courbe de croissance" subtitle="Tâches cumulées sur la période" delay={0.25}>
-                  {loading ? <Skeleton height={220} radius={10} /> : (
-                    <div style={{ height: 220, position: 'relative' }}>
+                  {loading ? <Skeleton height={isMobile ? 170 : 220} radius={10} /> : (
+                    <div style={{ height: isMobile ? 170 : 220, position: 'relative' }}>
                       {cumulativeData && <Line data={cumulativeData} options={{ ...baseOptions, plugins: { ...baseOptions.plugins, legend: { display: false } } }} />}
                     </div>
                   )}
@@ -1177,9 +1182,9 @@ export default function Analytics() {
               {/* Row: Chronotype + Doughnut */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: 16, marginTop: 16 }}>
                 <ChartCard title="Chronotype productif" subtitle="Quand êtes-vous le plus efficace ?" delay={0.3}>
-                  {loading ? <Skeleton height={220} radius={10} /> : (
+                  {loading ? <Skeleton height={isMobile ? 160 : 220} radius={10} /> : (
                     <>
-                      <div style={{ height: 200, position: 'relative' }}>
+                      <div style={{ height: isMobile ? 160 : 200, position: 'relative' }}>
                         {chronoData && <Bar data={chronoData} options={baseOptions} />}
                       </div>
                       {stats && (
@@ -1194,9 +1199,9 @@ export default function Analytics() {
                 </ChartCard>
 
                 <ChartCard title="Répartition priorités" subtitle="Vanité vs Impact" delay={0.35}>
-                  {loading ? <Skeleton height={220} radius={10} /> : (
+                  {loading ? <Skeleton height={isMobile ? 180 : 220} radius={10} /> : (
                     <>
-                      <div style={{ height: 180, position: 'relative' }}>
+                      <div style={{ height: isMobile ? 150 : 180, position: 'relative' }}>
                         {doughnutData && <Doughnut data={doughnutData} options={doughnutOptions} />}
                       </div>
                       {stats && (
