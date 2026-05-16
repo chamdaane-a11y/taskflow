@@ -540,10 +540,20 @@ const ChartCarousel = ({ T, children }) => {
   const scrollRef = useRef(null)
   const cards = (Array.isArray(children) ? children : [children]).flat().filter(Boolean)
 
+  // Fix Chart.js : les canvas off-screen ont width=0 au mount → trigger resize global
+  useEffect(() => {
+    const triggers = [100, 300, 600, 1200].map(d =>
+      setTimeout(() => window.dispatchEvent(new Event('resize')), d)
+    )
+    return () => triggers.forEach(clearTimeout)
+  }, [])
+
   const handleScroll = () => {
     if (!scrollRef.current) return
     const { scrollLeft, clientWidth } = scrollRef.current
     setActiveIdx(Math.round(scrollLeft / clientWidth))
+    // Re-resize Chart.js quand on arrive sur une carte off-screen
+    window.dispatchEvent(new Event('resize'))
   }
 
   const goTo = (i) => {
@@ -552,10 +562,11 @@ const ChartCarousel = ({ T, children }) => {
   }
 
   return (
-    <div style={{ marginBottom: 18 }}>
+    <div style={{ marginBottom: 18, width: '100%' }}>
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        className="chart-carousel-track"
         style={{
           display: 'flex',
           overflowX: 'auto',
@@ -565,10 +576,11 @@ const ChartCarousel = ({ T, children }) => {
           marginBottom: 10,
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
+          width: '100%',
         }}>
         <style>{`.chart-carousel-track::-webkit-scrollbar { display: none; }`}</style>
         {cards.map((c, i) => (
-          <div key={i} style={{ minWidth: '100%', scrollSnapAlign: 'center', flexShrink: 0, padding: '0 2px' }}>
+          <div key={i} style={{ minWidth: '100%', width: '100%', scrollSnapAlign: 'center', flexShrink: 0, padding: '0 2px', boxSizing: 'border-box' }}>
             {c}
           </div>
         ))}
@@ -1251,7 +1263,31 @@ export default function Analytics() {
     }
   }), [T, jours])
 
-  // Chart data — memoized
+  // ── Palette pastel moderne ──
+  // Helper : gradient vertical pour area chart (semi-transparent)
+  const makeAreaGradient = (color) => (context) => {
+    const { ctx, chartArea } = context.chart
+    if (!chartArea) return color + '20'
+    const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+    g.addColorStop(0, color + '66')   // sommet : 40%
+    g.addColorStop(0.5, color + '20') // milieu : 12%
+    g.addColorStop(1, color + '02')   // bas : 1%
+    return g
+  }
+
+  // Couleurs pastel dérivées du thème
+  const PASTEL = {
+    main: T.accent,
+    soft: T.accent + 'cc',
+    ghost: (T.text2 || '#888') + '40',
+    mint: '#86d4a8',     // pastel vert
+    peach: '#ffb89e',    // pastel orange
+    rose: '#ff9eb5',     // pastel rouge/rose
+    lavender: '#b8a5ff', // pastel violet
+    sky: '#9bc8ff',      // pastel bleu
+  }
+
+  // Chart data — courbes lissées + area gradient semi-transparent + style minimaliste
   const lineChartData = useMemo(() => {
     if (!stats) return null
     return {
@@ -1260,36 +1296,41 @@ export default function Analytics() {
         {
           label: 'Cette période',
           data: stats.current,
-          borderColor: T.accent,
-          backgroundColor: T.accent + '15',
+          borderColor: PASTEL.main,
+          backgroundColor: makeAreaGradient(PASTEL.main),
           borderWidth: 2.5,
-          pointBackgroundColor: T.accent,
-          pointRadius: jours <= 7 ? 4 : 0,
-          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: PASTEL.main,
+          pointBorderWidth: 2,
+          pointRadius: jours <= 7 ? 3 : 0,
+          pointHoverRadius: 7,
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderWidth: 3,
           fill: true,
-          tension: 0.4,
+          tension: 0.45,
+          cubicInterpolationMode: 'monotone',
         },
         {
           label: 'Période précédente',
           data: stats.previous,
-          borderColor: T.text2 + '30',
+          borderColor: PASTEL.ghost,
           backgroundColor: 'transparent',
           borderWidth: 1.5,
-          borderDash: [5, 4],
+          borderDash: [4, 5],
           pointRadius: 0,
           fill: false,
-          tension: 0.4,
+          tension: 0.45,
         },
         {
-          label: 'Moyenne mobile 7J',
+          label: 'Moyenne 7J',
           data: stats.movingAvg,
-          borderColor: '#4caf82',
+          borderColor: PASTEL.mint,
           backgroundColor: 'transparent',
-          borderWidth: 2,
+          borderWidth: 1.8,
           pointRadius: 0,
           fill: false,
-          tension: 0.4,
-          borderDash: [3, 2],
+          tension: 0.45,
+          borderDash: [3, 3],
         }
       ]
     }
@@ -1301,12 +1342,17 @@ export default function Analytics() {
       labels: stats.labels,
       datasets: [{
         data: stats.cumulative,
-        borderColor: T.accent,
-        backgroundColor: T.accent + '20',
+        borderColor: PASTEL.lavender,
+        backgroundColor: makeAreaGradient(PASTEL.lavender),
         borderWidth: 2.5,
         pointRadius: 0,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: PASTEL.lavender,
+        pointHoverBorderWidth: 3,
         fill: true,
-        tension: 0.4,
+        tension: 0.45,
+        cubicInterpolationMode: 'monotone',
       }]
     }
   }, [stats, T])
@@ -1317,13 +1363,21 @@ export default function Analytics() {
       labels: stats.labels,
       datasets: [{
         data: stats.current,
-        backgroundColor: stats.current.map((v, i) =>
-          i === stats.maxIdx ? T.accent : T.accent + 'cc'
-        ),
-        borderRadius: 8,
+        backgroundColor: (context) => {
+          const { ctx, chartArea, dataIndex } = context
+          if (!chartArea) return PASTEL.main + 'aa'
+          const isMax = dataIndex === stats.maxIdx
+          const top = isMax ? PASTEL.main : PASTEL.soft
+          const bot = isMax ? PASTEL.main + 'aa' : PASTEL.main + '55'
+          const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+          g.addColorStop(0, top); g.addColorStop(1, bot)
+          return g
+        },
+        borderRadius: 10,
         borderSkipped: false,
         borderColor: 'transparent',
         borderWidth: 0,
+        maxBarThickness: 36,
       }]
     }
   }, [stats, T])
@@ -1335,19 +1389,26 @@ export default function Analytics() {
       const slice = stats.heures.slice(start, start + 3)
       return slice.reduce((a, b) => a + b, 0)
     })
+    const max = Math.max(...compressed)
     return {
       labels: Array.from({ length: 8 }, (_, i) => `${i * 3}h`),
       datasets: [{
         data: compressed,
-        backgroundColor: compressed.map((v) => {
-          const max = Math.max(...compressed)
-          const intensity = max > 0 ? v / max : 0
-          return `rgba(108, 99, 255, ${0.35 + intensity * 0.65})`
-        }),
-        borderRadius: 8,
+        backgroundColor: (context) => {
+          const { ctx, chartArea, dataIndex } = context
+          if (!chartArea) return PASTEL.lavender
+          const intensity = max > 0 ? compressed[dataIndex] / max : 0
+          const alpha = Math.round((0.45 + intensity * 0.55) * 255).toString(16).padStart(2, '0')
+          const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+          g.addColorStop(0, PASTEL.lavender + alpha)
+          g.addColorStop(1, PASTEL.lavender + '33')
+          return g
+        },
+        borderRadius: 10,
         borderSkipped: false,
         borderColor: 'transparent',
         borderWidth: 0,
+        maxBarThickness: 32,
       }]
     }
   }, [stats])
@@ -1358,9 +1419,11 @@ export default function Analytics() {
       labels: ['Haute', 'Moyenne', 'Basse'],
       datasets: [{
         data: [stats.priorites?.haute || 0, stats.priorites?.moyenne || 0, stats.priorites?.basse || 0],
-        backgroundColor: ['#e05c5c', '#e08a3c', '#4caf82'],
+        backgroundColor: [PASTEL.rose, PASTEL.peach, PASTEL.mint],
         borderColor: [T.bg, T.bg, T.bg],
-        borderWidth: 2,
+        borderWidth: 3,
+        hoverOffset: 8,
+        hoverBorderWidth: 0,
       }]
     }
   }, [stats, T])
@@ -1735,19 +1798,22 @@ export default function Analytics() {
                 )
 
                 // Mobile : tout en carrousel swipeable. Desktop : grilles existantes.
+                // key={isMobile} force le remount des charts si on resize la fenêtre
                 if (isMobile) {
                   return (
-                    <ChartCarousel T={T}>
-                      {lineCard}
-                      {barCard}
-                      {cumulCard}
-                      {chronoCard}
-                      {doughnutCard}
-                    </ChartCarousel>
+                    <div key="mobile-charts">
+                      <ChartCarousel T={T}>
+                        {lineCard}
+                        {barCard}
+                        {cumulCard}
+                        {chronoCard}
+                        {doughnutCard}
+                      </ChartCarousel>
+                    </div>
                   )
                 }
                 return (
-                  <>
+                  <div key="desktop-charts">
                     {lineCard}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
                       {barCard}
@@ -1757,7 +1823,7 @@ export default function Analytics() {
                       {chronoCard}
                       {doughnutCard}
                     </div>
-                  </>
+                  </div>
                 )
               })()}
             </motion.div>
