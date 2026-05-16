@@ -214,10 +214,19 @@ const Skeleton = memo(({ width = '100%', height = 20, radius = 8, style = {} }) 
 const GitHubHeatmap = memo(({ parJour, T }) => {
   const weeks = 18
 
+  // Formatte une date en YYYY-MM-DD en heure LOCALE (pas UTC)
+  const localKey = (date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
   const data = useMemo(() => {
     const map = {}
     parJour?.forEach(p => {
-      const k = new Date(p.jour).toISOString().split('T')[0]
+      // Prend la partie date brute sans conversion UTC
+      const k = String(p.jour).split('T')[0]
       map[k] = (map[k] || 0) + p.count
     })
     return map
@@ -231,7 +240,7 @@ const GitHubHeatmap = memo(({ parJour, T }) => {
     today.setHours(0, 0, 0, 0)
     const todayDow = today.getDay() // 0=Dim, 1=Lun … 6=Sam
 
-    // Dimanche de la semaine courante
+    // Dimanche de la semaine courante (heure locale)
     const thisWeekSun = new Date(today)
     thisWeekSun.setDate(today.getDate() - todayDow)
 
@@ -245,7 +254,7 @@ const GitHubHeatmap = memo(({ parJour, T }) => {
         const date = new Date(weekSun)
         date.setDate(weekSun.getDate() + d)
         const isFuture = date > today
-        const key = date.toISOString().split('T')[0]
+        const key = localKey(date)   // ← heure locale, pas UTC
         const val = isFuture ? 0 : (data[key] || 0)
         const intensity = isFuture ? -1 : val / maxVal
         col.push({ key, val, intensity, date, isFuture })
