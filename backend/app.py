@@ -294,56 +294,234 @@ def _html_resume_hebdo(nom, stats):
     points_semaine = stats.get("points_semaine", 0)
     terminees_prec = stats.get("terminees_prec", 0)
     conseil_ia = stats.get("conseil_ia", "")
-    taches_haute = stats.get("taches_haute", [])
-    jours_actifs = stats.get("jours_actifs", {})
+    taches_haute_done = stats.get("taches_haute_done", [])
+    taches_haute_attente = stats.get("taches_haute_attente", [])
+    jours_actifs = stats.get("jours_actifs", [])  # liste [{jour, count}]
+    streak = stats.get("streak", 0)
+    heure_pointe = stats.get("heure_pointe")
+    categories = stats.get("categories", [])  # [{nom, count}]
+    badges_semaine = stats.get("badges_semaine", [])
+    calibration_globale = stats.get("calibration_globale")
+    semaine_debut = stats.get("semaine_debut", "")
+    semaine_fin = stats.get("semaine_fin", "")
+    xp_par_prio = stats.get("xp_par_prio", {"haute": 0, "moyenne": 0, "basse": 0})
 
     taux_color = "#4caf82" if taux >= 70 else "#e08a3c" if taux >= 40 else "#e05c5c"
     barre_w = max(4, min(100, int(taux)))
     diff = terminees - terminees_prec
-    diff_color = "#4caf82" if diff >= 0 else "#e05c5c"
-    diff_label = f"{'▲' if diff >= 0 else '▼'} {abs(diff)} vs semaine précédente"
-    niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende"}
+    diff_color = "#4caf82" if diff > 0 else ("#e05c5c" if diff < 0 else "#8888a8")
+    diff_label = f"{'▲ +' if diff > 0 else ('▼ ' if diff < 0 else '·')}{abs(diff)} vs semaine -1"
+    niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende",7:"Mythique",8:"Immortel"}
     niveau_label = niveaux_labels.get(niveau, f"Niveau {niveau}")
+    xp_semaine = xp_par_prio.get("haute", 0)*50 + xp_par_prio.get("moyenne", 0)*25 + xp_par_prio.get("basse", 0)*10
 
-    contenu = f"""
-    <h2 style="color:#fff;margin:0 0 20px;">Bonjour {nom}, voici ta semaine.</h2>
+    # ── Vibe emoji storytelling ──
+    if en_retard >= 3: vibe = "😮‍💨"
+    elif streak >= 5: vibe = "🔥"
+    elif diff > 5: vibe = "🚀"
+    elif terminees > 0: vibe = "💪"
+    else: vibe = "✨"
+
+    # ── Phrase d'accroche storytelling ──
+    if terminees == 0:
+        accroche = "Une semaine calme — c'est aussi le moment de respirer et préparer la suite."
+    elif streak >= 5:
+        accroche = f"Tu enchaînes {streak} jours d'affilée — ton momentum est exceptionnel."
+    elif diff > 5:
+        accroche = f"+{diff} tâches vs semaine dernière, ton rythme s'accélère franchement."
+    elif diff < -5:
+        accroche = f"{diff} vs semaine dernière. Pas de panique, identifie ce qui a changé."
+    elif taux >= 70:
+        accroche = f"Excellent taux de complétion ({taux}%) — tu transformes ce que tu décides."
+    else:
+        accroche = f"Semaine régulière : {terminees} tâche{'s' if terminees > 1 else ''} bouclée{'s' if terminees > 1 else ''}."
+
+    periode_label = f"{semaine_debut} → {semaine_fin}" if semaine_debut else "7 derniers jours"
+
+    # ── SECTION 1 : Header storytelling ──
+    section_header = f"""
+    <div style="font-size:48px;text-align:center;margin-bottom:8px;">{vibe}</div>
+    <h2 style="color:#fff;margin:0 0 6px;font-size:22px;text-align:center;">Bonjour {nom}</h2>
+    <p style="color:#8888a8;font-size:12px;text-align:center;margin:0 0 6px;">Bilan {periode_label}</p>
+    <p style="color:#c8c8e8;font-size:14px;text-align:center;margin:0 0 24px;line-height:1.5;">{accroche}</p>
+    """
+
+    # ── SECTION 2 : KPI principaux ──
+    section_kpi = f"""
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
       <tr>
-        <td width="33%" style="padding:0 5px 0 0;"><div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:14px;padding:18px;text-align:center;">
-          <div style="font-size:32px;font-weight:800;color:#4caf82;">{terminees}</div>
+        <td width="33%" style="padding:0 5px 0 0;"><div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:14px;padding:16px;text-align:center;">
+          <div style="font-size:30px;font-weight:800;color:#4caf82;">{terminees}</div>
           <div style="font-size:11px;color:#8888a8;">Terminées</div>
-          <div style="font-size:10px;color:{diff_color};">{diff_label}</div>
+          <div style="font-size:10px;color:{diff_color};margin-top:4px;">{diff_label}</div>
         </div></td>
-        <td width="33%" style="padding:0 2px;"><div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:18px;text-align:center;">
-          <div style="font-size:32px;font-weight:800;color:#6c63ff;">{en_cours}</div>
+        <td width="33%" style="padding:0 2px;"><div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:16px;text-align:center;">
+          <div style="font-size:30px;font-weight:800;color:#6c63ff;">{en_cours}</div>
           <div style="font-size:11px;color:#8888a8;">En cours</div>
+          <div style="font-size:10px;color:#8888a8;margin-top:4px;">à venir</div>
         </div></td>
-        <td width="33%" style="padding:0 0 0 5px;"><div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:18px;text-align:center;">
-          <div style="font-size:32px;font-weight:800;color:#e05c5c;">{en_retard}</div>
+        <td width="33%" style="padding:0 0 0 5px;"><div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:16px;text-align:center;">
+          <div style="font-size:30px;font-weight:800;color:#e05c5c;">{en_retard}</div>
           <div style="font-size:11px;color:#8888a8;">En retard</div>
+          <div style="font-size:10px;color:#8888a8;margin-top:4px;">{'à rattraper' if en_retard > 0 else 'aucun ✓'}</div>
         </div></td>
       </tr>
     </table>
-    <div style="background:#0f0f18;border-radius:14px;padding:18px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-        <span style="color:#8888a8;">TAUX DE COMPLÉTION</span>
-        <span style="font-size:20px;font-weight:800;color:{taux_color};">{taux}%</span>
+    """
+
+    # ── SECTION 3 : Streak + XP + Niveau ──
+    section_progression = f"""
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+      <tr>
+        <td width="33%" style="padding:0 5px 0 0;"><div style="background:#0f0f18;border:1px solid #e08a3c22;border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:#e08a3c;">🔥 {streak}j</div>
+          <div style="font-size:10px;color:#8888a8;margin-top:3px;">Série en cours</div>
+        </div></td>
+        <td width="33%" style="padding:0 2px;"><div style="background:#0f0f18;border:1px solid #a855f722;border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:#a855f7;">+{xp_semaine} XP</div>
+          <div style="font-size:10px;color:#8888a8;margin-top:3px;">Cette semaine</div>
+        </div></td>
+        <td width="33%" style="padding:0 0 0 5px;"><div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:16px;font-weight:800;color:#6c63ff;">Niveau {niveau}</div>
+          <div style="font-size:10px;color:#8888a8;margin-top:3px;">{niveau_label} · {points} pts</div>
+        </div></td>
+      </tr>
+    </table>
+    """
+
+    # ── SECTION 4 : Taux + barre ──
+    section_taux = f"""
+    <div style="background:#0f0f18;border-radius:14px;padding:16px;margin-bottom:16px;">
+      <div style="margin-bottom:8px;">
+        <span style="color:#8888a8;font-size:11px;letter-spacing:1px;">TAUX DE COMPLÉTION</span>
+        <span style="font-size:20px;font-weight:800;color:{taux_color};float:right;">{taux}%</span>
       </div>
-      <div style="height:8px;background:#ffffff08;border-radius:99px;">
-        <div style="height:8px;width:{barre_w}%;background:{taux_color};border-radius:99px;"></div>
+      <div style="height:8px;background:#ffffff08;border-radius:99px;clear:both;">
+        <div style="height:8px;width:{barre_w}%;background:linear-gradient(90deg,{taux_color},{taux_color}aa);border-radius:99px;"></div>
       </div>
     </div>
-    {"<div style='background:linear-gradient(135deg,#a855f712,#6c63ff12);border:1px solid #a855f725;border-radius:14px;padding:20px;margin-bottom:16px;'><div style='font-size:11px;font-weight:700;color:#a855f7;margin-bottom:5px;'>CONSEIL IA</div><div style='font-size:13px;color:#c8c8e8;'>" + conseil_ia + "</div></div>" if conseil_ia else ""}
-    <table width="100%" cellpadding="0" cellspacing="0">
+    """
+
+    # ── SECTION 5 : Activité par jour (mini barres) ──
+    section_activite = ""
+    if jours_actifs:
+        max_count = max([j.get("count", 0) for j in jours_actifs] + [1])
+        cellules = ""
+        jours_fr = {0:"Lun",1:"Mar",2:"Mer",3:"Jeu",4:"Ven",5:"Sam",6:"Dim"}
+        for j in jours_actifs:
+            count = j.get("count", 0)
+            h = max(int((count / max_count) * 60), 4) if count > 0 else 4
+            jour_label = jours_fr.get(j.get("dow", 0), "")
+            color = "#4caf82" if count >= max_count*0.7 else "#6c63ff" if count > 0 else "#ffffff15"
+            cellules += f'<td style="vertical-align:bottom;padding:0 3px;width:14%;"><div style="height:64px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;"><div style="height:{h}px;width:100%;background:{color};border-radius:6px 6px 2px 2px;"></div></div><div style="text-align:center;font-size:10px;color:#8888a8;margin-top:4px;">{jour_label}</div><div style="text-align:center;font-size:11px;font-weight:700;color:#c8c8e8;">{count}</div></td>'
+        max_jour = max(jours_actifs, key=lambda x: x.get("count", 0)) if jours_actifs else None
+        meilleur_label = ""
+        if max_jour and max_jour.get("count", 0) > 0:
+            meilleur_label = f"<div style='text-align:center;font-size:11px;color:#8888a8;margin-top:10px;'>Meilleur jour : <span style='color:#4caf82;font-weight:700;'>{jours_fr.get(max_jour.get('dow', 0), '?')} ({max_jour.get('count', 0)} tâches)</span>"
+            if heure_pointe is not None:
+                meilleur_label += f" · Heure de pointe : <span style='color:#a855f7;font-weight:700;'>{heure_pointe}h</span>"
+            meilleur_label += "</div>"
+        section_activite = f"""
+        <div style="background:#0f0f18;border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="color:#8888a8;font-size:11px;letter-spacing:1px;margin-bottom:12px;">ACTIVITÉ PAR JOUR</div>
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>{cellules}</tr></table>
+          {meilleur_label}
+        </div>
+        """
+
+    # ── SECTION 6 : Top tâches haute prio accomplies ──
+    section_top_done = ""
+    if taches_haute_done:
+        items = ""
+        for t in taches_haute_done[:5]:
+            items += f'<div style="padding:8px 0;border-bottom:1px solid #ffffff06;color:#c8c8e8;font-size:12.5px;">✓ {t}</div>'
+        section_top_done = f"""
+        <div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="color:#4caf82;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;">🏆 TOP RÉUSSITES HAUTE PRIORITÉ</div>
+          {items}
+        </div>
+        """
+
+    # ── SECTION 7 : Tâches haute prio en attente ──
+    section_attente = ""
+    if taches_haute_attente:
+        items = ""
+        for t in taches_haute_attente[:3]:
+            items += f'<div style="padding:8px 0;border-bottom:1px solid #ffffff06;color:#c8c8e8;font-size:12.5px;">⏳ {t}</div>'
+        section_attente = f"""
+        <div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="color:#e05c5c;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;">⚠️ TON FOCUS SEMAINE PROCHAINE</div>
+          {items}
+        </div>
+        """
+
+    # ── SECTION 8 : Catégories ──
+    section_categories = ""
+    if categories:
+        total_cat = sum(c.get("count", 0) for c in categories)
+        rows = ""
+        for c in categories[:4]:
+            pct = round((c.get("count", 0) / max(total_cat, 1)) * 100)
+            rows += f'<tr><td style="padding:6px 0;color:#c8c8e8;font-size:12px;">{c.get("nom", "—")}</td><td style="padding:6px 0;text-align:right;color:#8888a8;font-size:11px;">{c.get("count", 0)} tâches · {pct}%</td></tr>'
+        section_categories = f"""
+        <div style="background:#0f0f18;border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="color:#8888a8;font-size:11px;letter-spacing:1px;margin-bottom:8px;">RÉPARTITION PAR CATÉGORIE</div>
+          <table width="100%" cellpadding="0" cellspacing="0">{rows}</table>
+        </div>
+        """
+
+    # ── SECTION 9 : Calibration ──
+    section_calibration = ""
+    if calibration_globale is not None:
+        cal_color = "#4caf82" if calibration_globale > 70 else "#e08a3c" if calibration_globale > 40 else "#e05c5c"
+        section_calibration = f"""
+        <div style="background:#0f0f18;border-radius:14px;padding:14px;margin-bottom:16px;">
+          <span style="color:#8888a8;font-size:11px;letter-spacing:1px;">CALIBRATION DES DURÉES (Task DNA)</span>
+          <span style="float:right;font-size:18px;font-weight:800;color:{cal_color};">{calibration_globale}%</span>
+        </div>
+        """
+
+    # ── SECTION 10 : Badges semaine ──
+    section_badges = ""
+    if badges_semaine:
+        badges_html = " ".join([f'<span style="display:inline-block;padding:6px 12px;background:#a855f718;border:1px solid #a855f730;border-radius:99px;color:#a855f7;font-size:11px;font-weight:600;margin:3px;">{b.get("icon", "🏅")} {b.get("nom", "")}</span>' for b in badges_semaine])
+        section_badges = f"""
+        <div style="background:#0f0f18;border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="color:#a855f7;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;">🎖️ BADGES DÉBLOQUÉS</div>
+          <div>{badges_html}</div>
+        </div>
+        """
+
+    # ── SECTION 11 : Conseil IA ──
+    section_conseil = ""
+    if conseil_ia:
+        section_conseil = f"""
+        <div style="background:linear-gradient(135deg,#a855f712,#6c63ff12);border:1px solid #a855f725;border-radius:14px;padding:18px;margin-bottom:18px;">
+          <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1px;margin-bottom:8px;">💡 ANALYSE COACH IA</div>
+          <div style="font-size:13.5px;color:#e8e8f0;line-height:1.6;">{conseil_ia}</div>
+        </div>
+        """
+
+    # ── SECTION 12 : CTAs ──
+    section_cta = """
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
       <tr>
-        <td style="padding:0 6px 0 0;" width="50%">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px;border-radius:11px;text-decoration:none;font-weight:700;">Dashboard →</a>
+        <td style="padding:0 4px 8px 0;" width="50%">
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px;border-radius:11px;text-decoration:none;font-weight:700;font-size:13px;">Dashboard →</a>
         </td>
-        <td style="padding:0 0 0 6px;" width="50%">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/analytics" style="display:block;text-align:center;background:#1a1a28;color:#8888a8;padding:13px;border-radius:11px;text-decoration:none;font-weight:600;border:1px solid #ffffff0f;">Analytics →</a>
+        <td style="padding:0 0 8px 4px;" width="50%">
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/analytics" style="display:block;text-align:center;background:linear-gradient(135deg,#4caf82,#22a06b);color:white;padding:13px;border-radius:11px;text-decoration:none;font-weight:700;font-size:13px;">Analytics →</a>
         </td>
       </tr>
-    </table>"""
+      <tr>
+        <td colspan="2">
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/planification" style="display:block;text-align:center;background:#1a1a28;color:#c8c8e8;padding:11px;border-radius:11px;text-decoration:none;font-weight:600;font-size:12px;border:1px solid #ffffff0f;">📅 Planifier la semaine prochaine</a>
+        </td>
+      </tr>
+    </table>
+    """
+
+    contenu = section_header + section_kpi + section_progression + section_taux + section_activite + section_top_done + section_attente + section_categories + section_calibration + section_badges + section_conseil + section_cta
     return _base_email(contenu, "Bilan hebdomadaire — GetShift")
 
 # ============================================
@@ -419,6 +597,126 @@ def job_email_taches_retard():
     except Exception as e:
         print(f"[Email Retard] Erreur: {e}")
 
+def _collecter_stats_hebdo(cursor, user_id, base_user):
+    """Récupère toutes les données enrichies pour le rapport hebdo d'un utilisateur."""
+    # ── Jours actifs (7 derniers jours, par jour de la semaine) ──
+    cursor.execute("""
+        SELECT DATE(updated_at) AS jour, DAYOFWEEK(updated_at) AS dow_sql, COUNT(*) AS count
+        FROM taches WHERE user_id=%s AND terminee=TRUE
+          AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE(updated_at) ORDER BY jour
+    """, (user_id,))
+    jours_raw = cursor.fetchall()
+    # Construire les 7 derniers jours avec count (0 si rien)
+    from datetime import date, timedelta
+    today = date.today()
+    jours_map = {}
+    for r in jours_raw:
+        d = r['jour'].isoformat() if hasattr(r['jour'], 'isoformat') else str(r['jour'])
+        jours_map[d] = r['count']
+    jours_actifs = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        # dow Python : 0=Lundi … 6=Dimanche (différent de SQL)
+        jours_actifs.append({"date": d.isoformat(), "dow": d.weekday(), "count": jours_map.get(d.isoformat(), 0)})
+
+    # ── Top 5 tâches haute prio terminées cette semaine ──
+    cursor.execute("""
+        SELECT titre FROM taches
+        WHERE user_id=%s AND terminee=TRUE AND priorite='haute'
+          AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        ORDER BY updated_at DESC LIMIT 5
+    """, (user_id,))
+    taches_haute_done = [r['titre'] for r in cursor.fetchall()]
+
+    # ── Top 3 tâches haute prio en attente ──
+    cursor.execute("""
+        SELECT titre FROM taches
+        WHERE user_id=%s AND terminee=FALSE AND priorite='haute'
+        ORDER BY (deadline IS NULL), deadline ASC, created_at DESC LIMIT 3
+    """, (user_id,))
+    taches_haute_attente = [r['titre'] for r in cursor.fetchall()]
+
+    # ── Catégories breakdown ──
+    cursor.execute("""
+        SELECT c.nom, COUNT(t.id) AS count
+        FROM taches t
+        LEFT JOIN categories c ON t.categorie_id = c.id
+        WHERE t.user_id=%s AND t.terminee=TRUE
+          AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+          AND c.nom IS NOT NULL
+        GROUP BY c.nom ORDER BY count DESC LIMIT 4
+    """, (user_id,))
+    categories = cursor.fetchall()
+
+    # ── XP par priorité ──
+    cursor.execute("""
+        SELECT priorite, COUNT(*) AS count
+        FROM taches WHERE user_id=%s AND terminee=TRUE
+          AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY priorite
+    """, (user_id,))
+    prio_rows = cursor.fetchall()
+    xp_par_prio = {"haute": 0, "moyenne": 0, "basse": 0}
+    for r in prio_rows:
+        xp_par_prio[r['priorite']] = r['count']
+
+    # ── Heure de pointe (la plus productive sur 7 jours) ──
+    cursor.execute("""
+        SELECT HOUR(updated_at) AS h, COUNT(*) AS count
+        FROM taches WHERE user_id=%s AND terminee=TRUE
+          AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY HOUR(updated_at) ORDER BY count DESC LIMIT 1
+    """, (user_id,))
+    h_row = cursor.fetchone()
+    heure_pointe = h_row['h'] if h_row else None
+
+    # ── Streak réel ──
+    cursor.execute("SELECT streak FROM users WHERE id=%s", (user_id,))
+    s_row = cursor.fetchone()
+    streak = s_row['streak'] if s_row else 0
+
+    # ── Calibration globale (si données dispo) ──
+    cursor.execute("""
+        SELECT temps_estime, temps_reel FROM taches
+        WHERE user_id=%s AND terminee=TRUE
+          AND temps_estime IS NOT NULL AND temps_estime > 0
+          AND temps_reel IS NOT NULL AND temps_reel > 0
+    """, (user_id,))
+    cal_rows = cursor.fetchall()
+    calibration_globale = None
+    if len(cal_rows) >= 2:
+        bien = sum(1 for r in cal_rows if 0.8 <= (r['temps_reel'] / r['temps_estime']) <= 1.2)
+        calibration_globale = round(bien / len(cal_rows) * 100)
+
+    # ── Badges débloqués cette semaine ──
+    badges_semaine = []
+    try:
+        cursor.execute("""
+            SELECT badge_id FROM user_badges
+            WHERE user_id=%s AND obtenu_le >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        """, (user_id,))
+        badge_ids = [r['badge_id'] for r in cursor.fetchall()]
+        for bid in badge_ids:
+            rule = next((b for b in REGLES_BADGES if b['id'] == bid), None)
+            if rule:
+                badges_semaine.append({"icon": rule['icon'], "nom": rule['nom']})
+    except Exception:
+        pass  # table user_badges peut ne pas exister
+
+    return {
+        "jours_actifs": jours_actifs,
+        "taches_haute_done": taches_haute_done,
+        "taches_haute_attente": taches_haute_attente,
+        "categories": categories,
+        "xp_par_prio": xp_par_prio,
+        "heure_pointe": heure_pointe,
+        "streak": streak,
+        "calibration_globale": calibration_globale,
+        "badges_semaine": badges_semaine,
+    }
+
+
 def job_email_resume_hebdo():
     try:
         db = connecter()
@@ -429,37 +727,64 @@ def job_email_resume_hebdo():
                 COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND t.updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
                 COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as en_cours,
                 COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
-                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) * 10 as points_semaine,
                 COUNT(t.id) as total
             FROM users u LEFT JOIN taches t ON u.id = t.user_id
             WHERE u.email_verifie = TRUE GROUP BY u.id
         """)
         users = cursor.fetchall()
+        from datetime import date, timedelta
+        semaine_fin = date.today()
+        semaine_debut = semaine_fin - timedelta(days=6)
         for u in users:
             if u['total'] == 0:
                 continue
             user_id = u['id']
-            taux = round((u['terminees'] / max(u['total'], 1)) * 100, 0) if u['terminees'] else 0
+            terminees = u['terminees'] or 0
+            taux = round((terminees / max(u['total'], 1)) * 100, 0) if terminees else 0
+            extra = _collecter_stats_hebdo(cursor, user_id, u)
+
+            # ── Conseil IA enrichi (4-5 phrases, structuré) ──
             conseil_ia = ""
             try:
-                contexte = f"Utilisateur: {u['nom']}. Cette semaine: {u['terminees']} tâches terminées, {u['en_cours']} en cours, {u['en_retard']} en retard. Taux: {int(taux)}%."
+                top_done = ", ".join(extra['taches_haute_done'][:3]) if extra['taches_haute_done'] else "aucune"
+                top_attente = ", ".join(extra['taches_haute_attente'][:2]) if extra['taches_haute_attente'] else "aucune"
+                heure = f"{extra['heure_pointe']}h" if extra['heure_pointe'] is not None else "non identifiée"
+                contexte = (
+                    f"Bilan hebdo de {u['nom']} :\n"
+                    f"- {terminees} tâches terminées ({u['terminees_prec'] or 0} sem précédente)\n"
+                    f"- {u['en_cours'] or 0} en cours, {u['en_retard'] or 0} en retard\n"
+                    f"- Taux : {int(taux)}% · Streak : {extra['streak']} jours · Heure pointe : {heure}\n"
+                    f"- Top réussites haute prio : {top_done}\n"
+                    f"- Tâches haute prio en attente : {top_attente}\n"
+                )
                 completion = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=[{"role": "user", "content": f"{contexte}\n\nDonne un conseil de productivité personnalisé en 2 phrases max, bienveillant et actionnable."}],
-                    max_tokens=120, temperature=0.7
+                    messages=[{"role": "user", "content": (
+                        f"{contexte}\n\nÉcris une analyse personnalisée en 4-5 phrases. Structure :\n"
+                        f"1) Reconnais une réussite concrète (cite une tâche ou un chiffre).\n"
+                        f"2) Note une tendance (positive ou point d'attention).\n"
+                        f"3) Donne 1 conseil actionnable pour la semaine prochaine.\n"
+                        f"4) Termine sur un encouragement court.\n"
+                        f"Ton : bienveillant, précis, jamais générique. Pas de markdown."
+                    )}],
+                    max_tokens=400, temperature=0.75
                 )
                 conseil_ia = completion.choices[0].message.content.strip()
-            except Exception:
-                conseil_ia = "Continue sur ta lancée et concentre-toi sur tes tâches prioritaires."
+            except Exception as e:
+                conseil_ia = "Continue sur ta lancée et concentre-toi sur tes tâches haute priorité dès le matin. Une session de 90 min sans interruption peut tout changer."
+
             stats = {
-                "terminees": u['terminees'] or 0, "terminees_prec": u['terminees_prec'] or 0,
+                "terminees": terminees, "terminees_prec": u['terminees_prec'] or 0,
                 "en_cours": u['en_cours'] or 0, "en_retard": u['en_retard'] or 0,
                 "taux": int(taux), "points": u['points'] or 0, "niveau": u['niveau'] or 1,
-                "points_semaine": u['points_semaine'] or 0, "conseil_ia": conseil_ia,
-                "jours_actifs": {}, "taches_haute": []
+                "conseil_ia": conseil_ia,
+                "semaine_debut": semaine_debut.strftime('%d/%m'),
+                "semaine_fin": semaine_fin.strftime('%d/%m/%Y'),
+                **extra,
             }
             html = _html_resume_hebdo(u['nom'], stats)
-            threading.Thread(target=envoyer_email, args=(u['email'], f"Bilan · semaine du {datetime.now().strftime('%d/%m')} — GetShift", html)).start()
+            sujet = f"Bilan · {semaine_debut.strftime('%d/%m')} → {semaine_fin.strftime('%d/%m')} — GetShift"
+            threading.Thread(target=envoyer_email, args=(u['email'], sujet, html)).start()
         cursor.close(); db.close()
     except Exception as e:
         print(f"[Email Hebdo] Erreur: {e}")
@@ -2236,20 +2561,41 @@ def test_email_user(user_id):
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT id, nom, email, points, niveau FROM users WHERE id=%s", (user_id,))
         u = cursor.fetchone()
-        cursor.close(); db.close()
         if not u:
+            cursor.close(); db.close()
             return jsonify({"erreur": "User introuvable"}), 404
+        # Récupère les vraies stats enrichies pour ce user
+        extra = _collecter_stats_hebdo(cursor, user_id, u)
+        cursor.execute("""
+            SELECT
+                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
+                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND t.updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
+                COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as en_cours,
+                COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
+                COUNT(t.id) as total
+            FROM taches t WHERE user_id=%s
+        """, (user_id,))
+        k = cursor.fetchone() or {}
+        cursor.close(); db.close()
+        from datetime import date, timedelta
+        sf = date.today(); sd = sf - timedelta(days=6)
+        terminees = k.get('terminees', 0) or 0
+        total = k.get('total', 0) or 0
+        taux = round((terminees / max(total, 1)) * 100, 0) if terminees else 0
         stats = {
-            "terminees": 7, "terminees_prec": 4, "en_cours": 3, "en_retard": 1,
-            "taux": 70, "points": u['points'] or 0, "niveau": u['niveau'] or 1,
-            "points_semaine": 70, "jours_actifs": {}, "taches_haute": [],
-            "conseil_ia": "Continue sur ta lancée ! Pour la semaine prochaine, essaie de travailler en blocs de 90 minutes sur tes tâches haute priorité dès le matin."
+            "terminees": terminees, "terminees_prec": k.get('terminees_prec', 0) or 0,
+            "en_cours": k.get('en_cours', 0) or 0, "en_retard": k.get('en_retard', 0) or 0,
+            "taux": int(taux), "points": u['points'] or 0, "niveau": u['niveau'] or 1,
+            "conseil_ia": "Test : analyse coach IA enrichie qui s'adapte normalement à tes vraies données. Cette semaine tu as bouclé tes priorités hautes — c'est exactement le bon réflexe. Pour la semaine prochaine, essaie de bloquer 2×90 min sur tes deux tâches haute prio en attente. Tu construis quelque chose de solide.",
+            "semaine_debut": sd.strftime('%d/%m'), "semaine_fin": sf.strftime('%d/%m/%Y'),
+            **extra,
         }
         html = _html_resume_hebdo(u['nom'], stats)
-        envoyer_email(u['email'], "Bilan hebdomadaire [TEST] — GetShift", html)
+        envoyer_email(u['email'], f"Bilan [TEST] · {sd.strftime('%d/%m')} → {sf.strftime('%d/%m')} — GetShift", html)
         return jsonify({"message": f"Email de test envoyé à {u['email']} !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        import traceback
+        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
 
 # ============================================
 # INTEGRATIONS
