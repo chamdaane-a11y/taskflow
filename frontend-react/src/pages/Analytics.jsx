@@ -212,8 +212,7 @@ const Skeleton = memo(({ width = '100%', height = 20, radius = 8, style = {} }) 
 // GITHUB HEATMAP
 // ══════════════════════════════════════════════════════════════════════
 const GitHubHeatmap = memo(({ parJour, T }) => {
-  const weeks = 18 // ~4 mois
-  const days = 7
+  const weeks = 18
 
   const data = useMemo(() => {
     const map = {}
@@ -226,21 +225,38 @@ const GitHubHeatmap = memo(({ parJour, T }) => {
 
   const maxVal = Math.max(...Object.values(data), 1)
 
-  const cells = []
-  for (let w = weeks - 1; w >= 0; w--) {
-    const col = []
-    for (let d = 0; d < days; d++) {
-      const date = new Date()
-      date.setDate(date.getDate() - (w * 7 + d))
-      const key = date.toISOString().split('T')[0]
-      const val = data[key] || 0
-      const intensity = val / maxVal
-      col.push({ key, val, intensity, date })
-    }
-    cells.push(col)
-  }
+  // Aligne sur les vraies semaines : dimanche (0) en haut, samedi (6) en bas
+  const cells = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayDow = today.getDay() // 0=Dim, 1=Lun … 6=Sam
 
-  const getColor = (intensity) => {
+    // Dimanche de la semaine courante
+    const thisWeekSun = new Date(today)
+    thisWeekSun.setDate(today.getDate() - todayDow)
+
+    const result = []
+    for (let w = 0; w < weeks; w++) {
+      const col = []
+      const weekSun = new Date(thisWeekSun)
+      weekSun.setDate(thisWeekSun.getDate() - (weeks - 1 - w) * 7)
+
+      for (let d = 0; d < 7; d++) {
+        const date = new Date(weekSun)
+        date.setDate(weekSun.getDate() + d)
+        const isFuture = date > today
+        const key = date.toISOString().split('T')[0]
+        const val = isFuture ? 0 : (data[key] || 0)
+        const intensity = isFuture ? -1 : val / maxVal
+        col.push({ key, val, intensity, date, isFuture })
+      }
+      result.push(col)
+    }
+    return result
+  }, [data, maxVal])
+
+  const getColor = (intensity, isFuture) => {
+    if (isFuture) return 'transparent'
     if (intensity === 0) return T.border
     if (intensity < 0.25) return T.accent + '40'
     if (intensity < 0.5)  return T.accent + '70'
@@ -248,37 +264,38 @@ const GitHubHeatmap = memo(({ parJour, T }) => {
     return T.accent
   }
 
-  const dayLabels = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+  // Dim Lun Mar Mer Jeu Ven Sam
+  const dayLabels = ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa']
 
   return (
     <div style={{ overflowX: 'auto' }}>
       <div style={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
-        {/* Day labels */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginRight: 4 }}>
+        {/* Étiquettes jours */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginRight: 6 }}>
           {dayLabels.map((l, i) => (
-            <div key={i} style={{ width: 10, height: 12, fontSize: 9, color: T.text2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{l}</div>
+            <div key={i} style={{ height: 12, fontSize: 9, color: T.text2, display: 'flex', alignItems: 'center' }}>{l}</div>
           ))}
         </div>
-        {/* Grid */}
+        {/* Grille */}
         {cells.map((col, wi) => (
           <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {col.map(({ key, val, intensity, date }) => (
+            {col.map(({ key, val, intensity, date, isFuture }) => (
               <motion.div
                 key={key}
-                title={`${date.toLocaleDateString('fr-FR')} : ${val} tâche${val !== 1 ? 's' : ''}`}
-                style={{ width: 12, height: 12, borderRadius: 3, background: getColor(intensity), cursor: 'default', flexShrink: 0 }}
-                whileHover={{ scale: 1.4 }}
+                title={isFuture ? '' : `${date.toLocaleDateString('fr-FR')} : ${val} tâche${val !== 1 ? 's' : ''}`}
+                style={{ width: 12, height: 12, borderRadius: 3, background: getColor(intensity, isFuture), cursor: isFuture ? 'default' : 'default', flexShrink: 0 }}
+                whileHover={isFuture ? {} : { scale: 1.4 }}
                 transition={{ duration: 0.1 }}
               />
             ))}
           </div>
         ))}
       </div>
-      {/* Legend */}
+      {/* Légende */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 10, justifyContent: 'flex-end' }}>
         <span style={{ fontSize: 10, color: T.text2 }}>Moins</span>
         {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
-          <div key={i} style={{ width: 12, height: 12, borderRadius: 3, background: getColor(v) }} />
+          <div key={i} style={{ width: 12, height: 12, borderRadius: 3, background: getColor(v, false) }} />
         ))}
         <span style={{ fontSize: 10, color: T.text2 }}>Plus</span>
       </div>
@@ -718,7 +735,7 @@ export default function Analytics() {
       },
       y: {
         ticks: { color: T.text2 || '#888', font: { size: 11 }, stepSize: 1, callback: v => Number.isInteger(v) ? v : null },
-        grid: { color: (T.border || '#333') + '18', drawBorder: false },
+        grid: { color: (T.border || '#333') + '0d', drawBorder: false },
         border: { display: false },
         beginAtZero: true
       }
