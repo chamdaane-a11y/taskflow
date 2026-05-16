@@ -8,11 +8,20 @@ import {
   Coffee, Brain, Target, TrendingUp, ChevronDown, ChevronUp,
   RefreshCw, Moon, Sun, Flame, Battery, BatteryLow, BatteryMedium,
   SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare,
-  Play, Pause, X
+  Play, Pause, X, GripVertical
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
+import {
+  DndContext, closestCenter, DragOverlay,
+  PointerSensor, TouchSensor, useSensor, useSensors
+} from '@dnd-kit/core'
+import {
+  SortableContext, verticalListSortingStrategy,
+  useSortable, arrayMove
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -58,6 +67,29 @@ function EnergyGauge({ score, T }) {
   )
 }
 
+// ---- Id unique par item de planning ----
+const getPlanItemId = (item) =>
+  `${item.type}|${item.heure_debut}|${item.heure_fin}|${item.titre || ''}`
+
+// ---- Wrapper sortable pour DnD ----
+function SortablePlanningCard(props) {
+  const { item } = props
+  const id = getPlanItemId(item)
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+
+  return (
+    <div ref={setNodeRef} style={{
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.35 : 1,
+      zIndex: isDragging ? 0 : 'auto',
+      position: 'relative',
+    }}>
+      <PlanningCard {...props} dragListeners={listeners} dragAttributes={attributes} />
+    </div>
+  )
+}
+
 // ---- Helper décalage heure ----
 function decalerHeure(heureStr, minutesAjouter) {
   const [h, m] = heureStr.split(':').map(Number)
@@ -66,7 +98,7 @@ function decalerHeure(heureStr, minutesAjouter) {
 }
 
 // ---- Composant card tâche planning ----
-function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, showDecalerMenu, onToggleDecalerMenu }) {
+function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, showDecalerMenu, onToggleDecalerMenu, dragListeners, dragAttributes }) {
   const [expanded, setExpanded] = useState(false)
   const isEnCours = statut === 'en_cours'
 
@@ -134,12 +166,21 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
                 <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${energieColor}12`, color: energieColor, fontWeight: 600 }}>⚡ {item.energie_requise}</span>
               </div>
             </div>
-            <motion.button
-              style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4, flexShrink: 0 }}
-              onClick={() => setExpanded(!expanded)}
-              whileHover={{ color: T.accent }}>
-              {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </motion.button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+              <div
+                {...dragListeners} {...dragAttributes}
+                style={{ color: T.text2, cursor: 'grab', padding: '4px 2px', touchAction: 'none', opacity: 0.5, display: 'flex', alignItems: 'center' }}
+                onMouseDown={e => e.currentTarget.style.cursor = 'grabbing'}
+                onMouseUp={e => e.currentTarget.style.cursor = 'grab'}>
+                <GripVertical size={15} />
+              </div>
+              <motion.button
+                style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4 }}
+                onClick={() => setExpanded(!expanded)}
+                whileHover={{ color: T.accent }}>
+                {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </motion.button>
+            </div>
           </div>
 
           {/* Détails expandés */}
@@ -366,6 +407,29 @@ export default function TomorrowBuilder() {
 
   const [statutsActions, setStatutsActions] = useState({})
   const [showDecalerIdx, setShowDecalerIdx] = useState(null)
+  const [activeId, setActiveId] = useState(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+  )
+
+  const handleDragEnd = ({ active, over }) => {
+    setActiveId(null)
+    if (!over || active.id === over.id) return
+    setPlanning(prev => {
+      const items = [...prev.planning]
+      const oldIdx = items.findIndex(item => getPlanItemId(item) === active.id)
+      const newIdx = items.findIndex(item => getPlanItemId(item) === over.id)
+      if (oldIdx === -1 || newIdx === -1) return prev
+      const reordered = arrayMove(items, oldIdx, newIdx)
+      let ordre = 1
+      reordered.forEach(item => { if (item.type === 'tache') item.ordre = ordre++ })
+      const updated = { ...prev, planning: reordered }
+      axios.patch(`${API}/ia/tomorrow-builder/${user.id}/update`, { planning: updated }).catch(() => {})
+      return updated
+    })
+  }
 
   const handleLancer = (idx) => {
     setStatutsActions(prev => ({ ...prev, [idx]: prev[idx] === 'en_cours' ? null : 'en_cours' }))
@@ -702,17 +766,38 @@ export default function TomorrowBuilder() {
                     </h3>
                     <span style={{ fontSize: 11, color: T.text2 }}>{planning.planning?.length} créneaux</span>
                   </div>
-                  <AnimatePresence mode="popLayout">
-                    {planning.planning?.map((item, i) => (
-                      <PlanningCard key={`${item.titre}-${item.heure_debut}`} item={item} index={i} T={T}
-                        statut={statutsActions[i]}
-                        onLancer={() => handleLancer(i)}
-                        onDecaler={(min) => handleDecaler(i, min)}
-                        onSkip={() => handleSkip(i)}
-                        showDecalerMenu={showDecalerIdx === i}
-                        onToggleDecalerMenu={() => setShowDecalerIdx(prev => prev === i ? null : i)} />
-                    ))}
-                  </AnimatePresence>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={({ active }) => setActiveId(active.id)}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={() => setActiveId(null)}>
+                    <SortableContext
+                      items={(planning.planning || []).map(getPlanItemId)}
+                      strategy={verticalListSortingStrategy}>
+                      <AnimatePresence mode="popLayout">
+                        {planning.planning?.map((item, i) => (
+                          <SortablePlanningCard key={getPlanItemId(item)} item={item} index={i} T={T}
+                            statut={statutsActions[i]}
+                            onLancer={() => handleLancer(i)}
+                            onDecaler={(min) => handleDecaler(i, min)}
+                            onSkip={() => handleSkip(i)}
+                            showDecalerMenu={showDecalerIdx === i}
+                            onToggleDecalerMenu={() => setShowDecalerIdx(prev => prev === i ? null : i)} />
+                        ))}
+                      </AnimatePresence>
+                    </SortableContext>
+                    <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.16,1,0.3,1)' }}>
+                      {activeId && (() => {
+                        const item = planning?.planning?.find(it => getPlanItemId(it) === activeId)
+                        return item ? (
+                          <div style={{ opacity: 0.95, transform: 'scale(1.025)', boxShadow: '0 20px 48px rgba(0,0,0,0.4)', borderRadius: 14 }}>
+                            <PlanningCard item={item} index={0} T={T} />
+                          </div>
+                        ) : null
+                      })()}
+                    </DragOverlay>
+                  </DndContext>
 
                   {/* Tâches reportées */}
                   {planning.taches_reportees?.length > 0 && (
