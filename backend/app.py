@@ -2772,6 +2772,9 @@ def coach_chat():
         curseur.execute("CREATE TABLE IF NOT EXISTS coach_messages (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, role VARCHAR(10), contenu TEXT, style_coach VARCHAR(30), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
         curseur.execute("INSERT INTO coach_messages (user_id, role, contenu, style_coach) VALUES (%s, %s, %s, %s)", (user_id, 'user', message, style))
         system_prompt = coach['persona'] + f"\n\nPROFIL DE {ctx['prenom'].upper()}:\n- Taches: {ctx['taches_actives']} actives | {ctx['taches_terminees']} terminées | {ctx['taches_en_retard']} en retard\n- Taux: {ctx['taux_completion']}% | Streak: {ctx['streak']} jours\nReponds en francais, 3-5 phrases max."
+        analytics_ctx = data.get('analytics_context')
+        if analytics_ctx:
+            system_prompt += f"\n\nDONNÉES ANALYTIQUES EN TEMPS RÉEL (page Analytics):\n- Streak: {analytics_ctx.get('streak', 0)} jours consécutifs\n- Score focus: {analytics_ctx.get('focusScore', 0)}/100\n- Risque burnout: {'OUI ⚠️' if analytics_ctx.get('burnoutRisk') else 'Non'}\n- Vélocité: {analytics_ctx.get('velocity', 0)} tâches/jour actif\n- Évolution vs période précédente: {analytics_ctx.get('wow', 0)}%\n- Chronotype: pic de productivité à {analytics_ctx.get('peakHour', 0)}h ({analytics_ctx.get('chronotype', '?')})\n- Règle 80/20: {analytics_ctx.get('lowRatio', 0)}% de tâches à faible priorité\n- Tâches complétées sur la période: {analytics_ctx.get('total', 0)}\nTu as accès à ces données en temps réel. Utilise-les précisément dans tes réponses."
         messages = [{"role": "system", "content": system_prompt}]
         for h in historique[-6:]:
             messages.append({"role": h['role'], "content": h['contenu']})

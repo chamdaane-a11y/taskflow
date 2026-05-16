@@ -20,6 +20,7 @@ import {
 } from 'chart.js'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
+import { CoachFloat } from './CoachFloat'
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -1397,6 +1398,17 @@ export default function Analytics() {
           </>
         )}
       </AnimatePresence>
+      {/* Coach Nova — voit toutes les données analytics en temps réel */}
+      {!loading && stats && (
+        <CoachFloat
+          T={T}
+          isMobile={isMobile}
+          userId={user?.id}
+          analyticsStats={stats}
+          defaultStyle="nova"
+        />
+      )}
+
       {isMobile && <BottomNavMobile T={T} />}
     </div>
   )

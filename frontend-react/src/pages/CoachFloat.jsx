@@ -14,12 +14,32 @@ const COACHES = {
   nova: { label: 'Nova', tagline: 'Analytique',    Icon: Brain,    grad: ['#6366f1', '#4f46e5'] },
 }
 
-const greetingFor = (style, ctx) => {
+const greetingFor = (style, ctx, analyticsStats = null) => {
+  // Greeting analytics — Nova voit les vraies métriques
+  if (analyticsStats) {
+    const { streak, focusScore, burnoutRisk, wow, velocity, lowRatio } = analyticsStats
+    if (style === 'nova') {
+      if (burnoutRisk) return `⚠️ Anomalie détectée : pattern burnout. Focus ${focusScore}/100. Streak ${streak}j. Recommandation : réduction de charge immédiate.`
+      if (lowRatio > 70) return `Alerte 80/20 : ${lowRatio}% de tes tâches sont à faible priorité. Streak ${streak}j. Que veux-tu rééquilibrer ?`
+      if (wow > 20) return `+${wow}% vs période précédente. Vélocité : ${velocity}/j. Streak : ${streak}j. Trajectory positive — quel aspect décortiquer ?`
+      if (streak >= 5) return `Streak exceptionnel : ${streak} jours. Focus ${focusScore}/100. Vélocité ${velocity}/j. Les données parlent d'elles-mêmes.`
+      return `Données chargées. Streak ${streak}j · Focus ${focusScore}/100 · Vélocité ${velocity}/j. ${burnoutRisk ? '⚠️ Burnout' : '✓ Rythme OK'}. Que veux-tu analyser ?`
+    }
+    if (style === 'alex') {
+      if (streak >= 3) return `${streak} jours de suite, c'est super ! 🎉 Comment tu te sens dans ce rythme ?`
+      return `Tes données analytiques sont là ! Comment tu vis ta productivité en ce moment ?`
+    }
+    if (style === 'max') {
+      return wow > 0
+        ? `+${wow}% cette période — les chiffres confirment : tu déchires ! On pousse encore ?`
+        : `Les données sont là, l'heure du bilan. Qu'est-ce qu'on optimise en premier ?`
+    }
+  }
+
   const { nowH, chargeMin, overdue, unplanned, capaciteMin } = ctx
   const h = (chargeMin / 60).toFixed(1)
   const pct = capaciteMin > 0 ? Math.round(chargeMin / capaciteMin * 100) : 0
 
-  // Alex — bienveillant
   if (style === 'alex') {
     if (overdue >= 2) return `Hey ${overdue} tâches en retard — pas de panique, on les replanifie ensemble ?`
     if (chargeMin === 0 && nowH < 19) return nowH < 12 ? "Bonjour ! Prêt(e) à structurer ta journée ? Je peux t'aider." : "Tu n'as encore rien planifié — veux-tu qu'on s'y mette ?"
@@ -28,7 +48,6 @@ const greetingFor = (style, ctx) => {
     if (nowH >= 19) return "La journée s'achève — bravo. On prépare demain ?"
     return `${unplanned > 0 ? `${unplanned} tâches en attente. ` : ''}Comment je peux t'aider ?`
   }
-  // Max — énergique
   if (style === 'max') {
     if (overdue >= 2) return `${overdue} retards ?! Allez, on attaque, je te trouve des créneaux.`
     if (chargeMin === 0) return "Aucun plan ? Let's go ! Je t'organise ça maintenant."
@@ -37,7 +56,7 @@ const greetingFor = (style, ctx) => {
     if (nowH >= 19) return "Fin de journée — fais le bilan, prépare demain à fond."
     return "Prêt à exploser tes objectifs ? Dis-moi par où on commence."
   }
-  // Nova — analytique
+  // Nova — planification
   if (overdue >= 2) return `Donnée : ${overdue} tâches en retard. Recommandation : replanification immédiate.`
   if (chargeMin === 0) return `Charge actuelle : 0h. ${unplanned} tâches non planifiées détectées.`
   if (pct > 120) return `Charge ${h}h vs capacité ${(capaciteMin/60).toFixed(0)}h → surcharge ${pct}%. Risque de burnout.`
@@ -47,11 +66,14 @@ const greetingFor = (style, ctx) => {
 }
 
 export const CoachFloat = memo(function CoachFloat({
-  T, isMobile, userId, planification, taches, heuresDispo
+  T, isMobile, userId,
+  planification = [], taches = [], heuresDispo = 8,
+  analyticsStats = null,
+  defaultStyle = null,
 }) {
   const [open, setOpen] = useState(false)
   const [style, setStyle] = useState(() => {
-    try { return localStorage.getItem('coach_style') || 'alex' } catch { return 'alex' }
+    try { return defaultStyle || localStorage.getItem('coach_style') || 'alex' } catch { return defaultStyle || 'alex' }
   })
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -86,7 +108,7 @@ export const CoachFloat = memo(function CoachFloat({
     let greeted = false
     try { greeted = localStorage.getItem(greetedKey) === '1' } catch {}
     if (greeted && messages.length > 0) return
-    const greeting = greetingFor(style, ctx)
+    const greeting = greetingFor(style, ctx, analyticsStats)
     setMessages(m => m.length === 0 ? [{ role: 'assistant', content: greeting }] : m)
     try { localStorage.setItem(greetedKey, '1') } catch {}
     setHasNotif(false)
@@ -109,6 +131,17 @@ export const CoachFloat = memo(function CoachFloat({
         user_id: userId,
         style_coach: style,
         message: txt,
+        analytics_context: analyticsStats ? {
+          streak: analyticsStats.streak,
+          focusScore: analyticsStats.focusScore,
+          burnoutRisk: analyticsStats.burnoutRisk,
+          velocity: analyticsStats.velocity,
+          wow: analyticsStats.wow,
+          lowRatio: analyticsStats.lowRatio,
+          total: analyticsStats.total,
+          chronotype: analyticsStats.chronotype,
+          peakHour: analyticsStats.peakHour,
+        } : null,
       })
       const reply = res.data?.reponse || res.data?.message || "Désolé, j'ai eu un souci."
       setMessages(m => [...m, { role: 'assistant', content: reply }])
