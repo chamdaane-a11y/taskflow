@@ -81,18 +81,21 @@ function useAnalyticsData(userId, jours) {
 
   useEffect(() => {
     if (!userId) return
-    const cacheKey = `analytics_${userId}_${jours}`
+    // v2 = invalide les anciens caches qui pourraient avoir corrompu les graphes
+    const cacheKey = `analytics_v2_${userId}_${jours}`
     try {
       const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null')
-      if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
+      if (cached && cached.data && Date.now() - cached.ts < 5 * 60 * 1000) {
         setData(cached.data); setLoading(false); return
       }
     } catch {}
     setLoading(true)
     axios.get(`${API}/analytics/${userId}?jours=${jours}`)
       .then(r => {
-        setData(r.data); setError(null)
-        try { localStorage.setItem(cacheKey, JSON.stringify({ data: r.data, ts: Date.now() })) } catch {}
+        if (r.data) {
+          setData(r.data); setError(null)
+          try { localStorage.setItem(cacheKey, JSON.stringify({ data: r.data, ts: Date.now() })) } catch {}
+        }
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -1263,31 +1266,29 @@ export default function Analytics() {
     }
   }), [T, jours])
 
-  // ── Palette pastel moderne ──
-  // Helper : gradient vertical pour area chart (semi-transparent)
-  const makeAreaGradient = (color) => (context) => {
-    const { ctx, chartArea } = context.chart
-    if (!chartArea) return color + '20'
-    const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-    g.addColorStop(0, color + '66')   // sommet : 40%
-    g.addColorStop(0.5, color + '20') // milieu : 12%
-    g.addColorStop(1, color + '02')   // bas : 1%
+  // ── Palette pastel moderne (couleurs statiques, pas de fonctions) ──
+  const PASTEL = {
+    main: T.accent || '#6c63ff',
+    ghost: (T.text2 || '#888') + '40',
+    mint: '#86d4a8',
+    peach: '#ffb89e',
+    rose: '#ff9eb5',
+    lavender: '#b8a5ff',
+  }
+
+  // Helper gradient via fonction (Chart.js v4 — context.chart contient ctx+chartArea)
+  const makeAreaGradient = (color) => (ctx) => {
+    const chart = ctx.chart
+    if (!chart || !chart.chartArea) return color + '33'
+    const c = chart.ctx
+    const area = chart.chartArea
+    const g = c.createLinearGradient(0, area.top, 0, area.bottom)
+    g.addColorStop(0, color + '55')
+    g.addColorStop(1, color + '08')
     return g
   }
 
-  // Couleurs pastel dérivées du thème
-  const PASTEL = {
-    main: T.accent,
-    soft: T.accent + 'cc',
-    ghost: (T.text2 || '#888') + '40',
-    mint: '#86d4a8',     // pastel vert
-    peach: '#ffb89e',    // pastel orange
-    rose: '#ff9eb5',     // pastel rouge/rose
-    lavender: '#b8a5ff', // pastel violet
-    sky: '#9bc8ff',      // pastel bleu
-  }
-
-  // Chart data — courbes lissées + area gradient semi-transparent + style minimaliste
+  // Chart data — minimaliste, courbes lissées, area semi-transparent
   const lineChartData = useMemo(() => {
     if (!stats) return null
     return {
@@ -1303,12 +1304,9 @@ export default function Analytics() {
           pointBorderColor: PASTEL.main,
           pointBorderWidth: 2,
           pointRadius: jours <= 7 ? 3 : 0,
-          pointHoverRadius: 7,
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderWidth: 3,
+          pointHoverRadius: 6,
           fill: true,
-          tension: 0.45,
-          cubicInterpolationMode: 'monotone',
+          tension: 0.4,
         },
         {
           label: 'Période précédente',
@@ -1319,7 +1317,7 @@ export default function Analytics() {
           borderDash: [4, 5],
           pointRadius: 0,
           fill: false,
-          tension: 0.45,
+          tension: 0.4,
         },
         {
           label: 'Moyenne 7J',
@@ -1329,12 +1327,12 @@ export default function Analytics() {
           borderWidth: 1.8,
           pointRadius: 0,
           fill: false,
-          tension: 0.45,
+          tension: 0.4,
           borderDash: [3, 3],
         }
       ]
     }
-  }, [stats, T, jours])
+  }, [stats, T.accent, T.text2, jours])
 
   const cumulativeData = useMemo(() => {
     if (!stats) return null
@@ -1347,15 +1345,11 @@ export default function Analytics() {
         borderWidth: 2.5,
         pointRadius: 0,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: PASTEL.lavender,
-        pointHoverBorderWidth: 3,
         fill: true,
-        tension: 0.45,
-        cubicInterpolationMode: 'monotone',
+        tension: 0.4,
       }]
     }
-  }, [stats, T])
+  }, [stats])
 
   const barData = useMemo(() => {
     if (!stats) return null
@@ -1363,16 +1357,9 @@ export default function Analytics() {
       labels: stats.labels,
       datasets: [{
         data: stats.current,
-        backgroundColor: (context) => {
-          const { ctx, chartArea, dataIndex } = context
-          if (!chartArea) return PASTEL.main + 'aa'
-          const isMax = dataIndex === stats.maxIdx
-          const top = isMax ? PASTEL.main : PASTEL.soft
-          const bot = isMax ? PASTEL.main + 'aa' : PASTEL.main + '55'
-          const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-          g.addColorStop(0, top); g.addColorStop(1, bot)
-          return g
-        },
+        backgroundColor: stats.current.map((_, i) =>
+          i === stats.maxIdx ? PASTEL.main : PASTEL.main + 'aa'
+        ),
         borderRadius: 10,
         borderSkipped: false,
         borderColor: 'transparent',
@@ -1380,7 +1367,7 @@ export default function Analytics() {
         maxBarThickness: 36,
       }]
     }
-  }, [stats, T])
+  }, [stats, T.accent])
 
   const chronoData = useMemo(() => {
     if (!stats) return null
@@ -1394,16 +1381,11 @@ export default function Analytics() {
       labels: Array.from({ length: 8 }, (_, i) => `${i * 3}h`),
       datasets: [{
         data: compressed,
-        backgroundColor: (context) => {
-          const { ctx, chartArea, dataIndex } = context
-          if (!chartArea) return PASTEL.lavender
-          const intensity = max > 0 ? compressed[dataIndex] / max : 0
+        backgroundColor: compressed.map((v) => {
+          const intensity = max > 0 ? v / max : 0
           const alpha = Math.round((0.45 + intensity * 0.55) * 255).toString(16).padStart(2, '0')
-          const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-          g.addColorStop(0, PASTEL.lavender + alpha)
-          g.addColorStop(1, PASTEL.lavender + '33')
-          return g
-        },
+          return PASTEL.lavender + alpha
+        }),
         borderRadius: 10,
         borderSkipped: false,
         borderColor: 'transparent',
