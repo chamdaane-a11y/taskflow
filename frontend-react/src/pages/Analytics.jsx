@@ -805,19 +805,39 @@ const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) =
   const focusScore = stats.focusScore || 0
   const periodLabel = jours === 7 ? 'cette semaine' : jours === 30 ? 'ce mois' : 'ces 90 jours'
 
-  // ── TON CHALLENGER : pousse, ne console pas ──
-  // Cible projetée = potentiel basé sur meilleur jour × 7
+  // ── COACH DE SALLE : challenger quand slack, célèbre quand crush ──
   const maxDay = stats.maxVal || 0
   const potentielSemaine = maxDay * 7
   const ecartPotentiel = Math.max(0, potentielSemaine - total)
+  // Mode CÉLÉBRATION : l'user joue au max → on le félicite franchement
+  const isElite = (streak >= 7 && wow >= 0) || (focusScore >= 85 && streak >= 3) || (total > 0 && total >= potentielSemaine * 0.85)
+  const isCrushing = wow >= 30 || (streak >= 3 && total > 0 && total >= potentielSemaine * 0.7)
 
   let actionPhrase, ctaLabel, ctaAction
-  if (total === 0) {
+  // ── MODE CÉLÉBRATION (l'user mérite ses props) ──
+  if (isElite) {
+    if (streak >= 14) {
+      actionPhrase = `${streak} jours d'identité pure. Tu es de ceux qui changent vraiment leur vie.`
+    } else if (streak >= 7) {
+      actionPhrase = `Semaine pleine + ${wow >= 0 ? `+${wow}%` : 'rythme tenu'}. Ce que tu fais, peu de gens y arrivent.`
+    } else {
+      actionPhrase = `Focus ${focusScore}/100, streak ${streak}j. Pur travail d'élite — savoure-le.`
+    }
+    ctaLabel = 'Continuer →'
+    ctaAction = () => navigate('/planification')
+  } else if (isCrushing) {
+    actionPhrase = wow >= 30
+      ? `+${wow}% vs sem dernière — tu accélères fort. Garde ce rythme.`
+      : `${streak}j de série et ${total} tâches — tu joues bien. Push pour viser plus haut.`
+    ctaLabel = 'Pousser plus'
+    ctaAction = () => navigate('/planification')
+  }
+  // ── MODE CHALLENGER (l'user slack) ──
+  else if (total === 0) {
     actionPhrase = `Zéro tâche. Le top 10% en fait déjà 15. Démarre maintenant.`
     ctaLabel = 'Attaquer'
     ctaAction = () => navigate('/planification')
   } else if (burnoutRisk) {
-    // Même en burnout : on pousse à la stratégie, pas au repos passif
     actionPhrase = `Tu pousses fort mais mal réparti. Étale, garde l'intensité.`
     ctaLabel = 'Réorganiser'
     ctaAction = () => navigate('/planification')
@@ -836,34 +856,22 @@ const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) =
     actionPhrase = `${wow}% vs sem dernière. Tu redescends. Reprends le contrôle aujourd'hui.`
     ctaLabel = 'Reprendre'
     ctaAction = () => navigate('/planification')
-  } else if (streak >= 7) {
-    actionPhrase = `${streak} jours d'affilée. Pousse à 14j — c'est là que ça devient identité.`
-    ctaLabel = 'Planifier J+1'
-    ctaAction = () => navigate('/planification')
   } else if (streak >= 3) {
     actionPhrase = `Série de ${streak}j. Ne casse pas la chaîne — planifie demain MAINTENANT.`
     ctaLabel = 'Planifier J+1'
     ctaAction = () => navigate('/planification')
-  } else if (wow > 20) {
-    actionPhrase = `+${wow}% — tu accélères. Tiens le rythme et passe le seuil suivant.`
-    ctaLabel = 'Continuer'
-    ctaAction = () => navigate('/planification')
-  } else if (focusScore > 75) {
-    actionPhrase = `Focus ${focusScore}/100 — tu priorises bien. Augmente le volume maintenant.`
-    ctaLabel = 'Volumiser'
-    ctaAction = () => navigate('/dashboard')
   } else {
     actionPhrase = `${total} tâches. Vise +30% cette semaine — c'est ${Math.round(total * 1.3)} au lieu de ${total}.`
     ctaLabel = 'Viser haut'
     ctaAction = () => navigate('/planification')
   }
 
-  // Emoji vibe — vise la performance, pas le confort
-  const vibe = total === 0 ? '⚡'
+  // Emoji vibe — célèbre quand mérité, pousse sinon
+  const vibe = isElite ? (streak >= 14 ? '👑' : '🏆')
+    : isCrushing ? '🚀'
+    : total === 0 ? '⚡'
     : burnoutRisk ? '⚠️'
-    : streak >= 7 ? '🏆'
     : streak >= 3 ? '🔥'
-    : wow > 20 ? '🚀'
     : wow < -10 ? '📉'
     : ecartPotentiel >= maxDay ? '🎯'
     : '💪'
@@ -1037,7 +1045,24 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
 
   let alert = null
   if (!dismissed && stats) {
-    if (stats.burnoutRisk) {
+    // ── CÉLÉBRATION quand l'user crush vraiment fort ──
+    if (stats.streak >= 14) {
+      alert = {
+        Icon: Crown, color: '#a855f7',
+        title: `👑 ${stats.streak} jours d'identité — tu n'es plus un débutant`,
+        text: 'C\'est rare. Ce que tu construis aujourd\'hui, peu de gens y arrivent. Continue.',
+        ctaLabel: 'Voir mes records →',
+        ctaAction: () => navigate('/dashboard'),
+      }
+    } else if (stats.wow >= 30 && stats.streak >= 3) {
+      alert = {
+        Icon: TrendingUp, color: '#4caf82',
+        title: `🚀 +${stats.wow}% cette semaine — tu accélères fort`,
+        text: 'Ce momentum est précieux. Garde le rythme et passe au seuil suivant.',
+        ctaLabel: 'Pousser plus →',
+        ctaAction: () => navigate('/planification'),
+      }
+    } else if (stats.burnoutRisk) {
       alert = {
         Icon: Flame, color: '#e05c5c',
         title: '⚠️ Pattern burnout : tu pousses mal',

@@ -100,6 +100,58 @@ def envoyer_push(subscription_json, titre, body, url="/dashboard"):
         print(f"[Push] Erreur: {e}")
         return False
 
+
+# ── Système anti-doublons : tracking des notifs envoyées ──────────────
+def _ensure_notif_table(curseur):
+    """Crée la table de tracking si elle n'existe pas."""
+    curseur.execute("""
+        CREATE TABLE IF NOT EXISTS notifications_envoyees (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            type VARCHAR(80) NOT NULL,
+            titre VARCHAR(200),
+            body TEXT,
+            sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user_type (user_id, type, sent_at),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+
+def deja_envoyee(curseur, user_id, type_notif, intervalle_jours=1):
+    """Renvoie True si une notif de ce type a été envoyée à cet user dans les N derniers jours."""
+    _ensure_notif_table(curseur)
+    curseur.execute("""
+        SELECT id FROM notifications_envoyees
+        WHERE user_id=%s AND type=%s
+          AND sent_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+        LIMIT 1
+    """, (user_id, type_notif, intervalle_jours))
+    return curseur.fetchone() is not None
+
+
+def envoyer_push_smart(curseur, db, user_id, type_notif, titre, body, url="/dashboard", intervalle_jours=1):
+    """Envoie un push uniquement si pas déjà envoyé récemment. Trace dans la BDD."""
+    _ensure_notif_table(curseur)
+    if deja_envoyee(curseur, user_id, type_notif, intervalle_jours):
+        return False
+    curseur.execute("SELECT subscription FROM push_subscriptions WHERE user_id=%s", (user_id,))
+    rows = curseur.fetchall()
+    if not rows:
+        return False  # pas de subscription = pas de push
+    envoyé = False
+    for r in rows:
+        sub = r['subscription'] if isinstance(r, dict) else r[0]
+        if envoyer_push(sub, titre, body, url):
+            envoyé = True
+    if envoyé:
+        curseur.execute(
+            "INSERT INTO notifications_envoyees (user_id, type, titre, body) VALUES (%s, %s, %s, %s)",
+            (user_id, type_notif, titre, body)
+        )
+        db.commit()
+    return envoyé
+
 # ============================================
 # JOBS AUTOMATIQUES (SCHEDULER)
 # ============================================
@@ -1309,6 +1361,12 @@ def update_points(id):
     pts = data['points']
     db = connecter()
     curseur = db.cursor(dictionary=True)
+    # ── Capture niveau et streak AVANT pour détecter changements ──
+    curseur.execute("SELECT points, niveau, streak FROM users WHERE id=%s", (id,))
+    avant = curseur.fetchone() or {}
+    niveau_avant = avant.get('niveau') or 1
+    streak_avant = avant.get('streak') or 0
+
     curseur.execute("UPDATE users SET points=points+%s WHERE id=%s", (pts, id))
     db.commit()
     curseur.execute("SELECT points FROM users WHERE id=%s", (id,))
@@ -1333,6 +1391,37 @@ def update_points(id):
     curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=TRUE", (id,))
     nb_terminees = curseur.fetchone()['nb']
     nouveaux_badges = verifier_badges(curseur, db, id, nb_terminees, total_pts, streak)
+
+    # ── HOOKS NOTIF instant : niveau-up + streak milestones + badges ──
+    try:
+        niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende",7:"Mythique",8:"Immortel"}
+        # 1. Niveau up
+        if nouveau_niveau > niveau_avant:
+            label = niveaux_labels.get(nouveau_niveau, f"Niveau {nouveau_niveau}")
+            envoyer_push_smart(curseur, db, id, f"levelup_{nouveau_niveau}",
+                f"🏆 Niveau {nouveau_niveau} débloqué — {label}",
+                f"Tu passes au palier supérieur. Continue à pousser.",
+                url="/dashboard", intervalle_jours=365)
+        # 2. Streak milestones (3, 7, 14, 30, 100)
+        if streak > streak_avant and streak in (3, 7, 14, 30, 100):
+            messages_streak = {
+                3:  ("🔥 3 jours d'affilée", "C'est le début d'une habitude. Vise 7."),
+                7:  ("🏆 7 jours — semaine complète", "Tu fais partie des 10% qui tiennent. Pousse à 14."),
+                14: ("⚡ 14 jours — habitude ancrée", "C'est dans tes veines maintenant. 30 c'est l'élite."),
+                30: ("👑 30 jours — un mois entier", "Tu ne fais plus d'effort, tu ES productif. Bravo."),
+                100:("🌟 100 JOURS", "Tu fais partie des légendes. Tu peux tout."),
+            }
+            t, b = messages_streak[streak]
+            envoyer_push_smart(curseur, db, id, f"streak_{streak}", t, b, "/dashboard", intervalle_jours=365)
+        # 3. Nouveaux badges
+        for badge in (nouveaux_badges or []):
+            envoyer_push_smart(curseur, db, id, f"badge_{badge.get('id', 'x')}",
+                f"{badge.get('icon', '🏅')} Nouveau badge : {badge.get('nom', 'Badge')}",
+                badge.get('description', 'Continue comme ça !'),
+                url="/dashboard", intervalle_jours=365)
+    except Exception as e:
+        print(f"[Hook notif update_points] {e}")
+
     db.commit(); db.close()
     return jsonify({"points": total_pts, "niveau": nouveau_niveau, "streak": streak, "nouveaux_badges": nouveaux_badges})
 
@@ -1548,17 +1637,36 @@ def ajouter_tache():
         data = request.get_json()
         db = connecter()
         curseur = db.cursor()
-        curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id) VALUES (%s, %s, %s, %s, %s)", (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), data['user_id'], data.get('categorie_id')))
+        user_id = data['user_id']
+        # Compte AVANT insertion pour détecter 1ère tâche
+        curseur.execute("SELECT COUNT(*) FROM taches WHERE user_id=%s", (user_id,))
+        nb_avant = curseur.fetchone()[0]
+        curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id) VALUES (%s, %s, %s, %s, %s)", (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), user_id, data.get('categorie_id')))
         db.commit()
         tache_id = curseur.lastrowid
         curseur2 = db.cursor(dictionary=True)
-        curseur2.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (data['user_id'],))
+        curseur2.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
         row = curseur2.fetchone()
         if row:
             config = json.loads(row['config'])
             webhook_url = config.get('webhook_url')
             if webhook_url:
                 envoyer_notification_slack(webhook_url, f"Nouvelle tâche GetShift : *{data['titre']}* — Priorité: {data.get('priorite', 'moyenne')}")
+        # ── HOOK NOTIF : 1ère tâche jamais créée → célébration ──
+        try:
+            if nb_avant == 0:
+                envoyer_push_smart(curseur2, db, user_id, "first_task_ever",
+                    "🎉 Première tâche créée !",
+                    "Tu viens de planter la première graine. Planifie-la pour la réaliser.",
+                    url="/planification", intervalle_jours=365)
+            # Bonus : si user crée tâche haute prio → encourager
+            elif data.get('priorite') == 'haute':
+                envoyer_push_smart(curseur2, db, user_id, "haute_prio_créée",
+                    "⚡ Tâche haute priorité ajoutée",
+                    "Bouge-la en haut de ta planification — l'impact est ici.",
+                    url="/planification", intervalle_jours=1)
+        except Exception as e:
+            print(f"[Hook notif ajouter_tache] {e}")
         db.close()
         return jsonify({"message": "Tâche ajoutée !", "id": tache_id})
     except Exception as e:
@@ -2620,6 +2728,232 @@ def trigger_email_taches_retard():
 def trigger_email_resume_hebdo():
     threading.Thread(target=job_email_resume_hebdo).start()
     return jsonify({"message": "Emails résumé hebdo déclenchés !"})
+
+
+# ════════════════════════════════════════════════════════════════════════
+# SYSTÈME DE NOTIFICATIONS STYLE NOTION / TODOIST
+# Lifecycle + Daily + Instant + Win-back
+# Déclenchés par GitHub Actions cron (indépendant de Render qui dort)
+# ════════════════════════════════════════════════════════════════════════
+
+# ─── LIFECYCLE : parcours d'onboarding Day 0 → Day 30 ──────────────────
+LIFECYCLE_MESSAGES = {
+    0: {"titre": "Bienvenue 🚀", "body": "Crée ta première tâche en 30s pour démarrer."},
+    1: {"titre": "Hier c'était jour 1 — aujourd'hui on plante les racines",
+        "body": "1 tâche aujourd'hui = +1 jour de streak. Vas-y."},
+    2: {"titre": "Découvre Tomorrow Builder ⚡",
+        "body": "Planifie ta journée parfaite en 1 clic — l'IA s'occupe de tout."},
+    3: {"titre": "Coach Alex est là pour toi 🤗",
+        "body": "Il analyse ta semaine et te dit ce qui marche. Discute avec lui."},
+    5: {"titre": "Tu as commencé — ne lâche pas 🔥",
+        "body": "Les 7 premiers jours sont les plus durs. Tu y es presque."},
+    7: {"titre": "1 semaine ! 🏆 Voilà ton premier bilan",
+        "body": "Ouvre Analytiques pour voir ce que tu as déjà construit."},
+    10: {"titre": "Découvre Goal Reverse 🎯",
+         "body": "Définis un objectif et l'IA t'aide à le décomposer en étapes."},
+    14: {"titre": "Tes patterns émergent — découvre ton Task DNA 🧬",
+         "body": "Quel type de tâche tu sous/sur-estimes ? La data parle."},
+    21: {"titre": "21 jours = nouvelle habitude 🎉",
+         "body": "Tu n'es plus un débutant. Tu deviens régulier."},
+    30: {"titre": "1 mois avec GetShift — tu fais partie des 10% qui persistent 🏆",
+         "body": "Ouvre ton bilan mensuel : tu vas être fier."},
+}
+
+
+def job_notifs_lifecycle():
+    """Parcourt tous les users et envoie la notif lifecycle correspondant à l'âge de leur compte."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT id, nom, DATEDIFF(NOW(), created_at) AS age_jours
+            FROM users WHERE email_verifie = TRUE
+        """)
+        users = cursor.fetchall()
+        sent_count = 0
+        for u in users:
+            age = u['age_jours']
+            if age in LIFECYCLE_MESSAGES:
+                msg = LIFECYCLE_MESSAGES[age]
+                type_notif = f"lifecycle_day_{age}"
+                # 1 fois EVER (intervalle 365 jours)
+                if envoyer_push_smart(cursor, db, u['id'], type_notif,
+                                       msg['titre'], msg['body'],
+                                       url="/dashboard", intervalle_jours=365):
+                    sent_count += 1
+        cursor.close(); db.close()
+        print(f"[Lifecycle] {sent_count} notifs envoyées")
+        return sent_count
+    except Exception as e:
+        print(f"[Lifecycle] Erreur: {e}")
+        return 0
+
+
+@app.route('/notifications/lifecycle-tick', methods=['POST'])
+def trigger_lifecycle():
+    threading.Thread(target=job_notifs_lifecycle).start()
+    return jsonify({"message": "Lifecycle tick déclenché"})
+
+
+# ─── DAILY : matin (planning) / midi (push) / soir (streak warning) ───
+def job_notifs_daily_matin():
+    """8h UTC : nudge planning du jour selon état utilisateur."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom, u.streak,
+                (SELECT COUNT(*) FROM planification p WHERE p.user_id=u.id AND DATE(p.date_planifiee)=CURDATE()) AS planifie_aujourdhui,
+                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=FALSE AND t.priorite='haute') AS haute_attente,
+                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=FALSE) AS total_attente
+            FROM users u
+            WHERE u.email_verifie = TRUE
+              AND EXISTS (SELECT 1 FROM push_subscriptions ps WHERE ps.user_id=u.id)
+        """)
+        users = cursor.fetchall()
+        sent = 0
+        for u in users:
+            planifie = u['planifie_aujourdhui'] or 0
+            haute = u['haute_attente'] or 0
+            streak = u['streak'] or 0
+            total = u['total_attente'] or 0
+            if planifie >= 3:
+                titre = f"☀️ {planifie} tâches t'attendent aujourd'hui"
+                body = "Ouvre Planification pour démarrer en force."
+            elif planifie >= 1:
+                titre = f"☀️ {planifie} tâche planifiée aujourd'hui"
+                body = "Une journée légère — profite pour avancer sur tes prio haute."
+            elif haute >= 1:
+                titre = "⚡ Tu as des prio haute en attente"
+                body = f"Aucun plan aujourd'hui mais {haute} tâche{'s' if haute > 1 else ''} prio haute t'attend{'ent' if haute > 1 else ''}."
+            elif total >= 1:
+                titre = "🎯 Planifie ta journée en 30s"
+                body = f"{total} tâche{'s' if total > 1 else ''} en attente — décide laquelle tu attaques."
+            else:
+                titre = "✨ Nouvelle journée, nouvelle page"
+                body = "Crée une tâche pour démarrer cette journée avec intention."
+            url = "/planification" if (planifie == 0 and total > 0) else "/dashboard"
+            if envoyer_push_smart(cursor, db, u['id'], "daily_morning", titre, body, url, intervalle_jours=1):
+                sent += 1
+        cursor.close(); db.close()
+        print(f"[Daily-Matin] {sent} notifs envoyées")
+        return sent
+    except Exception as e:
+        print(f"[Daily-Matin] Erreur: {e}")
+        return 0
+
+
+def job_notifs_daily_midi():
+    """13h UTC : encouragement / mi-journée check."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom,
+                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=TRUE AND DATE(t.updated_at)=CURDATE()) AS faites_today,
+                (SELECT COUNT(*) FROM planification p JOIN taches t ON p.tache_id=t.id WHERE p.user_id=u.id AND DATE(p.date_planifiee)=CURDATE() AND t.terminee=FALSE) AS restantes_today
+            FROM users u
+            WHERE u.email_verifie = TRUE
+              AND EXISTS (SELECT 1 FROM push_subscriptions ps WHERE ps.user_id=u.id)
+        """)
+        users = cursor.fetchall()
+        sent = 0
+        for u in users:
+            faites = u['faites_today'] or 0
+            restantes = u['restantes_today'] or 0
+            if faites >= 5:
+                titre = f"🔥 Déjà {faites} tâches — tu déchires"
+                body = "Mi-journée et tu cartonnes. Garde le rythme."
+            elif faites >= 1 and restantes >= 1:
+                titre = f"💪 {faites} fait, {restantes} restant{'s' if restantes > 1 else ''}"
+                body = "Tu es lancé. Encore un push avant la pause déj."
+            elif faites == 0 and restantes >= 1:
+                titre = f"⚡ Midi — il te reste {restantes} tâche{'s' if restantes > 1 else ''}"
+                body = "Ne laisse pas l'aprem te dépasser. 1 tâche maintenant."
+            else:
+                continue  # rien à pousser, on saute
+            if envoyer_push_smart(cursor, db, u['id'], "daily_midi", titre, body, "/dashboard", intervalle_jours=1):
+                sent += 1
+        cursor.close(); db.close()
+        print(f"[Daily-Midi] {sent} notifs envoyées")
+        return sent
+    except Exception as e:
+        print(f"[Daily-Midi] Erreur: {e}")
+        return 0
+
+
+def job_notifs_daily_soir():
+    """20h UTC : streak warning + bilan + win-back."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.nom, u.streak,
+                DATEDIFF(NOW(), u.derniere_activite) AS jours_inactif,
+                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=TRUE AND DATE(t.updated_at)=CURDATE()) AS faites_today
+            FROM users u
+            WHERE u.email_verifie = TRUE
+              AND EXISTS (SELECT 1 FROM push_subscriptions ps WHERE ps.user_id=u.id)
+        """)
+        users = cursor.fetchall()
+        sent = 0
+        for u in users:
+            faites = u['faites_today'] or 0
+            streak = u['streak'] or 0
+            inactif = u['jours_inactif'] if u['jours_inactif'] is not None else 999
+
+            # Win-back graduel
+            if inactif == 3:
+                if envoyer_push_smart(cursor, db, u['id'], "winback_3j",
+                                       "👋 3 jours sans toi", "Tes tâches t'attendent — 1 clic pour reprendre.",
+                                       "/dashboard", intervalle_jours=7):
+                    sent += 1; continue
+            elif inactif == 7:
+                if envoyer_push_smart(cursor, db, u['id'], "winback_7j",
+                                       "📅 Une semaine sans GetShift", "Reviens, on a des nouveautés pour toi.",
+                                       "/dashboard", intervalle_jours=14):
+                    sent += 1; continue
+            elif inactif >= 14 and inactif < 21:
+                if envoyer_push_smart(cursor, db, u['id'], "winback_14j",
+                                       "💭 On t'a manqué", "Reviens en 30s et reprends là où tu t'es arrêté.",
+                                       "/dashboard", intervalle_jours=30):
+                    sent += 1; continue
+
+            # Streak en danger
+            if streak >= 2 and faites == 0:
+                titre = f"🔥 Streak {streak}j → casse pas la chaîne"
+                body = "Plus que 4h. 1 seule tâche suffit pour préserver ta série."
+                if envoyer_push_smart(cursor, db, u['id'], "streak_warning", titre, body, "/dashboard", intervalle_jours=1):
+                    sent += 1; continue
+
+            # Bilan positif quand bonne journée
+            if faites >= 3:
+                titre = f"✓ {faites} tâches aujourd'hui"
+                body = "Bonne journée. Planifie demain pour enchaîner."
+                if envoyer_push_smart(cursor, db, u['id'], "daily_evening_bilan", titre, body, "/planification", intervalle_jours=1):
+                    sent += 1
+        cursor.close(); db.close()
+        print(f"[Daily-Soir] {sent} notifs envoyées")
+        return sent
+    except Exception as e:
+        print(f"[Daily-Soir] Erreur: {e}")
+        return 0
+
+
+@app.route('/notifications/daily-matin', methods=['POST'])
+def trigger_daily_matin():
+    threading.Thread(target=job_notifs_daily_matin).start()
+    return jsonify({"message": "Daily matin déclenché"})
+
+@app.route('/notifications/daily-midi', methods=['POST'])
+def trigger_daily_midi():
+    threading.Thread(target=job_notifs_daily_midi).start()
+    return jsonify({"message": "Daily midi déclenché"})
+
+@app.route('/notifications/daily-soir', methods=['POST'])
+def trigger_daily_soir():
+    threading.Thread(target=job_notifs_daily_soir).start()
+    return jsonify({"message": "Daily soir déclenché"})
 
 @app.route('/email/test/<int:user_id>', methods=['POST'])
 def test_email_user(user_id):

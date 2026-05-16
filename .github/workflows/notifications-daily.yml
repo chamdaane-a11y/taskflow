@@ -1,0 +1,72 @@
+name: Notifications quotidiennes
+
+# 3 ticks par jour pour le système de notifs Notion-style
+# Matin 7h UTC (8h Paris hiver / 9h été)
+# Midi 11h UTC (12h Paris hiver / 13h été)
+# Soir 18h UTC (19h Paris hiver / 20h été)
+on:
+  schedule:
+    - cron: '0 7 * * *'   # matin
+    - cron: '0 11 * * *'  # midi
+    - cron: '0 18 * * *'  # soir
+  workflow_dispatch:
+    inputs:
+      moment:
+        description: 'Quel tick déclencher manuellement'
+        required: true
+        default: 'matin'
+        type: choice
+        options: [matin, midi, soir, lifecycle, all]
+
+jobs:
+  notifications-tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Détecter le moment de la journée
+        id: heure
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "moment=${{ github.event.inputs.moment }}" >> $GITHUB_OUTPUT
+          else
+            H=$(date -u +%H)
+            if [ "$H" -lt 10 ]; then echo "moment=matin" >> $GITHUB_OUTPUT
+            elif [ "$H" -lt 15 ]; then echo "moment=midi" >> $GITHUB_OUTPUT
+            else echo "moment=soir" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Wake up Render backend
+        run: |
+          for i in 1 2 3; do
+            if curl -sf --max-time 30 https://getshift-backend.onrender.com/health; then
+              echo "✓ Backend awake try $i"; break
+            fi
+            sleep 20
+          done
+
+      - name: Wait for warm-up
+        run: sleep 12
+
+      - name: Déclencher lifecycle (tous les ticks)
+        if: steps.heure.outputs.moment == 'matin' || steps.heure.outputs.moment == 'lifecycle' || steps.heure.outputs.moment == 'all'
+        run: |
+          echo "→ Lifecycle (onboarding Day N)"
+          curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/notifications/lifecycle-tick || echo "fail lifecycle"
+
+      - name: Déclencher daily matin
+        if: steps.heure.outputs.moment == 'matin' || steps.heure.outputs.moment == 'all'
+        run: |
+          echo "→ Daily matin"
+          curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/notifications/daily-matin || echo "fail matin"
+
+      - name: Déclencher daily midi
+        if: steps.heure.outputs.moment == 'midi' || steps.heure.outputs.moment == 'all'
+        run: |
+          echo "→ Daily midi"
+          curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/notifications/daily-midi || echo "fail midi"
+
+      - name: Déclencher daily soir (streak warning + winback)
+        if: steps.heure.outputs.moment == 'soir' || steps.heure.outputs.moment == 'all'
+        run: |
+          echo "→ Daily soir (streak warning + winback)"
+          curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/notifications/daily-soir || echo "fail soir"
