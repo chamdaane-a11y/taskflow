@@ -718,7 +718,7 @@ export default function Analytics() {
       },
       y: {
         ticks: { color: T.text2 || '#888', font: { size: 11 }, stepSize: 1, callback: v => Number.isInteger(v) ? v : null },
-        grid: { color: (T.border || '#333') + '60', drawBorder: false },
+        grid: { color: (T.border || '#333') + '18', drawBorder: false },
         border: { display: false },
         beginAtZero: true
       }
