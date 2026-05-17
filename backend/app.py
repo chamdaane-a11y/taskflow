@@ -961,6 +961,12 @@ GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleuse
 def health():
     return jsonify({'status': 'ok'}), 200
 
+@app.route('/debug/gcal-env', methods=['GET'])
+def debug_gcal_env():
+    vars_to_check = ['client_id', 'client_secret', 'GOOGLE_CALENDAR_CLIENT_ID',
+                     'GOOGLE_CALENDAR_CLIENT_SECRET', 'INTEGRATIONS_ENCRYPTION_KEY']
+    return jsonify({v: bool(os.environ.get(v)) for v in vars_to_check})
+
 @app.route('/auth/google', methods=['POST'])
 @limiter.limit("20 per minute")
 def auth_google():
