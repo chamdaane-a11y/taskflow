@@ -3167,7 +3167,10 @@ def auth_google_calendar():
     if not user_id:
         return "user_id requis", 400
     if not os.environ.get('GOOGLE_CALENDAR_CLIENT_ID'):
-        return "GOOGLE_CALENDAR_CLIENT_ID non configuré côté serveur", 500
+        return """<!DOCTYPE html><html><body><script>
+window.opener&&window.opener.postMessage({type:'oauth_error',integration:'google_calendar',error:'Google Calendar non configuré côté serveur'},'*');
+setTimeout(()=>window.close(),1500);
+</script><p style="font-family:sans-serif;text-align:center;padding:40px;color:#e05c5c">Google Calendar non disponible</p></body></html>""", 500
     flow = _gcal_flow()
     flow.redirect_uri = GCAL_REDIRECT_URI
     state_token = secrets.token_urlsafe(32)

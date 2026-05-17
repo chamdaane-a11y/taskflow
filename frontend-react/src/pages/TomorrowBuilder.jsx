@@ -8,7 +8,7 @@ import {
   Coffee, Brain, Target, TrendingUp, ChevronDown, ChevronUp,
   RefreshCw, Moon, Sun, Flame, Battery, BatteryLow, BatteryMedium,
   SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare,
-  Play, Pause, X, GripVertical
+  Play, Pause, X, GripVertical, Download, CalendarDays
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -46,7 +46,7 @@ function ProgressBar({ value, color, height = 6 }) {
 }
 
 // ---- Bloc apprentissage durées ----
-function DureeApprentissageBloc({ user, T }) {
+function DureeApprentissageBloc({ user, T, isMobile }) {
   const [stats, setStats] = useState(null)
   const [open, setOpen] = useState(false)
 
@@ -63,10 +63,10 @@ function DureeApprentissageBloc({ user, T }) {
   const accent = precision == null ? T.text2 : precision >= 70 ? '#4caf82' : precision >= 50 ? '#e08a3c' : '#e05c5c'
 
   return (
-    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: isMobile ? '12px 14px' : '14px 16px', marginTop: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: stats.conseil || precision != null ? 10 : 0 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Brain size={15} color={accent} />
+        <div style={{ width: 30, height: 30, borderRadius: 9, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Brain size={14} color={accent} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8 }}>APPRENTISSAGE DURÉES</div>
@@ -134,8 +134,8 @@ function DureeApprentissageBloc({ user, T }) {
 }
 
 // ---- Bloc Push matin 7h ----
-function PushMatinBloc({ user, T, notifier }) {
-  const [state, setState] = useState('loading') // loading | unsupported | denied | inactive | active
+function PushMatinBloc({ user, T, isMobile }) {
+  const [state, setState] = useState('loading') // loading | unsupported | denied | inactive | active | error
   const [busy, setBusy] = useState(false)
 
   const supported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window
@@ -149,6 +149,7 @@ function PushMatinBloc({ user, T, notifier }) {
   }, [user.id])
 
   const urlB64ToUint8 = (b64) => {
+    if (!b64) throw new Error('VAPID key manquante')
     const pad = '='.repeat((4 - b64.length % 4) % 4)
     const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/')
     return Uint8Array.from([...window.atob(s)].map(c => c.charCodeAt(0)))
@@ -160,7 +161,7 @@ function PushMatinBloc({ user, T, notifier }) {
       const reg = await navigator.serviceWorker.register('/taskflow/sw.js')
       await navigator.serviceWorker.ready
       const perm = await Notification.requestPermission()
-      if (perm !== 'granted') { setState('denied'); return }
+      if (perm !== 'granted') { setState('denied'); setBusy(false); return }
       const { data } = await axios.get(`${API}/push/vapid-public-key`)
       const key = urlB64ToUint8(data.public_key)
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
@@ -168,6 +169,7 @@ function PushMatinBloc({ user, T, notifier }) {
       setState('active')
     } catch (e) {
       console.error('[push] activer failed', e)
+      setState('error')
     } finally {
       setBusy(false)
     }
@@ -181,8 +183,8 @@ function PushMatinBloc({ user, T, notifier }) {
       if (sub) await sub.unsubscribe()
       await axios.delete(`${API}/push/unsubscribe/${user.id}`)
       setState('inactive')
-    } catch (e) {
-      console.error('[push] desactiver failed', e)
+    } catch {
+      setState('inactive')
     } finally {
       setBusy(false)
     }
@@ -190,13 +192,8 @@ function PushMatinBloc({ user, T, notifier }) {
 
   const tester = async () => {
     setBusy(true)
-    try {
-      await axios.post(`${API}/push/test/${user.id}`)
-    } catch (e) {
-      console.error('[push] test failed', e)
-    } finally {
-      setBusy(false)
-    }
+    try { await axios.post(`${API}/push/test/${user.id}`) } catch {}
+    finally { setBusy(false) }
   }
 
   const isActive = state === 'active'
@@ -205,62 +202,52 @@ function PushMatinBloc({ user, T, notifier }) {
   const border = isActive ? 'rgba(76,175,130,0.25)' : T.border
 
   return (
-    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12, transition: 'all 0.25s' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: state === 'active' || state === 'inactive' ? 10 : 8 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Sun size={15} color={accent} />
+    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 16, padding: isMobile ? '12px 14px' : '14px 16px', marginTop: 10, transition: 'all 0.25s' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: (isActive || state === 'inactive') ? 10 : 6 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 9, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Sun size={14} color={accent} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8 }}>NOTIF MATIN 7H</div>
-          <div style={{ fontSize: 12, color: isActive ? '#4caf82' : T.text2, fontWeight: 600 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 0.8 }}>NOTIF MATIN 7H</div>
+          <div style={{ fontSize: 11, color: isActive ? '#4caf82' : state === 'error' ? '#e05c5c' : T.text2, fontWeight: 600 }}>
             {state === 'loading' && '…'}
-            {state === 'unsupported' && 'Non supporté par ce navigateur'}
+            {state === 'unsupported' && 'Non supporté'}
             {state === 'denied' && 'Autorisation refusée'}
             {state === 'inactive' && 'Inactif'}
-            {state === 'active' && '✓ Activé · résumé chaque matin'}
+            {state === 'active' && 'Activé · rappel chaque matin'}
+            {state === 'error' && 'Erreur — réessaie'}
           </div>
         </div>
-        {isActive && <CheckCircle size={14} color="#4caf82" />}
+        {isActive && <CheckCircle size={13} color="#4caf82" />}
       </div>
 
       {state === 'denied' && (
         <p style={{ fontSize: 10, color: T.text2, margin: 0, lineHeight: 1.5 }}>
-          Réactive les notifications dans les paramètres de ton navigateur (cadenas → notifications → autoriser).
+          Réactive dans les paramètres navigateur (cadenas → notifications → autoriser).
         </p>
       )}
 
-      {state === 'inactive' && (
+      {(state === 'inactive' || state === 'error') && (
         <motion.button
-          onClick={activer}
-          disabled={busy}
+          onClick={activer} disabled={busy}
           whileHover={!busy ? { scale: 1.02 } : {}}
           whileTap={!busy ? { scale: 0.98 } : {}}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: `${T.accent}15`, border: `1.5px solid ${T.accent}30`, borderRadius: 10, color: T.accent, fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '8px 0', background: `${T.accent}15`, border: `1.5px solid ${T.accent}30`, borderRadius: 9, color: T.accent, fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
         >
           {busy
             ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-flex' }}><RefreshCw size={12} /></motion.span> Activation…</>
-            : <>🔔 Activer la notif 7h</>}
+            : 'Activer la notif 7h'}
         </motion.button>
       )}
 
       {isActive && (
         <div style={{ display: 'flex', gap: 6 }}>
-          <motion.button
-            onClick={tester}
-            disabled={busy}
-            whileHover={!busy ? { scale: 1.02 } : {}}
-            whileTap={!busy ? { scale: 0.98 } : {}}
-            style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
-          >
+          <motion.button onClick={tester} disabled={busy} whileHover={!busy ? { scale: 1.02 } : {}} whileTap={!busy ? { scale: 0.98 } : {}}
+            style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
             Tester
           </motion.button>
-          <motion.button
-            onClick={desactiver}
-            disabled={busy}
-            whileHover={!busy ? { scale: 1.02 } : {}}
-            whileTap={!busy ? { scale: 0.98 } : {}}
-            style={{ flex: 1, padding: '7px 0', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
-          >
+          <motion.button onClick={desactiver} disabled={busy} whileHover={!busy ? { scale: 1.02 } : {}} whileTap={!busy ? { scale: 0.98 } : {}}
+            style={{ flex: 1, padding: '7px 0', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
             Désactiver
           </motion.button>
         </div>
@@ -1193,7 +1180,7 @@ export default function TomorrowBuilder() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                     <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: 0 }}>
-                      📅 Planning de {demainStr}
+                      Planning de {demainStr}
                     </h3>
                     <span style={{ fontSize: 11, color: T.text2 }}>{planning.planning?.length} créneaux</span>
                   </div>
@@ -1289,10 +1276,10 @@ export default function TomorrowBuilder() {
                   </div>
 
                   {/* Push notif matin 7h */}
-                  <PushMatinBloc user={user} T={T} />
+                  <PushMatinBloc user={user} T={T} isMobile={isMobile} />
 
                   {/* Apprentissage durées */}
-                  <DureeApprentissageBloc user={user} T={T} />
+                  <DureeApprentissageBloc user={user} T={T} isMobile={isMobile} />
 
                   {/* Export iCal */}
                   {planning && (
@@ -1315,16 +1302,16 @@ export default function TomorrowBuilder() {
                       whileTap={{ scale: 0.98 }}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 16px', background: `${T.accent}12`, border: `1.5px solid ${T.accent}30`, borderRadius: 14, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 12 }}
                     >
-                      <span>📅</span>
-                      <span>Exporter en iCal</span>
+                      <Download size={13} />
+                      <span>Exporter iCal</span>
                     </motion.button>
                   )}
 
                   {/* Google Calendar */}
                   <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: calendarConnected && calendarEvents.length > 0 ? 10 : 8 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14 }}>
-                        📅
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <CalendarDays size={15} color="#1A73E8" />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: '#1A73E8', letterSpacing: 0.8 }}>GOOGLE CALENDAR</div>
