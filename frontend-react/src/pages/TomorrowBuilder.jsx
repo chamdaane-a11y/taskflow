@@ -265,6 +265,51 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
   )
 }
 
+// ---- Composant event Google Calendar (read-only, non-draggable) ----
+function CalendarEventCard({ event, index, T }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.04 }}
+      onClick={() => event.html_link && window.open(event.html_link, '_blank', 'noopener,noreferrer')}
+      style={{
+        background: 'rgba(26,115,232,0.06)',
+        border: '1.5px solid rgba(26,115,232,0.28)',
+        borderRadius: 14, marginBottom: 8,
+        cursor: event.html_link ? 'pointer' : 'default',
+        overflow: 'hidden',
+      }}
+      whileHover={event.html_link ? { borderColor: 'rgba(26,115,232,0.55)' } : {}}>
+      <div style={{ display: 'flex' }}>
+        <div style={{ width: 4, background: '#1A73E8', flexShrink: 0 }} />
+        <div style={{ flex: 1, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>
+              📅
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.titre}</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#1A73E8', fontWeight: 600 }}>
+                  <Clock size={11} />
+                  {event.all_day ? 'Toute la journée' : `${event.heure_debut} → ${event.heure_fin}`}
+                </span>
+                {event.location && (
+                  <span style={{ fontSize: 11, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>📍 {event.location}</span>
+                )}
+              </div>
+            </div>
+            <div style={{ fontSize: 9, padding: '3px 8px', borderRadius: 99, background: 'rgba(26,115,232,0.15)', color: '#1A73E8', fontWeight: 700, letterSpacing: 0.5, flexShrink: 0 }}>
+              CALENDAR
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // ---- Composant alerte procrastination ----
 function AlerteProcrastination({ alerte, T }) {
   const color = alerte.niveau === 'critique' ? '#e05c5c' : '#e08a3c'
@@ -408,6 +453,9 @@ export default function TomorrowBuilder() {
   const [statutsActions, setStatutsActions] = useState({})
   const [showDecalerIdx, setShowDecalerIdx] = useState(null)
   const [activeId, setActiveId] = useState(null)
+  const [calendarEvents, setCalendarEvents] = useState([])
+  const [calendarConnected, setCalendarConnected] = useState(false)
+  const [calendarConnecting, setCalendarConnecting] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -482,7 +530,53 @@ export default function TomorrowBuilder() {
     chargerSavedPlan()
     chargerProcrastination()
     chargerCheckinToday()
+    chargerCalendarEvents(demain.toISOString().split('T')[0])
   }, [])
+
+  useEffect(() => {
+    if (savedPlan?.date_planifiee) {
+      chargerCalendarEvents(savedPlan.date_planifiee)
+    }
+  }, [savedPlan?.date_planifiee])
+
+  const chargerCalendarEvents = async (dateStr) => {
+    if (!user) return
+    try {
+      const res = await axios.get(`${API}/integrations/google-calendar/events/${user.id}?date=${dateStr}`)
+      setCalendarEvents(res.data.events || [])
+      setCalendarConnected(!!res.data.connected)
+    } catch {
+      setCalendarConnected(false)
+    }
+  }
+
+  const connecterCalendar = () => {
+    setCalendarConnecting(true)
+    const popup = window.open(
+      `${API}/auth/google/calendar?user_id=${user.id}`,
+      'gcal_oauth', 'width=540,height=680,menubar=no,toolbar=no'
+    )
+    const listener = (e) => {
+      if (e.data?.type === 'oauth_success' && e.data?.integration === 'google_calendar') {
+        window.removeEventListener('message', listener)
+        setCalendarConnecting(false)
+        const datePlan = savedPlan?.date_planifiee || demain.toISOString().split('T')[0]
+        chargerCalendarEvents(datePlan)
+      } else if (e.data?.type === 'oauth_error') {
+        window.removeEventListener('message', listener)
+        setCalendarConnecting(false)
+        setErreur('Connexion Google Calendar annulée')
+      }
+    }
+    window.addEventListener('message', listener)
+    const checkPopup = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkPopup)
+        window.removeEventListener('message', listener)
+        setCalendarConnecting(false)
+      }
+    }, 800)
+  }
 
   const chargerCheckinToday = async () => {
     try {
@@ -776,15 +870,24 @@ export default function TomorrowBuilder() {
                       items={(planning.planning || []).map(getPlanItemId)}
                       strategy={verticalListSortingStrategy}>
                       <AnimatePresence mode="popLayout">
-                        {planning.planning?.map((item, i) => (
-                          <SortablePlanningCard key={getPlanItemId(item)} item={item} index={i} T={T}
-                            statut={statutsActions[i]}
-                            onLancer={() => handleLancer(i)}
-                            onDecaler={(min) => handleDecaler(i, min)}
-                            onSkip={() => handleSkip(i)}
-                            showDecalerMenu={showDecalerIdx === i}
-                            onToggleDecalerMenu={() => setShowDecalerIdx(prev => prev === i ? null : i)} />
-                        ))}
+                        {(() => {
+                          const planningItems = (planning.planning || []).map((p, i) => ({ ...p, _src: 'getshift', _idx: i }))
+                          const calItems = (calendarEvents || []).map((e, i) => ({ ...e, _src: 'calendar', _idx: i, type: 'calendar_event' }))
+                          const merged = [...planningItems, ...calItems].sort((a, b) =>
+                            (a.heure_debut || '00:00').localeCompare(b.heure_debut || '00:00')
+                          )
+                          return merged.map((item) =>
+                            item._src === 'calendar'
+                              ? <CalendarEventCard key={`cal-${item._idx}-${item.heure_debut}-${item.titre}`} event={item} index={item._idx} T={T} />
+                              : <SortablePlanningCard key={getPlanItemId(item)} item={item} index={item._idx} T={T}
+                                  statut={statutsActions[item._idx]}
+                                  onLancer={() => handleLancer(item._idx)}
+                                  onDecaler={(min) => handleDecaler(item._idx, min)}
+                                  onSkip={() => handleSkip(item._idx)}
+                                  showDecalerMenu={showDecalerIdx === item._idx}
+                                  onToggleDecalerMenu={() => setShowDecalerIdx(prev => prev === item._idx ? null : item._idx)} />
+                          )
+                        })()}
                       </AnimatePresence>
                     </SortableContext>
                     <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.16,1,0.3,1)' }}>
@@ -846,6 +949,53 @@ export default function TomorrowBuilder() {
                     <p style={{ fontSize: 11, color: T.text2, margin: 0, lineHeight: 1.5 }}>
                       Tes tâches les plus complexes sont planifiées autour de cette heure.
                     </p>
+                  </div>
+
+                  {/* Google Calendar */}
+                  <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: calendarConnected && calendarEvents.length > 0 ? 10 : 8 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14 }}>
+                        📅
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#1A73E8', letterSpacing: 0.8 }}>GOOGLE CALENDAR</div>
+                        <div style={{ fontSize: 11, color: T.text2 }}>
+                          {calendarConnected
+                            ? (calendarEvents.length === 0
+                              ? 'Journée libre ✨'
+                              : `${calendarEvents.length} event${calendarEvents.length > 1 ? 's' : ''}`)
+                            : 'Non connecté'}
+                        </div>
+                      </div>
+                      {calendarConnected && <CheckCircle size={14} color="#1A73E8" />}
+                    </div>
+                    {calendarConnected ? (
+                      calendarEvents.length > 0 && (
+                        <div>
+                          {calendarEvents.slice(0, 5).map((ev, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none' }}>
+                              <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#1A73E8', flexShrink: 0 }} />
+                              <span style={{ fontSize: 11, color: '#1A73E8', fontWeight: 700, flexShrink: 0, minWidth: 38 }}>{ev.all_day ? '—' : ev.heure_debut}</span>
+                              <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ev.titre}</span>
+                            </div>
+                          ))}
+                          {calendarEvents.length > 5 && (
+                            <p style={{ fontSize: 10, color: T.text2, margin: '6px 0 0', textAlign: 'center' }}>+ {calendarEvents.length - 5} autre{calendarEvents.length - 5 > 1 ? 's' : ''}</p>
+                          )}
+                        </div>
+                      )
+                    ) : (
+                      <motion.button
+                        onClick={connecterCalendar}
+                        disabled={calendarConnecting}
+                        whileHover={!calendarConnecting ? { scale: 1.02 } : {}}
+                        whileTap={!calendarConnecting ? { scale: 0.98 } : {}}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'rgba(26,115,232,0.1)', border: '1.5px solid rgba(26,115,232,0.3)', borderRadius: 10, color: '#1A73E8', fontSize: 12, fontWeight: 600, cursor: calendarConnecting ? 'wait' : 'pointer' }}>
+                        {calendarConnecting
+                          ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Connexion…</>
+                          : <>🔗 Connecter mon agenda</>}
+                      </motion.button>
+                    )}
                   </div>
 
                   {/* Tip du jour */}

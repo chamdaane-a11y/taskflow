@@ -2,7 +2,7 @@ import threading
 import schedule
 import time
 import urllib.parse
-from flask import Flask, jsonify, request, make_response
+from flask import Flask, jsonify, request, make_response, redirect
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies
 from flask_limiter import Limiter
@@ -21,7 +21,12 @@ import requests as http_requests
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SGMail
 from google.oauth2 import id_token
+from google.oauth2.credentials import Credentials
 from google.auth.transport import requests as google_requests
+from google.auth.transport.requests import Request as GoogleAuthRequest
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+from cryptography.fernet import Fernet
 
 load_dotenv()
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -3037,15 +3042,171 @@ def save_slack_integration():
 # OAUTH INTEGRATIONS (Calendar, Drive, Zoom, Notion, Discord)
 # ============================================
 
+# ============================================
+# GOOGLE CALENDAR — OAuth réel + events
+# ============================================
+
+GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+GCAL_REDIRECT_URI = "https://getshift-backend.onrender.com/auth/google/calendar/callback"
+
+def _gcal_flow():
+    return Flow.from_client_config({
+        "web": {
+            "client_id": os.environ.get('GOOGLE_CALENDAR_CLIENT_ID', ''),
+            "client_secret": os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET', ''),
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [GCAL_REDIRECT_URI],
+        }
+    }, scopes=GCAL_SCOPES)
+
+def _fernet():
+    key = os.environ.get('INTEGRATIONS_ENCRYPTION_KEY', '')
+    if not key:
+        raise RuntimeError("INTEGRATIONS_ENCRYPTION_KEY manquant")
+    return Fernet(key.encode() if isinstance(key, str) else key)
+
+def get_google_calendar_creds(user_id):
+    """Décrypte les tokens, refresh si expiré, retourne Credentials prêts à l'emploi."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT config FROM integrations WHERE user_id=%s AND type='google_calendar'", (user_id,))
+        row = curseur.fetchone()
+        db.close()
+        if not row or not row['config']:
+            return None
+        tokens = json.loads(_fernet().decrypt(row['config'].encode()).decode())
+        creds = Credentials(
+            token=tokens.get('access_token'),
+            refresh_token=tokens.get('refresh_token'),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=os.environ.get('GOOGLE_CALENDAR_CLIENT_ID', ''),
+            client_secret=os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET', ''),
+            scopes=GCAL_SCOPES,
+        )
+        if tokens.get('expires_at') and tokens['expires_at'] < int(time.time()) + 60:
+            creds.refresh(GoogleAuthRequest())
+            new_tokens = {
+                "access_token": creds.token,
+                "refresh_token": creds.refresh_token or tokens.get('refresh_token'),
+                "expires_at": int(creds.expiry.timestamp()) if creds.expiry else None,
+            }
+            enc = _fernet().encrypt(json.dumps(new_tokens).encode()).decode()
+            db = connecter()
+            curseur = db.cursor()
+            curseur.execute("UPDATE integrations SET config=%s WHERE user_id=%s AND type='google_calendar'", (enc, user_id))
+            db.commit(); db.close()
+        return creds
+    except Exception:
+        return None
+
 @app.route('/auth/google/calendar')
 def auth_google_calendar():
     user_id = request.args.get('user_id')
-    # TODO : implémenter le vrai flow OAuth Google Calendar
-    # Pour l'instant, retourne le postMessage de succès
-    return """<script>
-        window.opener.postMessage({type:'oauth_success',integration:'google_calendar'},'*');
-        window.close();
-    </script>"""
+    if not user_id:
+        return "user_id requis", 400
+    if not os.environ.get('GOOGLE_CALENDAR_CLIENT_ID'):
+        return "GOOGLE_CALENDAR_CLIENT_ID non configuré côté serveur", 500
+    flow = _gcal_flow()
+    flow.redirect_uri = GCAL_REDIRECT_URI
+    state_token = secrets.token_urlsafe(32)
+    db = connecter()
+    curseur = db.cursor()
+    curseur.execute("""CREATE TABLE IF NOT EXISTS oauth_states (
+        state VARCHAR(64) PRIMARY KEY, user_id INT NOT NULL,
+        integration VARCHAR(50) NOT NULL,
+        cree_le DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+    curseur.execute("DELETE FROM oauth_states WHERE cree_le < DATE_SUB(NOW(), INTERVAL 1 HOUR)")
+    curseur.execute("INSERT INTO oauth_states (state, user_id, integration) VALUES (%s, %s, 'google_calendar')", (state_token, user_id))
+    db.commit(); db.close()
+    auth_url, _ = flow.authorization_url(
+        access_type='offline', prompt='consent',
+        state=state_token, include_granted_scopes='true'
+    )
+    return redirect(auth_url)
+
+@app.route('/auth/google/calendar/callback')
+def auth_google_calendar_callback():
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    if error:
+        return f"""<script>
+            window.opener && window.opener.postMessage({{type:'oauth_error',integration:'google_calendar',error:'{error}'}},'*');
+            window.close();
+        </script>"""
+    if not code or not state:
+        return "Paramètres OAuth manquants", 400
+    db = connecter()
+    curseur = db.cursor(dictionary=True)
+    curseur.execute("SELECT user_id FROM oauth_states WHERE state=%s AND integration='google_calendar'", (state,))
+    row = curseur.fetchone()
+    if not row:
+        db.close()
+        return "State invalide ou expiré", 400
+    user_id = row['user_id']
+    curseur.execute("DELETE FROM oauth_states WHERE state=%s", (state,))
+    db.commit()
+    try:
+        flow = _gcal_flow()
+        flow.redirect_uri = GCAL_REDIRECT_URI
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+        tokens = {
+            "access_token": creds.token,
+            "refresh_token": creds.refresh_token,
+            "expires_at": int(creds.expiry.timestamp()) if creds.expiry else None,
+        }
+        encrypted = _fernet().encrypt(json.dumps(tokens).encode()).decode()
+        curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='google_calendar'", (user_id,))
+        curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, 'google_calendar', %s)", (user_id, encrypted))
+        db.commit(); db.close()
+        return """<script>
+            window.opener && window.opener.postMessage({type:'oauth_success',integration:'google_calendar'},'*');
+            window.close();
+        </script>"""
+    except Exception as e:
+        db.close()
+        return f"<pre>Erreur OAuth: {str(e)[:200]}</pre>", 500
+
+@app.route('/integrations/google-calendar/events/<int:user_id>', methods=['GET'])
+def get_calendar_events(user_id):
+    date_str = request.args.get('date')
+    if not date_str:
+        date_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    creds = get_google_calendar_creds(user_id)
+    if not creds:
+        return jsonify({"events": [], "connected": False, "date": date_str})
+    try:
+        service = build('calendar', 'v3', credentials=creds, cache_discovery=False)
+        date_dt = datetime.strptime(date_str, '%Y-%m-%d')
+        time_min = date_dt.isoformat() + 'Z'
+        time_max = (date_dt + timedelta(days=1)).isoformat() + 'Z'
+        result = service.events().list(
+            calendarId='primary', timeMin=time_min, timeMax=time_max,
+            singleEvents=True, orderBy='startTime', maxResults=25
+        ).execute()
+        events = []
+        for ev in result.get('items', []):
+            start = ev.get('start', {})
+            end = ev.get('end', {})
+            start_dt = start.get('dateTime') or start.get('date')
+            end_dt = end.get('dateTime') or end.get('date')
+            if not start_dt:
+                continue
+            all_day = 'dateTime' not in start
+            events.append({
+                'titre': ev.get('summary', '(Sans titre)'),
+                'heure_debut': start_dt[11:16] if not all_day else '00:00',
+                'heure_fin': end_dt[11:16] if not all_day else '23:59',
+                'all_day': all_day,
+                'location': ev.get('location', ''),
+                'html_link': ev.get('htmlLink', ''),
+            })
+        return jsonify({"events": events, "connected": True, "date": date_str})
+    except Exception as e:
+        return jsonify({"events": [], "connected": False, "erreur": str(e)[:200]}), 200
 
 @app.route('/auth/google/drive')
 def auth_google_drive():
@@ -3494,8 +3655,27 @@ def tomorrow_builder(user_id):
                 if dernier_checkin.get('note_libre'): checkin_context += f". Note user: {dernier_checkin['note_libre'][:80]}"
         except:
             pass
+        calendar_context = ""
+        try:
+            gcal_creds = get_google_calendar_creds(user_id)
+            if gcal_creds:
+                service = build('calendar', 'v3', credentials=gcal_creds, cache_discovery=False)
+                demain_dt = datetime.now() + timedelta(days=1)
+                t_min = demain_dt.replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + 'Z'
+                t_max = (demain_dt + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + 'Z'
+                evts = service.events().list(calendarId='primary', timeMin=t_min, timeMax=t_max, singleEvents=True, orderBy='startTime', maxResults=15).execute()
+                lignes = []
+                for ev in evts.get('items', []):
+                    start = ev.get('start', {})
+                    end = ev.get('end', {})
+                    if 'dateTime' in start and 'dateTime' in end:
+                        lignes.append(f"{start['dateTime'][11:16]}→{end['dateTime'][11:16]} {ev.get('summary','Réservé')[:40]}")
+                if lignes:
+                    calendar_context = f"\nCRÉNEAUX DÉJÀ OCCUPÉS (Google Calendar — INTERDIT de planifier dessus): {' | '.join(lignes[:8])}"
+        except Exception:
+            pass
         prompt = f"""Crée le planning optimal pour demain ({demain}).
-Score énergie: {score_energie}/100 ({niveau_energie}), heure productive: {heure_productive}h{checkin_context}
+Score énergie: {score_energie}/100 ({niveau_energie}), heure productive: {heure_productive}h{checkin_context}{calendar_context}
 Tâches: {prompt_taches}
 Réponds UNIQUEMENT en JSON: {{"score_energie": {score_energie}, "niveau_energie": "{niveau_energie}", "heure_productive": {heure_productive}, "duree_totale_planifiee": 0, "conseil_journee": "", "alerte_burnout": false, "message_alerte": null, "planning": [{{"ordre": 1, "heure_debut": "09:00", "heure_fin": "10:00", "type": "tache", "titre": "", "priorite": "haute", "duree_minutes": 60, "raison_placement": "", "energie_requise": "élevée", "tips": ""}}], "taches_reportees": [], "resume_global": ""}}"""
         response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], max_tokens=2000, temperature=0.7)
