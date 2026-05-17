@@ -2321,6 +2321,22 @@ def get_membres_equipe(equipe_id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+def _ensure_taches_equipe_columns(curseur):
+    """Ajoute completed_at + completed_by si absents (migration lazy)."""
+    try:
+        curseur.execute("SHOW COLUMNS FROM taches_equipe LIKE 'completed_at'")
+        if not curseur.fetchone():
+            curseur.execute("ALTER TABLE taches_equipe ADD COLUMN completed_at DATETIME NULL")
+    except Exception:
+        pass
+    try:
+        curseur.execute("SHOW COLUMNS FROM taches_equipe LIKE 'completed_by'")
+        if not curseur.fetchone():
+            curseur.execute("ALTER TABLE taches_equipe ADD COLUMN completed_by INT NULL")
+    except Exception:
+        pass
+
+
 @app.route('/equipes/<int:equipe_id>/taches', methods=['GET'])
 def get_taches_equipe(equipe_id):
     try:
@@ -2332,15 +2348,82 @@ def get_taches_equipe(equipe_id):
             db.commit()
         except Exception:
             pass
+        _ensure_taches_equipe_columns(curseur)
+        db.commit()
         curseur.execute("""
             SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom,
+                u3.nom as completed_by_nom,
                 (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires
-            FROM taches_equipe te JOIN users u1 ON te.createur_id=u1.id LEFT JOIN users u2 ON te.assignee_id=u2.id
+            FROM taches_equipe te
+            JOIN users u1 ON te.createur_id=u1.id
+            LEFT JOIN users u2 ON te.assignee_id=u2.id
+            LEFT JOIN users u3 ON te.completed_by=u3.id
             WHERE te.equipe_id=%s ORDER BY te.created_at DESC
         """, (equipe_id,))
         taches = curseur.fetchall()
+        for t in taches:
+            if t.get('completed_at'):
+                t['completed_at'] = t['completed_at'].isoformat() if hasattr(t['completed_at'], 'isoformat') else str(t['completed_at'])
         db.close()
         return jsonify(taches)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/taches/<int:tache_id>/toggle-fait', methods=['PATCH'])
+def toggle_tache_fait(tache_id):
+    """Toggle done/undone par n'importe quel membre de l'équipe.
+    Met à jour statut + completed_at + completed_by + log activité."""
+    try:
+        data = request.get_json() or {}
+        user_id = data.get('user_id')
+        nom_user = data.get('nom_user', 'Quelqu\'un')
+        if not user_id:
+            return jsonify({"erreur": "user_id requis"}), 400
+
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        _ensure_taches_equipe_columns(curseur)
+        db.commit()
+
+        curseur.execute("SELECT statut, titre, equipe_id, createur_id, assignee_id FROM taches_equipe WHERE id=%s", (tache_id,))
+        t = curseur.fetchone()
+        if not t:
+            db.close()
+            return jsonify({"erreur": "Tâche introuvable"}), 404
+
+        if t['statut'] == 'termine':
+            # Re-ouvre : retour en 'todo' + clear completion meta
+            curseur.execute(
+                "UPDATE taches_equipe SET statut='todo', completed_at=NULL, completed_by=NULL WHERE id=%s",
+                (tache_id,)
+            )
+            action = 'a ré-ouvert la tâche'
+        else:
+            curseur.execute(
+                "UPDATE taches_equipe SET statut='termine', completed_at=NOW(), completed_by=%s WHERE id=%s",
+                (user_id, tache_id)
+            )
+            action = 'a terminé la tâche'
+        db.commit()
+
+        # Récupère la tâche enrichie pour la réponse
+        curseur.execute("""
+            SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom, u3.nom as completed_by_nom,
+                (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires
+            FROM taches_equipe te
+            JOIN users u1 ON te.createur_id=u1.id
+            LEFT JOIN users u2 ON te.assignee_id=u2.id
+            LEFT JOIN users u3 ON te.completed_by=u3.id
+            WHERE te.id=%s
+        """, (tache_id,))
+        tache = curseur.fetchone()
+        if tache and tache.get('completed_at'):
+            tache['completed_at'] = tache['completed_at'].isoformat() if hasattr(tache['completed_at'], 'isoformat') else str(tache['completed_at'])
+        db.close()
+
+        log_activite(t['equipe_id'], user_id, nom_user, action, t['titre'], tache_id)
+        return jsonify(tache)
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 

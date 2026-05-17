@@ -238,10 +238,25 @@ function QuickAddInline({ T, col, onAdd }) {
 }
 
 // ===== CARTE TÂCHE — DRAGGABLE =====
-function CarteTache({ T, tache, membres, onModifier, onOuvrir, onAssign, isDragOverlay = false }) {
+function tempsRelatif(iso) {
+  if (!iso) return ''
+  try {
+    const d = new Date(iso)
+    const diff = (Date.now() - d.getTime()) / 1000
+    if (diff < 60) return 'à l\'instant'
+    if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`
+    if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
+    if (diff < 604800) return `il y a ${Math.floor(diff / 86400)}j`
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+  } catch { return '' }
+}
+
+function CarteTache({ T, tache, membres, onModifier, onOuvrir, onAssign, onToggleFait, isDragOverlay = false }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(tache.id) })
   const [assignOpen, setAssignOpen] = useState(false)
+  const [checkHover, setCheckHover] = useState(false)
   const popRef = useRef(null)
+  const isDone = tache.statut === 'termine'
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging && !isDragOverlay ? 0.35 : 1,
@@ -261,21 +276,68 @@ function CarteTache({ T, tache, membres, onModifier, onOuvrir, onAssign, isDragO
   return (
     <div ref={setNodeRef} style={{ ...style, position: 'relative' }} {...attributes}>
       <motion.div layout
-        style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 12, padding: '12px 14px', marginBottom: 8, boxShadow: isDragOverlay ? '0 12px 40px rgba(0,0,0,0.28)' : 'none' }}
+        style={{
+          background: isDone ? `${T.bg}88` : T.bg,
+          border: `1px solid ${isDone ? '#4caf8230' : T.border}`,
+          borderRadius: 12, padding: '12px 14px', marginBottom: 8,
+          boxShadow: isDragOverlay ? '0 12px 40px rgba(0,0,0,0.28)' : 'none',
+          opacity: isDone ? 0.72 : 1,
+          transition: 'opacity 0.2s, background 0.2s',
+        }}
         whileHover={!isDragging ? { borderColor: col?.couleur + '55', y: -1, boxShadow: '0 4px 20px rgba(0,0,0,0.12)' } : {}}
         onClick={() => !isDragging && onOuvrir(tache)}
-        initial={isDragOverlay ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        initial={isDragOverlay ? false : { opacity: 0, y: 8 }} animate={{ opacity: isDone ? 0.72 : 1, y: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+          {/* Checkbox terminer/ré-ouvrir */}
+          <motion.button
+            onClick={e => { e.stopPropagation(); onToggleFait?.(tache.id, !isDone) }}
+            onMouseEnter={() => setCheckHover(true)}
+            onMouseLeave={() => setCheckHover(false)}
+            whileTap={{ scale: 0.85 }}
+            title={isDone ? 'Ré-ouvrir' : 'Marquer terminée'}
+            style={{
+              width: 18, height: 18, borderRadius: '50%',
+              border: `1.8px solid ${isDone ? '#4caf82' : (checkHover ? '#4caf82' : T.border)}`,
+              background: isDone ? '#4caf82' : (checkHover ? '#4caf8215' : 'transparent'),
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, marginTop: 1, cursor: 'pointer', padding: 0,
+              transition: 'all 0.15s',
+            }}>
+            {(isDone || checkHover) && (
+              <motion.div
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+                <Check size={11} color={isDone ? '#fff' : '#4caf82'} strokeWidth={3.5} />
+              </motion.div>
+            )}
+          </motion.button>
           <div {...listeners} style={{ cursor: 'grab', flexShrink: 0, color: T.text2, paddingTop: 3 }} onClick={e => e.stopPropagation()}>
             <GripVertical size={12} />
           </div>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITE_COLOR[tache.priorite], flexShrink: 0, marginTop: 5 }} />
-          <p style={{ fontSize: 13, fontWeight: 600, color: T.text, lineHeight: 1.4, flex: 1, margin: 0 }}>{tache.titre}</p>
+          <p style={{
+            fontSize: 13, fontWeight: 600, lineHeight: 1.4, flex: 1, margin: 0,
+            color: isDone ? T.text2 : T.text,
+            textDecoration: isDone ? 'line-through' : 'none',
+          }}>{tache.titre}</p>
           <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 2, flexShrink: 0 }}
             onClick={e => { e.stopPropagation(); onModifier(tache) }} whileHover={{ color: T.accent }}>
             <MoreHorizontal size={14} />
           </motion.button>
         </div>
+
+        {/* Badge "terminé par X il y a Y" */}
+        {isDone && tache.completed_by_nom && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 10, color: '#4caf82', fontWeight: 600,
+            background: '#4caf8210', padding: '3px 8px', borderRadius: 99,
+            marginBottom: 8, width: 'fit-content',
+          }}>
+            <Check size={9} strokeWidth={3} />
+            <span>Par {tache.completed_by_nom} · {tempsRelatif(tache.completed_at)}</span>
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             {/* Avatar cliquable : assigner / désassigner rapidement */}
@@ -1413,6 +1475,39 @@ export default function Collaboration() {
     }
   }, [equipeActive, user, addToast])
 
+  // ── Toggle terminer/ré-ouvrir une tâche depuis la checkbox de la carte ──
+  const toggleFait = useCallback(async (tacheId, marquerFait) => {
+    const prev = tachesRef.current
+    // Optimistic update
+    setTaches(p => p.map(t => t.id === tacheId
+      ? {
+          ...t,
+          statut: marquerFait ? 'termine' : 'todo',
+          completed_at: marquerFait ? new Date().toISOString() : null,
+          completed_by: marquerFait ? user.id : null,
+          completed_by_nom: marquerFait ? user.nom : null,
+        }
+      : t
+    ))
+    try {
+      const r = await axios.patch(`${API}/equipes/taches/${tacheId}/toggle-fait`, {
+        user_id: user.id, nom_user: user.nom,
+      })
+      // Resync avec la réponse serveur (vraie date)
+      if (r.data?.id) {
+        setTaches(p => p.map(t => t.id === tacheId ? { ...t, ...r.data } : t))
+      }
+      if (marquerFait) {
+        addToast('Tâche terminée — bien joué', '✓', '#4caf82')
+      } else {
+        addToast('Tâche ré-ouverte', '↻', '#6c63ff')
+      }
+    } catch {
+      setTaches(prev)
+      addToast('Erreur — réessaie', '❌', '#e05c5c')
+    }
+  }, [user, addToast])
+
   // ── Assignation rapide depuis la carte (sans modale) ──
   const quickAssigner = useCallback(async (tacheId, assigneeId) => {
     const prev = tachesRef.current
@@ -1845,7 +1940,8 @@ export default function Collaboration() {
                           <CarteTache key={t.id} T={T} tache={t} membres={membres}
                             onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
                             onOuvrir={setTacheCommentaires}
-                            onAssign={quickAssigner} />
+                            onAssign={quickAssigner}
+                            onToggleFait={toggleFait} />
                         ))}
                       </AnimatePresence>
                       {tachesCol(col.id).length === 0 && (
