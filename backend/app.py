@@ -621,6 +621,45 @@ def _html_resume_hebdo(nom, stats):
             </div>
             """
 
+    # ── SECTION 11.9 : Objectifs en cours (Goal Reverse) ──
+    section_objectifs = ""
+    objectifs_hebdo = stats.get("objectifs_en_cours", [])
+    if objectifs_hebdo:
+        rows_obj = ""
+        for obj in objectifs_hebdo[:4]:
+            pct_obj = obj.get("progression", 0)
+            barre_obj = max(4, min(100, int(pct_obj)))
+            couleur_obj = "#4caf82" if pct_obj >= 70 else "#e08a3c" if pct_obj >= 30 else "#e05c5c"
+            j_rest = obj.get("jours_restants")
+            urgence = ""
+            if j_rest is not None:
+                if j_rest < 0:
+                    urgence = f'<span style="color:#e05c5c;font-weight:700;">⚠️ En retard de {abs(j_rest)}j</span>'
+                elif j_rest <= 7:
+                    urgence = f'<span style="color:#e08a3c;font-weight:700;">⏰ J-{j_rest}</span>'
+                else:
+                    urgence = f'<span style="color:#8888a8;">J-{j_rest}</span>'
+            retard_label = f' <span style="color:#e05c5c;">(⚠ {obj.get("taches_en_retard",0)} en retard)</span>' if obj.get("taches_en_retard", 0) > 0 else ""
+            rows_obj += f"""
+            <div style="margin-bottom:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <span style="font-size:12.5px;color:#e8e8f0;font-weight:600;">{obj.get('titre','')}{retard_label}</span>
+                <span style="font-size:11px;">{urgence}</span>
+              </div>
+              <div style="height:6px;background:#ffffff10;border-radius:99px;margin-bottom:4px;">
+                <div style="height:6px;width:{barre_obj}%;background:{couleur_obj};border-radius:99px;"></div>
+              </div>
+              <div style="font-size:10px;color:#8888a8;">{obj.get('taches_done',0)}/{obj.get('taches_total',0)} tâches · {pct_obj}%</div>
+            </div>
+            """
+        section_objectifs = f"""
+        <div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="color:#6c63ff;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px;">🎯 TES OBJECTIFS EN COURS</div>
+          {rows_obj}
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/goal" style="display:inline-block;margin-top:4px;font-size:11px;color:#6c63ff;text-decoration:none;font-weight:600;">Voir tous mes objectifs →</a>
+        </div>
+        """
+
     # ── SECTION 12 : CTAs ──
     section_cta = """
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
@@ -644,7 +683,7 @@ def _html_resume_hebdo(nom, stats):
         section_header + section_kpi + section_progression + section_taux
         + section_activite + section_top_done + section_attente
         + section_categories + section_calibration + section_badges
-        + section_potentiel + section_defi + section_conseil + section_cta
+        + section_objectifs + section_potentiel + section_defi + section_conseil + section_cta
     )
     return _base_email(contenu, "Bilan hebdomadaire — GetShift")
 
@@ -828,6 +867,40 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
     except Exception:
         pass  # table user_badges peut ne pas exister
 
+    # ── Objectifs Goal Reverse en cours ──
+    objectifs_en_cours = []
+    try:
+        from datetime import date as _date
+        today_obj = _date.today()
+        cursor.execute("""SELECT id, titre, deadline, score_faisabilite FROM objectifs
+            WHERE user_id=%s AND statut='actif' ORDER BY cree_le DESC LIMIT 5""", (user_id,))
+        goals = cursor.fetchall()
+        for g in goals:
+            gid = g['id']
+            cursor.execute("""SELECT COUNT(*) as total,
+                SUM(CASE WHEN terminee=1 THEN 1 ELSE 0 END) as done
+                FROM taches WHERE objectif_id=%s""", (gid,))
+            gs = cursor.fetchone()
+            gt = gs['total'] or 0
+            gd = gs['done'] or 0
+            cursor.execute("""SELECT COUNT(*) as late FROM taches
+                WHERE objectif_id=%s AND terminee=0 AND deadline IS NOT NULL AND deadline < %s""",
+                (gid, today_obj))
+            glate = (cursor.fetchone()['late'] or 0)
+            dl = g['deadline']
+            j_rest = None
+            if dl:
+                dl_d = dl if isinstance(dl, _date) else _date.fromisoformat(str(dl))
+                j_rest = (dl_d - today_obj).days
+            objectifs_en_cours.append({
+                'titre': g['titre'], 'deadline': str(g['deadline']) if g['deadline'] else None,
+                'progression': round(gd / gt * 100) if gt else 0,
+                'taches_done': gd, 'taches_total': gt,
+                'taches_en_retard': glate, 'jours_restants': j_rest,
+            })
+    except Exception:
+        pass
+
     return {
         "jours_actifs": jours_actifs,
         "taches_haute_done": taches_haute_done,
@@ -838,6 +911,7 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
         "streak": streak,
         "calibration_globale": calibration_globale,
         "badges_semaine": badges_semaine,
+        "objectifs_en_cours": objectifs_en_cours,
     }
 
 
@@ -5122,8 +5196,10 @@ def goal_reverse_importer():
 
 @app.route('/ia/goal-reverse/list/<int:user_id>', methods=['GET'])
 def goal_reverse_list(user_id):
-    """Liste les objectifs actifs avec progress."""
+    """Liste les objectifs actifs avec progress, prochain jalon, urgence."""
     try:
+        from datetime import date as _date
+        today = _date.today()
         db = connecter()
         curseur = db.cursor(dictionary=True)
         _ensure_objectifs_schema(curseur)
@@ -5132,14 +5208,37 @@ def goal_reverse_list(user_id):
         objectifs = curseur.fetchall()
         result = []
         for o in objectifs:
+            oid = o['id']
+            # Progression globale
             curseur.execute("""SELECT COUNT(*) as total,
                 SUM(CASE WHEN terminee=1 THEN 1 ELSE 0 END) as done
-                FROM taches WHERE objectif_id=%s""", (o['id'],))
+                FROM taches WHERE objectif_id=%s""", (oid,))
             stats = curseur.fetchone()
             total = stats['total'] or 0
             done = stats['done'] or 0
+
+            # Prochaine tâche non terminée (deadline la plus proche)
+            curseur.execute("""SELECT titre, deadline FROM taches
+                WHERE objectif_id=%s AND terminee=0
+                ORDER BY (deadline IS NULL), deadline ASC LIMIT 1""", (oid,))
+            next_t = curseur.fetchone()
+            prochaine_etape = next_t['titre'] if next_t else None
+
+            # Tâches en retard (deadline dépassée, non terminées)
+            curseur.execute("""SELECT COUNT(*) as late FROM taches
+                WHERE objectif_id=%s AND terminee=0
+                  AND deadline IS NOT NULL AND deadline < %s""", (oid, today))
+            late_row = curseur.fetchone()
+            taches_en_retard = late_row['late'] or 0
+
+            # Jours restants jusqu'à la deadline objectif
+            jours_restants = None
+            if o['deadline']:
+                dl = o['deadline'] if isinstance(o['deadline'], _date) else _date.fromisoformat(str(o['deadline']))
+                jours_restants = (dl - today).days
+
             result.append({
-                'id': o['id'],
+                'id': oid,
                 'titre': o['titre'],
                 'deadline': str(o['deadline']) if o['deadline'] else None,
                 'niveau': o['niveau'],
@@ -5148,11 +5247,86 @@ def goal_reverse_list(user_id):
                 'taches_total': total,
                 'taches_done': done,
                 'cree_le': str(o['cree_le']),
+                'prochaine_etape': prochaine_etape,
+                'taches_en_retard': taches_en_retard,
+                'needs_replanning': taches_en_retard >= 2,
+                'jours_restants': jours_restants,
             })
         db.close()
         return jsonify({"objectifs": result})
     except Exception as e:
         return jsonify({"error": str(e), "objectifs": []}), 200
+
+
+@app.route('/ia/goal-reverse/<int:objectif_id>/replanning', methods=['POST'])
+def goal_reverse_replanning(objectif_id):
+    """Auto-replanning IA : redistribue les tâches en retard sur les semaines restantes."""
+    try:
+        from datetime import date as _date
+        today = _date.today()
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+
+        curseur.execute("SELECT * FROM objectifs WHERE id=%s", (objectif_id,))
+        objectif = curseur.fetchone()
+        if not objectif:
+            return jsonify({"erreur": "Objectif introuvable"}), 404
+
+        # Tâches en retard
+        curseur.execute("""SELECT titre, deadline FROM taches
+            WHERE objectif_id=%s AND terminee=0 AND deadline IS NOT NULL AND deadline < %s
+            ORDER BY deadline""", (objectif_id, today))
+        retard = [r['titre'] for r in curseur.fetchall()]
+
+        # Tâches à venir (non terminées, deadline OK ou pas de deadline)
+        curseur.execute("""SELECT titre, deadline FROM taches
+            WHERE objectif_id=%s AND terminee=0
+              AND (deadline IS NULL OR deadline >= %s)
+            ORDER BY (deadline IS NULL), deadline""", (objectif_id, today))
+        a_venir = [r['titre'] for r in curseur.fetchall()]
+
+        # Deadline finale de l'objectif
+        deadline_finale = str(objectif['deadline']) if objectif['deadline'] else "non définie"
+        dl_obj = objectif['deadline'] if isinstance(objectif['deadline'], _date) else (
+            _date.fromisoformat(str(objectif['deadline'])) if objectif['deadline'] else None
+        )
+        semaines_restantes = max(1, ((dl_obj - today).days // 7) if dl_obj else 4)
+
+        prompt = f"""Tu es un coach expert en planification agile.
+
+L'utilisateur a un objectif : "{objectif['titre']}" (deadline : {deadline_finale}).
+Il reste {semaines_restantes} semaine(s) jusqu'à la deadline.
+
+Tâches EN RETARD (à réintégrer) : {retard}
+Tâches encore à faire : {a_venir}
+
+Propose un replanning en JSON strict, sans markdown, sans commentaire :
+{{
+  "analyse": "1-2 phrases : pourquoi il est en retard et quel ajustement clé",
+  "jalons_restants": [
+    {{"semaine": 1, "titre": "Sprint X", "taches": ["tache1", "tache2"]}},
+    ...
+  ],
+  "conseil": "1 conseil ACTIONNABLE pour ne plus être en retard"
+}}
+
+Les jalons_restants doivent couvrir toutes les tâches en retard + à venir, réparties sur {semaines_restantes} semaines.
+Sois réaliste : max 4-5 tâches par semaine."""
+
+        completion = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800, temperature=0.5
+        )
+        raw = completion.choices[0].message.content.strip()
+        start = raw.find('{'); end = raw.rfind('}') + 1
+        plan = json.loads(raw[start:end]) if start != -1 else {}
+
+        db.close()
+        return jsonify({"objectif_id": objectif_id, "replanning": plan})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 
 # ============================================
 # SPRINT 8 — GETSHIFT AI AUGMENTÉ

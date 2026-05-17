@@ -1453,6 +1453,168 @@ const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, na
   )
 })
 
+// ── GoalWidget — objectifs en cours avec progress ────────────────────────────
+const GoalWidget = memo(function GoalWidget({ d, T, isMobile, navigate }) {
+  const [objectifs, setObjectifs] = useState([])
+  const [loaded, setLoaded] = useState(false)
+  const [replanningId, setReplanningId] = useState(null)
+  const [replanningLoading, setReplanningLoading] = useState(false)
+  const [replanningData, setReplanningData] = useState({})
+  const userId = d.user?.id
+
+  useEffect(() => {
+    if (!userId) return
+    axios.get(`${API}/ia/goal-reverse/list/${userId}`)
+      .then(r => setObjectifs(r.data.objectifs || []))
+      .catch(() => {})
+      .finally(() => setLoaded(true))
+  }, [userId])
+
+  const lancerReplanning = async (id) => {
+    setReplanningId(id)
+    setReplanningLoading(true)
+    try {
+      const r = await axios.post(`${API}/ia/goal-reverse/${id}/replanning`)
+      setReplanningData(prev => ({ ...prev, [id]: r.data.replanning }))
+    } catch {}
+    setReplanningLoading(false)
+  }
+
+  if (!loaded || objectifs.length === 0) return null
+
+  const pColor = (pct) => pct >= 70 ? '#4caf82' : pct >= 30 ? '#e08a3c' : '#6c63ff'
+  const niveauColor = (n) => n === 'expert' ? '#e05c5c' : n === 'intermédiaire' ? '#e08a3c' : '#4caf82'
+  const urgenceInfo = (j) => {
+    if (j === null || j === undefined) return null
+    if (j < 0) return { label: `${Math.abs(j)}j de retard`, color: '#e05c5c' }
+    if (j === 0) return { label: "Aujourd'hui !", color: '#e05c5c' }
+    if (j <= 7) return { label: `J-${j}`, color: '#e08a3c' }
+    if (j <= 14) return { label: `J-${j}`, color: T.text2 }
+    return null
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 20 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Target size={14} color={T.accent} strokeWidth={2.5} />
+          </div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Mes objectifs</span>
+          <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: `${T.accent}15`, color: T.accent, fontWeight: 700 }}>
+            {objectifs.length}
+          </span>
+        </div>
+        <motion.button onClick={() => navigate('/goal')} whileHover={{ x: 2 }}
+          style={{ fontSize: 12, color: T.accent, background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+          Voir tout <ChevronRight size={13} />
+        </motion.button>
+      </div>
+
+      {/* Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+        {objectifs.map(obj => {
+          const pct = obj.progression
+          const pc = pColor(pct)
+          const urg = urgenceInfo(obj.jours_restants)
+          const plan = replanningData[obj.id]
+          const isReplanning = replanningLoading && replanningId === obj.id
+
+          return (
+            <div key={obj.id} style={{
+              background: T.bg2,
+              border: `1px solid ${obj.needs_replanning ? 'rgba(224,92,92,0.25)' : T.border}`,
+              borderRadius: 14, padding: '14px 16px', position: 'relative', overflow: 'hidden',
+            }}>
+              {/* Strip urgence */}
+              {urg && (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2.5, background: urg.color, borderRadius: '14px 14px 0 0' }} />
+              )}
+
+              {/* Titre + badge */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {obj.titre}
+                  </div>
+                  <span style={{ fontSize: 9.5, color: niveauColor(obj.niveau), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {obj.niveau || 'intermédiaire'}
+                  </span>
+                </div>
+                {urg && (
+                  <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: `${urg.color}18`, color: urg.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {urg.label}
+                  </span>
+                )}
+              </div>
+
+              {/* Barre de progression */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.text2, marginBottom: 4, fontWeight: 600 }}>
+                  <span>{obj.taches_done}/{obj.taches_total} tâches</span>
+                  <span style={{ color: pc, fontWeight: 700 }}>{pct}%</span>
+                </div>
+                <div style={{ height: 5, background: T.bg3, borderRadius: 99, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+                  <motion.div
+                    initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    style={{ height: '100%', background: `linear-gradient(90deg, ${pc}, ${pc}bb)`, borderRadius: 99 }} />
+                </div>
+              </div>
+
+              {/* Prochaine étape */}
+              {obj.prochaine_etape && (
+                <div style={{ fontSize: 11, color: T.text2, marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 5, lineHeight: 1.4 }}>
+                  <ChevronRight size={11} strokeWidth={2.5} color={T.accent} style={{ marginTop: 1, flexShrink: 0 }} />
+                  <span>{obj.prochaine_etape}</span>
+                </div>
+              )}
+
+              {/* Bouton replanning */}
+              {obj.needs_replanning && !plan && (
+                <motion.button
+                  onClick={() => lancerReplanning(obj.id)}
+                  disabled={isReplanning}
+                  whileHover={isReplanning ? {} : { scale: 1.02 }} whileTap={isReplanning ? {} : { scale: 0.98 }}
+                  style={{ width: '100%', padding: '7px 10px', background: 'rgba(224,92,92,0.09)', border: '1px solid rgba(224,92,92,0.22)', borderRadius: 9, color: '#e05c5c', fontSize: 11, fontWeight: 700, cursor: isReplanning ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  {isReplanning
+                    ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: 14 }}>↻</motion.span> Replanning en cours…</>
+                    : <><AlertTriangle size={12} strokeWidth={2.5} /> {obj.taches_en_retard} en retard — Replanning IA</>
+                  }
+                </motion.button>
+              )}
+
+              {/* Résultat replanning */}
+              {plan && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  style={{ marginTop: 10, padding: '10px 12px', background: `${T.accent}08`, border: `1px solid ${T.accent}20`, borderRadius: 10 }}>
+                  {plan.analyse && (
+                    <p style={{ fontSize: 11, color: T.text2, lineHeight: 1.5, marginBottom: 8, fontStyle: 'italic', margin: '0 0 8px' }}>
+                      {plan.analyse}
+                    </p>
+                  )}
+                  {(plan.jalons_restants || []).map((j, i) => (
+                    <div key={i} style={{ fontSize: 10.5, color: T.text2, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 700, color: T.accent }}>S{j.semaine} — {j.titre} :</span>{' '}
+                      {(j.taches || []).join(', ')}
+                    </div>
+                  ))}
+                  {plan.conseil && (
+                    <div style={{ fontSize: 11, color: T.accent, fontWeight: 600, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
+                      💡 {plan.conseil}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </motion.div>
+  )
+})
+
 // ── FocusDuJour — 3 priorités de la journée ──────────────────────────────────
 const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -2585,6 +2747,9 @@ export default function Dashboard() {
 
           {/* Stats HUD — Niveau / Streak / Points semaine / Réussite (caché si nouveau user) */}
           {!isNewUser && <StatsHUD d={d} T={T} isMobile={isMobile} />}
+
+          {/* Objectifs Goal Reverse en cours */}
+          {!isNewUser && <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />}
 
           {/* Alerte bloquées */}
           <AnimatePresence>
