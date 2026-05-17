@@ -964,12 +964,9 @@ def health():
 @app.route('/debug/gcal-env', methods=['GET'])
 def debug_gcal_env():
     vars_to_check = [
-        'client_id', 'client_secret',
-        'CLIENT_ID', 'CLIENT_SECRET',
-        'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
-        'GOOGLE_CALENDAR_CLIENT_ID', 'GOOGLE_CALENDAR_CLIENT_SECRET',
         'GCAL_CLIENT_ID', 'GCAL_CLIENT_SECRET',
-        'OAUTH_CLIENT_ID', 'OAUTH_CLIENT_SECRET',
+        'client_id', 'client_secret',
+        'GOOGLE_CALENDAR_CLIENT_ID', 'GOOGLE_CALENDAR_CLIENT_SECRET',
         'INTEGRATIONS_ENCRYPTION_KEY',
     ]
     found = {v: bool(os.environ.get(v)) for v in vars_to_check}
@@ -3126,10 +3123,12 @@ GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 GCAL_REDIRECT_URI = "https://getshift-backend.onrender.com/auth/google/calendar/callback"
 
 def _gcal_cid():
-    return os.environ.get('client_id') or os.environ.get('GOOGLE_CALENDAR_CLIENT_ID', '')
+    return (os.environ.get('GCAL_CLIENT_ID') or os.environ.get('client_id')
+            or os.environ.get('GOOGLE_CALENDAR_CLIENT_ID', ''))
 
 def _gcal_csecret():
-    return os.environ.get('client_secret') or os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET', '')
+    return (os.environ.get('GCAL_CLIENT_SECRET') or os.environ.get('client_secret')
+            or os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET', ''))
 
 def _gcal_flow():
     return Flow.from_client_config({
