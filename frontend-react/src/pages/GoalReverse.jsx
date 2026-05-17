@@ -278,7 +278,7 @@ export default function GoalReverse() {
               scrollbarWidth: 'none', WebkitScrollbar: { display: 'none' },
             }} className="templates-scroll">
               <style>{`.templates-scroll::-webkit-scrollbar{display:none;}`}</style>
-              {templates.slice(0, isMobile ? 4 : 6).map((tpl, i) => (
+              {templates.slice(0, isMobile ? 8 : 6).map((tpl, i) => (
                 <motion.button
                   key={tpl.id}
                   onClick={() => appliquerTemplate(tpl)}
@@ -306,20 +306,6 @@ export default function GoalReverse() {
                   </div>
                 </motion.button>
               ))}
-              {isMobile && (
-                <motion.button
-                  onClick={() => setShowTemplatesModal(true)}
-                  whileTap={{ scale: 0.98 }}
-                  style={{
-                    flexShrink: 0, width: 92, padding: '12px 10px',
-                    background: `${T.accent}10`, border: `1px dashed ${T.accent}40`,
-                    borderRadius: 14, cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  }}>
-                  <ArrowRight size={18} color={T.accent} />
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: T.accent, textAlign: 'center', lineHeight: 1.2 }}>Voir tous</span>
-                </motion.button>
-              )}
             </div>
           </motion.div>
         )}
