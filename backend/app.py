@@ -13,6 +13,7 @@ import os
 import json
 import re
 import secrets
+import base64
 from datetime import timedelta, datetime
 from dotenv import load_dotenv
 from groq import Groq
@@ -3279,6 +3280,209 @@ def get_calendar_events(user_id):
         return jsonify({"events": events, "connected": True, "date": date_str})
     except Exception as e:
         return jsonify({"events": [], "connected": False, "erreur": str(e)[:200]}), 200
+
+# ============================================
+# GMAIL — OAuth réel + extraction tâches IA
+# ============================================
+
+GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+GMAIL_REDIRECT_URI = "https://getshift-backend.onrender.com/auth/gmail/callback"
+
+def _gmail_flow():
+    return Flow.from_client_config({
+        "web": {
+            "client_id": _gcal_cid(),
+            "client_secret": _gcal_csecret(),
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [GMAIL_REDIRECT_URI],
+        }
+    }, scopes=GMAIL_SCOPES)
+
+def get_gmail_creds(user_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT config FROM integrations WHERE user_id=%s AND type='gmail'", (user_id,))
+        row = curseur.fetchone()
+        db.close()
+        if not row or not row['config']:
+            return None
+        tokens = json.loads(_fernet().decrypt(row['config'].encode()).decode())
+        creds = Credentials(
+            token=tokens.get('access_token'),
+            refresh_token=tokens.get('refresh_token'),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=_gcal_cid(),
+            client_secret=_gcal_csecret(),
+            scopes=GMAIL_SCOPES,
+        )
+        if tokens.get('expires_at') and tokens['expires_at'] < int(time.time()) + 60:
+            creds.refresh(GoogleAuthRequest())
+            new_tokens = {
+                "access_token": creds.token,
+                "refresh_token": creds.refresh_token or tokens.get('refresh_token'),
+                "expires_at": int(creds.expiry.timestamp()) if creds.expiry else None,
+            }
+            enc = _fernet().encrypt(json.dumps(new_tokens).encode()).decode()
+            db = connecter()
+            curseur = db.cursor()
+            curseur.execute("UPDATE integrations SET config=%s WHERE user_id=%s AND type='gmail'", (enc, user_id))
+            db.commit(); db.close()
+        return creds
+    except Exception:
+        return None
+
+@app.route('/auth/gmail')
+def auth_gmail():
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return "user_id requis", 400
+    if not _gcal_cid():
+        return """<!DOCTYPE html><html><body><script>
+window.opener&&window.opener.postMessage({type:'oauth_error',integration:'gmail',error:'Gmail non configuré côté serveur'},'*');
+setTimeout(()=>window.close(),1500);
+</script><p style="font-family:sans-serif;text-align:center;padding:40px;color:#e05c5c">Gmail non disponible</p></body></html>""", 500
+    flow = _gmail_flow()
+    flow.redirect_uri = GMAIL_REDIRECT_URI
+    state_token = secrets.token_urlsafe(32)
+    db = connecter()
+    curseur = db.cursor()
+    curseur.execute("""CREATE TABLE IF NOT EXISTS oauth_states (
+        state VARCHAR(64) PRIMARY KEY, user_id INT NOT NULL,
+        integration VARCHAR(50) NOT NULL,
+        cree_le DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+    curseur.execute("DELETE FROM oauth_states WHERE cree_le < DATE_SUB(NOW(), INTERVAL 1 HOUR)")
+    curseur.execute("INSERT INTO oauth_states (state, user_id, integration) VALUES (%s, %s, 'gmail')", (state_token, user_id))
+    db.commit(); db.close()
+    auth_url, _ = flow.authorization_url(
+        access_type='offline', prompt='consent',
+        state=state_token, include_granted_scopes='true'
+    )
+    return redirect(auth_url)
+
+@app.route('/auth/gmail/callback')
+def auth_gmail_callback():
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    if error:
+        return f"""<script>
+            window.opener && window.opener.postMessage({{type:'oauth_error',integration:'gmail',error:'{error}'}},'*');
+            window.close();
+        </script>"""
+    if not code or not state:
+        return "Paramètres OAuth manquants", 400
+    db = connecter()
+    curseur = db.cursor(dictionary=True)
+    curseur.execute("SELECT user_id FROM oauth_states WHERE state=%s AND integration='gmail'", (state,))
+    row = curseur.fetchone()
+    if not row:
+        db.close()
+        return "State invalide ou expiré", 400
+    user_id = row['user_id']
+    curseur.execute("DELETE FROM oauth_states WHERE state=%s", (state,))
+    db.commit()
+    try:
+        flow = _gmail_flow()
+        flow.redirect_uri = GMAIL_REDIRECT_URI
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+        tokens = {
+            "access_token": creds.token,
+            "refresh_token": creds.refresh_token,
+            "expires_at": int(creds.expiry.timestamp()) if creds.expiry else None,
+        }
+        encrypted = _fernet().encrypt(json.dumps(tokens).encode()).decode()
+        curseur.execute("CREATE TABLE IF NOT EXISTS integrations (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, type VARCHAR(50) NOT NULL, config LONGTEXT, cree_le DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='gmail'", (user_id,))
+        curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, 'gmail', %s)", (user_id, encrypted))
+        db.commit()
+    except Exception as e:
+        db.close()
+        return f"<script>window.opener && window.opener.postMessage({{type:'oauth_error',integration:'gmail',error:'{str(e)[:200]}'}},'*'); window.close();</script>"
+    db.close()
+    return """<script>
+        window.opener && window.opener.postMessage({type:'oauth_success',integration:'gmail'},'*');
+        window.close();
+    </script>"""
+
+def _gmail_decode_body(payload):
+    if not payload:
+        return ""
+    body_data = ""
+    if payload.get('body', {}).get('data'):
+        body_data = payload['body']['data']
+    elif payload.get('parts'):
+        for part in payload['parts']:
+            if part.get('mimeType') == 'text/plain' and part.get('body', {}).get('data'):
+                body_data = part['body']['data']
+                break
+        if not body_data:
+            for part in payload['parts']:
+                sub = _gmail_decode_body(part)
+                if sub:
+                    return sub
+    if body_data:
+        try:
+            return base64.urlsafe_b64decode(body_data + '==').decode('utf-8', errors='ignore')[:2000]
+        except Exception:
+            return ""
+    return ""
+
+@app.route('/integrations/gmail/extract-tasks/<int:user_id>', methods=['GET'])
+def gmail_extract_tasks(user_id):
+    creds = get_gmail_creds(user_id)
+    if not creds:
+        return jsonify({"taches": [], "connected": False, "nb_emails": 0})
+    try:
+        service = build('gmail', 'v1', credentials=creds, cache_discovery=False)
+        result = service.users().messages().list(
+            userId='me', q='is:unread newer_than:2d -category:promotions -category:social',
+            maxResults=15
+        ).execute()
+        msg_ids = [m['id'] for m in result.get('messages', [])]
+        if not msg_ids:
+            return jsonify({"taches": [], "connected": True, "nb_emails": 0})
+        emails_text = []
+        for mid in msg_ids[:10]:
+            msg = service.users().messages().get(userId='me', id=mid, format='full').execute()
+            headers = {h['name']: h['value'] for h in msg.get('payload', {}).get('headers', [])}
+            sujet = headers.get('Subject', '(Sans sujet)')[:100]
+            expediteur = headers.get('From', '')[:80]
+            body = _gmail_decode_body(msg.get('payload', {}))[:400]
+            emails_text.append(f"De: {expediteur}\nSujet: {sujet}\nContenu: {body}")
+        emails_block = "\n---\n".join(emails_text)
+        prompt = f"""Analyse ces {len(emails_text)} emails et extrais les VRAIES action items (choses concrètes à faire). Ignore newsletters, notifications auto, accusés de réception, marketing, publicités.
+
+EMAILS:
+{emails_block}
+
+Réponds UNIQUEMENT en JSON: {{"taches": [{{"titre": "action concrète courte", "priorite": "haute|moyenne|basse", "duree_min": 15, "contexte_email": "expéditeur — sujet"}}]}}
+
+Règles:
+- Maximum 5 tâches (les plus importantes)
+- titre = action verbale ("Répondre à X", "Préparer doc Y", "Confirmer rdv Z")
+- priorité haute = deadline proche ou personne importante
+- duree_min réaliste en minutes (5/15/30/60)
+- Si aucune vraie tâche, retourne {{"taches": []}}"""
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1500, temperature=0.3
+        )
+        contenu = response.choices[0].message.content.strip()
+        if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
+        elif '```' in contenu: contenu = contenu.split('```')[1].split('```')[0].strip()
+        data = json.loads(contenu)
+        return jsonify({"taches": data.get('taches', []), "connected": True, "nb_emails": len(emails_text)})
+    except Exception as e:
+        return jsonify({"taches": [], "connected": False, "erreur": str(e)[:200]}), 200
+
+@app.route('/integrations/gmail/status/<int:user_id>', methods=['GET'])
+def gmail_status(user_id):
+    creds = get_gmail_creds(user_id)
+    return jsonify({"connected": creds is not None})
 
 @app.route('/auth/google/drive')
 def auth_google_drive():

@@ -42,6 +42,16 @@ const LogoZoom = () => (
   </svg>
 )
 
+const LogoGmail = () => (
+  <svg viewBox="0 0 256 193" width="24" height="18">
+    <path d="M58.182 192.05V93.14L27.507 65.077 0 49.504v125.091c0 9.658 7.825 17.455 17.455 17.455h40.727z" fill="#4285F4"/>
+    <path d="M197.818 192.05h40.727c9.659 0 17.455-7.826 17.455-17.455V49.504l-31.156 17.837-27.026 25.798v98.911z" fill="#34A853"/>
+    <path d="M58.182 93.14l-4.174-38.647 4.174-36.989L128 69.868l69.818-52.364 4.669 33.629-4.669 42.007L128 145.504z" fill="#EA4335"/>
+    <path d="M197.818 17.504V93.14L256 49.504V26.231c0-21.585-24.64-33.89-41.89-20.945l-16.292 12.218z" fill="#FBBC04"/>
+    <path d="M0 49.504l26.759 20.07L58.182 93.14V17.504L41.89 5.286C24.61-7.66 0 4.646 0 26.23v23.273z" fill="#C5221F"/>
+  </svg>
+)
+
 const LogoNotion = () => (
   <svg viewBox="0 0 100 100" width="22" height="22">
     <rect width="100" height="100" rx="16" fill="white" stroke="#E8E8E8" strokeWidth="2"/>
@@ -65,11 +75,12 @@ const LogoDiscord = () => (
 )
 
 const INTEGRATIONS = [
-  { id: 'google_calendar', nom: 'Google Calendar', description: 'Synchronise tes deadlines avec ton agenda.', Logo: LogoGoogleCalendar, categorie: 'Google', oauthPath: '/auth/google/calendar', couleur: '#1A73E8' },
+  { id: 'google_calendar', nom: 'Google Calendar', description: 'Évite les conflits — ton IA respecte ton agenda.', Logo: LogoGoogleCalendar, categorie: 'Google', oauthPath: '/auth/google/calendar', couleur: '#1A73E8' },
+  { id: 'gmail',           nom: 'Gmail',           description: 'L\'IA extrait les vraies tâches de tes emails.', Logo: LogoGmail,           categorie: 'Google', oauthPath: '/auth/gmail',           couleur: '#EA4335' },
   { id: 'google_drive',    nom: 'Google Drive',    description: 'Attache des fichiers Drive à tes tâches.', Logo: LogoGoogleDrive,    categorie: 'Google', oauthPath: '/auth/google/drive',    couleur: '#00AC47' },
-  { id: 'zoom',            nom: 'Zoom',            description: 'Crée des tâches de préparation auto.',    Logo: LogoZoom,            categorie: 'Communication', oauthPath: '/auth/zoom',        couleur: '#2D8CFF' },
   { id: 'notion',          nom: 'Notion',          description: 'Importe tes pages comme tâches GetShift.',Logo: LogoNotion,          categorie: 'Productivité',  oauthPath: '/auth/notion',      couleur: '#1C1C1C' },
   { id: 'slack',           nom: 'Slack',           description: 'Rappels de deadlines dans ton canal.',    Logo: LogoSlack,           categorie: 'Communication', oauthPath: '/auth/slack/oauth', couleur: '#E01E5A' },
+  { id: 'zoom',            nom: 'Zoom',            description: 'Crée des tâches de préparation auto.',    Logo: LogoZoom,            categorie: 'Communication', oauthPath: '/auth/zoom',        couleur: '#2D8CFF' },
   { id: 'discord',         nom: 'Discord',         description: 'Notifications pour tes tâches urgentes.', Logo: LogoDiscord,         categorie: 'Communication', oauthPath: '/auth/discord',     couleur: '#5865F2' },
 ]
 
