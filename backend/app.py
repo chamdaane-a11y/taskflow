@@ -4947,6 +4947,31 @@ def get_coach_historique(user_id):
 # SPRINT 7 — GOAL REVERSE ENGINEERING
 # ============================================
 
+def _ensure_objectifs_schema(curseur):
+    """Crée table objectifs + colonne objectif_id sur taches si absent."""
+    curseur.execute("""CREATE TABLE IF NOT EXISTS objectifs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        titre VARCHAR(255) NOT NULL,
+        deadline DATE,
+        niveau VARCHAR(20),
+        duree_semaines INT,
+        score_faisabilite INT,
+        conseil_global TEXT,
+        risques_json TEXT,
+        jalons_json LONGTEXT,
+        coach_style VARCHAR(30),
+        statut VARCHAR(20) DEFAULT 'actif',
+        cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)""")
+    curseur.execute("SHOW COLUMNS FROM taches LIKE 'objectif_id'")
+    if not curseur.fetchone():
+        try:
+            curseur.execute("ALTER TABLE taches ADD COLUMN objectif_id INT NULL")
+            curseur.execute("ALTER TABLE taches ADD INDEX idx_objectif_id (objectif_id)")
+        except Exception:
+            pass
+
 @app.route('/ia/goal-reverse', methods=['POST'])
 def goal_reverse():
     data = request.json
@@ -4954,29 +4979,100 @@ def goal_reverse():
     objectif = data.get('objectif')
     deadline = data.get('deadline')
     niveau = data.get('niveau', 'realiste')
+    coach_style = data.get('coach_style', 'bienveillant')
     aujourd_hui = datetime.now().strftime('%Y-%m-%d')
-    prompt = f"""Tu es un expert en productivité et planification stratégique.
-Fais du Goal Reverse Engineering : pars de l'objectif final et reconstruis le chemin étape par étape.
 
-CONTEXTE : Objectif : {objectif} | Deadline : {deadline} | Niveau : {niveau} | Aujourd'hui : {aujourd_hui}
-
-FORMAT JSON STRICT :
-{{
-  "duree_semaines": <number>, "score_faisabilite": <number>, "conseil_global": "<string>",
-  "risques": ["<string>"],
-  "jalons": [{{
-    "semaine": <number>, "titre": "<string>", "date_fin": "YYYY-MM-DD", "difficulte": "faible|moyenne|élevée",
-    "taches": [{{"titre": "<string>", "duree_estimee": <number>, "priorite": "faible|moyenne|haute", "deadline": "YYYY-MM-DD"}}]
-  }}]
-}}
-Dates entre {aujourd_hui} et {deadline}. Max 8 jalons, 4 tâches par jalon. JSON uniquement."""
+    # ── Contexte user pour personnaliser le plan ──
+    contexte_user = ""
     try:
-        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], temperature=0.7, max_tokens=2500)
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        score_energie = calculer_score_energie(user_id, curseur)
+        heure_productive = detecter_heure_productive(user_id, curseur)
+        niveau_e = "élevé" if score_energie >= 70 else "moyen" if score_energie >= 40 else "faible"
+
+        # Durées typiques par catégorie sémantique (Task DNA)
+        cat_durees = {}
+        for cat_titre in [("Préparer doc", "deep_work"), ("Répondre email", "communication"),
+                          ("Remplir formulaire", "admin"), ("Brainstormer idée", "creatif"),
+                          ("Réunion équipe", "meeting"), ("Tâche rapide", "quickwin"),
+                          ("Apprendre concept", "learning")]:
+            try:
+                d = estimer_duree_tache_smart(cat_titre[0], "moyenne", user_id, curseur)
+                cat_durees[cat_titre[1]] = d
+            except Exception:
+                pass
+
+        # Tâches existantes proches du domaine de l'objectif (top 5)
+        curseur.execute("""SELECT titre FROM taches WHERE user_id=%s AND terminee=0
+                           ORDER BY deadline ASC LIMIT 8""", (user_id,))
+        taches_existantes = [r['titre'] for r in curseur.fetchall()]
+        db.close()
+
+        ctx_parts = [f"Énergie user: {score_energie}/100 ({niveau_e})",
+                     f"Heure de pic: {heure_productive}h"]
+        if cat_durees:
+            ctx_parts.append(f"Durées moyennes user par type (min): {cat_durees}")
+        if taches_existantes:
+            ctx_parts.append(f"Tâches déjà actives (à NE PAS dupliquer): {' | '.join(taches_existantes[:5])}")
+        contexte_user = "\n".join(ctx_parts)
+    except Exception as e:
+        print(f"[goal_reverse] Contexte user erreur: {e}")
+        contexte_user = ""
+
+    # ── Coach persona ──
+    coach = COACH_STYLES.get(coach_style, COACH_STYLES['bienveillant'])
+    coach_intro = coach['persona']
+    coach_nom = coach['nom']
+
+    prompt = f"""{coach_intro}
+
+Tu fais du Goal Reverse Engineering : pars de l'objectif final et reconstruis le chemin à rebours, étape par étape. Tu dois PERSONNALISER selon le contexte réel de l'utilisateur.
+
+OBJECTIF: {objectif}
+DEADLINE FINALE: {deadline}
+NIVEAU D'AMBITION: {niveau}
+AUJOURD'HUI: {aujourd_hui}
+
+CONTEXTE USER (utilise ces données pour calibrer les durées et la charge):
+{contexte_user or "(contexte indisponible — utilise des durées génériques)"}
+
+RÈGLES STRICTES:
+- duree_semaines = nombre entier de semaines entre aujourd'hui et la deadline
+- score_faisabilite = note 0-100 de réalisme du plan (basé sur niveau + délai + complexité)
+- conseil_global = signé "{coach_nom}", reflète ton personnage, max 2 phrases
+- risques = 2-4 risques concrets que tu identifies (deadlines serrées, dépendances, charge)
+- jalons = max 8 jalons hebdomadaires, ordonnés chronologiquement
+- Pour chaque tâche : duree_estimee en minutes (calibre avec les durées user ci-dessus si possible)
+- Dates entre {aujourd_hui} et {deadline}
+- Max 4 tâches par jalon
+
+FORMAT JSON STRICT (rien d'autre):
+{{
+  "duree_semaines": <int>,
+  "score_faisabilite": <int>,
+  "conseil_global": "<string>",
+  "risques": ["<string>", "..."],
+  "jalons": [{{
+    "semaine": <int>,
+    "titre": "<string>",
+    "date_fin": "YYYY-MM-DD",
+    "difficulte": "faible|moyenne|élevée",
+    "taches": [{{"titre": "<string>", "duree_estimee": <int>, "priorite": "faible|moyenne|haute", "deadline": "YYYY-MM-DD"}}]
+  }}]
+}}"""
+    try:
+        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}], temperature=0.7, max_tokens=2500)
         raw = response.choices[0].message.content.strip()
         if raw.startswith('```'):
             raw = raw.split('```')[1]
             if raw.startswith('json'): raw = raw[4:]
-        result = json.loads(raw)
+        if raw.endswith('```'):
+            raw = raw[:-3]
+        result = json.loads(raw.strip())
+        # Métadonnée pour le frontend
+        result['_coach'] = {'nom': coach['nom'], 'emoji': coach['emoji']}
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -4986,17 +5082,77 @@ def goal_reverse_importer():
     data = request.json
     user_id = data.get('user_id')
     taches = data.get('taches', [])
+    # Métadonnées objectif pour persistance
+    objectif_titre = data.get('objectif_titre')
+    objectif_deadline = data.get('objectif_deadline')
+    objectif_niveau = data.get('objectif_niveau')
+    objectif_plan = data.get('objectif_plan', {})
+    objectif_coach = data.get('coach_style', 'bienveillant')
     ids_crees = []
+    objectif_id = None
     try:
         conn = connecter()
         cursor = conn.cursor()
+        _ensure_objectifs_schema(cursor)
+        if objectif_titre and objectif_deadline:
+            cursor.execute("""INSERT INTO objectifs
+                (user_id, titre, deadline, niveau, duree_semaines, score_faisabilite,
+                 conseil_global, risques_json, jalons_json, coach_style)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (user_id, objectif_titre[:255], objectif_deadline, objectif_niveau,
+                 objectif_plan.get('duree_semaines'), objectif_plan.get('score_faisabilite'),
+                 objectif_plan.get('conseil_global'),
+                 json.dumps(objectif_plan.get('risques', []), ensure_ascii=False),
+                 json.dumps(objectif_plan.get('jalons', []), ensure_ascii=False),
+                 objectif_coach))
+            objectif_id = cursor.lastrowid
         for t in taches:
-            cursor.execute("INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)", (t['titre'], t['priorite'], t['deadline'], user_id))
+            if objectif_id:
+                cursor.execute("INSERT INTO taches (titre, priorite, deadline, user_id, objectif_id) VALUES (%s, %s, %s, %s, %s)",
+                    (t['titre'], t['priorite'], t['deadline'], user_id, objectif_id))
+            else:
+                cursor.execute("INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)",
+                    (t['titre'], t['priorite'], t['deadline'], user_id))
             ids_crees.append(cursor.lastrowid)
         conn.commit(); cursor.close(); conn.close()
-        return jsonify({"message": f"{len(ids_crees)} tâches importées avec succès", "ids": ids_crees})
+        return jsonify({"message": f"{len(ids_crees)} tâches importées avec succès",
+                        "ids": ids_crees, "objectif_id": objectif_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/ia/goal-reverse/list/<int:user_id>', methods=['GET'])
+def goal_reverse_list(user_id):
+    """Liste les objectifs actifs avec progress."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        _ensure_objectifs_schema(curseur)
+        curseur.execute("""SELECT * FROM objectifs WHERE user_id=%s AND statut='actif'
+                           ORDER BY cree_le DESC""", (user_id,))
+        objectifs = curseur.fetchall()
+        result = []
+        for o in objectifs:
+            curseur.execute("""SELECT COUNT(*) as total,
+                SUM(CASE WHEN terminee=1 THEN 1 ELSE 0 END) as done
+                FROM taches WHERE objectif_id=%s""", (o['id'],))
+            stats = curseur.fetchone()
+            total = stats['total'] or 0
+            done = stats['done'] or 0
+            result.append({
+                'id': o['id'],
+                'titre': o['titre'],
+                'deadline': str(o['deadline']) if o['deadline'] else None,
+                'niveau': o['niveau'],
+                'score_faisabilite': o['score_faisabilite'],
+                'progression': round(done / total * 100) if total else 0,
+                'taches_total': total,
+                'taches_done': done,
+                'cree_le': str(o['cree_le']),
+            })
+        db.close()
+        return jsonify({"objectifs": result})
+    except Exception as e:
+        return jsonify({"error": str(e), "objectifs": []}), 200
 
 # ============================================
 # SPRINT 8 — GETSHIFT AI AUGMENTÉ

@@ -10,7 +10,7 @@ import fr from 'date-fns/locale/fr'
 import {
   Flag, ChevronLeft, Sparkles, Target, Calendar,
   CheckCircle2, AlertCircle, Clock, Zap, ArrowRight,
-  Download, ChevronDown, ChevronUp, Layers
+  Download, ChevronDown, ChevronUp, Layers, AlertTriangle
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -54,6 +54,10 @@ export default function GoalReverse() {
     setTimeout(() => setNotification(null), 3500)
   }
 
+  const coachStyle = (() => {
+    try { return localStorage.getItem('getshift_coach_style') || 'bienveillant' } catch { return 'bienveillant' }
+  })()
+
   const decomposer = async () => {
     if (!objectif.trim()) { setErreur("Décris ton objectif."); return }
     if (!deadline) { setErreur("Choisis une deadline."); return }
@@ -67,9 +71,9 @@ export default function GoalReverse() {
         objectif: objectif.trim(),
         deadline: deadline.toISOString().slice(0, 10),
         niveau,
+        coach_style: coachStyle,
       })
       setResult(res.data)
-      // Ouvrir le premier jalon par défaut
       if (res.data.jalons?.length > 0) {
         setJalonsOuverts({ 0: true })
       }
@@ -93,6 +97,17 @@ export default function GoalReverse() {
       const res = await axios.post(`${API}/ia/goal-reverse/importer`, {
         user_id: user.id,
         taches: toutesLesTaches,
+        objectif_titre: objectif.trim(),
+        objectif_deadline: deadline.toISOString().slice(0, 10),
+        objectif_niveau: niveau,
+        objectif_plan: {
+          duree_semaines: result.duree_semaines,
+          score_faisabilite: result.score_faisabilite,
+          conseil_global: result.conseil_global,
+          risques: result.risques || [],
+          jalons: result.jalons || [],
+        },
+        coach_style: coachStyle,
       })
       setImported(true)
       afficherNotification(`✅ ${res.data.message}`)
@@ -278,12 +293,38 @@ export default function GoalReverse() {
                 })}
               </div>
 
-              {/* Conseil global */}
+              {/* Conseil du coach */}
               {result.conseil_global && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                  style={{ background: `${T.accent}10`, border: `1px solid ${T.accent}25`, borderRadius: 14, padding: '14px 18px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <Sparkles size={16} color={T.accent} style={{ flexShrink: 0, marginTop: 2 }} />
-                  <p style={{ fontSize: 13, color: T.text, margin: 0, lineHeight: 1.7 }}>{result.conseil_global}</p>
+                  style={{ background: `${T.accent}10`, border: `1px solid ${T.accent}25`, borderRadius: 14, padding: '14px 18px', marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 18, flexShrink: 0, marginTop: -1 }}>{result._coach?.emoji || '✨'}</span>
+                  <div style={{ flex: 1 }}>
+                    {result._coach?.nom && (
+                      <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: 0.6, marginBottom: 4 }}>
+                        CONSEIL DE {result._coach.nom.toUpperCase()}
+                      </div>
+                    )}
+                    <p style={{ fontSize: 13, color: T.text, margin: 0, lineHeight: 1.7 }}>{result.conseil_global}</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Risques identifiés */}
+              {result.risques && result.risques.length > 0 && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
+                  style={{ background: 'rgba(224,92,92,0.08)', border: '1px solid rgba(224,92,92,0.25)', borderRadius: 14, padding: '14px 18px', marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <AlertTriangle size={15} color="#e05c5c" strokeWidth={2} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#e05c5c', letterSpacing: 0.8 }}>RISQUES IDENTIFIÉS</span>
+                  </div>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                    {result.risques.map((r, i) => (
+                      <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: T.text, lineHeight: 1.6, padding: '4px 0' }}>
+                        <span style={{ color: '#e05c5c', flexShrink: 0 }}>•</span>
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </motion.div>
               )}
 
