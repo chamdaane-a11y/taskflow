@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
@@ -10,7 +10,8 @@ import fr from 'date-fns/locale/fr'
 import {
   Flag, ChevronLeft, Sparkles, Target, Calendar,
   CheckCircle2, AlertCircle, Clock, Zap, ArrowRight,
-  Download, ChevronDown, ChevronUp, Layers, AlertTriangle
+  Download, ChevronDown, ChevronUp, Layers, AlertTriangle,
+  Wand2, BookOpen, Send, Lightbulb, X
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -31,6 +32,15 @@ const DIFFICULTE_COLOR = {
   'élevée':  '#e05c5c',
 }
 
+const QUICK_ITERATIONS = [
+  { emoji: '➕', label: '+1 semaine', text: 'Ajoute 1 semaine supplémentaire au planning' },
+  { emoji: '🌿', label: 'Plus chill', text: 'Rends le plan plus chill, moins intense, avec moins de tâches par semaine' },
+  { emoji: '🔥', label: 'Plus intense', text: 'Rends le plan plus intense, ajoute des tâches pour aller plus vite' },
+  { emoji: '🗜️', label: '−1 jalon', text: 'Fusionne 2 jalons proches pour réduire le nombre total' },
+  { emoji: '🎯', label: 'Prépa au début', text: 'Ajoute une phase de préparation/setup en premier jalon' },
+  { emoji: '📅', label: 'Recale les dates', text: 'Recale toutes les dates pour mieux répartir la charge' },
+]
+
 export default function GoalReverse() {
   const navigate = useNavigate()
   const user = (() => { try { return JSON.parse(localStorage.getItem('user')) } catch { return null } })()
@@ -47,7 +57,56 @@ export default function GoalReverse() {
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState(false)
   const [notification, setNotification] = useState(null)
+  const [templates, setTemplates] = useState([])
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+  const [iterating, setIterating] = useState(false)
+  const [iterationInput, setIterationInput] = useState('')
   const isMobile = window.innerWidth <= 768
+
+  useEffect(() => {
+    axios.get(`${API}/ia/goal-reverse/templates`)
+      .then(r => setTemplates(r.data.templates || []))
+      .catch(() => {})
+  }, [])
+
+  const appliquerTemplate = (tpl) => {
+    setObjectif(tpl.objectif)
+    setNiveau(tpl.niveau)
+    const d = new Date()
+    d.setMonth(d.getMonth() + tpl.duree_mois)
+    setDeadline(d)
+    setShowTemplatesModal(false)
+    setResult(null)
+    setImported(false)
+    afficherNotification(`Template "${tpl.titre}" appliqué — clique sur Décomposer`)
+    setTimeout(() => {
+      const el = document.querySelector('textarea')
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+  }
+
+  const iterer = async (instruction) => {
+    const instr = (instruction || '').trim()
+    if (!instr || !result) return
+    setIterating(true)
+    try {
+      const res = await axios.post(`${API}/ia/goal-reverse/iterate`, {
+        instruction: instr,
+        plan: result,
+        objectif: objectif.trim(),
+        deadline: deadline?.toISOString().slice(0, 10),
+        niveau,
+        coach_style: coachStyle,
+      })
+      setResult(res.data)
+      setIterationInput('')
+      if (res.data.jalons?.length > 0) setJalonsOuverts({ 0: true })
+      afficherNotification(`✨ Plan affiné : "${instr.length > 40 ? instr.slice(0, 40) + '…' : instr}"`)
+    } catch {
+      afficherNotification("Erreur lors de l'affinement", 'error')
+    }
+    setIterating(false)
+  }
 
   const afficherNotification = (msg, type = 'success') => {
     setNotification({ msg, type })
@@ -195,6 +254,76 @@ export default function GoalReverse() {
           </div>
         </motion.div>
 
+        {/* Templates inspirants */}
+        {templates.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <Lightbulb size={14} color={T.accent} strokeWidth={2.3} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 1 }}>PAS D'IDÉE ? INSPIRE-TOI</span>
+              </div>
+              {!isMobile && (
+                <motion.button
+                  onClick={() => setShowTemplatesModal(true)}
+                  whileHover={{ x: 2 }}
+                  style={{ fontSize: 11, color: T.accent, background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                  Voir tous <ArrowRight size={11} />
+                </motion.button>
+              )}
+            </div>
+            <div style={{
+              display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6,
+              scrollbarWidth: 'none', WebkitScrollbar: { display: 'none' },
+            }} className="templates-scroll">
+              <style>{`.templates-scroll::-webkit-scrollbar{display:none;}`}</style>
+              {templates.slice(0, isMobile ? 8 : 6).map((tpl, i) => (
+                <motion.button
+                  key={tpl.id}
+                  onClick={() => appliquerTemplate(tpl)}
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 + i * 0.04 }}
+                  whileHover={{ y: -3, borderColor: tpl.couleur }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{
+                    flexShrink: 0, width: 160, padding: '12px 14px',
+                    background: T.bg2, border: `1px solid ${T.border}`,
+                    borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+                    display: 'flex', flexDirection: 'column', gap: 6,
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 22 }}>{tpl.emoji}</span>
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+                      background: `${tpl.couleur}18`, color: tpl.couleur, letterSpacing: 0.5,
+                    }}>{tpl.duree_mois} MOIS</span>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.25 }}>
+                    {tpl.titre}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: T.text2, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {tpl.description}
+                  </div>
+                </motion.button>
+              ))}
+              {isMobile && (
+                <motion.button
+                  onClick={() => setShowTemplatesModal(true)}
+                  whileTap={{ scale: 0.98 }}
+                  style={{
+                    flexShrink: 0, width: 100, padding: '12px 14px',
+                    background: `${T.accent}10`, border: `1px dashed ${T.accent}40`,
+                    borderRadius: 14, cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}>
+                  <ArrowRight size={18} color={T.accent} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: T.accent }}>Voir tous</span>
+                </motion.button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Formulaire */}
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
@@ -328,6 +457,64 @@ export default function GoalReverse() {
                 </motion.div>
               )}
 
+              {/* Gantt mini — chronologie visuelle */}
+              {result.jalons && result.jalons.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                  style={{ marginBottom: 24, padding: '16px 18px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <Calendar size={13} color={T.accent} strokeWidth={2.2} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 1 }}>CHRONOLOGIE</span>
+                    </div>
+                    <span style={{ fontSize: 10, color: T.text2 }}>
+                      {result.duree_semaines || result.jalons.length} sem. · {result.jalons.length} jalons
+                    </span>
+                  </div>
+                  {/* Barres jalons */}
+                  <div style={{ display: 'flex', gap: 3, height: 32, alignItems: 'stretch' }}>
+                    {result.jalons.map((j, i) => {
+                      const c = DIFFICULTE_COLOR[j.difficulte] || T.accent
+                      const isOpen = jalonsOuverts[i]
+                      return (
+                        <motion.button
+                          key={i}
+                          initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: 1 }}
+                          transition={{ delay: 0.35 + i * 0.05, duration: 0.4, ease: 'easeOut' }}
+                          onClick={() => toggleJalon(i)}
+                          title={`S${j.semaine} — ${j.titre}`}
+                          whileHover={{ y: -2 }}
+                          style={{
+                            flex: 1, minWidth: 0, height: '100%',
+                            background: `linear-gradient(135deg, ${c}, ${c}bb)`,
+                            border: 'none', borderRadius: 6, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 800, color: '#fff', letterSpacing: 0.3,
+                            boxShadow: isOpen ? `0 0 0 2px ${T.bg}, 0 0 0 4px ${c}, 0 4px 14px ${c}50` : `0 2px 6px ${c}30`,
+                            transformOrigin: 'left center', position: 'relative',
+                          }}>
+                          S{j.semaine}
+                        </motion.button>
+                      )
+                    })}
+                  </div>
+                  {/* Légende */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {[['faible', 'Facile'], ['moyenne', 'Moyen'], ['élevée', 'Élevé']].map(([k, lbl]) => (
+                        <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: 2, background: DIFFICULTE_COLOR[k] }} />
+                          <span style={{ fontSize: 9.5, color: T.text2 }}>{lbl}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <span style={{ fontSize: 9.5, color: T.text2, fontStyle: 'italic' }}>
+                      Clique sur un jalon pour le détailler ↓
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Timeline jalons */}
               <div style={{ marginBottom: 24 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 16 }}>PLAN D'ACTION</p>
@@ -394,6 +581,86 @@ export default function GoalReverse() {
                 ))}
               </div>
 
+              {/* Panel Iterate — affiner le plan sans regénérer */}
+              {!imported && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                  style={{ background: T.bg2, border: `1px solid ${T.accent}25`, borderRadius: 14, padding: '16px 18px', marginBottom: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: 8, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Wand2 size={13} color={T.accent} strokeWidth={2.2} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: T.text, letterSpacing: 0.5 }}>AFFINER LE PLAN</span>
+                    {result._iteration && (
+                      <span style={{ fontSize: 10, color: T.text2, fontStyle: 'italic', marginLeft: 'auto', maxWidth: '40%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        ✨ "{result._iteration}"
+                      </span>
+                    )}
+                  </div>
+                  {/* Quick actions */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {QUICK_ITERATIONS.map(q => (
+                      <motion.button
+                        key={q.label}
+                        onClick={() => iterer(q.text)}
+                        disabled={iterating}
+                        whileHover={!iterating ? { scale: 1.04, borderColor: T.accent + '60' } : {}}
+                        whileTap={!iterating ? { scale: 0.96 } : {}}
+                        style={{
+                          padding: '6px 11px', background: T.bg3, border: `1px solid ${T.border}`,
+                          borderRadius: 99, color: T.text, fontSize: 11.5, fontWeight: 500,
+                          cursor: iterating ? 'not-allowed' : 'pointer', opacity: iterating ? 0.5 : 1,
+                          display: 'flex', alignItems: 'center', gap: 5,
+                        }}>
+                        <span style={{ fontSize: 13 }}>{q.emoji}</span>
+                        {q.label}
+                      </motion.button>
+                    ))}
+                  </div>
+                  {/* Free text */}
+                  <div style={{ display: 'flex', gap: 6, flexDirection: isMobile ? 'column' : 'row' }}>
+                    <input
+                      value={iterationInput}
+                      onChange={e => setIterationInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && iterationInput.trim() && !iterating) iterer(iterationInput) }}
+                      placeholder="Ex: ajoute une phase de tests utilisateurs..."
+                      disabled={iterating}
+                      style={{
+                        flex: 1, padding: '10px 14px', background: T.bg3,
+                        border: `1px solid ${T.border}`, borderRadius: 10,
+                        color: T.text, fontSize: 12.5, outline: 'none',
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    />
+                    <motion.button
+                      onClick={() => iterer(iterationInput)}
+                      disabled={iterating || !iterationInput.trim()}
+                      whileHover={!iterating && iterationInput.trim() ? { scale: 1.03 } : {}}
+                      whileTap={!iterating && iterationInput.trim() ? { scale: 0.97 } : {}}
+                      style={{
+                        padding: '10px 16px',
+                        background: iterating || !iterationInput.trim() ? T.bg3 : T.accent,
+                        border: 'none', borderRadius: 10,
+                        color: iterating || !iterationInput.trim() ? T.text2 : T.bg,
+                        fontSize: 12.5, fontWeight: 700,
+                        cursor: iterating || !iterationInput.trim() ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        minWidth: isMobile ? '100%' : 110,
+                      }}>
+                      {iterating ? (
+                        <>
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                            style={{ width: 13, height: 13, borderRadius: '50%', border: `2px solid ${T.border}`, borderTop: `2px solid ${T.accent}` }} />
+                          IA…
+                        </>
+                      ) : (
+                        <><Send size={13} /> Affiner</>
+                      )}
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Bouton import */}
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                 {imported ? (
@@ -426,6 +693,94 @@ export default function GoalReverse() {
         </AnimatePresence>
 
       </main>
+
+      {/* Templates Modal — overlay full-page */}
+      <AnimatePresence>
+        {showTemplatesModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowTemplatesModal(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 1000 }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.96 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              style={{
+                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: T.bg, border: `1px solid ${T.border}`, borderRadius: 20,
+                padding: isMobile ? 18 : 28,
+                width: isMobile ? 'calc(100vw - 24px)' : 'min(880px, 92vw)',
+                maxHeight: '88vh', overflowY: 'auto',
+                zIndex: 1001,
+                boxShadow: '0 24px 80px rgba(0,0,0,0.4)',
+              }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 12, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <BookOpen size={18} color={T.bg} strokeWidth={2.4} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: T.text, margin: 0, letterSpacing: '-0.3px' }}>Templates inspirants</h2>
+                    <p style={{ fontSize: 12, color: T.text2, margin: '2px 0 0' }}>Clique pour pré-remplir ton objectif</p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => setShowTemplatesModal(false)}
+                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  style={{ width: 32, height: 32, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={16} />
+                </motion.button>
+              </div>
+
+              {/* Grid templates */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                {templates.map((tpl, i) => (
+                  <motion.button
+                    key={tpl.id}
+                    onClick={() => appliquerTemplate(tpl)}
+                    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                    whileHover={{ y: -4, borderColor: tpl.couleur, boxShadow: `0 8px 24px ${tpl.couleur}25` }}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14,
+                      padding: '16px 18px', cursor: 'pointer', textAlign: 'left',
+                      display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', overflow: 'hidden',
+                    }}>
+                    <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: `radial-gradient(circle, ${tpl.couleur}15, transparent 70%)` }} />
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative' }}>
+                      <span style={{ fontSize: 32 }}>{tpl.emoji}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: `${tpl.couleur}18`, color: tpl.couleur, letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                        {tpl.categorie}
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: T.text, lineHeight: 1.25, marginBottom: 4 }}>
+                        {tpl.titre}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: T.text2, lineHeight: 1.45 }}>
+                        {tpl.description}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Calendar size={10} /> {tpl.duree_mois} mois
+                      </span>
+                      <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Zap size={10} /> {tpl.niveau}
+                      </span>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </div>

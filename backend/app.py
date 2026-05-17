@@ -5258,6 +5258,200 @@ def goal_reverse_list(user_id):
         return jsonify({"error": str(e), "objectifs": []}), 200
 
 
+@app.route('/ia/goal-reverse/iterate', methods=['POST'])
+def goal_reverse_iterate():
+    """Mode Iterate : modifie un plan existant sans regénérer from scratch.
+    Préserve la cohérence (jalons existants, tâches déjà importées) et applique
+    une instruction utilisateur en langage naturel."""
+    try:
+        data = request.json or {}
+        instruction = (data.get('instruction') or '').strip()
+        plan = data.get('plan') or {}
+        objectif = (data.get('objectif') or '').strip()
+        deadline = data.get('deadline') or ''
+        niveau = data.get('niveau', 'realiste')
+        coach_style = data.get('coach_style', 'bienveillant')
+        if not instruction:
+            return jsonify({"erreur": "Instruction requise"}), 400
+        if not plan or 'jalons' not in plan:
+            return jsonify({"erreur": "Plan actuel requis"}), 400
+
+        coach = COACH_STYLES.get(coach_style, COACH_STYLES['bienveillant'])
+        aujourd_hui = datetime.now().strftime('%Y-%m-%d')
+
+        # On envoie une version compacte du plan pour ne pas exploser le contexte
+        plan_compact = {
+            'duree_semaines': plan.get('duree_semaines'),
+            'score_faisabilite': plan.get('score_faisabilite'),
+            'conseil_global': plan.get('conseil_global'),
+            'risques': plan.get('risques', []),
+            'jalons': [
+                {
+                    'semaine': j.get('semaine'),
+                    'titre': j.get('titre'),
+                    'date_fin': j.get('date_fin'),
+                    'difficulte': j.get('difficulte'),
+                    'taches': [
+                        {'titre': t.get('titre'), 'duree_estimee': t.get('duree_estimee'),
+                         'priorite': t.get('priorite'), 'deadline': t.get('deadline')}
+                        for t in (j.get('taches') or [])
+                    ]
+                } for j in (plan.get('jalons') or [])
+            ]
+        }
+
+        prompt = f"""{coach['persona']}
+
+Tu fais du Goal Reverse Engineering en mode ITERATE.
+L'utilisateur a déjà un plan généré. Il veut le MODIFIER, pas tout regénérer.
+Tu dois préserver la cohérence (titres de jalons existants quand pertinent, structure générale)
+et appliquer son instruction de façon CHIRURGICALE.
+
+OBJECTIF: {objectif}
+DEADLINE FINALE: {deadline}
+NIVEAU: {niveau}
+AUJOURD'HUI: {aujourd_hui}
+
+PLAN ACTUEL:
+{json.dumps(plan_compact, ensure_ascii=False)}
+
+INSTRUCTION DE L'UTILISATEUR:
+"{instruction}"
+
+RÈGLES:
+- Modifie SEULEMENT ce que l'instruction demande, garde le reste tel quel
+- Si l'instruction étend la durée, recale les dates des jalons et tâches
+- Si l'instruction réduit/fusionne, ne perds pas d'information critique
+- Recalcule score_faisabilite si la charge change
+- conseil_global signé "{coach['nom']}", max 2 phrases, mentionne la modification
+- Max 8 jalons, max 4 tâches par jalon
+- Dates entre {aujourd_hui} et {deadline}
+
+FORMAT JSON STRICT (rien d'autre) — même schéma que le plan actuel:
+{{
+  "duree_semaines": <int>,
+  "score_faisabilite": <int>,
+  "conseil_global": "<string>",
+  "risques": ["<string>"],
+  "jalons": [{{"semaine": <int>, "titre": "<string>", "date_fin": "YYYY-MM-DD",
+    "difficulte": "faible|moyenne|élevée",
+    "taches": [{{"titre": "<string>", "duree_estimee": <int>, "priorite": "faible|moyenne|haute", "deadline": "YYYY-MM-DD"}}]}}]
+}}"""
+
+        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}], temperature=0.5, max_tokens=2500)
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith('```'):
+            raw = raw.split('```')[1]
+            if raw.startswith('json'): raw = raw[4:]
+        if raw.endswith('```'):
+            raw = raw[:-3]
+        result = json.loads(raw.strip())
+        result['_coach'] = {'nom': coach['nom'], 'emoji': coach['emoji']}
+        result['_iteration'] = instruction
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+# Templates de Goal Reverse Engineering — objectifs inspirants pré-formatés
+GOAL_TEMPLATES = [
+    {
+        "id": "saas",
+        "emoji": "🚀",
+        "categorie": "Business",
+        "titre": "Lancer un SaaS",
+        "objectif": "Lancer un SaaS avec 100 premiers utilisateurs payants",
+        "duree_mois": 3,
+        "niveau": "ambitieux",
+        "description": "Du MVP au product-market fit — landing, acquisition, premiers paiements",
+        "couleur": "#6c63ff",
+    },
+    {
+        "id": "concours",
+        "emoji": "🎓",
+        "categorie": "Études",
+        "titre": "Préparer un concours",
+        "objectif": "Réussir le concours / l'examen avec un score top 20%",
+        "duree_mois": 6,
+        "niveau": "ambitieux",
+        "description": "Planning de révision structuré + annales + simulations chronométrées",
+        "couleur": "#e08a3c",
+    },
+    {
+        "id": "marathon",
+        "emoji": "🏃",
+        "categorie": "Sport",
+        "titre": "Courir un marathon",
+        "objectif": "Finir mon premier marathon en moins de 4h30",
+        "duree_mois": 4,
+        "niveau": "realiste",
+        "description": "Plan d'entraînement progressif, nutrition, sorties longues, récup",
+        "couleur": "#4caf82",
+    },
+    {
+        "id": "livre",
+        "emoji": "📖",
+        "categorie": "Création",
+        "titre": "Écrire un livre",
+        "objectif": "Écrire et publier mon premier livre (60 000 mots)",
+        "duree_mois": 6,
+        "niveau": "realiste",
+        "description": "Plan détaillé, sessions d'écriture quotidiennes, relecture, édition",
+        "couleur": "#a855f7",
+    },
+    {
+        "id": "youtube",
+        "emoji": "🎥",
+        "categorie": "Création",
+        "titre": "Lancer une chaîne YouTube",
+        "objectif": "Atteindre 1000 abonnés YouTube avec une chaîne thématique",
+        "duree_mois": 3,
+        "niveau": "ambitieux",
+        "description": "Setup, ligne édito, 1 vidéo/semaine, miniatures, optimisation SEO",
+        "couleur": "#e05c5c",
+    },
+    {
+        "id": "langue",
+        "emoji": "🗣️",
+        "categorie": "Apprentissage",
+        "titre": "Apprendre une langue (B2)",
+        "objectif": "Atteindre le niveau B2 dans une nouvelle langue",
+        "duree_mois": 6,
+        "niveau": "realiste",
+        "description": "Vocabulaire, grammaire, immersion, conversations, écoute active",
+        "couleur": "#22a06b",
+    },
+    {
+        "id": "job",
+        "emoji": "💼",
+        "categorie": "Carrière",
+        "titre": "Trouver un nouveau job",
+        "objectif": "Décrocher un poste qui me correspond avec +20% de salaire",
+        "duree_mois": 3,
+        "niveau": "ambitieux",
+        "description": "CV, LinkedIn, networking, préparation entretiens, négociation",
+        "couleur": "#3b82f6",
+    },
+    {
+        "id": "voyage",
+        "emoji": "✈️",
+        "categorie": "Vie perso",
+        "titre": "Préparer un grand voyage",
+        "objectif": "Organiser un voyage solo de 1 mois dans un pays étranger",
+        "duree_mois": 2,
+        "niveau": "realiste",
+        "description": "Budget, itinéraire, billets, vaccins, logements, sécurité",
+        "couleur": "#06b6d4",
+    },
+]
+
+@app.route('/ia/goal-reverse/templates', methods=['GET'])
+def goal_reverse_templates():
+    """Liste des templates inspirants pré-formatés."""
+    return jsonify({"templates": GOAL_TEMPLATES})
+
+
 @app.route('/ia/goal-reverse/<int:objectif_id>/replanning', methods=['POST'])
 def goal_reverse_replanning(objectif_id):
     """Auto-replanning IA : redistribue les tâches en retard sur les semaines restantes."""
