@@ -252,11 +252,13 @@ function tempsRelatif(iso) {
   } catch { return '' }
 }
 
-function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, onToggleFait, isDragOverlay = false }) {
+function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, onToggleFait, onDemarrer, isDragOverlay = false }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(tache.id) })
   const [assignOpen, setAssignOpen] = useState(false)
   const [checkHover, setCheckHover] = useState(false)
   const popRef = useRef(null)
+  const isTodo = tache.statut === 'todo'
+  const isEnCours = tache.statut === 'en_cours'
   const isDone = tache.statut === 'termine'
   const isEnValidation = tache.statut === 'en_validation'
   const isCreateur = user && tache.createur_id === user.id
@@ -266,6 +268,13 @@ function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, o
   const checkTitle = isDone ? 'Ré-ouvrir'
     : isEnValidation ? (canValidate ? 'Valider la tâche ✓' : 'Annuler la proposition')
     : 'Marquer terminée'
+  // Stripe gauche selon statut — indicateur visuel rapide
+  const statusStripe = isEnCours ? '#e08a3c'
+    : isEnValidation ? '#f59e0b'
+    : isDone ? '#4caf82'
+    : null
+  const statusBadge = isEnCours ? { label: 'En cours', color: '#e08a3c', icon: 'play' }
+    : null
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging && !isDragOverlay ? 0.35 : 1,
@@ -288,6 +297,7 @@ function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, o
         style={{
           background: isDone ? `${T.bg}88` : T.bg,
           border: `1px solid ${isDone ? '#4caf8230' : T.border}`,
+          borderLeft: statusStripe ? `3px solid ${statusStripe}` : `1px solid ${isDone ? '#4caf8230' : T.border}`,
           borderRadius: 12, padding: '12px 14px', marginBottom: 8,
           boxShadow: isDragOverlay ? '0 12px 40px rgba(0,0,0,0.28)' : 'none',
           opacity: isDone ? 0.72 : 1,
@@ -394,6 +404,26 @@ function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, o
             </span>
           </div>
         )}
+
+        {/* Badge "En cours" (statut explicite quand pas dans la colonne visible) */}
+        {statusBadge && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            fontSize: 10, color: statusBadge.color, fontWeight: 700,
+            background: `${statusBadge.color}14`, padding: '3px 8px',
+            borderRadius: 99, marginBottom: 8, width: 'fit-content',
+            border: `1px solid ${statusBadge.color}30`,
+          }}>
+            <motion.span
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ display: 'inline-flex' }}>
+              <Zap size={9} strokeWidth={3} />
+            </motion.span>
+            <span>{statusBadge.label}</span>
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             {/* Avatar cliquable : assigner / désassigner rapidement */}
@@ -431,11 +461,33 @@ function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, o
               </span>
             )}
           </div>
-          {tache.nb_commentaires > 0 && (
-            <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
-              <MessageCircle size={9} />{tache.nb_commentaires}
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {tache.nb_commentaires > 0 && (
+              <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                <MessageCircle size={9} />{tache.nb_commentaires}
+              </span>
+            )}
+            {/* Bouton "▶ Démarrer" — visible uniquement sur tâches À faire */}
+            {isTodo && (
+              <motion.button
+                onClick={e => { e.stopPropagation(); onDemarrer?.(tache.id) }}
+                whileHover={{ scale: 1.05, background: '#e08a3c22' }}
+                whileTap={{ scale: 0.92 }}
+                title="Démarrer la tâche"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 3,
+                  padding: '3px 9px', borderRadius: 99,
+                  background: '#e08a3c14', border: `1px solid #e08a3c30`,
+                  color: '#e08a3c', fontSize: 10, fontWeight: 700,
+                  cursor: 'pointer', flexShrink: 0,
+                }}>
+                <motion.span style={{ display: 'inline-flex', marginLeft: -1 }}>
+                  <svg width="8" height="8" viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9" fill="currentColor" /></svg>
+                </motion.span>
+                Démarrer
+              </motion.button>
+            )}
+          </div>
         </div>
       </motion.div>
 
@@ -1864,6 +1916,21 @@ export default function Collaboration() {
   const chargerTaches = async (id) => { try { const r = await axios.get(`${API}/equipes/${id}/taches`); setTaches(r.data) } catch {} }
   const chargerLabels = async (id) => { try { const r = await axios.get(`${API}/equipes/${id}/labels`); setLabels(r.data || []) } catch {} }
 
+  // Démarrer une tâche : todo → en_cours (1 clic depuis la carte)
+  const demarrerTache = useCallback(async (tacheId) => {
+    const prev = tachesRef.current
+    setTaches(p => p.map(t => t.id === tacheId ? { ...t, statut: 'en_cours' } : t))
+    try {
+      await axios.put(`${API}/equipes/taches/${tacheId}`, {
+        statut: 'en_cours', user_id: user.id, nom_user: user.nom,
+      })
+      addToast('Tâche démarrée', '▶', '#e08a3c')
+    } catch {
+      setTaches(prev)
+      addToast('Erreur — réessaie', '❌', '#e05c5c')
+    }
+  }, [user, addToast])
+
   // Toggle assignation d'un label sur une tâche
   const toggleLabelTache = useCallback(async (tacheId, labelId, deja) => {
     setTaches(p => p.map(t => {
@@ -2579,7 +2646,8 @@ export default function Collaboration() {
                             onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
                             onOuvrir={setTacheCommentaires}
                             onAssign={quickAssigner}
-                            onToggleFait={toggleFait} />
+                            onToggleFait={toggleFait}
+                            onDemarrer={demarrerTache} />
                         ))}
                       </AnimatePresence>
                       {tachesCol(col.id).length === 0 && (
