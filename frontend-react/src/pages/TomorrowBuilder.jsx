@@ -45,6 +45,94 @@ function ProgressBar({ value, color, height = 6 }) {
   )
 }
 
+// ---- Bloc apprentissage durées ----
+function DureeApprentissageBloc({ user, T }) {
+  const [stats, setStats] = useState(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    axios.get(`${API}/ia/duree-stats/${user.id}`)
+      .then(r => setStats(r.data))
+      .catch(() => {})
+  }, [user.id])
+
+  if (!stats) return null
+
+  const total = stats.total || 0
+  const precision = stats.precision_globale
+  const accent = precision == null ? T.text2 : precision >= 70 ? '#4caf82' : precision >= 50 ? '#e08a3c' : '#e05c5c'
+
+  return (
+    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: stats.conseil || precision != null ? 10 : 0 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Brain size={15} color={accent} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8 }}>APPRENTISSAGE DURÉES</div>
+          <div style={{ fontSize: 12, color: T.text, fontWeight: 600 }}>
+            {total === 0
+              ? 'En attente de données…'
+              : precision != null
+                ? <>Précision <span style={{ color: accent }}>{precision}%</span> · {total} tâches</>
+                : `${total} tâche${total > 1 ? 's' : ''} apprises`}
+          </div>
+        </div>
+        {stats.categories?.length > 0 && (
+          <motion.button
+            onClick={() => setOpen(o => !o)}
+            whileTap={{ scale: 0.9 }}
+            style={{ background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', padding: 4, display: 'flex' }}
+          >
+            {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </motion.button>
+        )}
+      </div>
+
+      {total === 0 ? (
+        <p style={{ fontSize: 10, color: T.text2, margin: '4px 0 0', lineHeight: 1.5 }}>
+          Marque le temps réel de tes tâches terminées pour calibrer tes estimations.
+        </p>
+      ) : (
+        <>
+          {stats.conseil && (
+            <p style={{ fontSize: 11, color: T.text, margin: 0, lineHeight: 1.5, padding: '8px 10px', background: `${accent}10`, borderRadius: 8, borderLeft: `2px solid ${accent}` }}>
+              {stats.conseil}
+            </p>
+          )}
+          <AnimatePresence>
+            {open && stats.categories?.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25 }}
+                style={{ overflow: 'hidden', marginTop: 8 }}
+              >
+                {stats.categories.slice(0, 5).map((c, i) => {
+                  const ecartColor = c.ecart_pct > 15 ? '#e05c5c' : c.ecart_pct < -15 ? '#e08a3c' : '#4caf82'
+                  const sign = c.ecart_pct > 0 ? '+' : ''
+                  return (
+                    <div key={c.categorie} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: T.text }}>{c.label}</div>
+                        <div style={{ fontSize: 10, color: T.text2 }}>{c.moyenne_reelle_min}min réel · {c.nb} ex.</div>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: ecartColor, padding: '2px 6px', borderRadius: 6, background: `${ecartColor}12` }}>
+                        {sign}{c.ecart_pct}%
+                      </div>
+                    </div>
+                  )
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ---- Bloc Push matin 7h ----
 function PushMatinBloc({ user, T, notifier }) {
   const [state, setState] = useState('loading') // loading | unsupported | denied | inactive | active
@@ -1202,6 +1290,9 @@ export default function TomorrowBuilder() {
 
                   {/* Push notif matin 7h */}
                   <PushMatinBloc user={user} T={T} />
+
+                  {/* Apprentissage durées */}
+                  <DureeApprentissageBloc user={user} T={T} />
 
                   {/* Google Calendar */}
                   <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>

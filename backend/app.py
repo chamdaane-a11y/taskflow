@@ -3659,21 +3659,81 @@ def calculer_score_energie(user_id, db_cursor):
     except:
         return 60
 
+CATEGORIES_DUREE = {
+    'deep_work':     {'mots': ['rédiger', 'rediger', 'analyser', 'concevoir', 'développer', 'developper', 'coder', 'créer', 'creer', 'préparer', 'preparer', 'planifier', 'rechercher', 'écrire', 'ecrire', 'architecturer', 'designer'], 'baseline': 90, 'label': 'Travail profond'},
+    'communication': {'mots': ['appeler', 'appel', 'email', 'mail', 'envoyer', 'répondre', 'repondre', 'contacter', 'message', 'écrire à', 'ecrire a', 'relancer', 'recontacter'], 'baseline': 20, 'label': 'Communication'},
+    'admin':         {'mots': ['facture', 'paiement', 'payer', 'déclarer', 'declarer', 'dossier', 'formulaire', 'rendez-vous', 'rdv', 'banque', 'impôt', 'impot', 'administratif', 'compta'], 'baseline': 30, 'label': 'Administratif'},
+    'creatif':       {'mots': ['design', 'maquette', 'brainstorm', 'prototyper', 'prototype', 'illustrer', 'mockup', 'wireframe', 'logo', 'graphique', 'visuel'], 'baseline': 75, 'label': 'Créatif'},
+    'meeting':       {'mots': ['réunion', 'reunion', 'meeting', 'call', 'point ', 'sync', 'entretien', 'visio', 'standup', 'daily', 'retro'], 'baseline': 60, 'label': 'Réunion'},
+    'quickwin':      {'mots': ['checker', 'vérifier', 'verifier', 'lire ', 'noter', 'mettre à jour', 'maj', 'cocher', 'archiver', 'classer', 'ranger'], 'baseline': 15, 'label': 'Quick win'},
+    'learning':      {'mots': ['apprendre', 'réviser', 'reviser', 'étudier', 'etudier', 'cours', 'formation', 'tutoriel', 'tuto', 'lecture', 'livre', 'doc'], 'baseline': 60, 'label': 'Apprentissage'},
+}
+
+def categoriser_titre(titre):
+    """Catégorise sémantiquement un titre de tâche. Retourne (categorie_key, baseline_min)."""
+    if not titre:
+        return ('default', 45)
+    t = titre.lower()
+    for cat, data in CATEGORIES_DUREE.items():
+        for mot in data['mots']:
+            if mot in t:
+                return (cat, data['baseline'])
+    return ('default', 45)
+
 def estimer_duree_tache(titre, priorite):
-    titre_lower = titre.lower()
-    mots_longs = ['rédiger', 'analyser', 'concevoir', 'développer', 'coder', 'créer', 'préparer', 'planifier', 'rechercher']
-    mots_courts = ['appeler', 'email', 'envoyer', 'vérifier', 'lire', 'répondre', 'noter', 'checker']
-    mots_moyens = ['réunion', 'meeting', 'réviser', 'corriger', 'mettre à jour', 'organiser']
-    duree_base = 45
-    for mot in mots_longs:
-        if mot in titre_lower: duree_base = 90; break
-    for mot in mots_courts:
-        if mot in titre_lower: duree_base = 20; break
-    for mot in mots_moyens:
-        if mot in titre_lower: duree_base = 60; break
-    if priorite == 'haute': duree_base = int(duree_base * 1.3)
-    elif priorite == 'basse': duree_base = int(duree_base * 0.8)
-    return duree_base
+    """Baseline statique — utilisée comme fallback dans estimer_duree_tache_smart."""
+    _, base = categoriser_titre(titre)
+    if priorite == 'haute': base = int(base * 1.3)
+    elif priorite == 'basse': base = int(base * 0.8)
+    return base
+
+def estimer_duree_tache_smart(titre, priorite, user_id, db_cursor):
+    """Prédiction de durée personnalisée : baseline + apprentissage sur historique user.
+    - Catégorise sémantiquement le titre (7 catégories + default)
+    - Récupère les tâches terminées de l'user dans cette catégorie avec temps_reel
+    - Moyenne pondérée par récence (exponential decay, demi-vie 30j)
+    - Bayesian shrinkage : poids user grandit avec nb d'exemples (n / (n + 5))
+    """
+    categorie, baseline = categoriser_titre(titre)
+    base_with_prio = baseline
+    if priorite == 'haute': base_with_prio = int(baseline * 1.3)
+    elif priorite == 'basse': base_with_prio = int(baseline * 0.8)
+    try:
+        db_cursor.execute("""
+            SELECT titre, priorite, temps_reel, updated_at
+            FROM taches
+            WHERE user_id=%s AND terminee=1
+              AND temps_reel IS NOT NULL AND temps_reel > 0
+              AND updated_at >= DATE_SUB(NOW(), INTERVAL 180 DAY)
+        """, (user_id,))
+        rows = db_cursor.fetchall()
+        same_cat = []
+        for r in rows:
+            cat_r, _ = categoriser_titre(r['titre'])
+            if cat_r == categorie:
+                same_cat.append(r)
+        if len(same_cat) < 2:
+            return base_with_prio
+        import math
+        now = datetime.now()
+        weights, values = [], []
+        for r in same_cat:
+            d_age = max(0, (now - r['updated_at']).days) if r['updated_at'] else 30
+            w = math.exp(-d_age / 30.0)
+            v = r['temps_reel']
+            # Normaliser sur la priorité de référence du titre actuel
+            if r['priorite'] == 'haute' and priorite != 'haute': v = v / 1.3
+            elif r['priorite'] == 'basse' and priorite != 'basse': v = v / 0.8
+            if priorite == 'haute' and r['priorite'] != 'haute': v = v * 1.3
+            elif priorite == 'basse' and r['priorite'] != 'basse': v = v * 0.8
+            weights.append(w); values.append(v)
+        weighted_mean = sum(v * w for v, w in zip(values, weights)) / sum(weights)
+        n = len(same_cat)
+        alpha = n / (n + 5.0)  # shrinkage : 5 exemples → 50% poids user
+        blended = alpha * weighted_mean + (1 - alpha) * base_with_prio
+        return max(5, min(240, int(round(blended))))
+    except Exception:
+        return base_with_prio
 
 def detecter_heure_productive(user_id, db_cursor):
     try:
@@ -3696,7 +3756,7 @@ def tomorrow_builder(user_id):
         score_energie = calculer_score_energie(user_id, curseur)
         heure_productive = detecter_heure_productive(user_id, curseur)
         for t in taches:
-            t['duree_estimee'] = estimer_duree_tache(t['titre'], t['priorite'])
+            t['duree_estimee'] = estimer_duree_tache_smart(t['titre'], t['priorite'], user_id, curseur)
             if t['deadline']: t['deadline'] = str(t['deadline'])
         niveau_energie = "élevé" if score_energie >= 70 else "moyen" if score_energie >= 40 else "faible"
         demain = (datetime.now() + timedelta(days=1)).strftime('%A %d %B %Y')
@@ -3894,6 +3954,71 @@ def energie_courbe(user_id):
             "heure_pic": heure_pic,
             "score_global": score_global,
             "has_user_data": total > 0
+        })
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/ia/duree-stats/<int:user_id>', methods=['GET'])
+def duree_stats(user_id):
+    """Bilan apprentissage des durées : par catégorie sémantique, ratio reel/baseline, confiance."""
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT titre, priorite, temps_estime, temps_reel, updated_at
+            FROM taches
+            WHERE user_id=%s AND terminee=1
+              AND temps_reel IS NOT NULL AND temps_reel > 0
+              AND updated_at >= DATE_SUB(NOW(), INTERVAL 180 DAY)
+        """, (user_id,))
+        rows = cursor.fetchall()
+        db.close()
+        if not rows:
+            return jsonify({"total": 0, "categories": [], "precision_globale": None, "conseil": None})
+        # Regroupe par catégorie sémantique
+        par_cat = {}
+        for r in rows:
+            cat, baseline = categoriser_titre(r['titre'])
+            par_cat.setdefault(cat, {'baseline': baseline, 'rows': []})
+            par_cat[cat]['rows'].append(r)
+        categories = []
+        bien_calibrees_total = 0
+        total = 0
+        for cat, d in par_cat.items():
+            items = d['rows']
+            if len(items) < 2:
+                continue
+            moy_reel = sum(i['temps_reel'] for i in items) / len(items)
+            moy_estime = sum((i['temps_estime'] or d['baseline']) for i in items) / len(items)
+            ratio = moy_reel / max(moy_estime, 1)
+            ecart_pct = round((ratio - 1) * 100)
+            label_categorie = CATEGORIES_DUREE.get(cat, {}).get('label', 'Autres')
+            categories.append({
+                "categorie": cat,
+                "label": label_categorie,
+                "nb": len(items),
+                "moyenne_reelle_min": round(moy_reel),
+                "baseline_min": d['baseline'],
+                "ratio": round(ratio, 2),
+                "ecart_pct": ecart_pct
+            })
+            total += len(items)
+            bien_calibrees_total += sum(1 for i in items if i['temps_estime'] and 0.8 <= i['temps_reel'] / i['temps_estime'] <= 1.2)
+        categories.sort(key=lambda x: -x['nb'])
+        precision = round(bien_calibrees_total / total * 100) if total > 0 else None
+        # Conseil : catégorie la plus sous-estimée
+        sous_estimes = sorted([c for c in categories if c['ecart_pct'] > 15], key=lambda x: -x['ecart_pct'])
+        conseil = None
+        if sous_estimes:
+            top = sous_estimes[0]
+            conseil = f"Tu sous-estimes les tâches « {top['label'].lower()} » de +{top['ecart_pct']}%. GetShift ajuste auto."
+        elif precision is not None and precision >= 70:
+            conseil = f"Tes estimations sont précises à {precision}% — bonne calibration."
+        return jsonify({
+            "total": sum(c['nb'] for c in categories),
+            "categories": categories,
+            "precision_globale": precision,
+            "conseil": conseil
         })
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
