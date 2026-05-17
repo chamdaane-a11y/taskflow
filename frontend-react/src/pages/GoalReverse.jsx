@@ -242,14 +242,14 @@ export default function GoalReverse() {
 )}
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 40 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 16px ${T.accent}40` }}>
-              <Flag size={20} color={T.bg} strokeWidth={2.5} />
+        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: isMobile ? 22 : 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 12, marginBottom: 8 }}>
+            <div style={{ width: isMobile ? 36 : 44, height: isMobile ? 36 : 44, borderRadius: isMobile ? 11 : 14, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 16px ${T.accent}40`, flexShrink: 0 }}>
+              <Flag size={isMobile ? 16 : 20} color={T.bg} strokeWidth={2.5} />
             </div>
-            <div>
-              <h1 style={{ fontSize: 26, fontWeight: 700, color: T.text, letterSpacing: '-0.5px', margin: 0 }}>Goal Reverse Engineering</h1>
-              <p style={{ fontSize: 13, color: T.text2, margin: 0, marginTop: 3 }}>Définis ton objectif final, l'IA construit le chemin à rebours</p>
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ fontSize: isMobile ? 19 : 26, fontWeight: 700, color: T.text, letterSpacing: '-0.5px', margin: 0, lineHeight: 1.15 }}>Goal Reverse</h1>
+              <p style={{ fontSize: isMobile ? 11.5 : 13, color: T.text2, margin: 0, marginTop: 3, lineHeight: 1.4 }}>{isMobile ? "Ton objectif → plan à rebours" : "Définis ton objectif final, l'IA construit le chemin à rebours"}</p>
             </div>
           </div>
         </motion.div>
@@ -278,7 +278,7 @@ export default function GoalReverse() {
               scrollbarWidth: 'none', WebkitScrollbar: { display: 'none' },
             }} className="templates-scroll">
               <style>{`.templates-scroll::-webkit-scrollbar{display:none;}`}</style>
-              {templates.slice(0, isMobile ? 8 : 6).map((tpl, i) => (
+              {templates.slice(0, isMobile ? 4 : 6).map((tpl, i) => (
                 <motion.button
                   key={tpl.id}
                   onClick={() => appliquerTemplate(tpl)}
@@ -286,19 +286,19 @@ export default function GoalReverse() {
                   whileHover={{ y: -3, borderColor: tpl.couleur }}
                   whileTap={{ scale: 0.98 }}
                   style={{
-                    flexShrink: 0, width: 160, padding: '12px 14px',
+                    flexShrink: 0, width: isMobile ? 142 : 160, padding: isMobile ? '11px 12px' : '12px 14px',
                     background: T.bg2, border: `1px solid ${T.border}`,
                     borderRadius: 14, cursor: 'pointer', textAlign: 'left',
                     display: 'flex', flexDirection: 'column', gap: 6,
                   }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 22 }}>{tpl.emoji}</span>
+                    <span style={{ fontSize: isMobile ? 20 : 22 }}>{tpl.emoji}</span>
                     <span style={{
                       fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
                       background: `${tpl.couleur}18`, color: tpl.couleur, letterSpacing: 0.5,
-                    }}>{tpl.duree_mois} MOIS</span>
+                    }}>{tpl.duree_mois}M</span>
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.25 }}>
+                  <div style={{ fontSize: isMobile ? 12.5 : 13, fontWeight: 700, color: T.text, lineHeight: 1.25 }}>
                     {tpl.titre}
                   </div>
                   <div style={{ fontSize: 10.5, color: T.text2, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
@@ -311,13 +311,13 @@ export default function GoalReverse() {
                   onClick={() => setShowTemplatesModal(true)}
                   whileTap={{ scale: 0.98 }}
                   style={{
-                    flexShrink: 0, width: 100, padding: '12px 14px',
+                    flexShrink: 0, width: 92, padding: '12px 10px',
                     background: `${T.accent}10`, border: `1px dashed ${T.accent}40`,
                     borderRadius: 14, cursor: 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}>
                   <ArrowRight size={18} color={T.accent} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: T.accent }}>Voir tous</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: T.accent, textAlign: 'center', lineHeight: 1.2 }}>Voir tous</span>
                 </motion.button>
               )}
             </div>
@@ -327,7 +327,7 @@ export default function GoalReverse() {
         {/* Formulaire */}
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 20, padding: 28, marginBottom: 28 }}>
+          style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: isMobile ? 16 : 20, padding: isMobile ? 18 : 28, marginBottom: isMobile ? 22 : 28 }}>
 
           {/* Objectif */}
           <div style={{ marginBottom: 20 }}>
@@ -403,7 +403,7 @@ export default function GoalReverse() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
 
               {/* Résumé */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 10, marginBottom: isMobile ? 18 : 24 }}>
                 {[
                   { label: 'Semaines', val: result.duree_semaines, icon: Calendar, color: T.accent },
                   { label: 'Jalons', val: result.jalons?.length, icon: Flag, color: '#6c63ff' },
@@ -413,10 +413,10 @@ export default function GoalReverse() {
                   const Icon = s.icon
                   return (
                     <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                      style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '14px 16px' }}>
-                      <Icon size={15} color={s.color} strokeWidth={1.8} style={{ marginBottom: 8 }} />
-                      <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.5px' }}>{s.val}</div>
-                      <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>{s.label}</div>
+                      style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: isMobile ? 12 : 14, padding: isMobile ? '11px 12px' : '14px 16px' }}>
+                      <Icon size={isMobile ? 13 : 15} color={s.color} strokeWidth={1.8} style={{ marginBottom: isMobile ? 5 : 8 }} />
+                      <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: s.color, letterSpacing: '-0.5px' }}>{s.val}</div>
+                      <div style={{ fontSize: isMobile ? 10 : 11, color: T.text2, marginTop: 2 }}>{s.label}</div>
                     </motion.div>
                   )
                 })}
@@ -425,15 +425,15 @@ export default function GoalReverse() {
               {/* Conseil du coach */}
               {result.conseil_global && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                  style={{ background: `${T.accent}10`, border: `1px solid ${T.accent}25`, borderRadius: 14, padding: '14px 18px', marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 18, flexShrink: 0, marginTop: -1 }}>{result._coach?.emoji || '✨'}</span>
-                  <div style={{ flex: 1 }}>
+                  style={{ background: `${T.accent}10`, border: `1px solid ${T.accent}25`, borderRadius: isMobile ? 12 : 14, padding: isMobile ? '12px 14px' : '14px 18px', marginBottom: isMobile ? 12 : 16, display: 'flex', gap: isMobile ? 10 : 12, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: isMobile ? 16 : 18, flexShrink: 0, marginTop: -1 }}>{result._coach?.emoji || '✨'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     {result._coach?.nom && (
-                      <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: 0.6, marginBottom: 4 }}>
+                      <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: T.accent, letterSpacing: 0.6, marginBottom: 4 }}>
                         CONSEIL DE {result._coach.nom.toUpperCase()}
                       </div>
                     )}
-                    <p style={{ fontSize: 13, color: T.text, margin: 0, lineHeight: 1.7 }}>{result.conseil_global}</p>
+                    <p style={{ fontSize: isMobile ? 12.5 : 13, color: T.text, margin: 0, lineHeight: 1.6 }}>{result.conseil_global}</p>
                   </div>
                 </motion.div>
               )}
@@ -441,14 +441,14 @@ export default function GoalReverse() {
               {/* Risques identifiés */}
               {result.risques && result.risques.length > 0 && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
-                  style={{ background: 'rgba(224,92,92,0.08)', border: '1px solid rgba(224,92,92,0.25)', borderRadius: 14, padding: '14px 18px', marginBottom: 24 }}>
+                  style={{ background: 'rgba(224,92,92,0.08)', border: '1px solid rgba(224,92,92,0.25)', borderRadius: isMobile ? 12 : 14, padding: isMobile ? '12px 14px' : '14px 18px', marginBottom: isMobile ? 16 : 24 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <AlertTriangle size={15} color="#e05c5c" strokeWidth={2} />
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#e05c5c', letterSpacing: 0.8 }}>RISQUES IDENTIFIÉS</span>
+                    <AlertTriangle size={isMobile ? 13 : 15} color="#e05c5c" strokeWidth={2} />
+                    <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: '#e05c5c', letterSpacing: 0.8 }}>RISQUES IDENTIFIÉS</span>
                   </div>
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
                     {result.risques.map((r, i) => (
-                      <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: T.text, lineHeight: 1.6, padding: '4px 0' }}>
+                      <li key={i} style={{ display: 'flex', gap: 8, fontSize: isMobile ? 12.5 : 13, color: T.text, lineHeight: 1.55, padding: '4px 0' }}>
                         <span style={{ color: '#e05c5c', flexShrink: 0 }}>•</span>
                         <span>{r}</span>
                       </li>
@@ -461,18 +461,18 @@ export default function GoalReverse() {
               {result.jalons && result.jalons.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                  style={{ marginBottom: 24, padding: '16px 18px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                  style={{ marginBottom: isMobile ? 18 : 24, padding: isMobile ? '14px 14px' : '16px 18px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: isMobile ? 12 : 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? 12 : 14, flexWrap: 'wrap', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <Calendar size={13} color={T.accent} strokeWidth={2.2} />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 1 }}>CHRONOLOGIE</span>
+                      <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: T.text2, letterSpacing: 1 }}>CHRONOLOGIE</span>
                     </div>
-                    <span style={{ fontSize: 10, color: T.text2 }}>
+                    <span style={{ fontSize: isMobile ? 9.5 : 10, color: T.text2 }}>
                       {result.duree_semaines || result.jalons.length} sem. · {result.jalons.length} jalons
                     </span>
                   </div>
                   {/* Barres jalons */}
-                  <div style={{ display: 'flex', gap: 3, height: 32, alignItems: 'stretch' }}>
+                  <div style={{ display: 'flex', gap: isMobile ? 2 : 3, height: isMobile ? 36 : 32, alignItems: 'stretch' }}>
                     {result.jalons.map((j, i) => {
                       const c = DIFFICULTE_COLOR[j.difficulte] || T.accent
                       const isOpen = jalonsOuverts[i]
@@ -489,9 +489,10 @@ export default function GoalReverse() {
                             background: `linear-gradient(135deg, ${c}, ${c}bb)`,
                             border: 'none', borderRadius: 6, cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 10, fontWeight: 800, color: '#fff', letterSpacing: 0.3,
-                            boxShadow: isOpen ? `0 0 0 2px ${T.bg}, 0 0 0 4px ${c}, 0 4px 14px ${c}50` : `0 2px 6px ${c}30`,
+                            fontSize: isMobile ? 11 : 10, fontWeight: 800, color: '#fff', letterSpacing: 0.3,
+                            boxShadow: isOpen ? `0 0 0 2px ${T.bg}, 0 0 0 3px ${c}, 0 4px 14px ${c}50` : `0 2px 6px ${c}30`,
                             transformOrigin: 'left center', position: 'relative',
+                            padding: 0,
                           }}>
                           S{j.semaine}
                         </motion.button>
@@ -500,7 +501,7 @@ export default function GoalReverse() {
                   </div>
                   {/* Légende */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: isMobile ? 8 : 10, flexWrap: 'wrap' }}>
                       {[['faible', 'Facile'], ['moyenne', 'Moyen'], ['élevée', 'Élevé']].map(([k, lbl]) => (
                         <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <div style={{ width: 8, height: 8, borderRadius: 2, background: DIFFICULTE_COLOR[k] }} />
@@ -508,43 +509,45 @@ export default function GoalReverse() {
                         </div>
                       ))}
                     </div>
-                    <span style={{ fontSize: 9.5, color: T.text2, fontStyle: 'italic' }}>
-                      Clique sur un jalon pour le détailler ↓
-                    </span>
+                    {!isMobile && (
+                      <span style={{ fontSize: 9.5, color: T.text2, fontStyle: 'italic' }}>
+                        Clique sur un jalon pour le détailler ↓
+                      </span>
+                    )}
                   </div>
                 </motion.div>
               )}
 
               {/* Timeline jalons */}
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 16 }}>PLAN D'ACTION</p>
+              <div style={{ marginBottom: isMobile ? 18 : 24 }}>
+                <p style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: isMobile ? 12 : 16 }}>PLAN D'ACTION</p>
                 {result.jalons?.map((jalon, i) => (
                   <motion.div key={i}
                     initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                    style={{ marginBottom: 10, position: 'relative' }}>
+                    style={{ marginBottom: isMobile ? 8 : 10, position: 'relative' }}>
                     {/* Ligne verticale */}
                     {i < result.jalons.length - 1 && (
-                      <div style={{ position: 'absolute', left: 19, top: 50, width: 2, height: 'calc(100% - 10px)', background: `${T.border}`, zIndex: 0 }} />
+                      <div style={{ position: 'absolute', left: isMobile ? 16 : 19, top: isMobile ? 44 : 50, width: 2, height: 'calc(100% - 8px)', background: `${T.border}`, zIndex: 0 }} />
                     )}
 
                     {/* Header jalon */}
                     <motion.button
                       onClick={() => toggleJalon(i)}
-                      style={{ width: '100%', background: T.bg2, border: `1px solid ${jalonsOuverts[i] ? T.accent + '50' : T.border}`, borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left', position: 'relative', zIndex: 1 }}
+                      style={{ width: '100%', background: T.bg2, border: `1px solid ${jalonsOuverts[i] ? T.accent + '50' : T.border}`, borderRadius: isMobile ? 12 : 14, padding: isMobile ? '11px 13px' : '14px 18px', display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, cursor: 'pointer', textAlign: 'left', position: 'relative', zIndex: 1 }}
                       whileHover={{ borderColor: T.accent + '40' }}>
                       {/* Numéro semaine */}
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: jalonsOuverts[i] ? T.accent : T.bg3, border: `2px solid ${jalonsOuverts[i] ? T.accent : T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: jalonsOuverts[i] ? T.bg : T.text2 }}>S{jalon.semaine}</span>
+                      <div style={{ width: isMobile ? 30 : 36, height: isMobile ? 30 : 36, borderRadius: '50%', background: jalonsOuverts[i] ? T.accent : T.bg3, border: `2px solid ${jalonsOuverts[i] ? T.accent : T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
+                        <span style={{ fontSize: isMobile ? 10.5 : 12, fontWeight: 800, color: jalonsOuverts[i] ? T.bg : T.text2 }}>S{jalon.semaine}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{jalon.titre}</div>
-                        <div style={{ display: 'flex', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 11, color: T.text2 }}>📅 {new Date(jalon.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: DIFFICULTE_COLOR[jalon.difficulte] || T.text2 }}>● {jalon.difficulte}</span>
-                          <span style={{ fontSize: 11, color: T.text2 }}>{jalon.taches.length} tâche{jalon.taches.length > 1 ? 's' : ''}</span>
+                        <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: T.text, lineHeight: 1.3 }}>{jalon.titre}</div>
+                        <div style={{ display: 'flex', gap: isMobile ? 8 : 10, marginTop: 3, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: isMobile ? 10.5 : 11, color: T.text2 }}>📅 {new Date(jalon.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                          <span style={{ fontSize: isMobile ? 10.5 : 11, fontWeight: 600, color: DIFFICULTE_COLOR[jalon.difficulte] || T.text2 }}>● {jalon.difficulte}</span>
+                          <span style={{ fontSize: isMobile ? 10.5 : 11, color: T.text2 }}>{jalon.taches.length} tâche{jalon.taches.length > 1 ? 's' : ''}</span>
                         </div>
                       </div>
-                      {jalonsOuverts[i] ? <ChevronUp size={16} color={T.text2} /> : <ChevronDown size={16} color={T.text2} />}
+                      {jalonsOuverts[i] ? <ChevronUp size={isMobile ? 14 : 16} color={T.text2} /> : <ChevronDown size={isMobile ? 14 : 16} color={T.text2} />}
                     </motion.button>
 
                     {/* Tâches du jalon */}
@@ -553,23 +556,35 @@ export default function GoalReverse() {
                         <motion.div
                           initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.2 }}
-                          style={{ overflow: 'hidden', paddingLeft: 50, paddingTop: 6 }}>
+                          style={{ overflow: 'hidden', paddingLeft: isMobile ? 12 : 50, paddingTop: 6 }}>
                           {jalon.taches.map((tache, j) => {
                             const pColor = tache.priorite === 'haute' ? '#e05c5c' : tache.priorite === 'moyenne' ? '#e08a3c' : '#4caf82'
                             return (
                               <motion.div key={j}
                                 initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: j * 0.05 }}
-                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, marginBottom: 6 }}>
-                                <div style={{ width: 7, height: 7, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
-                                <span style={{ flex: 1, fontSize: 13, color: T.text }}>{tache.titre}</span>
-                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: isMobile ? 'column' : 'row',
+                                  alignItems: isMobile ? 'stretch' : 'center',
+                                  gap: isMobile ? 6 : 10,
+                                  padding: isMobile ? '10px 12px' : '9px 14px',
+                                  background: T.bg3, border: `1px solid ${T.border}`,
+                                  borderRadius: 10, marginBottom: 6,
+                                }}>
+                                {/* Titre + bullet */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
+                                  <span style={{ flex: 1, fontSize: isMobile ? 12.5 : 13, color: T.text, lineHeight: 1.35, wordBreak: 'break-word' }}>{tache.titre}</span>
+                                </div>
+                                {/* Meta info */}
+                                <div style={{ display: 'flex', gap: isMobile ? 6 : 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', paddingLeft: isMobile ? 15 : 0 }}>
                                   {tache.duree_estimee && (
-                                    <span style={{ fontSize: 11, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                    <span style={{ fontSize: isMobile ? 10 : 11, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
                                       <Clock size={10} />{tache.duree_estimee}min
                                     </span>
                                   )}
-                                  <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: `${pColor}18`, color: pColor, fontWeight: 600 }}>{tache.priorite}</span>
-                                  <span style={{ fontSize: 11, color: T.text2 }}>{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                                  <span style={{ fontSize: isMobile ? 9 : 10, padding: '2px 7px', borderRadius: 99, background: `${pColor}18`, color: pColor, fontWeight: 600 }}>{tache.priorite}</span>
+                                  <span style={{ fontSize: isMobile ? 10 : 11, color: T.text2 }}>{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
                                 </div>
                               </motion.div>
                             )
@@ -585,18 +600,23 @@ export default function GoalReverse() {
               {!imported && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                  style={{ background: T.bg2, border: `1px solid ${T.accent}25`, borderRadius: 14, padding: '16px 18px', marginBottom: 18 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: 8, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Wand2 size={13} color={T.accent} strokeWidth={2.2} />
+                  style={{ background: T.bg2, border: `1px solid ${T.accent}25`, borderRadius: isMobile ? 12 : 14, padding: isMobile ? '14px 14px' : '16px 18px', marginBottom: isMobile ? 14 : 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: isMobile ? 10 : 12, flexWrap: 'wrap' }}>
+                    <div style={{ width: isMobile ? 24 : 26, height: isMobile ? 24 : 26, borderRadius: 8, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Wand2 size={isMobile ? 12 : 13} color={T.accent} strokeWidth={2.2} />
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: T.text, letterSpacing: 0.5 }}>AFFINER LE PLAN</span>
-                    {result._iteration && (
+                    <span style={{ fontSize: isMobile ? 11 : 12, fontWeight: 700, color: T.text, letterSpacing: 0.5 }}>AFFINER LE PLAN</span>
+                    {result._iteration && !isMobile && (
                       <span style={{ fontSize: 10, color: T.text2, fontStyle: 'italic', marginLeft: 'auto', maxWidth: '40%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                         ✨ "{result._iteration}"
                       </span>
                     )}
                   </div>
+                  {result._iteration && isMobile && (
+                    <div style={{ fontSize: 10, color: T.text2, fontStyle: 'italic', marginBottom: 10, padding: '6px 10px', background: `${T.accent}08`, borderRadius: 8, lineHeight: 1.4 }}>
+                      ✨ Dernière modif : "{result._iteration}"
+                    </div>
+                  )}
                   {/* Quick actions */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                     {QUICK_ITERATIONS.map(q => (
