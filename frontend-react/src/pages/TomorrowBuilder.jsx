@@ -1294,6 +1294,32 @@ export default function TomorrowBuilder() {
                   {/* Apprentissage durées */}
                   <DureeApprentissageBloc user={user} T={T} />
 
+                  {/* Export iCal */}
+                  {planning && (
+                    <motion.button
+                      onClick={async () => {
+                        try {
+                          const dateStr = savedPlan?.date_planifiee || demain.toISOString().split('T')[0]
+                          const res = await axios.get(`${API}/ia/tomorrow-builder/${user.id}/export-ical?date=${dateStr}`, { responseType: 'blob' })
+                          const url = window.URL.createObjectURL(res.data)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `getshift-${dateStr}.ics`
+                          a.click()
+                          window.URL.revokeObjectURL(url)
+                        } catch (e) {
+                          console.error('export failed', e)
+                        }
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 16px', background: `${T.accent}12`, border: `1.5px solid ${T.accent}30`, borderRadius: 14, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 12 }}
+                    >
+                      <span>📅</span>
+                      <span>Exporter en iCal</span>
+                    </motion.button>
+                  )}
+
                   {/* Google Calendar */}
                   <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: calendarConnected && calendarEvents.length > 0 ? 10 : 8 }}>

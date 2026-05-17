@@ -3827,6 +3827,86 @@ def get_saved_planning(user_id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+@app.route('/ia/tomorrow-builder/<int:user_id>/export-ical', methods=['GET'])
+def export_tomorrow_ical(user_id):
+    try:
+        date_str = request.args.get('date')
+        if not date_str:
+            date_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT planning_json FROM tomorrow_plans WHERE user_id=%s AND DATE(date_planifiee)=%s ORDER BY cree_le DESC LIMIT 1", (user_id, date_str))
+        row = cursor.fetchone()
+        db.close()
+        if not row:
+            return jsonify({"erreur": "Aucun plan pour cette date"}), 404
+        plan_data = json.loads(row['planning_json'])
+        creneaux = plan_data.get('planning', [])
+        # RFC 5545 : iCal format basique
+        cal_id = f"getshift-{user_id}-{date_str}@taskflow.app"
+        now = datetime.now().strftime('%Y%m%dT%H%M%SZ')
+        events = []
+        for p in creneaux:
+            if p.get('type') == 'pause':
+                continue
+            titre = p.get('titre', 'Tâche sans titre')
+            heure_debut = p.get('heure_debut', '09:00')
+            heure_fin = p.get('heure_fin', '10:00')
+            duree = p.get('duree_minutes', 60)
+            h_start, m_start = heure_debut.split(':')
+            dt_start = f"{date_str.replace('-', '')}T{h_start}{m_start}00"
+            h_end = int(h_start) + (int(m_start) + duree) // 60
+            m_end = (int(m_start) + duree) % 60
+            if h_end >= 24:
+                dt_end = (datetime.strptime(date_str, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y%m%d')
+                dt_end += f"T{h_end % 24:02d}{m_end:02d}00"
+            else:
+                dt_end = f"{date_str.replace('-', '')}T{h_end:02d}{m_end:02d}00"
+            uid = f"getshift-{user_id}-{date_str}-{titre[:20].replace(' ', '-')}@taskflow.app"
+            priorite = p.get('priorite', 'moyenne')
+            description = f"Priorité: {priorite} | {duree}min"
+            event = f"""BEGIN:VEVENT
+UID:{uid}
+DTSTAMP:{now}
+DTSTART:{dt_start}
+DTEND:{dt_end}
+SUMMARY:{titre}
+DESCRIPTION:{description}
+END:VEVENT"""
+            events.append(event)
+        ical = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//GetShift//TaskFlow//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:GetShift {date_str}
+X-WR-TIMEZONE:Europe/Paris
+BEGIN:VTIMEZONE
+TZID:Europe/Paris
+BEGIN:STANDARD
+DTSTART:19701025T030000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+TZNAME:CET
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:19700329T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+TZNAME:CEST
+END:DAYLIGHT
+END:VTIMEZONE
+{chr(10).join(events)}
+END:VCALENDAR"""
+        response = make_response(ical)
+        response.headers['Content-Type'] = 'text/calendar; charset=utf-8'
+        response.headers['Content-Disposition'] = f'attachment; filename="getshift-{date_str}.ics"'
+        return response
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 @app.route('/ia/tomorrow-builder/<int:user_id>/update', methods=['PATCH'])
 def update_tomorrow_plan(user_id):
     try:
