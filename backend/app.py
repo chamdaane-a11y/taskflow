@@ -3850,6 +3850,27 @@ def auth_discord():
         window.close();
     </script>"""
 
+@app.route('/integrations/status/<int:user_id>', methods=['GET'])
+def integrations_status_global(user_id):
+    """Retourne le statut de connexion de toutes les intégrations OAuth en une requête."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT type FROM integrations WHERE user_id=%s", (user_id,))
+        connected_types = {row['type'] for row in curseur.fetchall()}
+        db.close()
+        return jsonify({
+            "google_calendar": "google_calendar" in connected_types,
+            "gmail": "gmail" in connected_types,
+            "google_drive": "google_drive" in connected_types,
+            "notion": "notion" in connected_types,
+            "slack": "slack" in connected_types,
+            "zoom": "zoom" in connected_types,
+            "discord": "discord" in connected_types,
+        })
+    except Exception as e:
+        return jsonify({"erreur": str(e)[:200]}), 500
+
 @app.route('/auth/disconnect/<integration_id>', methods=['DELETE'])
 def disconnect_integration(integration_id):
     try:

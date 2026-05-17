@@ -46,7 +46,7 @@ function ProgressBar({ value, color, height = 6 }) {
 }
 
 // ---- Bloc générique source externe (Gmail/Notion/etc) avec extraction IA ----
-function SourceExterneBloc({ T, color, label, sublabel, connected, connecting, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onConnect, onExtract, onImport, scanLabel }) {
+function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onExtract, onImport, scanLabel, onActiver }) {
   return (
     <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -66,12 +66,10 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, connecting, e
         {connected && <CheckCircle size={14} color={color} />}
       </div>
       {!connected ? (
-        <motion.button onClick={onConnect} disabled={connecting}
-          whileHover={!connecting ? { scale: 1.02 } : {}} whileTap={!connecting ? { scale: 0.98 } : {}}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: `${color}1A`, border: `1.5px solid ${color}4D`, borderRadius: 10, color, fontSize: 12, fontWeight: 600, cursor: connecting ? 'wait' : 'pointer' }}>
-          {connecting
-            ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Connexion…</>
-            : <>Connecter {label.toLowerCase()}</>}
+        <motion.button onClick={onActiver}
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'transparent', border: `1.5px dashed ${color}4D`, borderRadius: 10, color, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+          Activer dans Paramètres →
         </motion.button>
       ) : (
         <>
@@ -1588,31 +1586,29 @@ export default function TomorrowBuilder() {
                       )
                     ) : (
                       <motion.button
-                        onClick={connecterCalendar}
-                        disabled={calendarConnecting}
-                        whileHover={!calendarConnecting ? { scale: 1.02 } : {}}
-                        whileTap={!calendarConnecting ? { scale: 0.98 } : {}}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'rgba(26,115,232,0.1)', border: '1.5px solid rgba(26,115,232,0.3)', borderRadius: 10, color: '#1A73E8', fontSize: 12, fontWeight: 600, cursor: calendarConnecting ? 'wait' : 'pointer' }}>
-                        {calendarConnecting
-                          ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Connexion…</>
-                          : <>🔗 Connecter mon agenda</>}
+                        onClick={() => navigate('/settings#integrations')}
+                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'transparent', border: '1.5px dashed rgba(26,115,232,0.4)', borderRadius: 10, color: '#1A73E8', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        Activer dans Paramètres →
                       </motion.button>
                     )}
                   </div>
 
                   <SourceExterneBloc
                     T={T} color="#EA4335" label="GMAIL" itemLabel="email" scanLabel="Scanner mes emails"
-                    IconComp={Mail} connected={gmailConnected} connecting={gmailConnecting}
+                    IconComp={Mail} connected={gmailConnected}
                     extracting={gmailExtracting} tasks={gmailTasks} nbItems={gmailNbEmails}
-                    importingState={gmailImporting} onConnect={connecterGmail}
+                    importingState={gmailImporting}
+                    onActiver={() => navigate('/settings#integrations')}
                     onExtract={extraireGmailTasks} onImport={importerGmailTask}
                   />
 
                   <SourceExterneBloc
                     T={T} color="#0F172A" label="NOTION" itemLabel="page" scanLabel="Scanner mes pages"
-                    IconComp={FileText} connected={notionConnected} connecting={notionConnecting}
+                    IconComp={FileText} connected={notionConnected}
                     extracting={notionExtracting} tasks={notionTasks} nbItems={notionNbPages}
-                    importingState={notionImporting} onConnect={connecterNotion}
+                    importingState={notionImporting}
+                    onActiver={() => navigate('/settings#integrations')}
                     onExtract={extraireNotionTasks} onImport={importerNotionTask}
                   />
 
@@ -1634,14 +1630,10 @@ export default function TomorrowBuilder() {
                     </div>
                     {!driveConnected ? (
                       <motion.button
-                        onClick={connecterDrive}
-                        disabled={driveConnecting}
-                        whileHover={!driveConnecting ? { scale: 1.02 } : {}}
-                        whileTap={!driveConnecting ? { scale: 0.98 } : {}}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'rgba(0,172,71,0.1)', border: '1.5px solid rgba(0,172,71,0.3)', borderRadius: 10, color: '#00AC47', fontSize: 12, fontWeight: 600, cursor: driveConnecting ? 'wait' : 'pointer' }}>
-                        {driveConnecting
-                          ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Connexion…</>
-                          : <>Connecter Drive</>}
+                        onClick={() => navigate('/settings#integrations')}
+                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'transparent', border: '1.5px dashed rgba(0,172,71,0.4)', borderRadius: 10, color: '#00AC47', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        Activer dans Paramètres →
                       </motion.button>
                     ) : (
                       driveDocs.length > 0 && (

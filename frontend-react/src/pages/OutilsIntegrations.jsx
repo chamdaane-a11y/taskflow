@@ -2,9 +2,10 @@
 // Self-contained : TOUS les imports sont dans CE fichier
 // Zéro dépendance sur Dashboard.jsx
 
-import { useState, useCallback, memo } from 'react'
+import { useState, useCallback, memo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link2, Unlink, CheckCircle2, Wifi } from 'lucide-react'
+import axios from 'axios'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -196,14 +197,18 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
 })
 
 export default function OutilsIntegrations({ T, userId }) {
-  const storageKey = `getshift_integrations_${userId}`
-  const [connectes, setConnectes] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(storageKey)) || {} } catch { return {} }
-  })
+  const [connectes, setConnectes] = useState({})
   const [loading, setLoading] = useState(null)
   const [toast, setToast] = useState(null)
   const [filtre, setFiltre] = useState('Tous')
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 480
+
+  useEffect(() => {
+    if (!userId) return
+    axios.get(`${API}/integrations/status/${userId}`)
+      .then(r => setConnectes(r.data || {}))
+      .catch(() => {})
+  }, [userId])
 
   const notifier = useCallback((msg, type = 'success') => {
     setToast({ msg, type })
@@ -211,12 +216,8 @@ export default function OutilsIntegrations({ T, userId }) {
   }, [])
 
   const sauvegarder = useCallback((id, val) => {
-    setConnectes(prev => {
-      const next = { ...prev, [id]: val }
-      localStorage.setItem(storageKey, JSON.stringify(next))
-      return next
-    })
-  }, [storageKey])
+    setConnectes(prev => ({ ...prev, [id]: val }))
+  }, [])
 
   const handleConnect = useCallback((integration) => {
     setLoading(integration.id)
@@ -228,6 +229,9 @@ export default function OutilsIntegrations({ T, userId }) {
       if (e.data?.type === 'oauth_success' && e.data?.integration === integration.id) {
         window.removeEventListener('message', onMsg); clearInterval(poll)
         popup?.close(); setLoading(null); sauvegarder(integration.id, true); notifier(`${integration.nom} connecté`)
+      } else if (e.data?.type === 'oauth_error') {
+        window.removeEventListener('message', onMsg); clearInterval(poll)
+        popup?.close(); setLoading(null); notifier(`Erreur ${integration.nom}: ${e.data?.error || 'annulé'}`, 'error')
       }
     }
     window.addEventListener('message', onMsg)

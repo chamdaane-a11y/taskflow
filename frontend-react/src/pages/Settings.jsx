@@ -11,6 +11,7 @@ import {
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
+import OutilsIntegrations from './OutilsIntegrations'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -56,7 +57,10 @@ export default function Settings() {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark')
   const T = themes[theme]
 
-  const [activeSection, setActiveSection] = useState('profil')
+  const [activeSection, setActiveSection] = useState(() => {
+    const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
+    return ['profil', 'badges', 'theme', 'integrations', 'notifications', 'compte'].includes(hash) ? hash : 'profil'
+  })
   const [points, setPoints] = useState(0)
   const [niveau, setNiveau] = useState(1)
   const [streak, setStreak] = useState(0)
@@ -299,24 +303,34 @@ export default function Settings() {
         <motion.div key="integrations" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <SectionTitle>Intégrations</SectionTitle>
 
-          {/* Slack */}
+          {/* Toutes les intégrations OAuth — connect / disconnect centralisé */}
+          <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 20, padding: '20px', marginBottom: 16 }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 4 }}>Connexions OAuth</div>
+              <p style={{ fontSize: 12, color: T.text2, margin: 0, lineHeight: 1.5 }}>
+                Connecte tes outils pour que l'IA puisse lire tes emails, pages Notion, docs Drive et événements Calendar.
+              </p>
+            </div>
+            <OutilsIntegrations T={T} userId={user.id} />
+          </div>
+
+          {/* Webhook Slack (notif sortante — différent de l'OAuth) */}
           <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: '#4A154B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 22, color: 'white', fontWeight: 800 }}>S</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#4A154B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 20, color: 'white', fontWeight: 800 }}>S</span>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Slack</div>
-                <div style={{ fontSize: 13, color: T.text2, marginTop: 2 }}>Recevez vos notifications de tâches dans Slack</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>Webhook Slack (notifs sortantes)</div>
+                <div style={{ fontSize: 12, color: T.text2, marginTop: 2 }}>Reçois tes notifs de tâches dans Slack via un Incoming Webhook</div>
               </div>
               {slackWebhook && (
                 <span style={{ fontSize: 11, padding: '4px 10px', borderRadius: 99, background: 'rgba(76,175,130,0.15)', color: '#4caf82', fontWeight: 700 }}>Connecté</span>
               )}
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: 'block', marginBottom: 8 }}>URL du Webhook</label>
+            <div style={{ marginBottom: 10 }}>
               <input
-                style={{ width: '100%', padding: '11px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                 placeholder="https://hooks.slack.com/services/..."
                 value={slackWebhook}
                 onChange={e => setSlackWebhook(e.target.value)}
@@ -324,37 +338,19 @@ export default function Settings() {
               />
             </div>
             <motion.button
-              style={{ width: '100%', padding: '12px', background: slackSaved ? '#4caf82' : `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, border: 'none', borderRadius: 12, color: slackSaved ? 'white' : T.bg, fontSize: 14, fontWeight: 700, cursor: slackSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              style={{ width: '100%', padding: '10px', background: slackSaved ? '#4caf82' : `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, border: 'none', borderRadius: 10, color: slackSaved ? 'white' : T.bg, fontSize: 13, fontWeight: 700, cursor: slackSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               onClick={sauvegarderSlack}
               whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-              {slackSaving ? 'Sauvegarde...' : slackSaved ? <><Check size={16} /> Webhook sauvegardé !</> : 'Sauvegarder le webhook'}
+              {slackSaving ? 'Sauvegarde...' : slackSaved ? <><Check size={14} /> Sauvegardé !</> : 'Sauvegarder le webhook'}
             </motion.button>
-            <p style={{ fontSize: 12, color: T.text2, marginTop: 12, lineHeight: 1.6 }}>
-              Créez un Incoming Webhook sur{' '}
+            <p style={{ fontSize: 11, color: T.text2, marginTop: 10, lineHeight: 1.5 }}>
+              Crée un Incoming Webhook sur{' '}
               <span style={{ color: T.accent, cursor: 'pointer', textDecoration: 'underline' }}
                 onClick={() => window.open('https://api.slack.com/messaging/webhooks', '_blank')}>
                 api.slack.com
               </span>
-              {' '}puis collez l'URL ci-dessus.
+              {' '}puis colle l'URL.
             </p>
-          </div>
-
-          {/* Google Calendar */}
-          <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 20, padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: '#4285F4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 22, color: 'white', fontWeight: 800 }}>G</span>
-              </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Google Calendar</div>
-                <div style={{ fontSize: 13, color: T.text2, marginTop: 2 }}>Exportez vos tâches vers votre agenda</div>
-              </div>
-            </div>
-            <div style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, padding: '14px 16px' }}>
-              <p style={{ fontSize: 13, color: T.text2, margin: 0, lineHeight: 1.6 }}>
-                Sur chaque tâche ayant une deadline, utilisez le bouton <strong style={{ color: T.text }}>Calendar</strong> pour l'exporter directement dans Google Calendar.
-              </p>
-            </div>
           </div>
         </motion.div>
       )
