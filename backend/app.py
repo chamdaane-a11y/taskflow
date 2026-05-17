@@ -3500,13 +3500,187 @@ def auth_zoom():
         window.close();
     </script>"""
 
+# ============================================
+# NOTION — OAuth réel + lecture pages + extraction IA
+# ============================================
+
+NOTION_REDIRECT_URI = "https://getshift-backend.onrender.com/auth/notion/callback"
+
+def _notion_cid():
+    return os.environ.get('NOTION_CLIENT_ID', '')
+
+def _notion_csecret():
+    return os.environ.get('NOTION_CLIENT_SECRET', '')
+
+def get_notion_token(user_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT config FROM integrations WHERE user_id=%s AND type='notion'", (user_id,))
+        row = curseur.fetchone()
+        db.close()
+        if not row or not row['config']:
+            return None
+        tokens = json.loads(_fernet().decrypt(row['config'].encode()).decode())
+        return tokens.get('access_token')
+    except Exception:
+        return None
+
 @app.route('/auth/notion')
 def auth_notion():
     user_id = request.args.get('user_id')
+    if not user_id:
+        return "user_id requis", 400
+    if not _notion_cid():
+        return """<!DOCTYPE html><html><body><script>
+window.opener&&window.opener.postMessage({type:'oauth_error',integration:'notion',error:'Notion non configuré côté serveur'},'*');
+setTimeout(()=>window.close(),1500);
+</script><p style="font-family:sans-serif;text-align:center;padding:40px;color:#e05c5c">Notion non disponible</p></body></html>""", 500
+    state_token = secrets.token_urlsafe(32)
+    db = connecter()
+    curseur = db.cursor()
+    curseur.execute("""CREATE TABLE IF NOT EXISTS oauth_states (
+        state VARCHAR(64) PRIMARY KEY, user_id INT NOT NULL,
+        integration VARCHAR(50) NOT NULL,
+        cree_le DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+    curseur.execute("DELETE FROM oauth_states WHERE cree_le < DATE_SUB(NOW(), INTERVAL 1 HOUR)")
+    curseur.execute("INSERT INTO oauth_states (state, user_id, integration) VALUES (%s, %s, 'notion')", (state_token, user_id))
+    db.commit(); db.close()
+    auth_url = (
+        f"https://api.notion.com/v1/oauth/authorize"
+        f"?client_id={_notion_cid()}&response_type=code"
+        f"&owner=user&redirect_uri={urllib.parse.quote(NOTION_REDIRECT_URI)}"
+        f"&state={state_token}"
+    )
+    return redirect(auth_url)
+
+@app.route('/auth/notion/callback')
+def auth_notion_callback():
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    if error:
+        return f"""<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'notion',error:'{error}'}},'*');window.close();</script>"""
+    if not code or not state:
+        return "Paramètres OAuth manquants", 400
+    db = connecter()
+    curseur = db.cursor(dictionary=True)
+    curseur.execute("SELECT user_id FROM oauth_states WHERE state=%s AND integration='notion'", (state,))
+    row = curseur.fetchone()
+    if not row:
+        db.close()
+        return "State invalide ou expiré", 400
+    user_id = row['user_id']
+    curseur.execute("DELETE FROM oauth_states WHERE state=%s", (state,))
+    db.commit()
+    try:
+        auth_str = f"{_notion_cid()}:{_notion_csecret()}"
+        auth_b64 = base64.b64encode(auth_str.encode()).decode()
+        resp = http_requests.post(
+            "https://api.notion.com/v1/oauth/token",
+            headers={
+                "Authorization": f"Basic {auth_b64}",
+                "Content-Type": "application/json",
+                "Notion-Version": "2022-06-28"
+            },
+            json={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": NOTION_REDIRECT_URI
+            },
+            timeout=15
+        )
+        if resp.status_code != 200:
+            db.close()
+            return f"<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'notion',error:'Erreur token Notion ({resp.status_code})'}},'*');window.close();</script>"
+        data = resp.json()
+        tokens = {
+            "access_token": data.get("access_token"),
+            "workspace_id": data.get("workspace_id"),
+            "workspace_name": data.get("workspace_name"),
+            "bot_id": data.get("bot_id"),
+        }
+        encrypted = _fernet().encrypt(json.dumps(tokens).encode()).decode()
+        curseur.execute("CREATE TABLE IF NOT EXISTS integrations (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, type VARCHAR(50) NOT NULL, config LONGTEXT, cree_le DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='notion'", (user_id,))
+        curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, 'notion', %s)", (user_id, encrypted))
+        db.commit()
+    except Exception as e:
+        db.close()
+        return f"<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'notion',error:'{str(e)[:200]}'}},'*');window.close();</script>"
+    db.close()
     return """<script>
-        window.opener.postMessage({type:'oauth_success',integration:'notion'},'*');
+        window.opener && window.opener.postMessage({type:'oauth_success',integration:'notion'},'*');
         window.close();
     </script>"""
+
+@app.route('/integrations/notion/extract-tasks/<int:user_id>', methods=['GET'])
+def notion_extract_tasks(user_id):
+    token = get_notion_token(user_id)
+    if not token:
+        return jsonify({"taches": [], "connected": False, "nb_pages": 0})
+    try:
+        resp = http_requests.post(
+            "https://api.notion.com/v1/search",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Notion-Version": "2022-06-28",
+                "Content-Type": "application/json"
+            },
+            json={
+                "filter": {"value": "page", "property": "object"},
+                "sort": {"direction": "descending", "timestamp": "last_edited_time"},
+                "page_size": 10
+            },
+            timeout=15
+        )
+        if resp.status_code != 200:
+            return jsonify({"taches": [], "connected": True, "erreur": f"Notion API {resp.status_code}"}), 200
+        pages = resp.json().get("results", [])
+        if not pages:
+            return jsonify({"taches": [], "connected": True, "nb_pages": 0})
+        pages_text = []
+        for page in pages[:8]:
+            title = ""
+            props = page.get("properties", {})
+            for prop_val in props.values():
+                if prop_val.get("type") == "title":
+                    titles = prop_val.get("title", [])
+                    if titles:
+                        title = titles[0].get("plain_text", "")[:80]
+                        break
+            if not title:
+                title = "(Sans titre)"
+            last_edit = page.get("last_edited_time", "")[:10]
+            pages_text.append(f"Page: {title} (modifiée: {last_edit})")
+        pages_block = "\n".join(pages_text)
+        prompt = f"""Voici {len(pages_text)} pages Notion récentes de l'utilisateur. Identifie celles qui suggèrent des VRAIES tâches à faire (projets en cours, todos, action items). Ignore les pages purement informatives.
+
+PAGES:
+{pages_block}
+
+Réponds UNIQUEMENT en JSON: {{"taches": [{{"titre": "action concrète", "priorite": "haute|moyenne|basse", "duree_min": 30, "contexte": "titre page source"}}]}}
+
+Règles:
+- Maximum 5 tâches
+- titre = action verbale ("Avancer sur X", "Finaliser doc Y")
+- Si aucune vraie tâche actionable, retourne {{"taches": []}}"""
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1200, temperature=0.3
+        )
+        contenu = response.choices[0].message.content.strip()
+        if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
+        elif '```' in contenu: contenu = contenu.split('```')[1].split('```')[0].strip()
+        data = json.loads(contenu)
+        return jsonify({"taches": data.get('taches', []), "connected": True, "nb_pages": len(pages)})
+    except Exception as e:
+        return jsonify({"taches": [], "connected": False, "erreur": str(e)[:200]}), 200
+
+@app.route('/integrations/notion/status/<int:user_id>', methods=['GET'])
+def notion_status(user_id):
+    return jsonify({"connected": get_notion_token(user_id) is not None})
 
 @app.route('/auth/slack/oauth')
 def auth_slack_oauth():

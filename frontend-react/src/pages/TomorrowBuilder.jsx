@@ -8,7 +8,7 @@ import {
   Coffee, Brain, Target, TrendingUp, ChevronDown, ChevronUp,
   RefreshCw, Moon, Sun, Flame, Battery, BatteryLow, BatteryMedium,
   SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare,
-  Play, Pause, X, GripVertical, Download, CalendarDays, Mail, Plus, Check
+  Play, Pause, X, GripVertical, Download, CalendarDays, Mail, Plus, Check, FileText
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -41,6 +41,73 @@ function ProgressBar({ value, color, height = 6 }) {
         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
         style={{ height: '100%', background: color, borderRadius: 99 }}
       />
+    </div>
+  )
+}
+
+// ---- Bloc générique source externe (Gmail/Notion/etc) avec extraction IA ----
+function SourceExterneBloc({ T, color, label, sublabel, connected, connecting, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onConnect, onExtract, onImport, scanLabel }) {
+  return (
+    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: `${color}26`, border: `1.5px solid ${color}4D`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <IconComp size={15} color={color} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 0.8 }}>{label}</div>
+          <div style={{ fontSize: 11, color: T.text2 }}>
+            {connected
+              ? (tasks.length > 0
+                ? `${tasks.length} tâche${tasks.length > 1 ? 's' : ''} détectée${tasks.length > 1 ? 's' : ''}`
+                : (nbItems > 0 ? `${nbItems} ${itemLabel}${nbItems > 1 ? 's' : ''} analysé${nbItems > 1 ? 's' : ''}` : (sublabel || 'Connecté')))
+              : 'Non connecté'}
+          </div>
+        </div>
+        {connected && <CheckCircle size={14} color={color} />}
+      </div>
+      {!connected ? (
+        <motion.button onClick={onConnect} disabled={connecting}
+          whileHover={!connecting ? { scale: 1.02 } : {}} whileTap={!connecting ? { scale: 0.98 } : {}}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: `${color}1A`, border: `1.5px solid ${color}4D`, borderRadius: 10, color, fontSize: 12, fontWeight: 600, cursor: connecting ? 'wait' : 'pointer' }}>
+          {connecting
+            ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Connexion…</>
+            : <>Connecter {label.toLowerCase()}</>}
+        </motion.button>
+      ) : (
+        <>
+          <motion.button onClick={onExtract} disabled={extracting}
+            whileHover={!extracting ? { scale: 1.02 } : {}} whileTap={!extracting ? { scale: 0.98 } : {}}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: `${color}14`, border: `1.5px solid ${color}40`, borderRadius: 10, color, fontSize: 12, fontWeight: 600, cursor: extracting ? 'wait' : 'pointer' }}>
+            {extracting
+              ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Analyse IA…</>
+              : <><Sparkles size={12} /> {scanLabel}</>}
+          </motion.button>
+          {tasks.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              {tasks.map((t, i) => {
+                const status = importingState[i]
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2 }}>{t.titre}</div>
+                      <div style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ padding: '1px 6px', borderRadius: 4, background: t.priorite === 'haute' ? 'rgba(239,68,68,0.12)' : t.priorite === 'basse' ? 'rgba(100,116,139,0.12)' : 'rgba(234,179,8,0.12)', color: t.priorite === 'haute' ? '#ef4444' : t.priorite === 'basse' ? '#64748b' : '#eab308', fontWeight: 600 }}>{t.priorite || 'moyenne'}</span>
+                        <span>{t.duree_min || 30} min</span>
+                      </div>
+                      {(t.contexte_email || t.contexte) && <div style={{ fontSize: 9, color: T.text2, marginTop: 3, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>↳ {t.contexte_email || t.contexte}</div>}
+                    </div>
+                    <motion.button onClick={() => status !== 'done' && onImport(t, i)} disabled={status === 'done' || status === true}
+                      whileTap={{ scale: 0.92 }}
+                      style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, background: status === 'done' ? 'rgba(34,197,94,0.15)' : `${color}1A`, border: `1px solid ${status === 'done' ? 'rgba(34,197,94,0.4)' : color + '4D'}`, color: status === 'done' ? '#22c55e' : color, cursor: status === 'done' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {status === 'done' ? <Check size={13} /> : status === true ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><RefreshCw size={11} /></motion.span> : <Plus size={13} />}
+                    </motion.button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -783,6 +850,12 @@ export default function TomorrowBuilder() {
   const [gmailExtracting, setGmailExtracting] = useState(false)
   const [gmailNbEmails, setGmailNbEmails] = useState(0)
   const [gmailImporting, setGmailImporting] = useState({})
+  const [notionConnected, setNotionConnected] = useState(false)
+  const [notionConnecting, setNotionConnecting] = useState(false)
+  const [notionTasks, setNotionTasks] = useState([])
+  const [notionExtracting, setNotionExtracting] = useState(false)
+  const [notionNbPages, setNotionNbPages] = useState(0)
+  const [notionImporting, setNotionImporting] = useState({})
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -859,6 +932,7 @@ export default function TomorrowBuilder() {
     chargerCheckinToday()
     chargerCalendarEvents(demain.toISOString().split('T')[0])
     chargerGmailStatus()
+    chargerNotionStatus()
     axios.get(`${API}/ia/energie-courbe/${user.id}`)
       .then(r => setEnergieCourbe(r.data))
       .catch(() => {})
@@ -969,6 +1043,69 @@ export default function TomorrowBuilder() {
       setGmailImporting(prev => ({ ...prev, [idx]: 'done' }))
     } catch (e) {
       setGmailImporting(prev => ({ ...prev, [idx]: 'error' }))
+    }
+  }
+
+  const chargerNotionStatus = async () => {
+    try {
+      const res = await axios.get(`${API}/integrations/notion/status/${user.id}`)
+      setNotionConnected(!!res.data.connected)
+    } catch { setNotionConnected(false) }
+  }
+
+  const connecterNotion = () => {
+    setNotionConnecting(true)
+    const popup = window.open(
+      `${API}/auth/notion?user_id=${user.id}`,
+      'notion_oauth', 'width=540,height=680,menubar=no,toolbar=no'
+    )
+    const listener = (e) => {
+      if (e.data?.type === 'oauth_success' && e.data?.integration === 'notion') {
+        window.removeEventListener('message', listener)
+        setNotionConnecting(false)
+        setNotionConnected(true)
+      } else if (e.data?.type === 'oauth_error') {
+        window.removeEventListener('message', listener)
+        setNotionConnecting(false)
+        setErreur('Connexion Notion annulée')
+      }
+    }
+    window.addEventListener('message', listener)
+    const checkPopup = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkPopup)
+        window.removeEventListener('message', listener)
+        setNotionConnecting(false)
+      }
+    }, 800)
+  }
+
+  const extraireNotionTasks = async () => {
+    setNotionExtracting(true)
+    setNotionTasks([])
+    try {
+      const res = await axios.get(`${API}/integrations/notion/extract-tasks/${user.id}`)
+      setNotionTasks(res.data.taches || [])
+      setNotionNbPages(res.data.nb_pages || 0)
+    } catch (e) {
+      setErreur('Erreur extraction Notion')
+    }
+    setNotionExtracting(false)
+  }
+
+  const importerNotionTask = async (tache, idx) => {
+    setNotionImporting(prev => ({ ...prev, [idx]: true }))
+    try {
+      const demainDate = demain.toISOString().split('T')[0]
+      await axios.post(`${API}/taches`, {
+        user_id: user.id,
+        titre: tache.titre,
+        priorite: tache.priorite || 'moyenne',
+        deadline: demainDate
+      })
+      setNotionImporting(prev => ({ ...prev, [idx]: 'done' }))
+    } catch (e) {
+      setNotionImporting(prev => ({ ...prev, [idx]: 'error' }))
     }
   }
 
@@ -1424,76 +1561,21 @@ export default function TomorrowBuilder() {
                     )}
                   </div>
 
-                  {/* Gmail — extraction tâches IA */}
-                  <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(234,67,53,0.15)', border: '1.5px solid rgba(234,67,53,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Mail size={15} color="#EA4335" />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#EA4335', letterSpacing: 0.8 }}>GMAIL</div>
-                        <div style={{ fontSize: 11, color: T.text2 }}>
-                          {gmailConnected
-                            ? (gmailTasks.length > 0
-                              ? `${gmailTasks.length} tâche${gmailTasks.length > 1 ? 's' : ''} détectée${gmailTasks.length > 1 ? 's' : ''}`
-                              : (gmailNbEmails > 0 ? `${gmailNbEmails} email${gmailNbEmails > 1 ? 's' : ''} analysés` : 'Connecté'))
-                            : 'Non connecté'}
-                        </div>
-                      </div>
-                      {gmailConnected && <CheckCircle size={14} color="#EA4335" />}
-                    </div>
-                    {!gmailConnected ? (
-                      <motion.button
-                        onClick={connecterGmail}
-                        disabled={gmailConnecting}
-                        whileHover={!gmailConnecting ? { scale: 1.02 } : {}}
-                        whileTap={!gmailConnecting ? { scale: 0.98 } : {}}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'rgba(234,67,53,0.1)', border: '1.5px solid rgba(234,67,53,0.3)', borderRadius: 10, color: '#EA4335', fontSize: 12, fontWeight: 600, cursor: gmailConnecting ? 'wait' : 'pointer' }}>
-                        {gmailConnecting
-                          ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Connexion…</>
-                          : <>Connecter Gmail</>}
-                      </motion.button>
-                    ) : (
-                      <>
-                        <motion.button
-                          onClick={extraireGmailTasks}
-                          disabled={gmailExtracting}
-                          whileHover={!gmailExtracting ? { scale: 1.02 } : {}}
-                          whileTap={!gmailExtracting ? { scale: 0.98 } : {}}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'rgba(234,67,53,0.08)', border: '1.5px solid rgba(234,67,53,0.25)', borderRadius: 10, color: '#EA4335', fontSize: 12, fontWeight: 600, cursor: gmailExtracting ? 'wait' : 'pointer' }}>
-                          {gmailExtracting
-                            ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Analyse IA…</>
-                            : <><Sparkles size={12} /> Scanner mes emails</>}
-                        </motion.button>
-                        {gmailTasks.length > 0 && (
-                          <div style={{ marginTop: 10 }}>
-                            {gmailTasks.map((t, i) => {
-                              const status = gmailImporting[i]
-                              return (
-                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none' }}>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2 }}>{t.titre}</div>
-                                    <div style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                      <span style={{ padding: '1px 6px', borderRadius: 4, background: t.priorite === 'haute' ? 'rgba(239,68,68,0.12)' : t.priorite === 'basse' ? 'rgba(100,116,139,0.12)' : 'rgba(234,179,8,0.12)', color: t.priorite === 'haute' ? '#ef4444' : t.priorite === 'basse' ? '#64748b' : '#eab308', fontWeight: 600 }}>{t.priorite || 'moyenne'}</span>
-                                      <span>{t.duree_min || 30} min</span>
-                                    </div>
-                                    {t.contexte_email && <div style={{ fontSize: 9, color: T.text2, marginTop: 3, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>📩 {t.contexte_email}</div>}
-                                  </div>
-                                  <motion.button
-                                    onClick={() => status !== 'done' && importerGmailTask(t, i)}
-                                    disabled={status === 'done' || status === true}
-                                    whileTap={{ scale: 0.92 }}
-                                    style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, background: status === 'done' ? 'rgba(34,197,94,0.15)' : 'rgba(234,67,53,0.1)', border: `1px solid ${status === 'done' ? 'rgba(34,197,94,0.4)' : 'rgba(234,67,53,0.3)'}`, color: status === 'done' ? '#22c55e' : '#EA4335', cursor: status === 'done' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {status === 'done' ? <Check size={13} /> : status === true ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><RefreshCw size={11} /></motion.span> : <Plus size={13} />}
-                                  </motion.button>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  <SourceExterneBloc
+                    T={T} color="#EA4335" label="GMAIL" itemLabel="email" scanLabel="Scanner mes emails"
+                    IconComp={Mail} connected={gmailConnected} connecting={gmailConnecting}
+                    extracting={gmailExtracting} tasks={gmailTasks} nbItems={gmailNbEmails}
+                    importingState={gmailImporting} onConnect={connecterGmail}
+                    onExtract={extraireGmailTasks} onImport={importerGmailTask}
+                  />
+
+                  <SourceExterneBloc
+                    T={T} color="#0F172A" label="NOTION" itemLabel="page" scanLabel="Scanner mes pages"
+                    IconComp={FileText} connected={notionConnected} connecting={notionConnecting}
+                    extracting={notionExtracting} tasks={notionTasks} nbItems={notionNbPages}
+                    importingState={notionImporting} onConnect={connecterNotion}
+                    onExtract={extraireNotionTasks} onImport={importerNotionTask}
+                  />
 
                   {/* Tip du jour */}
                   {planning.conseil_journee && (
