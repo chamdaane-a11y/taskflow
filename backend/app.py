@@ -2326,6 +2326,12 @@ def get_taches_equipe(equipe_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
+        # Migration lazy : aligne tout sur le vocabulaire frontend (todo|en_cours|termine)
+        try:
+            curseur.execute("UPDATE taches_equipe SET statut='todo' WHERE statut='a_faire'")
+            db.commit()
+        except Exception:
+            pass
         curseur.execute("""
             SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom,
                 (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires
@@ -2344,7 +2350,22 @@ def creer_tache_equipe():
         data = request.get_json()
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("INSERT INTO taches_equipe (equipe_id, titre, description, priorite, assignee_id, createur_id, deadline) VALUES (%s, %s, %s, %s, %s, %s, %s)", (data['equipe_id'], data['titre'], data.get('description',''), data.get('priorite','moyenne'), data.get('assignee_id'), data['createur_id'], data.get('deadline')))
+        # Migration lazy : aligne le default DB sur 'todo' au lieu de 'a_faire'
+        try:
+            curseur.execute("UPDATE taches_equipe SET statut='todo' WHERE statut='a_faire'")
+        except Exception:
+            pass
+        # Whitelist du statut côté frontend
+        statut_in = data.get('statut', 'todo')
+        if statut_in not in ('todo', 'en_cours', 'termine'):
+            statut_in = 'todo'
+        curseur.execute(
+            "INSERT INTO taches_equipe (equipe_id, titre, description, priorite, assignee_id, createur_id, deadline, statut) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (data['equipe_id'], data['titre'], data.get('description', ''),
+             data.get('priorite', 'moyenne'), data.get('assignee_id'),
+             data['createur_id'], data.get('deadline'), statut_in)
+        )
         tache_id = curseur.lastrowid
         db.commit()
         curseur.execute("SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom FROM taches_equipe te JOIN users u1 ON te.createur_id=u1.id LEFT JOIN users u2 ON te.assignee_id=u2.id WHERE te.id=%s", (tache_id,))
