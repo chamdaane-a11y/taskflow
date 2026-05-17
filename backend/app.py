@@ -3484,13 +3484,165 @@ def gmail_status(user_id):
     creds = get_gmail_creds(user_id)
     return jsonify({"connected": creds is not None})
 
+# ============================================
+# GOOGLE DRIVE — OAuth réel + contexte docs récents
+# ============================================
+
+DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly']
+DRIVE_REDIRECT_URI = "https://getshift-backend.onrender.com/auth/google/drive/callback"
+
+def _drive_flow():
+    return Flow.from_client_config({
+        "web": {
+            "client_id": _gcal_cid(),
+            "client_secret": _gcal_csecret(),
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [DRIVE_REDIRECT_URI],
+        }
+    }, scopes=DRIVE_SCOPES)
+
+def get_drive_creds(user_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT config FROM integrations WHERE user_id=%s AND type='google_drive'", (user_id,))
+        row = curseur.fetchone()
+        db.close()
+        if not row or not row['config']:
+            return None
+        tokens = json.loads(_fernet().decrypt(row['config'].encode()).decode())
+        creds = Credentials(
+            token=tokens.get('access_token'),
+            refresh_token=tokens.get('refresh_token'),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=_gcal_cid(),
+            client_secret=_gcal_csecret(),
+            scopes=DRIVE_SCOPES,
+        )
+        if tokens.get('expires_at') and tokens['expires_at'] < int(time.time()) + 60:
+            creds.refresh(GoogleAuthRequest())
+            new_tokens = {
+                "access_token": creds.token,
+                "refresh_token": creds.refresh_token or tokens.get('refresh_token'),
+                "expires_at": int(creds.expiry.timestamp()) if creds.expiry else None,
+            }
+            enc = _fernet().encrypt(json.dumps(new_tokens).encode()).decode()
+            db = connecter()
+            curseur = db.cursor()
+            curseur.execute("UPDATE integrations SET config=%s WHERE user_id=%s AND type='google_drive'", (enc, user_id))
+            db.commit(); db.close()
+        return creds
+    except Exception:
+        return None
+
 @app.route('/auth/google/drive')
 def auth_google_drive():
     user_id = request.args.get('user_id')
+    if not user_id:
+        return "user_id requis", 400
+    if not _gcal_cid():
+        return """<!DOCTYPE html><html><body><script>
+window.opener&&window.opener.postMessage({type:'oauth_error',integration:'google_drive',error:'Drive non configuré côté serveur'},'*');
+setTimeout(()=>window.close(),1500);
+</script><p style="font-family:sans-serif;text-align:center;padding:40px;color:#e05c5c">Drive non disponible</p></body></html>""", 500
+    flow = _drive_flow()
+    flow.redirect_uri = DRIVE_REDIRECT_URI
+    state_token = secrets.token_urlsafe(32)
+    db = connecter()
+    curseur = db.cursor()
+    curseur.execute("""CREATE TABLE IF NOT EXISTS oauth_states (
+        state VARCHAR(64) PRIMARY KEY, user_id INT NOT NULL,
+        integration VARCHAR(50) NOT NULL,
+        cree_le DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+    curseur.execute("DELETE FROM oauth_states WHERE cree_le < DATE_SUB(NOW(), INTERVAL 1 HOUR)")
+    curseur.execute("INSERT INTO oauth_states (state, user_id, integration) VALUES (%s, %s, 'google_drive')", (state_token, user_id))
+    db.commit(); db.close()
+    auth_url, _ = flow.authorization_url(
+        access_type='offline', prompt='consent',
+        state=state_token, include_granted_scopes='true'
+    )
+    return redirect(auth_url)
+
+@app.route('/auth/google/drive/callback')
+def auth_google_drive_callback():
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    if error:
+        return f"""<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'google_drive',error:'{error}'}},'*');window.close();</script>"""
+    if not code or not state:
+        return "Paramètres OAuth manquants", 400
+    db = connecter()
+    curseur = db.cursor(dictionary=True)
+    curseur.execute("SELECT user_id FROM oauth_states WHERE state=%s AND integration='google_drive'", (state,))
+    row = curseur.fetchone()
+    if not row:
+        db.close()
+        return "State invalide ou expiré", 400
+    user_id = row['user_id']
+    curseur.execute("DELETE FROM oauth_states WHERE state=%s", (state,))
+    db.commit()
+    try:
+        flow = _drive_flow()
+        flow.redirect_uri = DRIVE_REDIRECT_URI
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+        tokens = {
+            "access_token": creds.token,
+            "refresh_token": creds.refresh_token,
+            "expires_at": int(creds.expiry.timestamp()) if creds.expiry else None,
+        }
+        encrypted = _fernet().encrypt(json.dumps(tokens).encode()).decode()
+        curseur.execute("CREATE TABLE IF NOT EXISTS integrations (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, type VARCHAR(50) NOT NULL, config LONGTEXT, cree_le DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='google_drive'", (user_id,))
+        curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, 'google_drive', %s)", (user_id, encrypted))
+        db.commit()
+    except Exception as e:
+        db.close()
+        return f"<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'google_drive',error:'{str(e)[:200]}'}},'*');window.close();</script>"
+    db.close()
     return """<script>
-        window.opener.postMessage({type:'oauth_success',integration:'google_drive'},'*');
+        window.opener && window.opener.postMessage({type:'oauth_success',integration:'google_drive'},'*');
         window.close();
     </script>"""
+
+@app.route('/integrations/google-drive/recent/<int:user_id>', methods=['GET'])
+def drive_recent_docs(user_id):
+    creds = get_drive_creds(user_id)
+    if not creds:
+        return jsonify({"docs": [], "connected": False})
+    try:
+        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+        result = service.files().list(
+            q="trashed=false and mimeType != 'application/vnd.google-apps.folder'",
+            orderBy="modifiedTime desc",
+            pageSize=10,
+            fields="files(id,name,mimeType,modifiedTime,webViewLink,iconLink)"
+        ).execute()
+        docs = []
+        for f in result.get('files', []):
+            mime = f.get('mimeType', '')
+            type_label = 'doc'
+            if 'spreadsheet' in mime: type_label = 'sheet'
+            elif 'presentation' in mime: type_label = 'slide'
+            elif 'document' in mime: type_label = 'doc'
+            elif 'pdf' in mime: type_label = 'pdf'
+            elif 'image' in mime: type_label = 'image'
+            docs.append({
+                'id': f.get('id'),
+                'titre': f.get('name', 'Sans nom')[:80],
+                'type': type_label,
+                'modifie_le': f.get('modifiedTime', '')[:10],
+                'lien': f.get('webViewLink', ''),
+            })
+        return jsonify({"docs": docs, "connected": True})
+    except Exception as e:
+        return jsonify({"docs": [], "connected": False, "erreur": str(e)[:200]}), 200
+
+@app.route('/integrations/google-drive/status/<int:user_id>', methods=['GET'])
+def drive_status(user_id):
+    return jsonify({"connected": get_drive_creds(user_id) is not None})
 
 @app.route('/auth/zoom')
 def auth_zoom():

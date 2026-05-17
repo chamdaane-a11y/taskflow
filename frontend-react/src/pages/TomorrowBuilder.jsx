@@ -8,7 +8,7 @@ import {
   Coffee, Brain, Target, TrendingUp, ChevronDown, ChevronUp,
   RefreshCw, Moon, Sun, Flame, Battery, BatteryLow, BatteryMedium,
   SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare,
-  Play, Pause, X, GripVertical, Download, CalendarDays, Mail, Plus, Check, FileText
+  Play, Pause, X, GripVertical, Download, CalendarDays, Mail, Plus, Check, FileText, Folder, ExternalLink
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -856,6 +856,9 @@ export default function TomorrowBuilder() {
   const [notionExtracting, setNotionExtracting] = useState(false)
   const [notionNbPages, setNotionNbPages] = useState(0)
   const [notionImporting, setNotionImporting] = useState({})
+  const [driveConnected, setDriveConnected] = useState(false)
+  const [driveConnecting, setDriveConnecting] = useState(false)
+  const [driveDocs, setDriveDocs] = useState([])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -933,6 +936,7 @@ export default function TomorrowBuilder() {
     chargerCalendarEvents(demain.toISOString().split('T')[0])
     chargerGmailStatus()
     chargerNotionStatus()
+    chargerDrive()
     axios.get(`${API}/ia/energie-courbe/${user.id}`)
       .then(r => setEnergieCourbe(r.data))
       .catch(() => {})
@@ -1107,6 +1111,41 @@ export default function TomorrowBuilder() {
     } catch (e) {
       setNotionImporting(prev => ({ ...prev, [idx]: 'error' }))
     }
+  }
+
+  const chargerDrive = async () => {
+    try {
+      const res = await axios.get(`${API}/integrations/google-drive/recent/${user.id}`)
+      setDriveConnected(!!res.data.connected)
+      setDriveDocs(res.data.docs || [])
+    } catch { setDriveConnected(false) }
+  }
+
+  const connecterDrive = () => {
+    setDriveConnecting(true)
+    const popup = window.open(
+      `${API}/auth/google/drive?user_id=${user.id}`,
+      'drive_oauth', 'width=540,height=680,menubar=no,toolbar=no'
+    )
+    const listener = (e) => {
+      if (e.data?.type === 'oauth_success' && e.data?.integration === 'google_drive') {
+        window.removeEventListener('message', listener)
+        setDriveConnecting(false)
+        chargerDrive()
+      } else if (e.data?.type === 'oauth_error') {
+        window.removeEventListener('message', listener)
+        setDriveConnecting(false)
+        setErreur('Connexion Drive annulée')
+      }
+    }
+    window.addEventListener('message', listener)
+    const checkPopup = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkPopup)
+        window.removeEventListener('message', listener)
+        setDriveConnecting(false)
+      }
+    }, 800)
   }
 
   const chargerCheckinToday = async () => {
@@ -1576,6 +1615,52 @@ export default function TomorrowBuilder() {
                     importingState={notionImporting} onConnect={connecterNotion}
                     onExtract={extraireNotionTasks} onImport={importerNotionTask}
                   />
+
+                  {/* Google Drive — contexte docs récents */}
+                  <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(0,172,71,0.15)', border: '1.5px solid rgba(0,172,71,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Folder size={15} color="#00AC47" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#00AC47', letterSpacing: 0.8 }}>GOOGLE DRIVE</div>
+                        <div style={{ fontSize: 11, color: T.text2 }}>
+                          {driveConnected
+                            ? (driveDocs.length > 0 ? `${driveDocs.length} doc${driveDocs.length > 1 ? 's' : ''} récent${driveDocs.length > 1 ? 's' : ''}` : 'Connecté')
+                            : 'Non connecté'}
+                        </div>
+                      </div>
+                      {driveConnected && <CheckCircle size={14} color="#00AC47" />}
+                    </div>
+                    {!driveConnected ? (
+                      <motion.button
+                        onClick={connecterDrive}
+                        disabled={driveConnecting}
+                        whileHover={!driveConnecting ? { scale: 1.02 } : {}}
+                        whileTap={!driveConnecting ? { scale: 0.98 } : {}}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'rgba(0,172,71,0.1)', border: '1.5px solid rgba(0,172,71,0.3)', borderRadius: 10, color: '#00AC47', fontSize: 12, fontWeight: 600, cursor: driveConnecting ? 'wait' : 'pointer' }}>
+                        {driveConnecting
+                          ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={12} /></motion.span> Connexion…</>
+                          : <>Connecter Drive</>}
+                      </motion.button>
+                    ) : (
+                      driveDocs.length > 0 && (
+                        <div>
+                          {driveDocs.slice(0, 5).map((d, i) => (
+                            <a key={i} href={d.lien} target="_blank" rel="noopener noreferrer"
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none', textDecoration: 'none' }}>
+                              <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,172,71,0.12)', color: '#00AC47', fontWeight: 600, flexShrink: 0, textTransform: 'uppercase' }}>{d.type}</span>
+                              <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
+                              <ExternalLink size={11} color={T.text2} style={{ flexShrink: 0 }} />
+                            </a>
+                          ))}
+                          {driveDocs.length > 5 && (
+                            <p style={{ fontSize: 10, color: T.text2, margin: '6px 0 0', textAlign: 'center' }}>+ {driveDocs.length - 5} autre{driveDocs.length - 5 > 1 ? 's' : ''}</p>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
 
                   {/* Tip du jour */}
                   {planning.conseil_journee && (
