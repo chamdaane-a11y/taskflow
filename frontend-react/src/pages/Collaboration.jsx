@@ -296,6 +296,28 @@ function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, o
         whileHover={!isDragging ? { borderColor: col?.couleur + '55', y: -1, boxShadow: '0 4px 20px rgba(0,0,0,0.12)' } : {}}
         onClick={() => !isDragging && onOuvrir(tache)}
         initial={isDragOverlay ? false : { opacity: 0, y: 8 }} animate={{ opacity: isDone ? 0.72 : 1, y: 0 }}>
+        {/* Chips labels (top de la carte) */}
+        {tache.labels && tache.labels.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+            {tache.labels.slice(0, 3).map(l => (
+              <span key={l.id}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', padding: '2px 8px',
+                  borderRadius: 99, background: `${l.couleur}22`, color: l.couleur,
+                  fontSize: 9.5, fontWeight: 700, letterSpacing: 0.2,
+                  border: `1px solid ${l.couleur}40`, maxWidth: 120,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                {l.nom}
+              </span>
+            ))}
+            {tache.labels.length > 3 && (
+              <span style={{ fontSize: 9.5, color: T.text2, fontWeight: 700, alignSelf: 'center' }}>
+                +{tache.labels.length - 3}
+              </span>
+            )}
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
           {/* Checkbox terminer/ré-ouvrir/valider */}
           <motion.button
@@ -498,7 +520,7 @@ function ColonneDroppable({ T, col, children, isOver }) {
 }
 
 // ===== MODALE TÂCHE =====
-function ModaleTache({ T, membres, tache, user, onFermer, onSauvegarder }) {
+function ModaleTache({ T, membres, tache, user, labels = [], onToggleLabel, onFermer, onSauvegarder }) {
   const [form, setForm] = useState({ titre: tache?.titre || '', description: tache?.description || '', priorite: tache?.priorite || 'moyenne', statut: tache?.statut || 'todo', assignee_id: tache?.assignee_id || '' })
   const [sousTaches, setSousTaches] = useState([])
   const [nouvelleST, setNouvelleST] = useState('')
@@ -578,6 +600,42 @@ function ModaleTache({ T, membres, tache, user, onFermer, onSauvegarder }) {
               {membres.map(m => <option key={m.id} value={m.id}>{m.nom}{m.id === user.id ? ' (moi)' : ''}</option>)}
             </select>
           </div>
+
+          {/* Labels (uniquement si la tâche existe) */}
+          {tache?.id && labels.length > 0 && (() => {
+            const tacheLabels = tache.labels || []
+            const labelIds = new Set(tacheLabels.map(l => l.id))
+            return (
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: T.text2, display: 'block', marginBottom: 8 }}>
+                  LABELS {tacheLabels.length > 0 && <span style={{ color: T.text, marginLeft: 4 }}>· {tacheLabels.length}</span>}
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {labels.map(l => {
+                    const active = labelIds.has(l.id)
+                    return (
+                      <button
+                        key={l.id}
+                        onClick={() => onToggleLabel?.(tache.id, l.id, active)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '5px 11px', borderRadius: 99,
+                          background: active ? `${l.couleur}28` : T.bg3,
+                          color: active ? l.couleur : T.text2,
+                          fontSize: 11.5, fontWeight: 600,
+                          border: `1px solid ${active ? l.couleur + '60' : T.border}`,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}>
+                        {active && <Check size={10} strokeWidth={3} />}
+                        {l.nom}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Sous-tâches (uniquement si la tâche existe) */}
           {tache?.id && (
@@ -1084,6 +1142,207 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
   )
 }
 
+// ===== LABEL_PALETTE — couleurs prédéfinies pour les labels =====
+const LABEL_PALETTE = [
+  '#6c63ff', '#3b82f6', '#06b6d4', '#22a06b',
+  '#4caf82', '#f59e0b', '#e08a3c', '#e05c5c',
+  '#ec4899', '#a855f7', '#64748b', '#374151',
+]
+
+// ===== DRAWER LABELS — gérer les étiquettes d'une équipe =====
+function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
+  const [nouveauNom, setNouveauNom] = useState('')
+  const [nouvelleCouleur, setNouvelleCouleur] = useState(LABEL_PALETTE[0])
+  const [editingId, setEditingId] = useState(null)
+  const [editNom, setEditNom] = useState('')
+  const [editCouleur, setEditCouleur] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const creer = async () => {
+    if (!nouveauNom.trim()) return
+    setLoading(true)
+    try {
+      const r = await axios.post(`${API}/equipes/${equipe_id}/labels`, {
+        nom: nouveauNom.trim(), couleur: nouvelleCouleur
+      })
+      if (r.data?.id) onLabelsChange([...labels, r.data])
+      setNouveauNom(''); setNouvelleCouleur(LABEL_PALETTE[0])
+    } catch {}
+    setLoading(false)
+  }
+
+  const debuterEdit = (label) => {
+    setEditingId(label.id); setEditNom(label.nom); setEditCouleur(label.couleur)
+  }
+
+  const sauvegarderEdit = async (id) => {
+    if (!editNom.trim()) return
+    try {
+      const r = await axios.patch(`${API}/equipes/labels/${id}`, { nom: editNom.trim(), couleur: editCouleur })
+      if (r.data?.id) onLabelsChange(labels.map(l => l.id === id ? r.data : l))
+      setEditingId(null)
+    } catch {}
+  }
+
+  const supprimer = async (id) => {
+    if (!confirm('Supprimer ce label ? Il sera retiré de toutes les tâches.')) return
+    try {
+      await axios.delete(`${API}/equipes/labels/${id}`)
+      onLabelsChange(labels.filter(l => l.id !== id))
+    } catch {}
+  }
+
+  return (
+    <motion.div
+      initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 280 }}
+      style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100%)',
+        background: T.bg2, borderLeft: `1px solid ${T.border}`,
+        boxShadow: '-16px 0 48px rgba(0,0,0,0.25)', zIndex: 400,
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+      {/* Header */}
+      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Sparkles size={15} color="#fff" strokeWidth={2.3} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Labels</h3>
+            <p style={{ margin: 0, fontSize: 11, color: T.text2 }}>{labels.length} étiquette{labels.length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+        <button onClick={onFermer} style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+      </div>
+
+      {/* Corps scrollable */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: 18 }}>
+
+        {/* Création */}
+        <div style={{ background: T.bg3, borderRadius: 12, padding: 14, marginBottom: 18, border: `1px solid ${T.border}` }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 8, margin: '0 0 8px' }}>NOUVEAU LABEL</p>
+          <input
+            value={nouveauNom}
+            onChange={e => setNouveauNom(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !loading && nouveauNom.trim()) creer() }}
+            placeholder="Nom du label (ex: Bug, Feature, Urgent…)"
+            style={{ width: '100%', padding: '9px 12px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 12.5, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
+          />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {LABEL_PALETTE.map(c => (
+              <button
+                key={c}
+                onClick={() => setNouvelleCouleur(c)}
+                style={{
+                  width: 24, height: 24, borderRadius: 7, background: c,
+                  border: nouvelleCouleur === c ? `2.5px solid ${T.text}` : 'none',
+                  cursor: 'pointer', padding: 0,
+                  boxShadow: nouvelleCouleur === c ? `0 0 0 2px ${T.bg2}, 0 0 0 4px ${c}80` : 'none',
+                  transition: 'all 0.15s',
+                }} />
+            ))}
+          </div>
+          {/* Preview */}
+          {nouveauNom.trim() && (
+            <div style={{ marginBottom: 10 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 1, marginRight: 8 }}>APERÇU :</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 99, background: `${nouvelleCouleur}22`, color: nouvelleCouleur, fontSize: 11, fontWeight: 700, border: `1px solid ${nouvelleCouleur}50` }}>
+                {nouveauNom.trim()}
+              </span>
+            </div>
+          )}
+          <motion.button
+            onClick={creer}
+            disabled={loading || !nouveauNom.trim()}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              width: '100%', padding: '8px 12px',
+              background: nouveauNom.trim() ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg,
+              border: 'none', borderRadius: 9,
+              color: nouveauNom.trim() ? '#fff' : T.text2,
+              fontSize: 12.5, fontWeight: 700,
+              cursor: nouveauNom.trim() ? 'pointer' : 'not-allowed',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}>
+            <Plus size={13} /> Créer le label
+          </motion.button>
+        </div>
+
+        {/* Liste */}
+        <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 10 }}>TOUS LES LABELS</p>
+        {labels.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: T.text2, fontSize: 12, fontStyle: 'italic' }}>
+            Aucun label pour l'instant.<br />Crée-en un pour catégoriser tes tâches.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {labels.map(label => (
+              <motion.div
+                key={label.id}
+                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: 10 }}>
+                {editingId === label.id ? (
+                  <div>
+                    <input
+                      value={editNom}
+                      onChange={e => setEditNom(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') sauvegarderEdit(label.id); if (e.key === 'Escape') setEditingId(null) }}
+                      autoFocus
+                      style={{ width: '100%', padding: '7px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 7, color: T.text, fontSize: 12.5, outline: 'none', marginBottom: 8, boxSizing: 'border-box' }}
+                    />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                      {LABEL_PALETTE.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => setEditCouleur(c)}
+                          style={{
+                            width: 20, height: 20, borderRadius: 6, background: c,
+                            border: editCouleur === c ? `2px solid ${T.text}` : 'none',
+                            cursor: 'pointer', padding: 0,
+                          }} />
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => setEditingId(null)}
+                        style={{ flex: 1, padding: '6px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 7, color: T.text2, fontSize: 11.5, cursor: 'pointer' }}>
+                        Annuler
+                      </button>
+                      <button onClick={() => sauvegarderEdit(label.id)}
+                        style={{ flex: 1, padding: '6px 10px', background: T.accent, border: 'none', borderRadius: 7, color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', padding: '3px 11px',
+                      borderRadius: 99, background: `${label.couleur}22`,
+                      color: label.couleur, fontSize: 12, fontWeight: 700,
+                      border: `1px solid ${label.couleur}50`, flex: 1, minWidth: 0,
+                    }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label.nom}</span>
+                    </span>
+                    <button onClick={() => debuterEdit(label)} title="Modifier"
+                      style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4 }}>
+                      <Edit3 size={13} />
+                    </button>
+                    <button onClick={() => supprimer(label.id)} title="Supprimer"
+                      style={{ background: 'none', border: 'none', color: '#e05c5c', cursor: 'pointer', padding: 4 }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
 // ===== MINI BAR CHART CSS =====
 function MiniBar({ valeur, max, couleur, label, T }) {
   const pct = max > 0 ? Math.round((valeur / max) * 100) : 0
@@ -1428,12 +1687,17 @@ export default function Collaboration() {
   const [showGestion, setShowGestion] = useState(false)
   const [showAnalytiques, setShowAnalytiques] = useState(false)
   const [showIAEquipe, setShowIAEquipe] = useState(false)
+  const [showLabelsDrawer, setShowLabelsDrawer] = useState(false)
+  const [labels, setLabels] = useState([])
+  const [filtreLabelId, setFiltreLabelId] = useState(null)
+  const [showLabelsPopover, setShowLabelsPopover] = useState(false)
 
   const isAdmin = membres.some(m => m.id === user?.id && m.role === 'admin')
 
   const fermerTousDrawers = () => {
     setShowActivite(false); setShowGestion(false)
     setShowAnalytiques(false); setShowIAEquipe(false)
+    setShowLabelsDrawer(false)
   }
 
   // Drag & Drop state
@@ -1491,7 +1755,7 @@ export default function Collaboration() {
   }, [])
 
   useEffect(() => {
-    if (equipeActive) { chargerMembres(equipeActive.id); chargerTaches(equipeActive.id) }
+    if (equipeActive) { chargerMembres(equipeActive.id); chargerTaches(equipeActive.id); chargerLabels(equipeActive.id); setFiltreLabelId(null) }
   }, [equipeActive])
 
   // ===== POLLING INTELLIGENT =====
@@ -1598,6 +1862,32 @@ export default function Collaboration() {
   }
   const chargerMembres = async (id) => { try { const r = await axios.get(`${API}/equipes/${id}/membres`); setMembres(r.data) } catch {} }
   const chargerTaches = async (id) => { try { const r = await axios.get(`${API}/equipes/${id}/taches`); setTaches(r.data) } catch {} }
+  const chargerLabels = async (id) => { try { const r = await axios.get(`${API}/equipes/${id}/labels`); setLabels(r.data || []) } catch {} }
+
+  // Toggle assignation d'un label sur une tâche
+  const toggleLabelTache = useCallback(async (tacheId, labelId, deja) => {
+    setTaches(p => p.map(t => {
+      if (t.id !== tacheId) return t
+      const current = t.labels || []
+      if (deja) {
+        return { ...t, labels: current.filter(l => l.id !== labelId) }
+      } else {
+        const labelObj = labels.find(l => l.id === labelId)
+        if (!labelObj) return t
+        return { ...t, labels: [...current, labelObj] }
+      }
+    }))
+    try {
+      if (deja) {
+        await axios.delete(`${API}/equipes/taches/${tacheId}/labels/${labelId}`)
+      } else {
+        await axios.post(`${API}/equipes/taches/${tacheId}/labels/${labelId}`)
+      }
+    } catch {
+      // Rollback : recharge depuis serveur
+      if (equipeActive) chargerTaches(equipeActive.id)
+    }
+  }, [labels, equipeActive])
 
   const creerEquipe = async () => {
     if (!nomEquipe.trim()) { setErreur("Donne un nom à l'équipe"); return }
@@ -1777,6 +2067,7 @@ export default function Collaboration() {
     }
     else if (filtre === 'haute') list = list.filter(t => t.priorite === 'haute')
     else if (filtre === 'a_valider') list = list.filter(t => t.statut === 'en_validation')
+    if (filtreLabelId) list = list.filter(t => (t.labels || []).some(l => l.id === filtreLabelId))
     return list
   }
 
@@ -2031,6 +2322,7 @@ export default function Collaboration() {
                       {equipeActive && [
                         { icon: Brain, label: 'Coach IA', active: showIAEquipe, onClick: () => { fermerTousDrawers(); setShowIAEquipe(p => !p); setShowMoreMenu(false) } },
                         { icon: TrendingUp, label: 'Stats', active: showAnalytiques, onClick: () => { fermerTousDrawers(); setShowAnalytiques(p => !p); setShowMoreMenu(false) } },
+                        { icon: Sparkles, label: 'Labels', active: showLabelsDrawer, onClick: () => { fermerTousDrawers(); setShowLabelsDrawer(p => !p); setShowMoreMenu(false) } },
                         ...(isAdmin ? [{ icon: Shield, label: 'Gérer', active: showGestion, onClick: () => { fermerTousDrawers(); setShowGestion(p => !p); setShowMoreMenu(false) } }] : []),
                         { icon: Activity, label: 'Activité', active: showActivite, onClick: () => { fermerTousDrawers(); setShowActivite(p => !p); setShowMoreMenu(false) } },
                         { icon: Share2, label: 'Inviter', active: false, onClick: () => { setShowPartage(equipeActive); setShowMoreMenu(false) } },
@@ -2071,6 +2363,12 @@ export default function Collaboration() {
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showAnalytiques ? `${T.accent}18` : T.bg3, border: `1px solid ${showAnalytiques ? T.accent + '35' : T.border}`, borderRadius: 9, color: showAnalytiques ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
                   onClick={() => { fermerTousDrawers(); setShowAnalytiques(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
                   <TrendingUp size={13} /> Stats
+                </motion.button>
+              )}
+              {equipeActive && (
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showLabelsDrawer ? `${T.accent}18` : T.bg3, border: `1px solid ${showLabelsDrawer ? T.accent + '35' : T.border}`, borderRadius: 9, color: showLabelsDrawer ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowLabelsDrawer(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                  <Sparkles size={13} /> Labels{labels.length > 0 && <span style={{ marginLeft: 2, fontSize: 10, padding: '1px 5px', borderRadius: 99, background: T.accent + '20', color: T.accent, fontWeight: 700 }}>{labels.length}</span>}
                 </motion.button>
               )}
               {equipeActive && isAdmin && (
@@ -2177,6 +2475,72 @@ export default function Collaboration() {
                   </motion.button>
                 )
               })}
+
+              {/* Pill labels (popover multi-select) */}
+              {labels.length > 0 && (
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <motion.button
+                    onClick={() => setShowLabelsPopover(p => !p)}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '6px 12px', borderRadius: 99,
+                      background: filtreLabelId ? `${(labels.find(l => l.id === filtreLabelId)?.couleur || T.accent)}18` : T.bg3,
+                      border: `1px solid ${filtreLabelId ? (labels.find(l => l.id === filtreLabelId)?.couleur || T.accent) + '50' : T.border}`,
+                      color: filtreLabelId ? (labels.find(l => l.id === filtreLabelId)?.couleur || T.accent) : T.text2,
+                      fontSize: 11.5, fontWeight: filtreLabelId ? 700 : 500,
+                      cursor: 'pointer', transition: 'all 0.15s',
+                    }}>
+                    <Sparkles size={11} strokeWidth={2.2} />
+                    {filtreLabelId
+                      ? labels.find(l => l.id === filtreLabelId)?.nom || 'Label'
+                      : 'Filtrer par label'
+                    }
+                    {filtreLabelId && <X size={11} style={{ marginLeft: 2 }} onClick={(e) => { e.stopPropagation(); setFiltreLabelId(null) }} />}
+                  </motion.button>
+
+                  <AnimatePresence>
+                    {showLabelsPopover && (
+                      <>
+                        <div onClick={() => setShowLabelsPopover(false)}
+                          style={{ position: 'fixed', inset: 0, zIndex: 290 }} />
+                        <motion.div
+                          initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          style={{
+                            position: 'absolute', top: 'calc(100% + 6px)', left: 0,
+                            background: T.bg2, border: `1px solid ${T.border}`,
+                            borderRadius: 12, padding: 6, minWidth: 200, maxHeight: 280,
+                            overflowY: 'auto', zIndex: 300,
+                            boxShadow: '0 16px 48px rgba(0,0,0,0.28)',
+                          }}>
+                          <p style={{ fontSize: 9, fontWeight: 800, color: T.text2, letterSpacing: 1.3, padding: '7px 10px 5px', margin: 0 }}>FILTRER PAR LABEL</p>
+                          {filtreLabelId && (
+                            <button
+                              onClick={() => { setFiltreLabelId(null); setShowLabelsPopover(false) }}
+                              style={popItemStyle(T, false)}>
+                              <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px dashed ${T.border}`, flexShrink: 0 }} />
+                              <span>Effacer le filtre</span>
+                            </button>
+                          )}
+                          {labels.map(l => (
+                            <button
+                              key={l.id}
+                              onClick={() => { setFiltreLabelId(l.id); setShowLabelsPopover(false) }}
+                              style={popItemStyle(T, filtreLabelId === l.id)}>
+                              <div style={{ width: 12, height: 12, borderRadius: 4, background: l.couleur, flexShrink: 0 }} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{l.nom}</span>
+                              {filtreLabelId === l.id && <Check size={11} color={T.accent} strokeWidth={3} />}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
 
             {/* Barre stats */}
@@ -2272,8 +2636,19 @@ export default function Collaboration() {
         {showPartage && <ModalePartage key="partage" T={T} equipe={showPartage} onFermer={() => setShowPartage(null)} />}
         {showModaleTache && equipeActive && (
           <ModaleTache key="tache" T={T} membres={membres} tache={tacheAModifier} user={user}
+            labels={labels} onToggleLabel={toggleLabelTache}
             onFermer={() => { setShowModaleTache(false); setTacheAModifier(null) }}
             onSauvegarder={sauvegarderTache} />
+        )}
+
+        {showLabelsDrawer && equipeActive && (
+          <DrawerLabels key="labels-drawer" T={T} equipe_id={equipeActive.id} labels={labels}
+            onFermer={() => setShowLabelsDrawer(false)}
+            onLabelsChange={(nouveaux) => {
+              setLabels(nouveaux)
+              // Recharge les tâches pour mettre à jour les labels qui ont changé de nom/couleur ou été supprimés
+              chargerTaches(equipeActive.id)
+            }} />
         )}
 
         {showCreer && (

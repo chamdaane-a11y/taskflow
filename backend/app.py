@@ -2349,6 +2349,7 @@ def get_taches_equipe(equipe_id):
         except Exception:
             pass
         _ensure_taches_equipe_columns(curseur)
+        _ensure_labels_schema(curseur)
         db.commit()
         curseur.execute("""
             SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom,
@@ -2363,9 +2364,24 @@ def get_taches_equipe(equipe_id):
             WHERE te.equipe_id=%s ORDER BY te.created_at DESC
         """, (equipe_id,))
         taches = curseur.fetchall()
+
+        # Récupère tous les labels en une requête + merge en Python
+        curseur.execute("""
+            SELECT tl.tache_id, l.id, l.nom, l.couleur
+            FROM taches_labels tl
+            JOIN labels_equipe l ON tl.label_id=l.id
+            WHERE l.equipe_id=%s
+        """, (equipe_id,))
+        labels_par_tache = {}
+        for row in curseur.fetchall():
+            labels_par_tache.setdefault(row['tache_id'], []).append({
+                'id': row['id'], 'nom': row['nom'], 'couleur': row['couleur']
+            })
+
         for t in taches:
             if t.get('completed_at'):
                 t['completed_at'] = t['completed_at'].isoformat() if hasattr(t['completed_at'], 'isoformat') else str(t['completed_at'])
+            t['labels'] = labels_par_tache.get(t['id'], [])
         db.close()
         return jsonify(taches)
     except Exception as e:
@@ -2458,6 +2474,17 @@ def toggle_tache_fait(tache_id):
         tache = curseur.fetchone()
         if tache and tache.get('completed_at'):
             tache['completed_at'] = tache['completed_at'].isoformat() if hasattr(tache['completed_at'], 'isoformat') else str(tache['completed_at'])
+        # Inclure les labels dans la réponse pour cohérence frontend
+        if tache:
+            try:
+                curseur.execute("""
+                    SELECT l.id, l.nom, l.couleur FROM taches_labels tl
+                    JOIN labels_equipe l ON tl.label_id=l.id
+                    WHERE tl.tache_id=%s
+                """, (tache_id,))
+                tache['labels'] = curseur.fetchall() or []
+            except Exception:
+                tache['labels'] = []
 
         # Push notification au créateur selon l'action
         if t['createur_id'] != user_id:
@@ -2546,6 +2573,137 @@ def modifier_tache_equipe(tache_id):
         return jsonify({"message": "Tache mise a jour"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
+
+def _ensure_labels_schema(curseur):
+    """Crée labels_equipe + taches_labels si absents."""
+    curseur.execute("""CREATE TABLE IF NOT EXISTS labels_equipe (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        equipe_id INT NOT NULL,
+        nom VARCHAR(60) NOT NULL,
+        couleur VARCHAR(20) DEFAULT '#6c63ff',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_equipe (equipe_id),
+        FOREIGN KEY (equipe_id) REFERENCES equipes(id) ON DELETE CASCADE
+    )""")
+    curseur.execute("""CREATE TABLE IF NOT EXISTS taches_labels (
+        tache_id INT NOT NULL,
+        label_id INT NOT NULL,
+        PRIMARY KEY (tache_id, label_id),
+        FOREIGN KEY (tache_id) REFERENCES taches_equipe(id) ON DELETE CASCADE,
+        FOREIGN KEY (label_id) REFERENCES labels_equipe(id) ON DELETE CASCADE
+    )""")
+
+
+@app.route('/equipes/<int:equipe_id>/labels', methods=['GET'])
+def get_labels_equipe(equipe_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        _ensure_labels_schema(curseur); db.commit()
+        curseur.execute("SELECT id, nom, couleur FROM labels_equipe WHERE equipe_id=%s ORDER BY nom ASC", (equipe_id,))
+        labels = curseur.fetchall()
+        db.close()
+        return jsonify(labels)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/<int:equipe_id>/labels', methods=['POST'])
+def creer_label(equipe_id):
+    try:
+        data = request.get_json() or {}
+        nom = (data.get('nom') or '').strip()
+        couleur = (data.get('couleur') or '#6c63ff').strip()
+        if not nom:
+            return jsonify({"erreur": "nom requis"}), 400
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        _ensure_labels_schema(curseur); db.commit()
+        curseur.execute(
+            "INSERT INTO labels_equipe (equipe_id, nom, couleur) VALUES (%s, %s, %s)",
+            (equipe_id, nom[:60], couleur[:20])
+        )
+        db.commit()
+        label_id = curseur.lastrowid
+        curseur.execute("SELECT id, nom, couleur FROM labels_equipe WHERE id=%s", (label_id,))
+        label = curseur.fetchone()
+        db.close()
+        return jsonify(label)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/labels/<int:label_id>', methods=['PATCH'])
+def modifier_label(label_id):
+    try:
+        data = request.get_json() or {}
+        fields, vals = [], []
+        if 'nom' in data:
+            nom = (data['nom'] or '').strip()
+            if not nom:
+                return jsonify({"erreur": "nom vide"}), 400
+            fields.append("nom=%s"); vals.append(nom[:60])
+        if 'couleur' in data:
+            fields.append("couleur=%s"); vals.append((data['couleur'] or '#6c63ff').strip()[:20])
+        if not fields:
+            return jsonify({"erreur": "rien à modifier"}), 400
+        vals.append(label_id)
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute(f"UPDATE labels_equipe SET {', '.join(fields)} WHERE id=%s", vals)
+        db.commit()
+        curseur.execute("SELECT id, nom, couleur FROM labels_equipe WHERE id=%s", (label_id,))
+        label = curseur.fetchone()
+        db.close()
+        return jsonify(label)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/labels/<int:label_id>', methods=['DELETE'])
+def supprimer_label(label_id):
+    try:
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("DELETE FROM labels_equipe WHERE id=%s", (label_id,))
+        db.commit()
+        db.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/taches/<int:tache_id>/labels/<int:label_id>', methods=['POST'])
+def assigner_label_tache(tache_id, label_id):
+    """Assigne un label à une tâche (idempotent)."""
+    try:
+        db = connecter()
+        curseur = db.cursor()
+        _ensure_labels_schema(curseur); db.commit()
+        try:
+            curseur.execute("INSERT INTO taches_labels (tache_id, label_id) VALUES (%s, %s)", (tache_id, label_id))
+            db.commit()
+        except Exception:
+            # Doublon ignoré (PK composite)
+            pass
+        db.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/taches/<int:tache_id>/labels/<int:label_id>', methods=['DELETE'])
+def desassigner_label_tache(tache_id, label_id):
+    try:
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("DELETE FROM taches_labels WHERE tache_id=%s AND label_id=%s", (tache_id, label_id))
+        db.commit()
+        db.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 
 def _ensure_sous_taches_schema(curseur):
     """Crée la table sous_taches_equipe si absente."""
