@@ -963,9 +963,19 @@ def health():
 
 @app.route('/debug/gcal-env', methods=['GET'])
 def debug_gcal_env():
-    vars_to_check = ['client_id', 'client_secret', 'GOOGLE_CALENDAR_CLIENT_ID',
-                     'GOOGLE_CALENDAR_CLIENT_SECRET', 'INTEGRATIONS_ENCRYPTION_KEY']
-    return jsonify({v: bool(os.environ.get(v)) for v in vars_to_check})
+    vars_to_check = [
+        'client_id', 'client_secret',
+        'CLIENT_ID', 'CLIENT_SECRET',
+        'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
+        'GOOGLE_CALENDAR_CLIENT_ID', 'GOOGLE_CALENDAR_CLIENT_SECRET',
+        'GCAL_CLIENT_ID', 'GCAL_CLIENT_SECRET',
+        'OAUTH_CLIENT_ID', 'OAUTH_CLIENT_SECRET',
+        'INTEGRATIONS_ENCRYPTION_KEY',
+    ]
+    found = {v: bool(os.environ.get(v)) for v in vars_to_check}
+    all_env_keys = [k for k in os.environ.keys() if 'client' in k.lower() or 'google' in k.lower() or 'oauth' in k.lower() or 'gcal' in k.lower() or 'secret' in k.lower() or 'key' in k.lower()]
+    found['_all_matching_keys'] = all_env_keys
+    return jsonify(found)
 
 @app.route('/auth/google', methods=['POST'])
 @limiter.limit("20 per minute")
