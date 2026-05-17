@@ -3109,11 +3109,17 @@ def save_slack_integration():
 GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 GCAL_REDIRECT_URI = "https://getshift-backend.onrender.com/auth/google/calendar/callback"
 
+def _gcal_cid():
+    return os.environ.get('client_id') or os.environ.get('GOOGLE_CALENDAR_CLIENT_ID', '')
+
+def _gcal_csecret():
+    return os.environ.get('client_secret') or os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET', '')
+
 def _gcal_flow():
     return Flow.from_client_config({
         "web": {
-            "client_id": os.environ.get('GOOGLE_CALENDAR_CLIENT_ID', ''),
-            "client_secret": os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET', ''),
+            "client_id": _gcal_cid(),
+            "client_secret": _gcal_csecret(),
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "redirect_uris": [GCAL_REDIRECT_URI],
@@ -3141,8 +3147,8 @@ def get_google_calendar_creds(user_id):
             token=tokens.get('access_token'),
             refresh_token=tokens.get('refresh_token'),
             token_uri="https://oauth2.googleapis.com/token",
-            client_id=os.environ.get('GOOGLE_CALENDAR_CLIENT_ID', ''),
-            client_secret=os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET', ''),
+            client_id=_gcal_cid(),
+            client_secret=_gcal_csecret(),
             scopes=GCAL_SCOPES,
         )
         if tokens.get('expires_at') and tokens['expires_at'] < int(time.time()) + 60:
@@ -3166,7 +3172,7 @@ def auth_google_calendar():
     user_id = request.args.get('user_id')
     if not user_id:
         return "user_id requis", 400
-    if not os.environ.get('GOOGLE_CALENDAR_CLIENT_ID'):
+    if not _gcal_cid():
         return """<!DOCTYPE html><html><body><script>
 window.opener&&window.opener.postMessage({type:'oauth_error',integration:'google_calendar',error:'Google Calendar non configuré côté serveur'},'*');
 setTimeout(()=>window.close(),1500);
