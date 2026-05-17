@@ -32,9 +32,10 @@ const NAV_ITEMS = [
 ]
 
 const COLONNES = [
-  { id: 'todo',     label: 'À faire',   couleur: '#6c63ff', bg: '#6c63ff12' },
-  { id: 'en_cours', label: 'En cours',  couleur: '#e08a3c', bg: '#e08a3c12' },
-  { id: 'termine',  label: 'Terminé',   couleur: '#4caf82', bg: '#4caf8212' },
+  { id: 'todo',          label: 'À faire',     couleur: '#6c63ff', bg: '#6c63ff12' },
+  { id: 'en_cours',      label: 'En cours',    couleur: '#e08a3c', bg: '#e08a3c12' },
+  { id: 'en_validation', label: 'À valider',   couleur: '#f59e0b', bg: '#f59e0b14' },
+  { id: 'termine',       label: 'Terminé',     couleur: '#4caf82', bg: '#4caf8212' },
 ]
 const PRIORITE_COLOR = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
 
@@ -251,12 +252,20 @@ function tempsRelatif(iso) {
   } catch { return '' }
 }
 
-function CarteTache({ T, tache, membres, onModifier, onOuvrir, onAssign, onToggleFait, isDragOverlay = false }) {
+function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, onToggleFait, isDragOverlay = false }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(tache.id) })
   const [assignOpen, setAssignOpen] = useState(false)
   const [checkHover, setCheckHover] = useState(false)
   const popRef = useRef(null)
   const isDone = tache.statut === 'termine'
+  const isEnValidation = tache.statut === 'en_validation'
+  const isCreateur = user && tache.createur_id === user.id
+  const canValidate = isEnValidation && isCreateur
+  // Couleur de la checkbox selon l'état
+  const checkColor = isDone ? '#4caf82' : isEnValidation ? '#f59e0b' : '#4caf82'
+  const checkTitle = isDone ? 'Ré-ouvrir'
+    : isEnValidation ? (canValidate ? 'Valider la tâche ✓' : 'Annuler la proposition')
+    : 'Marquer terminée'
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging && !isDragOverlay ? 0.35 : 1,
@@ -288,22 +297,28 @@ function CarteTache({ T, tache, membres, onModifier, onOuvrir, onAssign, onToggl
         onClick={() => !isDragging && onOuvrir(tache)}
         initial={isDragOverlay ? false : { opacity: 0, y: 8 }} animate={{ opacity: isDone ? 0.72 : 1, y: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-          {/* Checkbox terminer/ré-ouvrir */}
+          {/* Checkbox terminer/ré-ouvrir/valider */}
           <motion.button
-            onClick={e => { e.stopPropagation(); onToggleFait?.(tache.id, !isDone) }}
+            onClick={e => { e.stopPropagation(); onToggleFait?.(tache) }}
             onMouseEnter={() => setCheckHover(true)}
             onMouseLeave={() => setCheckHover(false)}
             whileTap={{ scale: 0.85 }}
-            title={isDone ? 'Ré-ouvrir' : 'Marquer terminée'}
+            title={checkTitle}
             style={{
               width: 18, height: 18, borderRadius: '50%',
-              border: `1.8px solid ${isDone ? '#4caf82' : (checkHover ? '#4caf82' : T.border)}`,
-              background: isDone ? '#4caf82' : (checkHover ? '#4caf8215' : 'transparent'),
+              border: `1.8px solid ${(isDone || isEnValidation) ? checkColor : (checkHover ? '#4caf82' : T.border)}`,
+              background: isDone ? checkColor : isEnValidation ? `${checkColor}22` : (checkHover ? '#4caf8215' : 'transparent'),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0, marginTop: 1, cursor: 'pointer', padding: 0,
               transition: 'all 0.15s',
             }}>
-            {(isDone || checkHover) && (
+            {isEnValidation ? (
+              <motion.div
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+                <Check size={11} color={checkColor} strokeWidth={3.5} />
+              </motion.div>
+            ) : (isDone || checkHover) && (
               <motion.div
                 initial={{ scale: 0 }} animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
@@ -338,6 +353,25 @@ function CarteTache({ T, tache, membres, onModifier, onOuvrir, onAssign, onToggl
             <span>Par {tache.completed_by_nom} · {tempsRelatif(tache.completed_at)}</span>
           </div>
         )}
+
+        {/* Badge "à valider — proposé par X" */}
+        {isEnValidation && tache.completed_by_nom && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 10, color: '#f59e0b', fontWeight: 600,
+            background: '#f59e0b15', padding: '3px 8px', borderRadius: 99,
+            marginBottom: 8, width: 'fit-content',
+            border: '1px solid #f59e0b30',
+          }}>
+            <Clock size={9} strokeWidth={3} />
+            <span>
+              {canValidate
+                ? `Proposé par ${tache.completed_by_nom} — à valider`
+                : `Proposé par ${tache.completed_by_nom} · ${tempsRelatif(tache.completed_at)}`
+              }
+            </span>
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             {/* Avatar cliquable : assigner / désassigner rapidement */}
@@ -361,6 +395,17 @@ function CarteTache({ T, tache, membres, onModifier, onOuvrir, onAssign, onToggl
             {tache.deadline && (
               <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
                 <Clock size={9} />{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+              </span>
+            )}
+            {/* Progrès sous-tâches */}
+            {tache.nb_sous_taches > 0 && (
+              <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 4 }}
+                title={`${tache.nb_sous_taches_done}/${tache.nb_sous_taches} sous-tâches`}>
+                <CheckSquare size={9} />
+                {tache.nb_sous_taches_done}/{tache.nb_sous_taches}
+                <span style={{ display: 'inline-block', width: 20, height: 3, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
+                  <span style={{ display: 'block', height: '100%', width: `${(tache.nb_sous_taches_done / tache.nb_sous_taches) * 100}%`, background: '#4caf82', borderRadius: 99 }} />
+                </span>
               </span>
             )}
           </div>
@@ -455,6 +500,42 @@ function ColonneDroppable({ T, col, children, isOver }) {
 // ===== MODALE TÂCHE =====
 function ModaleTache({ T, membres, tache, user, onFermer, onSauvegarder }) {
   const [form, setForm] = useState({ titre: tache?.titre || '', description: tache?.description || '', priorite: tache?.priorite || 'moyenne', statut: tache?.statut || 'todo', assignee_id: tache?.assignee_id || '' })
+  const [sousTaches, setSousTaches] = useState([])
+  const [nouvelleST, setNouvelleST] = useState('')
+  const [stLoading, setStLoading] = useState(false)
+
+  useEffect(() => {
+    if (!tache?.id) return
+    axios.get(`${API}/equipes/taches/${tache.id}/sous-taches`)
+      .then(r => setSousTaches(r.data || []))
+      .catch(() => {})
+  }, [tache?.id])
+
+  const ajouterST = async () => {
+    if (!nouvelleST.trim() || !tache?.id) return
+    setStLoading(true)
+    try {
+      const r = await axios.post(`${API}/equipes/taches/${tache.id}/sous-taches`, { titre: nouvelleST.trim() })
+      if (r.data?.id) setSousTaches(p => [...p, r.data])
+      setNouvelleST('')
+    } catch {}
+    setStLoading(false)
+  }
+
+  const toggleST = async (id) => {
+    setSousTaches(p => p.map(s => s.id === id ? { ...s, terminee: s.terminee ? 0 : 1 } : s))
+    try { await axios.patch(`${API}/equipes/sous-taches/${id}/toggle`) } catch {}
+  }
+
+  const supprimerST = async (id) => {
+    setSousTaches(p => p.filter(s => s.id !== id))
+    try { await axios.delete(`${API}/equipes/sous-taches/${id}`) } catch {}
+  }
+
+  const stTotal = sousTaches.length
+  const stDone = sousTaches.filter(s => s.terminee).length
+  const stPct = stTotal ? Math.round(stDone / stTotal * 100) : 0
+
   return (
     <motion.div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -484,6 +565,7 @@ function ModaleTache({ T, membres, tache, user, onFermer, onSauvegarder }) {
                 value={form.statut} onChange={e => setForm({ ...form, statut: e.target.value })}>
                 <option value="todo">À faire</option>
                 <option value="en_cours">En cours</option>
+                <option value="en_validation">À valider</option>
                 <option value="termine">Terminé</option>
               </select>
             </div>
@@ -496,6 +578,79 @@ function ModaleTache({ T, membres, tache, user, onFermer, onSauvegarder }) {
               {membres.map(m => <option key={m.id} value={m.id}>{m.nom}{m.id === user.id ? ' (moi)' : ''}</option>)}
             </select>
           </div>
+
+          {/* Sous-tâches (uniquement si la tâche existe) */}
+          {tache?.id && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: T.text2 }}>
+                  SOUS-TÂCHES {stTotal > 0 && <span style={{ color: T.text, marginLeft: 4 }}>· {stDone}/{stTotal}</span>}
+                </label>
+                {stTotal > 0 && (
+                  <span style={{ fontSize: 10, color: stPct === 100 ? '#4caf82' : T.text2, fontWeight: 700 }}>{stPct}%</span>
+                )}
+              </div>
+              {stTotal > 0 && (
+                <div style={{ height: 4, background: T.bg3, borderRadius: 99, marginBottom: 8, overflow: 'hidden' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${stPct}%` }} transition={{ duration: 0.5 }}
+                    style={{ height: '100%', background: '#4caf82', borderRadius: 99 }} />
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto', marginBottom: 8 }}>
+                {sousTaches.map(s => (
+                  <motion.div key={s.id}
+                    initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: T.bg3, borderRadius: 8 }}>
+                    <button
+                      onClick={() => toggleST(s.id)}
+                      style={{
+                        width: 16, height: 16, borderRadius: '50%',
+                        border: `1.8px solid ${s.terminee ? '#4caf82' : T.border}`,
+                        background: s.terminee ? '#4caf82' : 'transparent',
+                        cursor: 'pointer', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                      }}>
+                      {s.terminee ? <Check size={10} color="#fff" strokeWidth={3.5} /> : null}
+                    </button>
+                    <span style={{ flex: 1, fontSize: 12.5, color: s.terminee ? T.text2 : T.text, textDecoration: s.terminee ? 'line-through' : 'none', lineHeight: 1.4, wordBreak: 'break-word' }}>
+                      {s.titre}
+                    </span>
+                    <button
+                      onClick={() => supprimerST(s.id)}
+                      title="Supprimer"
+                      style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 2, flexShrink: 0, opacity: 0.6 }}>
+                      <X size={12} />
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  value={nouvelleST}
+                  onChange={e => setNouvelleST(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !stLoading && nouvelleST.trim()) { e.preventDefault(); ajouterST() } }}
+                  placeholder="Ajouter une sous-tâche…"
+                  disabled={stLoading}
+                  style={{ flex: 1, padding: '8px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 12.5, outline: 'none' }}
+                />
+                <motion.button
+                  onClick={ajouterST}
+                  disabled={stLoading || !nouvelleST.trim()}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    padding: '8px 12px',
+                    background: nouvelleST.trim() ? T.accent : T.bg3,
+                    border: 'none', borderRadius: 9,
+                    color: nouvelleST.trim() ? 'white' : T.text2,
+                    fontSize: 12.5, fontWeight: 600,
+                    cursor: nouvelleST.trim() ? 'pointer' : 'not-allowed',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                  <Plus size={13} />
+                </motion.button>
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <motion.button style={{ flex: 1, padding: '10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 13, cursor: 'pointer' }} onClick={onFermer}>Annuler</motion.button>
@@ -1354,19 +1509,46 @@ export default function Collaboration() {
         const diff = nouvelles.length - anciennes.length
         if (diff > 0) addToast(`${diff} nouvelle${diff > 1 ? 's' : ''} tâche${diff > 1 ? 's' : ''} ajoutée${diff > 1 ? 's' : ''}`, '✅', '#4caf82')
       } else if (anciennes.length > 0) {
-        const changed = nouvelles.find(n => {
+        // Détecte spécifiquement les tâches qui me concernent en tant que créateur
+        const maTacheProposee = nouvelles.find(n => {
           const old = anciennes.find(a => a.id === n.id)
-          return old && old.statut !== n.statut
+          return old && old.statut !== 'en_validation' && n.statut === 'en_validation'
+            && n.createur_id === user.id && n.completed_by && n.completed_by !== user.id
         })
-        if (changed) {
-          const labels = { todo: 'À faire', en_cours: 'En cours', termine: 'Terminé' }
-          addToast(`"${changed.titre}" → ${labels[changed.statut]}`, '🔄', '#6c63ff')
+        if (maTacheProposee) {
+          addToast(
+            `📥 ${maTacheProposee.completed_by_nom} a terminé "${maTacheProposee.titre.slice(0, 30)}${maTacheProposee.titre.length > 30 ? '…' : ''}" — à valider`,
+            '📥',
+            '#f59e0b'
+          )
+        } else {
+          const maTacheTerminee = nouvelles.find(n => {
+            const old = anciennes.find(a => a.id === n.id)
+            return old && old.statut !== 'termine' && n.statut === 'termine'
+              && n.createur_id === user.id && n.completed_by && n.completed_by !== user.id
+          })
+          if (maTacheTerminee) {
+            addToast(
+              `🎉 ${maTacheTerminee.completed_by_nom} a terminé "${maTacheTerminee.titre.slice(0, 35)}${maTacheTerminee.titre.length > 35 ? '…' : ''}"`,
+              '🎉',
+              '#4caf82'
+            )
+          } else {
+            const changed = nouvelles.find(n => {
+              const old = anciennes.find(a => a.id === n.id)
+              return old && old.statut !== n.statut
+            })
+            if (changed) {
+              const labels = { todo: 'À faire', en_cours: 'En cours', en_validation: 'À valider', termine: 'Terminé' }
+              addToast(`"${changed.titre}" → ${labels[changed.statut]}`, '🔄', '#6c63ff')
+            }
+          }
         }
       }
 
       setTaches(nouvelles)
     } catch {}
-  }, [addToast])
+  }, [addToast, user])
 
   // ── Polling MEMBRES (détecte nouveaux arrivants live) ──
   const chargerMembresSilent = useCallback(async (equipe_id) => {
@@ -1475,17 +1657,45 @@ export default function Collaboration() {
     }
   }, [equipeActive, user, addToast])
 
-  // ── Toggle terminer/ré-ouvrir une tâche depuis la checkbox de la carte ──
-  const toggleFait = useCallback(async (tacheId, marquerFait) => {
+  // ── Toggle terminer/valider/annuler/ré-ouvrir une tâche depuis la checkbox ──
+  const toggleFait = useCallback(async (tache) => {
+    const tacheId = tache.id
     const prev = tachesRef.current
+    // Prédit l'état cible côté frontend pour optimistic update
+    const isCreateur = tache.createur_id === user.id
+    const hasAssignee = tache.assignee_id != null
+    const assigneeDiff = hasAssignee && tache.assignee_id !== tache.createur_id
+    const besoinValidation = assigneeDiff && !isCreateur
+
+    let nouveauStatut, action
+    if (tache.statut === 'termine') {
+      nouveauStatut = 'todo'
+      action = 'reopen'
+    } else if (tache.statut === 'en_validation') {
+      if (isCreateur) { nouveauStatut = 'termine'; action = 'valider' }
+      else { nouveauStatut = 'todo'; action = 'annuler' }
+    } else if (besoinValidation) {
+      nouveauStatut = 'en_validation'
+      action = 'proposer'
+    } else {
+      nouveauStatut = 'termine'
+      action = 'terminer'
+    }
+
     // Optimistic update
     setTaches(p => p.map(t => t.id === tacheId
       ? {
           ...t,
-          statut: marquerFait ? 'termine' : 'todo',
-          completed_at: marquerFait ? new Date().toISOString() : null,
-          completed_by: marquerFait ? user.id : null,
-          completed_by_nom: marquerFait ? user.nom : null,
+          statut: nouveauStatut,
+          completed_at: (action === 'terminer' || action === 'proposer') ? new Date().toISOString()
+                      : action === 'valider' ? t.completed_at
+                      : null,
+          completed_by: (action === 'terminer' || action === 'proposer') ? user.id
+                      : action === 'valider' ? t.completed_by
+                      : null,
+          completed_by_nom: (action === 'terminer' || action === 'proposer') ? user.nom
+                          : action === 'valider' ? t.completed_by_nom
+                          : null,
         }
       : t
     ))
@@ -1493,15 +1703,17 @@ export default function Collaboration() {
       const r = await axios.patch(`${API}/equipes/taches/${tacheId}/toggle-fait`, {
         user_id: user.id, nom_user: user.nom,
       })
-      // Resync avec la réponse serveur (vraie date)
       if (r.data?.id) {
         setTaches(p => p.map(t => t.id === tacheId ? { ...t, ...r.data } : t))
       }
-      if (marquerFait) {
-        addToast('Tâche terminée — bien joué', '✓', '#4caf82')
-      } else {
-        addToast('Tâche ré-ouverte', '↻', '#6c63ff')
-      }
+      const toastMsg = {
+        terminer: ['Tâche terminée — bien joué', '✓', '#4caf82'],
+        proposer: ['Proposée au créateur pour validation', '📥', '#f59e0b'],
+        valider:  ['Tâche validée ✓', '✓', '#4caf82'],
+        annuler:  ['Proposition annulée', '↩', '#6c63ff'],
+        reopen:   ['Tâche ré-ouverte', '↻', '#6c63ff'],
+      }[action]
+      addToast(...toastMsg)
     } catch {
       setTaches(prev)
       addToast('Erreur — réessaie', '❌', '#e05c5c')
@@ -1558,9 +1770,26 @@ export default function Collaboration() {
 
   const tachesCol = (statut) => {
     let list = taches.filter(t => t.statut === statut)
-    if (filtre === 'haute') list = list.filter(t => t.priorite === 'haute')
-    if (filtre === 'terminee') list = list.filter(t => t.statut === 'termine')
+    if (filtre === 'mes_taches') list = list.filter(t => t.assignee_id === user.id)
+    else if (filtre === 'en_retard') {
+      const today = new Date().toISOString().slice(0, 10)
+      list = list.filter(t => t.deadline && t.deadline < today && t.statut !== 'termine')
+    }
+    else if (filtre === 'haute') list = list.filter(t => t.priorite === 'haute')
+    else if (filtre === 'a_valider') list = list.filter(t => t.statut === 'en_validation')
     return list
+  }
+
+  // Compteurs pour les pills
+  const filtreCounts = {
+    toutes: taches.length,
+    mes_taches: taches.filter(t => t.assignee_id === user.id).length,
+    en_retard: (() => {
+      const today = new Date().toISOString().slice(0, 10)
+      return taches.filter(t => t.deadline && t.deadline < today && t.statut !== 'termine').length
+    })(),
+    haute: taches.filter(t => t.priorite === 'haute').length,
+    a_valider: taches.filter(t => t.statut === 'en_validation' && t.createur_id === user.id).length,
   }
   const tacheActive = activeId ? taches.find(t => t.id === parseInt(activeId)) : null
 
@@ -1905,10 +2134,55 @@ export default function Collaboration() {
         ) : (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
+            {/* Filtres rapides — pills */}
+            <div style={{
+              display: 'flex', gap: 6, padding: '10px clamp(14px,3vw,24px)',
+              borderBottom: `1px solid ${T.border}`, flexShrink: 0,
+              overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center',
+            }} className="filtres-pills">
+              <style>{`.filtres-pills::-webkit-scrollbar{display:none;}`}</style>
+              {[
+                { id: 'toutes',     label: 'Toutes',      icon: null, color: T.accent },
+                { id: 'mes_taches', label: 'Mes tâches',  icon: User, color: '#6c63ff' },
+                { id: 'en_retard',  label: 'En retard',   icon: AlertTriangle, color: '#e05c5c' },
+                { id: 'haute',      label: 'Haute prio',  icon: Zap, color: '#e05c5c' },
+                { id: 'a_valider',  label: 'À valider',   icon: Clock, color: '#f59e0b' },
+              ].map(f => {
+                const Icon = f.icon
+                const active = filtre === f.id
+                const count = filtreCounts[f.id] ?? 0
+                return (
+                  <motion.button
+                    key={f.id}
+                    onClick={() => setFiltre(f.id)}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '6px 12px', borderRadius: 99,
+                      background: active ? `${f.color}18` : T.bg3,
+                      border: `1px solid ${active ? f.color + '50' : T.border}`,
+                      color: active ? f.color : T.text2,
+                      fontSize: 11.5, fontWeight: active ? 700 : 500,
+                      cursor: 'pointer', flexShrink: 0,
+                      transition: 'all 0.15s',
+                    }}>
+                    {Icon && <Icon size={11} strokeWidth={2.2} />}
+                    {f.label}
+                    {count > 0 && f.id !== 'toutes' && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                        background: active ? f.color : T.bg2, color: active ? '#fff' : T.text2,
+                      }}>{count}</span>
+                    )}
+                  </motion.button>
+                )
+              })}
+            </div>
+
             {/* Barre stats */}
             <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
               {COLONNES.map((col, i) => (
-                <div key={col.id} style={{ flex: 1, padding: '9px 18px', borderRight: i < 2 ? `1px solid ${T.border}` : 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div key={col.id} style={{ flex: 1, padding: '9px 18px', borderRight: i < COLONNES.length - 1 ? `1px solid ${T.border}` : 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 7, height: 7, borderRadius: '50%', background: col.couleur }} />
                   <span style={{ fontSize: 12, fontWeight: 500, color: T.text2 }}>{col.label}</span>
                   <span style={{ fontSize: 13, fontWeight: 800, color: col.couleur, marginLeft: 'auto' }}>{tachesCol(col.id).length}</span>
@@ -1919,9 +2193,9 @@ export default function Collaboration() {
             {/* KANBAN avec DnD */}
             <DndContext sensors={sensors} collisionDetection={closestCenter}
               onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-              <div style={{ flex: 1, display: isMobile ? 'flex' : 'grid', gridTemplateColumns: isMobile ? undefined : 'repeat(3, 1fr)', flexDirection: isMobile ? 'row' : undefined, overflowX: isMobile ? 'auto' : undefined, overflowY: isMobile ? 'hidden' : 'hidden', scrollSnapType: isMobile ? 'x mandatory' : undefined, WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ flex: 1, display: isMobile ? 'flex' : 'grid', gridTemplateColumns: isMobile ? undefined : `repeat(${COLONNES.length}, 1fr)`, flexDirection: isMobile ? 'row' : undefined, overflowX: isMobile ? 'auto' : undefined, overflowY: isMobile ? 'hidden' : 'hidden', scrollSnapType: isMobile ? 'x mandatory' : undefined, WebkitOverflowScrolling: 'touch' }}>
                 {COLONNES.map((col, i) => (
-                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', borderRight: !isMobile && i < 2 ? `1px solid ${T.border}` : 'none', overflow: 'hidden', ...(isMobile ? { minWidth: '85vw', maxWidth: '85vw', scrollSnapAlign: 'start', flexShrink: 0, borderRight: i < 2 ? `1px solid ${T.border}` : 'none' } : {}) }}>
+                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', borderRight: !isMobile && i < COLONNES.length - 1 ? `1px solid ${T.border}` : 'none', overflow: 'hidden', ...(isMobile ? { minWidth: '85vw', maxWidth: '85vw', scrollSnapAlign: 'start', flexShrink: 0, borderRight: i < COLONNES.length - 1 ? `1px solid ${T.border}` : 'none' } : {}) }}>
                     <div style={{ padding: '13px 14px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.couleur }} />
@@ -1937,7 +2211,7 @@ export default function Collaboration() {
                       <QuickAddInline T={T} col={col} onAdd={(titre) => creerTacheRapide(titre, col.id)} />
                       <AnimatePresence>
                         {tachesCol(col.id).map(t => (
-                          <CarteTache key={t.id} T={T} tache={t} membres={membres}
+                          <CarteTache key={t.id} T={T} tache={t} membres={membres} user={user}
                             onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
                             onOuvrir={setTacheCommentaires}
                             onAssign={quickAssigner}

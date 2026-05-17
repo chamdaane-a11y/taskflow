@@ -2353,7 +2353,9 @@ def get_taches_equipe(equipe_id):
         curseur.execute("""
             SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom,
                 u3.nom as completed_by_nom,
-                (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires
+                (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires,
+                (SELECT COUNT(*) FROM sous_taches_equipe WHERE tache_id=te.id) as nb_sous_taches,
+                (SELECT COUNT(*) FROM sous_taches_equipe WHERE tache_id=te.id AND terminee=1) as nb_sous_taches_done
             FROM taches_equipe te
             JOIN users u1 ON te.createur_id=u1.id
             LEFT JOIN users u2 ON te.assignee_id=u2.id
@@ -2392,6 +2394,13 @@ def toggle_tache_fait(tache_id):
             db.close()
             return jsonify({"erreur": "Tâche introuvable"}), 404
 
+        nouvelle_action = 'reopen'
+        # Workflow validation : si tâche assignée à qqun de différent du créateur,
+        # et que le terminer n'est pas le créateur, on passe par "en_validation"
+        has_assignee = t.get('assignee_id') is not None
+        assignee_diff = has_assignee and t.get('assignee_id') != t.get('createur_id')
+        besoin_validation = assignee_diff and user_id != t.get('createur_id')
+
         if t['statut'] == 'termine':
             # Re-ouvre : retour en 'todo' + clear completion meta
             curseur.execute(
@@ -2399,18 +2408,47 @@ def toggle_tache_fait(tache_id):
                 (tache_id,)
             )
             action = 'a ré-ouvert la tâche'
+        elif t['statut'] == 'en_validation':
+            # Tâche en attente de validation
+            if user_id == t.get('createur_id'):
+                # Le créateur valide → termine
+                curseur.execute(
+                    "UPDATE taches_equipe SET statut='termine' WHERE id=%s",
+                    (tache_id,)
+                )
+                action = 'a validé la tâche'
+                nouvelle_action = 'validee'
+            else:
+                # Autre membre = annule la proposition → retour todo
+                curseur.execute(
+                    "UPDATE taches_equipe SET statut='todo', completed_at=NULL, completed_by=NULL WHERE id=%s",
+                    (tache_id,)
+                )
+                action = 'a annulé la proposition de validation'
+        elif besoin_validation:
+            # Propose pour validation au créateur
+            curseur.execute(
+                "UPDATE taches_equipe SET statut='en_validation', completed_at=NOW(), completed_by=%s WHERE id=%s",
+                (user_id, tache_id)
+            )
+            action = 'a proposé la tâche pour validation'
+            nouvelle_action = 'proposee'
         else:
+            # Direct au terminé (solo ou créateur lui-même)
             curseur.execute(
                 "UPDATE taches_equipe SET statut='termine', completed_at=NOW(), completed_by=%s WHERE id=%s",
                 (user_id, tache_id)
             )
             action = 'a terminé la tâche'
+            nouvelle_action = 'terminee'
         db.commit()
 
         # Récupère la tâche enrichie pour la réponse
         curseur.execute("""
             SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom, u3.nom as completed_by_nom,
-                (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires
+                (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires,
+                (SELECT COUNT(*) FROM sous_taches_equipe WHERE tache_id=te.id) as nb_sous_taches,
+                (SELECT COUNT(*) FROM sous_taches_equipe WHERE tache_id=te.id AND terminee=1) as nb_sous_taches_done
             FROM taches_equipe te
             JOIN users u1 ON te.createur_id=u1.id
             LEFT JOIN users u2 ON te.assignee_id=u2.id
@@ -2420,6 +2458,26 @@ def toggle_tache_fait(tache_id):
         tache = curseur.fetchone()
         if tache and tache.get('completed_at'):
             tache['completed_at'] = tache['completed_at'].isoformat() if hasattr(tache['completed_at'], 'isoformat') else str(tache['completed_at'])
+
+        # Push notification au créateur selon l'action
+        if t['createur_id'] != user_id:
+            try:
+                curseur.execute("SELECT subscription FROM push_subscriptions WHERE user_id=%s", (t['createur_id'],))
+                subs = curseur.fetchall()
+                if nouvelle_action == 'proposee':
+                    push_titre = "📥 Tâche à valider"
+                    push_body = f"{nom_user} a marqué « {t['titre'][:50]} » comme terminée — valide ou refuse"
+                elif nouvelle_action == 'terminee':
+                    push_titre = "🎉 Ta tâche a été terminée"
+                    push_body = f"{nom_user} vient de terminer « {t['titre'][:50]} »"
+                else:
+                    push_titre, push_body = None, None
+                if push_titre:
+                    for sub_row in subs:
+                        envoyer_push(sub_row['subscription'], push_titre, push_body, url="/collaboration")
+            except Exception as e:
+                print(f"[toggle-fait] push créateur erreur: {e}")
+
         db.close()
 
         log_activite(t['equipe_id'], user_id, nom_user, action, t['titre'], tache_id)
@@ -2488,6 +2546,93 @@ def modifier_tache_equipe(tache_id):
         return jsonify({"message": "Tache mise a jour"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
+
+def _ensure_sous_taches_schema(curseur):
+    """Crée la table sous_taches_equipe si absente."""
+    curseur.execute("""CREATE TABLE IF NOT EXISTS sous_taches_equipe (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tache_id INT NOT NULL,
+        titre VARCHAR(255) NOT NULL,
+        terminee TINYINT(1) DEFAULT 0,
+        position INT DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_tache (tache_id),
+        FOREIGN KEY (tache_id) REFERENCES taches_equipe(id) ON DELETE CASCADE
+    )""")
+
+
+@app.route('/equipes/taches/<int:tache_id>/sous-taches', methods=['GET'])
+def get_sous_taches(tache_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        _ensure_sous_taches_schema(curseur); db.commit()
+        curseur.execute("SELECT * FROM sous_taches_equipe WHERE tache_id=%s ORDER BY position ASC, id ASC", (tache_id,))
+        sous_taches = curseur.fetchall()
+        db.close()
+        return jsonify(sous_taches)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/taches/<int:tache_id>/sous-taches', methods=['POST'])
+def creer_sous_tache(tache_id):
+    try:
+        data = request.get_json() or {}
+        titre = (data.get('titre') or '').strip()
+        if not titre:
+            return jsonify({"erreur": "titre requis"}), 400
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        _ensure_sous_taches_schema(curseur); db.commit()
+        # Position = max + 1
+        curseur.execute("SELECT COALESCE(MAX(position), -1) + 1 as next_pos FROM sous_taches_equipe WHERE tache_id=%s", (tache_id,))
+        next_pos = (curseur.fetchone() or {}).get('next_pos', 0)
+        curseur.execute(
+            "INSERT INTO sous_taches_equipe (tache_id, titre, position) VALUES (%s, %s, %s)",
+            (tache_id, titre[:255], next_pos)
+        )
+        db.commit()
+        sous_tache_id = curseur.lastrowid
+        curseur.execute("SELECT * FROM sous_taches_equipe WHERE id=%s", (sous_tache_id,))
+        sous_tache = curseur.fetchone()
+        db.close()
+        return jsonify(sous_tache)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/sous-taches/<int:sous_tache_id>/toggle', methods=['PATCH'])
+def toggle_sous_tache(sous_tache_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT terminee FROM sous_taches_equipe WHERE id=%s", (sous_tache_id,))
+        row = curseur.fetchone()
+        if not row:
+            db.close()
+            return jsonify({"erreur": "Sous-tâche introuvable"}), 404
+        nouveau = 0 if row['terminee'] else 1
+        curseur.execute("UPDATE sous_taches_equipe SET terminee=%s WHERE id=%s", (nouveau, sous_tache_id))
+        db.commit()
+        db.close()
+        return jsonify({"terminee": nouveau})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route('/equipes/sous-taches/<int:sous_tache_id>', methods=['DELETE'])
+def supprimer_sous_tache(sous_tache_id):
+    try:
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute("DELETE FROM sous_taches_equipe WHERE id=%s", (sous_tache_id,))
+        db.commit()
+        db.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 
 @app.route('/equipes/taches/<int:tache_id>/commentaires', methods=['GET'])
 def get_commentaires_equipe(tache_id):
