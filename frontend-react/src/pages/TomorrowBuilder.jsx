@@ -10,6 +10,12 @@ import {
   SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare,
   Play, Pause, X, GripVertical
 } from 'lucide-react'
+import { Line } from 'react-chartjs-2'
+import {
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement,
+  LineElement, Title, Tooltip, Filler
+} from 'chart.js'
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
@@ -35,6 +41,109 @@ function ProgressBar({ value, color, height = 6 }) {
         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
         style={{ height: '100%', background: color, borderRadius: 99 }}
       />
+    </div>
+  )
+}
+
+// ---- Courbe d'énergie 24h ----
+function EnergyCourbeChart({ courbeData, T }) {
+  const now = new Date().getHours()
+  const picHeure = courbeData.heure_pic
+  const heures = courbeData.courbe.map(p => `${p.heure}h`)
+  const scores = courbeData.courbe.map(p => p.score)
+
+  const pointRadius = courbeData.courbe.map(p =>
+    p.heure === now ? 7 : p.heure === picHeure ? 5 : 2
+  )
+  const pointBg = courbeData.courbe.map(p => {
+    if (p.heure === now) return '#ffffff'
+    if (p.heure === picHeure) return T.accent
+    return 'transparent'
+  })
+  const pointBorder = courbeData.courbe.map(p => {
+    if (p.heure === now) return '#e05c5c'
+    if (p.heure === picHeure) return T.accent
+    return 'rgba(255,255,255,0.15)'
+  })
+
+  const chartData = {
+    labels: heures,
+    datasets: [{
+      data: scores,
+      borderColor: T.accent,
+      backgroundColor: `${T.accent}1A`,
+      fill: true,
+      tension: 0.45,
+      borderWidth: 2,
+      pointRadius,
+      pointBackgroundColor: pointBg,
+      pointBorderColor: pointBorder,
+      pointBorderWidth: 2,
+    }]
+  }
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 900, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        titleColor: '#fff',
+        bodyColor: 'rgba(255,255,255,0.75)',
+        cornerRadius: 8,
+        padding: 10,
+        callbacks: {
+          title: ctx => {
+            const h = courbeData.courbe[ctx[0].dataIndex].heure
+            if (h === now) return `${ctx[0].label} — Maintenant`
+            if (h === picHeure) return `${ctx[0].label} — ⚡ Pic`
+            return ctx[0].label
+          },
+          label: ctx => ` ${ctx.parsed.y}% énergie`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+        ticks: { color: T.text2, font: { size: 10 }, maxRotation: 0 }
+      },
+      y: {
+        min: 0, max: 100,
+        grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+        ticks: { color: T.text2, font: { size: 10 }, callback: v => `${v}%`, stepSize: 25 }
+      }
+    }
+  }
+
+  return (
+    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Courbe d'énergie 24h</div>
+          <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>
+            {courbeData.has_user_data ? 'Calibrée sur tes habitudes réelles (30j)' : 'Rythme circadien — complète des tâches pour personnaliser'}
+          </div>
+        </div>
+        <div style={{ padding: '4px 12px', borderRadius: 99, background: `${T.accent}22`, fontSize: 12, fontWeight: 700, color: T.accent, whiteSpace: 'nowrap' }}>
+          ⚡ Pic {picHeure}h
+        </div>
+      </div>
+      <div style={{ height: 140 }}>
+        <Line data={chartData} options={options} />
+      </div>
+      <div style={{ display: 'flex', gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: T.text2 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#e05c5c', border: '2px solid #fff' }} />
+          Maintenant ({now}h)
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: T.text2 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.accent }} />
+          Pic ({picHeure}h)
+        </div>
+      </div>
     </div>
   )
 }
@@ -456,6 +565,7 @@ export default function TomorrowBuilder() {
   const [calendarEvents, setCalendarEvents] = useState([])
   const [calendarConnected, setCalendarConnected] = useState(false)
   const [calendarConnecting, setCalendarConnecting] = useState(false)
+  const [energieCourbe, setEnergieCourbe] = useState(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -531,6 +641,9 @@ export default function TomorrowBuilder() {
     chargerProcrastination()
     chargerCheckinToday()
     chargerCalendarEvents(demain.toISOString().split('T')[0])
+    axios.get(`${API}/ia/energie-courbe/${user.id}`)
+      .then(r => setEnergieCourbe(r.data))
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -933,7 +1046,7 @@ export default function TomorrowBuilder() {
 
                 {/* SIDEBAR droite */}
                 <div>
-                  <EnergyGauge score={planning.score_energie || 60} T={T} />
+                  <EnergyGauge score={energieCourbe?.score_global || planning.score_energie || 60} T={T} />
 
                   {/* Heure productive */}
                   <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '16px 20px', marginTop: 12 }}>
@@ -1012,20 +1125,13 @@ export default function TomorrowBuilder() {
             {/* TAB ÉNERGIE */}
             {activeTab === 'energie' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <EnergyGauge score={planning.score_energie || 60} T={T} />
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginTop: 16 }}>
-                  {[
-                    { titre: '🌅 Matin (6h-12h)', desc: 'Idéal pour les tâches complexes et créatives. Ton cerveau est au maximum.', color: '#e08a3c' },
-                    { titre: '🌞 Après-midi (12h-18h)', desc: 'Parfait pour les réunions, emails et tâches collaboratives.', color: T.accent },
-                    { titre: '🌆 Soir (18h-21h)', desc: 'Réservé aux quick wins et à la planification du lendemain.', color: '#6c63ff' },
-                    { titre: '😴 Nuit (21h+)', desc: 'Évite le travail. Ton cerveau consolide les apprentissages.', color: '#4caf82' },
-                  ].map(c => (
-                    <div key={c.titre} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: c.color, marginBottom: 6 }}>{c.titre}</div>
-                      <p style={{ fontSize: 12, color: T.text2, margin: 0, lineHeight: 1.5 }}>{c.desc}</p>
-                    </div>
-                  ))}
-                </div>
+                {energieCourbe
+                  ? <EnergyCourbeChart courbeData={energieCourbe} T={T} />
+                  : <EnergyGauge score={planning.score_energie || 60} T={T} />
+                }
+                {energieCourbe && (
+                  <EnergyGauge score={energieCourbe.score_global || planning.score_energie || 60} T={T} />
+                )}
                 <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, marginTop: 12 }}>
                   <h4 style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🔥 Règles anti-burnout intégrées</h4>
                   {[

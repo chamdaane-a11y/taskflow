@@ -3797,6 +3797,47 @@ def soumettre_checkin():
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+@app.route('/ia/energie-courbe/<int:user_id>', methods=['GET'])
+def energie_courbe(user_id):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        # Baseline circadien scientifique (énergie typique humaine par heure)
+        BASELINE = {
+            6: 35, 7: 50, 8: 65, 9: 78, 10: 88, 11: 85,
+            12: 75, 13: 58, 14: 52, 15: 62, 16: 72, 17: 70,
+            18: 62, 19: 55, 20: 48, 21: 40, 22: 30
+        }
+        HEURES = list(range(6, 23))
+        curseur.execute("""
+            SELECT HOUR(updated_at) as heure, COUNT(*) as nb
+            FROM taches WHERE user_id=%s AND terminee=1
+            AND updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY HOUR(updated_at)
+        """, (user_id,))
+        rows = {r['heure']: r['nb'] for r in curseur.fetchall()}
+        total = sum(rows.values())
+        max_nb = max(rows.values(), default=1)
+        # Plus de données → plus de poids sur les vraies habitudes (max 65%)
+        weight_user = min(total / 80.0, 0.65)
+        weight_base = 1.0 - weight_user
+        courbe = []
+        for h in HEURES:
+            user_score = (rows.get(h, 0) / max_nb) * 100 if total > 0 else 0
+            blended = weight_user * user_score + weight_base * BASELINE.get(h, 50)
+            courbe.append({"heure": h, "score": round(blended)})
+        heure_pic = max(courbe, key=lambda x: x['score'])['heure']
+        score_global = calculer_score_energie(user_id, curseur)
+        db.close()
+        return jsonify({
+            "courbe": courbe,
+            "heure_pic": heure_pic,
+            "score_global": score_global,
+            "has_user_data": total > 0
+        })
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 # ============================================
 # SPRINT 5 — TASK DNA
 # ============================================
