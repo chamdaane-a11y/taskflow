@@ -45,6 +45,142 @@ function ProgressBar({ value, color, height = 6 }) {
   )
 }
 
+// ---- Bloc Push matin 7h ----
+function PushMatinBloc({ user, T, notifier }) {
+  const [state, setState] = useState('loading') // loading | unsupported | denied | inactive | active
+  const [busy, setBusy] = useState(false)
+
+  const supported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window
+
+  useEffect(() => {
+    if (!supported) { setState('unsupported'); return }
+    if (Notification.permission === 'denied') { setState('denied'); return }
+    axios.get(`${API}/push/status/${user.id}`)
+      .then(r => setState(r.data.subscribed ? 'active' : 'inactive'))
+      .catch(() => setState('inactive'))
+  }, [user.id])
+
+  const urlB64ToUint8 = (b64) => {
+    const pad = '='.repeat((4 - b64.length % 4) % 4)
+    const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/')
+    return Uint8Array.from([...window.atob(s)].map(c => c.charCodeAt(0)))
+  }
+
+  const activer = async () => {
+    setBusy(true)
+    try {
+      const reg = await navigator.serviceWorker.register('/taskflow/sw.js')
+      await navigator.serviceWorker.ready
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') { setState('denied'); return }
+      const { data } = await axios.get(`${API}/push/vapid-public-key`)
+      const key = urlB64ToUint8(data.public_key)
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
+      await axios.post(`${API}/push/subscribe`, { user_id: user.id, subscription: sub.toJSON() })
+      setState('active')
+    } catch (e) {
+      console.error('[push] activer failed', e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const desactiver = async () => {
+    setBusy(true)
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/taskflow/sw.js')
+      const sub = await reg?.pushManager.getSubscription()
+      if (sub) await sub.unsubscribe()
+      await axios.delete(`${API}/push/unsubscribe/${user.id}`)
+      setState('inactive')
+    } catch (e) {
+      console.error('[push] desactiver failed', e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const tester = async () => {
+    setBusy(true)
+    try {
+      await axios.post(`${API}/push/test/${user.id}`)
+    } catch (e) {
+      console.error('[push] test failed', e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const isActive = state === 'active'
+  const accent = isActive ? '#4caf82' : T.text2
+  const bg = isActive ? 'rgba(76,175,130,0.08)' : T.bg2
+  const border = isActive ? 'rgba(76,175,130,0.25)' : T.border
+
+  return (
+    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12, transition: 'all 0.25s' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: state === 'active' || state === 'inactive' ? 10 : 8 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Sun size={15} color={accent} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8 }}>NOTIF MATIN 7H</div>
+          <div style={{ fontSize: 12, color: isActive ? '#4caf82' : T.text2, fontWeight: 600 }}>
+            {state === 'loading' && '…'}
+            {state === 'unsupported' && 'Non supporté par ce navigateur'}
+            {state === 'denied' && 'Autorisation refusée'}
+            {state === 'inactive' && 'Inactif'}
+            {state === 'active' && '✓ Activé · résumé chaque matin'}
+          </div>
+        </div>
+        {isActive && <CheckCircle size={14} color="#4caf82" />}
+      </div>
+
+      {state === 'denied' && (
+        <p style={{ fontSize: 10, color: T.text2, margin: 0, lineHeight: 1.5 }}>
+          Réactive les notifications dans les paramètres de ton navigateur (cadenas → notifications → autoriser).
+        </p>
+      )}
+
+      {state === 'inactive' && (
+        <motion.button
+          onClick={activer}
+          disabled={busy}
+          whileHover={!busy ? { scale: 1.02 } : {}}
+          whileTap={!busy ? { scale: 0.98 } : {}}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: `${T.accent}15`, border: `1.5px solid ${T.accent}30`, borderRadius: 10, color: T.accent, fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
+        >
+          {busy
+            ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-flex' }}><RefreshCw size={12} /></motion.span> Activation…</>
+            : <>🔔 Activer la notif 7h</>}
+        </motion.button>
+      )}
+
+      {isActive && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <motion.button
+            onClick={tester}
+            disabled={busy}
+            whileHover={!busy ? { scale: 1.02 } : {}}
+            whileTap={!busy ? { scale: 0.98 } : {}}
+            style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
+          >
+            Tester
+          </motion.button>
+          <motion.button
+            onClick={desactiver}
+            disabled={busy}
+            whileHover={!busy ? { scale: 1.02 } : {}}
+            whileTap={!busy ? { scale: 0.98 } : {}}
+            style={{ flex: 1, padding: '7px 0', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
+          >
+            Désactiver
+          </motion.button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ---- Courbe d'énergie 24h ----
 function EnergyCourbeChart({ courbeData, T }) {
   const now = new Date().getHours()
@@ -1063,6 +1199,9 @@ export default function TomorrowBuilder() {
                       Tes tâches les plus complexes sont planifiées autour de cette heure.
                     </p>
                   </div>
+
+                  {/* Push notif matin 7h */}
+                  <PushMatinBloc user={user} T={T} />
 
                   {/* Google Calendar */}
                   <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>

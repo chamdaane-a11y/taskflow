@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getshift-v6'
+const CACHE_NAME = 'getshift-v7'
 const STATIC_ASSETS = [
   '/taskflow/',
   '/taskflow/index.html',
@@ -76,13 +76,16 @@ self.addEventListener('fetch', (e) => {
 
 self.addEventListener('push', (e) => {
   const data = e.data ? e.data.json() : { title: 'GetShift', body: 'Nouvelle notification' }
+  const targetUrl = data.url || '/dashboard'
   e.waitUntil(
     self.registration.showNotification(data.title || 'GetShift', {
       body: data.body || '',
       icon: '/taskflow/icons/icon-192.png',
       badge: '/taskflow/icons/icon-72.png',
+      data: { url: targetUrl },
+      tag: data.tag || 'getshift',
       actions: [
-        { action: 'open', title: 'Voir les tâches' },
+        { action: 'open', title: 'Ouvrir' },
         { action: 'dismiss', title: 'Ignorer' }
       ]
     })
@@ -92,12 +95,17 @@ self.addEventListener('push', (e) => {
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
   if (e.action === 'dismiss') return
+  const target = e.notification.data?.url || '/dashboard'
+  const targetFull = `/taskflow/#${target.startsWith('/') ? target : '/' + target}`
   e.waitUntil(
-    clients.matchAll({ type: 'window' }).then(list => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const client of list) {
-        if (client.url.includes('/taskflow') && 'focus' in client) return client.focus()
+        if (client.url.includes('/taskflow') && 'focus' in client) {
+          client.navigate(targetFull).catch(() => {})
+          return client.focus()
+        }
       }
-      return clients.openWindow('/taskflow/#/dashboard')
+      return clients.openWindow(targetFull)
     })
   )
 })

@@ -2675,6 +2675,47 @@ def subscribe_push():
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
+@app.route('/push/status/<int:user_id>', methods=['GET'])
+def push_status(user_id):
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id=%s", (user_id,))
+        n = (cursor.fetchone() or {}).get('n', 0)
+        cursor.close(); db.close()
+        return jsonify({"subscribed": n > 0})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/push/unsubscribe/<int:user_id>', methods=['DELETE'])
+def push_unsubscribe(user_id):
+    try:
+        db = connecter()
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM push_subscriptions WHERE user_id=%s", (user_id,))
+        db.commit(); cursor.close(); db.close()
+        return jsonify({"message": "Désabonné"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/push/test/<int:user_id>', methods=['POST'])
+def push_test(user_id):
+    try:
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id=%s", (user_id,))
+        rows = cursor.fetchall()
+        cursor.close(); db.close()
+        if not rows:
+            return jsonify({"erreur": "Aucun abonnement"}), 404
+        sent = 0
+        for r in rows:
+            if envoyer_push(r['subscription'], "🧪 Test GetShift", "Si tu vois ceci, tes notifs 7h sont opérationnelles", "/tomorrow"):
+                sent += 1
+        return jsonify({"sent": sent})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
 @app.route('/push/send-rappels', methods=['POST'])
 def send_rappels():
     try:
@@ -2802,7 +2843,7 @@ def trigger_lifecycle():
 
 # ─── DAILY : matin (planning) / midi (push) / soir (streak warning) ───
 def job_notifs_daily_matin():
-    """8h UTC : nudge planning du jour selon état utilisateur."""
+    """8h UTC : nudge planning du jour selon état utilisateur. Prio au plan Tomorrow Builder s'il existe."""
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -2810,7 +2851,8 @@ def job_notifs_daily_matin():
             SELECT u.id, u.nom, u.streak,
                 (SELECT COUNT(*) FROM planification p WHERE p.user_id=u.id AND DATE(p.date_planifiee)=CURDATE()) AS planifie_aujourdhui,
                 (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=FALSE AND t.priorite='haute') AS haute_attente,
-                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=FALSE) AS total_attente
+                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=FALSE) AS total_attente,
+                (SELECT planning_json FROM tomorrow_plans tp WHERE tp.user_id=u.id AND DATE(tp.date_planifiee)=CURDATE() ORDER BY tp.cree_le DESC LIMIT 1) AS tb_plan_json
             FROM users u
             WHERE u.email_verifie = TRUE
               AND EXISTS (SELECT 1 FROM push_subscriptions ps WHERE ps.user_id=u.id)
@@ -2818,6 +2860,24 @@ def job_notifs_daily_matin():
         users = cursor.fetchall()
         sent = 0
         for u in users:
+            # Priorité 1 : plan Tomorrow Builder du jour
+            tb_plan = u.get('tb_plan_json')
+            if tb_plan:
+                try:
+                    plan_data = json.loads(tb_plan)
+                    creneaux = [p for p in plan_data.get('planning', []) if p.get('type') != 'pause']
+                    nb = len(creneaux)
+                    if nb > 0:
+                        premier = creneaux[0]
+                        h_pic = plan_data.get('heure_productive', 9)
+                        titre = "☀️ Ton plan du jour est prêt"
+                        body = f"{nb} créneau{'x' if nb > 1 else ''} • démarre à {premier.get('heure_debut', '?')} • pic à {h_pic}h"
+                        if envoyer_push_smart(cursor, db, u['id'], "daily_morning", titre, body, "/tomorrow", intervalle_jours=1):
+                            sent += 1
+                        continue
+                except Exception:
+                    pass
+            # Priorité 2 : fallback logique existante
             planifie = u['planifie_aujourdhui'] or 0
             haute = u['haute_attente'] or 0
             streak = u['streak'] or 0
