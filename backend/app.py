@@ -5021,6 +5021,56 @@ def get_coach_historique(user_id):
 # SPRINT 7 — GOAL REVERSE ENGINEERING
 # ============================================
 
+def _clipper_dates_plan(plan, deadline_str):
+    """Force toutes les dates du plan à être <= deadline. Llama hallucine souvent.
+    Réécrit date_fin des jalons et deadline des tâches. Retourne le plan modifié."""
+    if not deadline_str:
+        return plan
+    try:
+        from datetime import date as _date
+        deadline_d = _date.fromisoformat(str(deadline_str))
+    except Exception:
+        return plan
+    aujourd_hui = datetime.now().date()
+    if deadline_d <= aujourd_hui:
+        return plan
+
+    total_jours = (deadline_d - aujourd_hui).days
+    jalons = plan.get('jalons') or []
+    nb_j = max(1, len(jalons))
+
+    for i, jalon in enumerate(jalons):
+        # date_fin du jalon = répartition linéaire entre aujourd'hui et deadline
+        target_jour = round((i + 1) / nb_j * total_jours)
+        date_fin_calc = aujourd_hui + timedelta(days=target_jour)
+        # On garde la date IA si elle est cohérente, sinon on remplace
+        try:
+            df_ia = _date.fromisoformat(str(jalon.get('date_fin', '')))
+            if df_ia > deadline_d or df_ia <= aujourd_hui:
+                jalon['date_fin'] = date_fin_calc.isoformat()
+            elif i > 0:
+                # vérifie chronologie : doit être >= jalon précédent
+                df_prev = _date.fromisoformat(str(jalons[i-1].get('date_fin', '')))
+                if df_ia < df_prev:
+                    jalon['date_fin'] = date_fin_calc.isoformat()
+        except Exception:
+            jalon['date_fin'] = date_fin_calc.isoformat()
+
+        # Clip les deadlines des tâches : doivent être <= date_fin du jalon
+        date_fin_jalon = _date.fromisoformat(jalon['date_fin'])
+        for tache in (jalon.get('taches') or []):
+            try:
+                dt = _date.fromisoformat(str(tache.get('deadline', '')))
+                if dt > deadline_d or dt > date_fin_jalon or dt <= aujourd_hui:
+                    tache['deadline'] = date_fin_jalon.isoformat()
+            except Exception:
+                tache['deadline'] = date_fin_jalon.isoformat()
+
+    # Recalibre duree_semaines pour matcher la réalité
+    plan['duree_semaines'] = max(1, (total_jours + 6) // 7)
+    return plan
+
+
 def _ensure_objectifs_schema(curseur):
     """Crée table objectifs + colonne objectif_id sur taches si absent."""
     curseur.execute("""CREATE TABLE IF NOT EXISTS objectifs (
@@ -5099,31 +5149,53 @@ def goal_reverse():
     coach_intro = coach['persona']
     coach_nom = coach['nom']
 
+    # ── Calcul EXACT du nombre de semaines disponibles (Llama est nul en dates) ──
+    try:
+        from datetime import date as _date
+        d_deadline = _date.fromisoformat(str(deadline))
+        d_today = datetime.now().date()
+        jours_dispo = max(1, (d_deadline - d_today).days)
+        semaines_dispo = max(1, (jours_dispo + 6) // 7)
+    except Exception:
+        jours_dispo = 30
+        semaines_dispo = 4
+
+    nb_jalons_recommande = min(8, max(2, semaines_dispo))
+
     prompt = f"""{coach_intro}
 
 Tu fais du Goal Reverse Engineering : pars de l'objectif final et reconstruis le chemin à rebours, étape par étape. Tu dois PERSONNALISER selon le contexte réel de l'utilisateur.
 
 OBJECTIF: {objectif}
-DEADLINE FINALE: {deadline}
-NIVEAU D'AMBITION: {niveau}
 AUJOURD'HUI: {aujourd_hui}
+DEADLINE FINALE ABSOLUE: {deadline} (AUCUNE date ne doit dépasser cette deadline)
+TEMPS DISPONIBLE: EXACTEMENT {jours_dispo} jours = {semaines_dispo} semaines
+NIVEAU D'AMBITION: {niveau}
 
 CONTEXTE USER (utilise ces données pour calibrer les durées et la charge):
 {contexte_user or "(contexte indisponible — utilise des durées génériques)"}
 
-RÈGLES STRICTES:
-- duree_semaines = nombre entier de semaines entre aujourd'hui et la deadline
-- score_faisabilite = note 0-100 de réalisme du plan (basé sur niveau + délai + complexité)
-- conseil_global = signé "{coach_nom}", reflète ton personnage, max 2 phrases
-- risques = 2-4 risques concrets que tu identifies (deadlines serrées, dépendances, charge)
-- jalons = max 8 jalons hebdomadaires, ordonnés chronologiquement
-- Pour chaque tâche : duree_estimee en minutes (calibre avec les durées user ci-dessus si possible)
-- Dates entre {aujourd_hui} et {deadline}
-- Max 4 tâches par jalon
+RÈGLES STRICTES — RESPECTER ABSOLUMENT:
+1. duree_semaines = {semaines_dispo} (NE PAS dépasser, NE PAS réduire arbitrairement)
+2. AUCUNE date_fin de jalon ne peut être > {deadline}
+3. AUCUNE deadline de tâche ne peut être > {deadline}
+4. Toutes les dates doivent être entre {aujourd_hui} et {deadline} inclus
+5. Le DERNIER jalon DOIT se terminer entre J-3 et {deadline} (pile sur la deadline)
+6. jalons = entre 2 et {nb_jalons_recommande} jalons, ordonnés chronologiquement
+7. semaine commence à 1 et s'incrémente de 1 par jalon (1, 2, 3...)
+8. Max 4 tâches par jalon
+9. score_faisabilite = note 0-100 (basé sur niveau + délai + complexité)
+10. conseil_global = signé "{coach_nom}", max 2 phrases, reflète ton personnage
+11. risques = 2-4 risques concrets (deadlines serrées, dépendances, charge)
+12. duree_estimee en minutes (calibre avec les durées user si possible)
 
-FORMAT JSON STRICT (rien d'autre):
+EXEMPLE DE RÉPARTITION DES DATES (pour {semaines_dispo} semaines):
+- Jalon 1 → date_fin = aujourd'hui + ~{jours_dispo // max(1, nb_jalons_recommande)} jours
+- Dernier jalon → date_fin = {deadline}
+
+FORMAT JSON STRICT (rien d'autre, pas de markdown):
 {{
-  "duree_semaines": <int>,
+  "duree_semaines": {semaines_dispo},
   "score_faisabilite": <int>,
   "conseil_global": "<string>",
   "risques": ["<string>", "..."],
@@ -5137,7 +5209,7 @@ FORMAT JSON STRICT (rien d'autre):
 }}"""
     try:
         response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}], temperature=0.7, max_tokens=2500)
+            messages=[{"role": "user", "content": prompt}], temperature=0.6, max_tokens=2500)
         raw = response.choices[0].message.content.strip()
         if raw.startswith('```'):
             raw = raw.split('```')[1]
@@ -5145,7 +5217,8 @@ FORMAT JSON STRICT (rien d'autre):
         if raw.endswith('```'):
             raw = raw[:-3]
         result = json.loads(raw.strip())
-        # Métadonnée pour le frontend
+        # Garde-fou : clip toutes les dates qui dépassent la deadline
+        result = _clipper_dates_plan(result, deadline)
         result['_coach'] = {'nom': coach['nom'], 'emoji': coach['emoji']}
         return jsonify(result)
     except Exception as e:
@@ -5318,14 +5391,16 @@ PLAN ACTUEL:
 INSTRUCTION DE L'UTILISATEUR:
 "{instruction}"
 
-RÈGLES:
+RÈGLES (RESPECTER ABSOLUMENT):
 - Modifie SEULEMENT ce que l'instruction demande, garde le reste tel quel
-- Si l'instruction étend la durée, recale les dates des jalons et tâches
+- AUCUNE date_fin ni deadline ne peut être > {deadline} (deadline absolue)
+- Le dernier jalon DOIT se terminer entre J-3 et {deadline}
+- Toutes les dates entre {aujourd_hui} et {deadline} inclus
+- Si l'instruction étend la durée mais ça dépasserait {deadline}, recale dans le délai dispo
 - Si l'instruction réduit/fusionne, ne perds pas d'information critique
 - Recalcule score_faisabilite si la charge change
 - conseil_global signé "{coach['nom']}", max 2 phrases, mentionne la modification
 - Max 8 jalons, max 4 tâches par jalon
-- Dates entre {aujourd_hui} et {deadline}
 
 FORMAT JSON STRICT (rien d'autre) — même schéma que le plan actuel:
 {{
@@ -5347,6 +5422,8 @@ FORMAT JSON STRICT (rien d'autre) — même schéma que le plan actuel:
         if raw.endswith('```'):
             raw = raw[:-3]
         result = json.loads(raw.strip())
+        # Garde-fou : clip toutes les dates qui dépassent la deadline
+        result = _clipper_dates_plan(result, deadline)
         result['_coach'] = {'nom': coach['nom'], 'emoji': coach['emoji']}
         result['_iteration'] = instruction
         return jsonify(result)
