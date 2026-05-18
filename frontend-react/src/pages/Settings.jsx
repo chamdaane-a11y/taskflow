@@ -70,6 +70,24 @@ export default function Settings() {
   const [slackSaved, setSlackSaved] = useState(false)
   const [notification, setNotification] = useState(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [notifPrefs, setNotifPrefs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('notif_prefs')
+      return saved ? JSON.parse(saved) : {
+        'Rappels de deadline': true,
+        'Nouvelles tâches bloquées': true,
+        'Tomorrow Builder (19h)': true,
+        'Résumé hebdomadaire': false,
+      }
+    } catch {
+      return {
+        'Rappels de deadline': true,
+        'Nouvelles tâches bloquées': true,
+        'Tomorrow Builder (19h)': true,
+        'Résumé hebdomadaire': false,
+      }
+    }
+  })
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
@@ -126,6 +144,14 @@ export default function Settings() {
   const afficherNotification = (msg, type = 'success') => {
     setNotification({ msg, type })
     setTimeout(() => setNotification(null), 3000)
+  }
+
+  const toggleNotifPref = (label) => {
+    setNotifPrefs(prev => {
+      const updated = { ...prev, [label]: !prev[label] }
+      localStorage.setItem('notif_prefs', JSON.stringify(updated))
+      return updated
+    })
   }
 
   const niveauActuel = niveaux.find(n => n.niveau === niveau) || niveaux[0]
@@ -323,21 +349,33 @@ export default function Settings() {
           <SectionTitle>Notifications</SectionTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { label: 'Rappels de deadline',       desc: 'Notifiez-moi 24h avant chaque deadline',    active: true },
-              { label: 'Nouvelles tâches bloquées', desc: 'Alerte quand une tâche devient bloquée',    active: true },
-              { label: 'Tomorrow Builder (19h)',    desc: "Génération automatique du planning du lendemain", active: true },
-              { label: 'Résumé hebdomadaire',       desc: 'Rapport de productivité chaque lundi matin', active: false },
-            ].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: T.text }}>{item.label}</div>
-                  <div style={{ fontSize: 12, color: T.text2, marginTop: 3 }}>{item.desc}</div>
-                </div>
-                <div style={{ width: 44, height: 24, borderRadius: 99, background: item.active ? T.accent : T.bg3, border: `1px solid ${item.active ? T.accent : T.border}`, position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s' }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'white', position: 'absolute', top: 2, left: item.active ? 22 : 2, transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
-                </div>
-              </div>
-            ))}
+              { label: 'Rappels de deadline',       desc: 'Notifiez-moi 24h avant chaque deadline' },
+              { label: 'Nouvelles tâches bloquées', desc: 'Alerte quand une tâche devient bloquée' },
+              { label: 'Tomorrow Builder (19h)',    desc: "Génération automatique du planning du lendemain" },
+              { label: 'Résumé hebdomadaire',       desc: 'Rapport de productivité chaque lundi matin' },
+            ].map((item) => {
+              const active = notifPrefs[item.label] ?? true
+              return (
+                <motion.div key={item.label}
+                  onClick={() => toggleNotifPref(item.label)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, cursor: 'pointer' }}
+                  whileHover={{ background: T.bg3 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: T.text }}>{item.label}</div>
+                    <div style={{ fontSize: 12, color: T.text2, marginTop: 3 }}>{item.desc}</div>
+                  </div>
+                  <motion.div
+                    style={{ width: 44, height: 24, borderRadius: 99, background: active ? T.accent : T.bg3, border: `1px solid ${active ? T.accent : T.border}`, position: 'relative', flexShrink: 0 }}
+                    animate={{ borderColor: active ? T.accent : T.border }}
+                    transition={{ duration: 0.2 }}>
+                    <motion.div
+                      style={{ width: 18, height: 18, borderRadius: '50%', background: 'white', position: 'absolute', top: 2, left: active ? 22 : 2, boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}
+                      animate={{ left: active ? 22 : 2 }}
+                      transition={{ duration: 0.2 }} />
+                  </motion.div>
+                </motion.div>
+              )
+            })}
           </div>
           <p style={{ fontSize: 12, color: T.text2, marginTop: 16, lineHeight: 1.6 }}>
             Les préférences de notifications seront sauvegardées automatiquement.
