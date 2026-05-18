@@ -1790,17 +1790,17 @@ export default function Collaboration() {
 
   useEffect(() => {
     // Récupérer le code soit depuis l'URL (scan QR / lien partagé)
-    // soit depuis sessionStorage (auto-join post-login)
+    // soit depuis localStorage (auto-join post-login/post-vérif-email)
     const params = new URLSearchParams(window.location.hash.split('?')[1] || '')
     const codeUrl = params.get('code')
     let pendingCode = null
-    try { pendingCode = sessionStorage.getItem('pending_invite_code') } catch {}
+    try { pendingCode = localStorage.getItem('pending_invite_code') } catch {}
     const inviteCode = codeUrl || pendingCode
 
     if (!user) {
-      // Préserver le code pour reprise après login/signup
+      // Préserver le code pour reprise après login/signup (localStorage = survit aux nouveaux onglets)
       if (inviteCode) {
-        try { sessionStorage.setItem('pending_invite_code', inviteCode) } catch {}
+        try { localStorage.setItem('pending_invite_code', inviteCode) } catch {}
       }
       navigate('/')
       return
@@ -1811,10 +1811,7 @@ export default function Collaboration() {
     if (inviteCode) {
       setCodeRejoint(inviteCode)
       setShowRejoindre(true)
-      // Auto-déclencher le rejoindre si on vient de se connecter (pending code)
-      if (pendingCode && !codeUrl) {
-        try { sessionStorage.removeItem('pending_invite_code') } catch {}
-      }
+      // Le pending_invite_code sera nettoyé après succès du rejoindre
     }
   }, [])
 
@@ -1984,12 +1981,14 @@ export default function Collaboration() {
     setLoading(true)
     try {
       await axios.post(`${API}/equipes/rejoindre`, { code: codeRejoint, user_id: user.id })
+      // Succès — nettoyer le code en attente (cas auto-join après login)
+      try { localStorage.removeItem('pending_invite_code') } catch {}
       await chargerEquipes(); setShowRejoindre(false); setCodeRejoint(''); setErreur('')
     } catch (e) {
       const codeErr = e.response?.data?.code_erreur
-      // Compte invalide en DB (FK fail évité maintenant côté backend) → reset session + relogin
+      // Compte invalide en DB → on conserve le code et on relance le login
       if (codeErr === 'USER_INVALID' || codeErr === 'AUTH_REQUIRED' || e.response?.status === 410 || e.response?.status === 401) {
-        try { sessionStorage.setItem('pending_invite_code', codeRejoint.trim()) } catch {}
+        try { localStorage.setItem('pending_invite_code', codeRejoint.trim()) } catch {}
         localStorage.removeItem('user')
         setErreur(e.response?.data?.erreur || 'Reconnecte-toi pour rejoindre l\'équipe')
         setTimeout(() => navigate('/'), 1500)
