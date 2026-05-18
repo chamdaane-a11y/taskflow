@@ -7,6 +7,7 @@ def connecter():
         user=os.getenv('MYSQLUSER', 'root'),
         password=os.getenv('MYSQLPASSWORD', ''),
         database=os.getenv('MYSQLDATABASE', 'todo_app'),
-        port=int(os.getenv('MYSQLPORT', 3306))
+        port=int(os.getenv('MYSQLPORT', 3306)),
+        connection_timeout=10,
     )
     return connexion
