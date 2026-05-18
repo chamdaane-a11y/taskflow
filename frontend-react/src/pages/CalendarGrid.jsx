@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════
 // CalendarGrid.jsx — Continuous timeline calendar (08:00–21:00)
 // ══════════════════════════════════════════════════════════════════════
-import { useRef, useState, useCallback, useMemo, memo, useEffect } from 'react'
+import { useRef, useState, useCallback, useMemo, memo, useEffect, useLayoutEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
@@ -56,6 +56,17 @@ const CalendarGrid = memo(function CalendarGrid({
     const nowMins = now.getHours() * 60 + now.getMinutes()
     const scrollTop = Math.max(0, nowMins * PX_PER_MIN - 150)
     gridRef.current.scrollTop = scrollTop
+  }, [])
+
+  // Measure actual scroll container width to compute real column width
+  const [containerW, setContainerW] = useState(0)
+  useLayoutEffect(() => {
+    const el = gridRef.current
+    if (!el) return
+    setContainerW(el.clientWidth)
+    const ro = new ResizeObserver(() => setContainerW(el.clientWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
   const resolvedByDate = useMemo(() => {
@@ -119,7 +130,12 @@ const CalendarGrid = memo(function CalendarGrid({
   const needsHScroll = isMobile && daysToShow === 7
   const gridMinWidth = needsHScroll ? GUTTER_W + 80 * jours.length : undefined
   const gridCols = `${GUTTER_W}px repeat(${jours.length}, ${COL_MIN_W ? `${COL_MIN_W}px` : '1fr'})`
-  const COL_W = COL_MIN_W ?? 140
+  // Real column width: if fixed (COL_MIN_W), use that; otherwise measure actual container width
+  const COL_W = COL_MIN_W
+    ? COL_MIN_W
+    : containerW > 0
+      ? Math.floor((containerW - GUTTER_W) / jours.length)
+      : 140
 
   // ─── Navigation label ─────────────────────────────────────────────
   const navLabel = daysToShow === 1
