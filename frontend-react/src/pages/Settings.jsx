@@ -5,99 +5,19 @@ import axios from 'axios'
 import { themes } from '../themes'
 import {
   ArrowLeft, Award, Palette, ExternalLink, LogOut, User,
-  Zap, Bell, Shield, ChevronRight, Check, Flame, Star,
-  Settings as SettingsIcon, Sprout, Cpu, Trophy, Medal, Crown,
-  Calendar, Sun, Moon, Lock, Sparkles
+  Bell, Shield, ChevronRight, Check, Star, Lock,
+  Settings as SettingsIcon, Flame,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import OutilsIntegrations from './OutilsIntegrations'
+import {
+  BADGES_CONFIG, BADGE_ICONS, BADGE_CATEGORIES, TIER_STYLES, CATEGORIES_ORDER,
+  niveaux, getProchainBadge,
+} from '../data/badges'
 
 const API = 'https://getshift-backend.onrender.com'
-
-const BADGE_ICONS = {
-  'first_task': Sprout,
-  'five_tasks': Flame,
-  'ten_tasks': Zap,
-  'fifty_tasks': Cpu,
-  'century': Trophy,
-  'pts_100': Medal,
-  'pts_500': Medal,
-  'pts_1000': Medal,
-  'pts_5000': Crown,
-  'streak_3': Flame,
-  'streak_7': Calendar,
-  'streak_30': Star,
-  'early_bird': Sun,
-  'night_owl': Moon,
-  'speedster': Zap,
-}
-
-// Tier system (rarity) — colors fixed across themes for a sense of prestige
-const TIER_STYLES = {
-  common: {
-    label: 'Commun',
-    color: '#a78f6f',
-    bg: 'rgba(167, 143, 111, 0.10)',
-    border: 'rgba(167, 143, 111, 0.35)',
-    glow: 'rgba(167, 143, 111, 0.25)',
-  },
-  rare: {
-    label: 'Rare',
-    color: '#5fb4d6',
-    bg: 'rgba(95, 180, 214, 0.12)',
-    border: 'rgba(95, 180, 214, 0.40)',
-    glow: 'rgba(95, 180, 214, 0.30)',
-  },
-  epic: {
-    label: 'Épique',
-    color: '#a78bfa',
-    bg: 'rgba(167, 139, 250, 0.14)',
-    border: 'rgba(167, 139, 250, 0.45)',
-    glow: 'rgba(167, 139, 250, 0.35)',
-  },
-  legendary: {
-    label: 'Légendaire',
-    color: '#f5b942',
-    bg: 'rgba(245, 185, 66, 0.16)',
-    border: 'rgba(245, 185, 66, 0.55)',
-    glow: 'rgba(245, 185, 66, 0.45)',
-  },
-}
-
-const BADGE_CATEGORIES = {
-  performance: { label: 'Performance', icon: Zap,      color: '#4caf82' },
-  points:      { label: 'Points',      icon: Trophy,   color: '#e08a3c' },
-  streak:      { label: 'Streak',      icon: Flame,    color: '#e74c3c' },
-  'spécial':   { label: 'Spécial',     icon: Sparkles, color: '#a78bfa' },
-}
-
-const niveaux = [
-  { niveau: 1, label: 'Débutant',  min: 0 },
-  { niveau: 2, label: 'Apprenti',  min: 100 },
-  { niveau: 3, label: 'Confirmé',  min: 250 },
-  { niveau: 4, label: 'Expert',    min: 500 },
-  { niveau: 5, label: 'Maître',    min: 1000 },
-]
-
-const BADGES_CONFIG = [
-  { id: 'first_task',  nom: 'Premier pas',      description: 'Première tâche terminée',        categorie: 'performance', tier: 'common'    },
-  { id: 'five_tasks',  nom: 'En rythme',         description: '5 tâches terminées',            categorie: 'performance', tier: 'common'    },
-  { id: 'ten_tasks',   nom: 'Productif',         description: '10 tâches terminées',           categorie: 'performance', tier: 'rare'      },
-  { id: 'fifty_tasks', nom: 'Machine',           description: '50 tâches terminées',           categorie: 'performance', tier: 'epic'      },
-  { id: 'century',     nom: 'Centurion',         description: '100 tâches terminées',          categorie: 'performance', tier: 'legendary' },
-  { id: 'pts_100',     nom: 'Débutant',          description: '100 points gagnés',             categorie: 'points',      tier: 'common'    },
-  { id: 'pts_500',     nom: 'Confirmé',          description: '500 points gagnés',             categorie: 'points',      tier: 'rare'      },
-  { id: 'pts_1000',    nom: 'Expert',            description: '1000 points gagnés',            categorie: 'points',      tier: 'epic'      },
-  { id: 'pts_5000',    nom: 'Maître',            description: '5000 points gagnés',            categorie: 'points',      tier: 'legendary' },
-  { id: 'streak_3',    nom: '3 jours de suite',  description: 'Actif 3 jours consécutifs',    categorie: 'streak',      tier: 'common'    },
-  { id: 'streak_7',    nom: 'Semaine parfaite',  description: 'Actif 7 jours consécutifs',    categorie: 'streak',      tier: 'rare'      },
-  { id: 'streak_30',   nom: 'Mois de feu',       description: 'Actif 30 jours consécutifs',   categorie: 'streak',      tier: 'legendary' },
-  { id: 'early_bird',  nom: 'Lève-tôt',          description: 'Tâche terminée avant 8h',      categorie: 'spécial',     tier: 'rare'      },
-  { id: 'night_owl',   nom: 'Noctambule',        description: 'Tâche terminée après 23h',     categorie: 'spécial',     tier: 'rare'      },
-  { id: 'speedster',   nom: 'Fulgurant',         description: '5 tâches terminées en 1 jour', categorie: 'spécial',     tier: 'epic'      },
-]
 
 const SECTIONS = [
   { id: 'profil',       label: 'Profil & Niveau',  icon: User },
@@ -294,7 +214,7 @@ export default function Settings() {
       // ── BADGES ──
       case 'badges': {
         const pctTotal = Math.round(badgesObtenus.length / BADGES_CONFIG.length * 100)
-        const prochainBadge = BADGES_CONFIG.find(b => !badgesObtenus.find(ob => ob.id === b.id))
+        const prochainBadge = getProchainBadge(badgesObtenus)
         const ProchainIcon = prochainBadge ? BADGE_ICONS[prochainBadge.id] : null
         const prochainTier = prochainBadge ? TIER_STYLES[prochainBadge.tier] : null
         return (
@@ -352,8 +272,8 @@ export default function Settings() {
             </motion.div>
           )}
 
-          {/* Badges par catégorie */}
-          {['performance', 'points', 'streak', 'spécial'].map((cat, catIdx) => {
+          {/* Badges par catégorie — 4 piliers GetShift */}
+          {CATEGORIES_ORDER.map((cat, catIdx) => {
             const catBadges = BADGES_CONFIG.filter(b => b.categorie === cat)
             const catUnlocked = catBadges.filter(b => badgesObtenus.find(ob => ob.id === b.id)).length
             const catPct = Math.round(catUnlocked / catBadges.length * 100)
@@ -361,25 +281,29 @@ export default function Settings() {
             const CatIcon = catMeta.icon
             return (
               <div key={cat} style={{ marginBottom: 28 }}>
-                {/* Category header */}
+                {/* Category header — pilier GetShift avec sous-titre inspirant */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                   <div style={{
-                    width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: `${catMeta.color}18`, border: `1px solid ${catMeta.color}30`, flexShrink: 0
+                    width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: `${catMeta.color}18`, border: `1px solid ${catMeta.color}30`, flexShrink: 0,
+                    boxShadow: `0 0 16px ${catMeta.color}25`
                   }}>
-                    <CatIcon size={16} color={catMeta.color} strokeWidth={2.2} />
+                    <CatIcon size={18} color={catMeta.color} strokeWidth={2.2} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>{catMeta.label}</div>
-                      <div style={{ fontSize: 11, color: T.text2, fontWeight: 500 }}>{catUnlocked}/{catBadges.length}</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>{catMeta.label}</div>
+                      <div style={{ fontSize: 11, color: catMeta.color, fontWeight: 700 }}>{catUnlocked}<span style={{ color: T.text2, fontWeight: 500 }}>/{catBadges.length}</span></div>
                     </div>
+                    {catMeta.subtitle && (
+                      <div style={{ fontSize: 11, color: T.text2, marginBottom: 6, fontStyle: 'italic', opacity: 0.85 }}>{catMeta.subtitle}</div>
+                    )}
                     <div style={{ height: 3, background: `${catMeta.color}12`, borderRadius: 99, overflow: 'hidden' }}>
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${catPct}%` }}
                         transition={{ duration: 0.9, delay: 0.1 * catIdx, ease: [0.16, 1, 0.3, 1] }}
-                        style={{ height: '100%', background: catMeta.color, borderRadius: 99 }} />
+                        style={{ height: '100%', background: `linear-gradient(90deg, ${catMeta.color}, ${catMeta.color}cc)`, borderRadius: 99 }} />
                     </div>
                   </div>
                 </div>

@@ -24,6 +24,7 @@ import OutilsIntegrations from './OutilsIntegrations'
 import TemplateIconBox from './CustomIcons'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import { BADGES_CONFIG } from '../data/badges'
 import { parseTaskInput, getPrioriteColor, getPrioriteBg } from '../utils/parseTask'
 
 registerLocale('fr', fr)
@@ -34,24 +35,6 @@ const PRIORITES = [
   { val: 'haute', label: 'Haute', bg: 'rgba(224,92,92,0.12)', color: '#e05c5c' },
   { val: 'moyenne', label: 'Moyenne', bg: 'rgba(224,138,60,0.12)', color: '#e08a3c' },
   { val: 'basse', label: 'Basse', bg: 'rgba(76,175,130,0.12)', color: '#4caf82' },
-]
-
-const BADGES_CONFIG = [
-  { id: 'first_task', nom: 'Premier pas', icon: '🌱', description: 'Première tâche terminée', categorie: 'performance' },
-  { id: 'five_tasks', nom: 'En rythme', icon: '🔥', description: '5 tâches terminées', categorie: 'performance' },
-  { id: 'ten_tasks', nom: 'Productif', icon: '⚡', description: '10 tâches terminées', categorie: 'performance' },
-  { id: 'fifty_tasks', nom: 'Machine', icon: '🤖', description: '50 tâches terminées', categorie: 'performance' },
-  { id: 'century', nom: 'Centurion', icon: '💯', description: '100 tâches terminées', categorie: 'performance' },
-  { id: 'pts_100', nom: 'Débutant', icon: '🥉', description: '100 points gagnés', categorie: 'points' },
-  { id: 'pts_500', nom: 'Confirmé', icon: '🥈', description: '500 points gagnés', categorie: 'points' },
-  { id: 'pts_1000', nom: 'Expert', icon: '🥇', description: '1000 points gagnés', categorie: 'points' },
-  { id: 'pts_5000', nom: 'Maître', icon: '👑', description: '5000 points gagnés', categorie: 'points' },
-  { id: 'streak_3', nom: '3 jours de suite', icon: '🔥', description: 'Actif 3 jours consécutifs', categorie: 'streak' },
-  { id: 'streak_7', nom: 'Semaine parfaite', icon: '📅', description: 'Actif 7 jours consécutifs', categorie: 'streak' },
-  { id: 'streak_30', nom: 'Mois de feu', icon: '🌟', description: 'Actif 30 jours consécutifs', categorie: 'streak' },
-  { id: 'early_bird', nom: 'Lève-tôt', icon: '🌅', description: 'Tâche terminée avant 8h', categorie: 'special' },
-  { id: 'night_owl', nom: 'Noctambule', icon: '🦉', description: 'Tâche terminée après 23h', categorie: 'special' },
-  { id: 'speedster', nom: 'Fulgurant', icon: '⚡', description: '5 tâches terminées en 1 jour', categorie: 'special' },
 ]
 
 const COACH_STYLES_LIST = [
