@@ -128,6 +128,8 @@ export default function Planification() {
   const streak = 5
 
   const SIDEBAR_W = 248
+  const GANTT_DAY_W   = isMobile ? 26 : 36
+  const GANTT_LABEL_W = isMobile ? 130 : 220
   const sidebarLeft = isMobile
     ? (sidebarOpen ? 0 : '-100%')
     : (sidebarOpen ? 0 : -SIDEBAR_W)
@@ -768,8 +770,8 @@ export default function Planification() {
             ].map(({ id, label, Icon }) => (
               <motion.button key={id}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 14px',
+                  display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6,
+                  padding: isMobile ? '7px 9px' : '8px 14px',
                   borderRadius: 8,
                   background: vue === id
                     ? `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`
@@ -786,7 +788,7 @@ export default function Planification() {
                 }}
                 onClick={() => { setVue(id); setSemaineOffset(0) }}
                 whileTap={{ scale: 0.95 }}>
-                <Icon size={13} strokeWidth={vue === id ? 2.5 : 1.8} />
+                {!isMobile && <Icon size={13} strokeWidth={vue === id ? 2.5 : 1.8} />}
                 <span>{label}</span>
               </motion.button>
             ))}
@@ -968,10 +970,10 @@ export default function Planification() {
                       <motion.div key={`${p.task.id}-${p.date}-${p.startMins}-${i}`}
                         initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} transition={{ delay: i * 0.03 }}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: T.bg2, borderRadius: 10, border: `1px solid ${T.border}` }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, fontFamily: 'monospace', minWidth: 92, textTransform: 'capitalize' }}>
+                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: T.accent, fontFamily: 'monospace', minWidth: isMobile ? 68 : 92, textTransform: 'capitalize' }}>
                           {dateLabel}
                         </div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: T.text2, fontFamily: 'monospace', minWidth: 78 }}>
+                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 600, color: T.text2, fontFamily: 'monospace', minWidth: isMobile ? 58 : 78 }}>
                           {minsToTime(p.startMins).slice(0,5)} → {minsToTime(p.endMins).slice(0,5)}
                         </div>
                         <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(p.task.priorite), flexShrink: 0 }} />
@@ -1278,10 +1280,10 @@ export default function Planification() {
                 <div style={{ background: T.bg2, borderRadius: 16, border: `1px solid ${T.border}`, overflow: 'auto' }}>
                   {/* Gantt header */}
                   <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, position: 'sticky', top: 0, background: T.bg2, zIndex: 10 }}>
-                    <div style={{ width: 220, flexShrink: 0, padding: '11px 16px', borderRight: `1px solid ${T.border}`, fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 2, opacity: 0.6 }}>TÂCHE · SCORE</div>
+                    <div style={{ width: GANTT_LABEL_W, flexShrink: 0, padding: isMobile ? '11px 10px' : '11px 16px', borderRight: `1px solid ${T.border}`, fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 2, opacity: 0.6, position: 'sticky', left: 0, background: T.bg2, zIndex: 11 }}>TÂCHE · SCORE</div>
                     <div style={{ display: 'flex' }}>
                       {ganttDays.map((day, i) => (
-                        <div key={day.date} style={{ width: 36, flexShrink: 0, padding: '7px 0', textAlign: 'center', background: day.isToday ? `${T.accent}10` : day.isWeekend ? `${T.bg}80` : 'transparent', borderRight: `1px solid ${T.border}12` }}>
+                        <div key={day.date} style={{ width: GANTT_DAY_W, flexShrink: 0, padding: '7px 0', textAlign: 'center', background: day.isToday ? `${T.accent}10` : day.isWeekend ? `${T.bg}80` : 'transparent', borderRight: `1px solid ${T.border}12` }}>
                           <div style={{ fontSize: 8, color: T.text2, fontWeight: 600, opacity: 0.5 }}>{i === 0 || day.label === 1 ? day.mois.toUpperCase() : ''}</div>
                           <div style={{ fontSize: 11, fontWeight: day.isToday ? 800 : 400, color: day.isToday ? T.accent : T.text2 }}>{day.label}</div>
                           {day.isToday && <div style={{ width: 3, height: 3, borderRadius: '50%', background: T.accent, margin: '2px auto 0' }} />}
@@ -1296,20 +1298,20 @@ export default function Planification() {
                     return (
                       <motion.div key={task.id} style={{ display: 'flex', borderBottom: `1px solid ${T.border}12`, minHeight: 46 }}
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}>
-                        <div style={{ width: 220, flexShrink: 0, padding: '11px 16px', borderRight: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: GANTT_LABEL_W, flexShrink: 0, padding: isMobile ? '11px 10px' : '11px 16px', borderRight: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', left: 0, background: T.bg2, zIndex: 4 }}>
                           <div style={{ width: 6, height: 6, borderRadius: '50%', background: pColor(task.priorite), flexShrink: 0, boxShadow: `0 0 6px ${pColor(task.priorite)}60` }} />
                           <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{task.titre}</span>
                           {task._score && <span style={{ fontSize: 9, color: T.accent, opacity: 0.5, flexShrink: 0 }}>#{Math.round(task._score)}</span>}
                         </div>
                         <div style={{ flex: 1, position: 'relative', display: 'flex' }}>
                           {ganttDays.map(day => (
-                            <div key={day.date} style={{ width: 36, flexShrink: 0, borderRight: `1px solid ${T.border}08`, background: day.isToday ? `${T.accent}05` : day.isWeekend ? `${T.bg}30` : 'transparent', position: 'relative' }}>
+                            <div key={day.date} style={{ width: GANTT_DAY_W, flexShrink: 0, borderRight: `1px solid ${T.border}08`, background: day.isToday ? `${T.accent}05` : day.isWeekend ? `${T.bg}30` : 'transparent', position: 'relative' }}>
                               {day.isToday && <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: `${T.accent}35`, transform: 'translateX(-50%)' }} />}
                             </div>
                           ))}
                           {barre && (
                             <motion.div
-                              style={{ position: 'absolute', left: barre.start * 36 + 2, width: Math.max((barre.end - barre.start + 1) * 36 - 4, 36), top: '50%', transform: 'translateY(-50%)', height: 22, background: `linear-gradient(90deg, ${pColor(task.priorite)}, ${pColor(task.priorite)}70)`, borderRadius: 6, display: 'flex', alignItems: 'center', paddingLeft: 9, fontSize: 9, color: '#fff', fontWeight: 700, overflow: 'hidden', boxShadow: `0 2px 10px ${pColor(task.priorite)}35`, zIndex: 2, cursor: 'default' }}
+                              style={{ position: 'absolute', left: barre.start * GANTT_DAY_W + 2, width: Math.max((barre.end - barre.start + 1) * GANTT_DAY_W - 4, GANTT_DAY_W), top: '50%', transform: 'translateY(-50%)', height: isMobile ? 18 : 22, background: `linear-gradient(90deg, ${pColor(task.priorite)}, ${pColor(task.priorite)}70)`, borderRadius: 6, display: 'flex', alignItems: 'center', paddingLeft: isMobile ? 5 : 9, fontSize: isMobile ? 8 : 9, color: '#fff', fontWeight: 700, overflow: 'hidden', boxShadow: `0 2px 10px ${pColor(task.priorite)}35`, zIndex: 2, cursor: 'default' }}
                               initial={{ scaleX: 0, originX: 0 }}
                               animate={{ scaleX: 1 }}
                               transition={{ delay: i * 0.05, duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}>
