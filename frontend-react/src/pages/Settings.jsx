@@ -314,44 +314,6 @@ export default function Settings() {
             <OutilsIntegrations T={T} userId={user.id} />
           </div>
 
-          {/* Webhook Slack (notif sortante — différent de l'OAuth) */}
-          <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#4A154B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 20, color: 'white', fontWeight: 800 }}>S</span>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>Webhook Slack (notifs sortantes)</div>
-                <div style={{ fontSize: 12, color: T.text2, marginTop: 2 }}>Reçois tes notifs de tâches dans Slack via un Incoming Webhook</div>
-              </div>
-              {slackWebhook && (
-                <span style={{ fontSize: 11, padding: '4px 10px', borderRadius: 99, background: 'rgba(76,175,130,0.15)', color: '#4caf82', fontWeight: 700 }}>Connecté</span>
-              )}
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <input
-                style={{ width: '100%', padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-                placeholder="https://hooks.slack.com/services/..."
-                value={slackWebhook}
-                onChange={e => setSlackWebhook(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sauvegarderSlack()}
-              />
-            </div>
-            <motion.button
-              style={{ width: '100%', padding: '10px', background: slackSaved ? '#4caf82' : `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, border: 'none', borderRadius: 10, color: slackSaved ? 'white' : T.bg, fontSize: 13, fontWeight: 700, cursor: slackSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              onClick={sauvegarderSlack}
-              whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-              {slackSaving ? 'Sauvegarde...' : slackSaved ? <><Check size={14} /> Sauvegardé !</> : 'Sauvegarder le webhook'}
-            </motion.button>
-            <p style={{ fontSize: 11, color: T.text2, marginTop: 10, lineHeight: 1.5 }}>
-              Crée un Incoming Webhook sur{' '}
-              <span style={{ color: T.accent, cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={() => window.open('https://api.slack.com/messaging/webhooks', '_blank')}>
-                api.slack.com
-              </span>
-              {' '}puis colle l'URL.
-            </p>
-          </div>
         </motion.div>
       )
 
