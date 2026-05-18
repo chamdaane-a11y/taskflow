@@ -7,7 +7,7 @@ import {
   ArrowLeft, Award, Palette, ExternalLink, LogOut, User,
   Zap, Bell, Shield, ChevronRight, Check, Flame, Star,
   Settings as SettingsIcon, Sprout, Cpu, Trophy, Medal, Crown,
-  Calendar, Sun, Moon
+  Calendar, Sun, Moon, Lock, Sparkles
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -34,6 +34,45 @@ const BADGE_ICONS = {
   'speedster': Zap,
 }
 
+// Tier system (rarity) — colors fixed across themes for a sense of prestige
+const TIER_STYLES = {
+  common: {
+    label: 'Commun',
+    color: '#a78f6f',
+    bg: 'rgba(167, 143, 111, 0.10)',
+    border: 'rgba(167, 143, 111, 0.35)',
+    glow: 'rgba(167, 143, 111, 0.25)',
+  },
+  rare: {
+    label: 'Rare',
+    color: '#5fb4d6',
+    bg: 'rgba(95, 180, 214, 0.12)',
+    border: 'rgba(95, 180, 214, 0.40)',
+    glow: 'rgba(95, 180, 214, 0.30)',
+  },
+  epic: {
+    label: 'Épique',
+    color: '#a78bfa',
+    bg: 'rgba(167, 139, 250, 0.14)',
+    border: 'rgba(167, 139, 250, 0.45)',
+    glow: 'rgba(167, 139, 250, 0.35)',
+  },
+  legendary: {
+    label: 'Légendaire',
+    color: '#f5b942',
+    bg: 'rgba(245, 185, 66, 0.16)',
+    border: 'rgba(245, 185, 66, 0.55)',
+    glow: 'rgba(245, 185, 66, 0.45)',
+  },
+}
+
+const BADGE_CATEGORIES = {
+  performance: { label: 'Performance', icon: Zap,      color: '#4caf82' },
+  points:      { label: 'Points',      icon: Trophy,   color: '#e08a3c' },
+  streak:      { label: 'Streak',      icon: Flame,    color: '#e74c3c' },
+  'spécial':   { label: 'Spécial',     icon: Sparkles, color: '#a78bfa' },
+}
+
 const niveaux = [
   { niveau: 1, label: 'Débutant',  min: 0 },
   { niveau: 2, label: 'Apprenti',  min: 100 },
@@ -43,21 +82,21 @@ const niveaux = [
 ]
 
 const BADGES_CONFIG = [
-  { id: 'first_task',  nom: 'Premier pas',      description: 'Première tâche terminée',        categorie: 'performance' },
-  { id: 'five_tasks',  nom: 'En rythme',         description: '5 tâches terminées',            categorie: 'performance' },
-  { id: 'ten_tasks',   nom: 'Productif',         description: '10 tâches terminées',           categorie: 'performance' },
-  { id: 'fifty_tasks', nom: 'Machine',           description: '50 tâches terminées',           categorie: 'performance' },
-  { id: 'century',     nom: 'Centurion',         description: '100 tâches terminées',          categorie: 'performance' },
-  { id: 'pts_100',     nom: 'Débutant',          description: '100 points gagnés',             categorie: 'points' },
-  { id: 'pts_500',     nom: 'Confirmé',          description: '500 points gagnés',             categorie: 'points' },
-  { id: 'pts_1000',    nom: 'Expert',            description: '1000 points gagnés',            categorie: 'points' },
-  { id: 'pts_5000',    nom: 'Maître',            description: '5000 points gagnés',            categorie: 'points' },
-  { id: 'streak_3',    nom: '3 jours de suite',  description: 'Actif 3 jours consécutifs',    categorie: 'streak' },
-  { id: 'streak_7',    nom: 'Semaine parfaite',  description: 'Actif 7 jours consécutifs',    categorie: 'streak' },
-  { id: 'streak_30',   nom: 'Mois de feu',       description: 'Actif 30 jours consécutifs',   categorie: 'streak' },
-  { id: 'early_bird',  nom: 'Lève-tôt',          description: 'Tâche terminée avant 8h',      categorie: 'spécial' },
-  { id: 'night_owl',   nom: 'Noctambule',        description: 'Tâche terminée après 23h',     categorie: 'spécial' },
-  { id: 'speedster',   nom: 'Fulgurant',         description: '5 tâches terminées en 1 jour', categorie: 'spécial' },
+  { id: 'first_task',  nom: 'Premier pas',      description: 'Première tâche terminée',        categorie: 'performance', tier: 'common'    },
+  { id: 'five_tasks',  nom: 'En rythme',         description: '5 tâches terminées',            categorie: 'performance', tier: 'common'    },
+  { id: 'ten_tasks',   nom: 'Productif',         description: '10 tâches terminées',           categorie: 'performance', tier: 'rare'      },
+  { id: 'fifty_tasks', nom: 'Machine',           description: '50 tâches terminées',           categorie: 'performance', tier: 'epic'      },
+  { id: 'century',     nom: 'Centurion',         description: '100 tâches terminées',          categorie: 'performance', tier: 'legendary' },
+  { id: 'pts_100',     nom: 'Débutant',          description: '100 points gagnés',             categorie: 'points',      tier: 'common'    },
+  { id: 'pts_500',     nom: 'Confirmé',          description: '500 points gagnés',             categorie: 'points',      tier: 'rare'      },
+  { id: 'pts_1000',    nom: 'Expert',            description: '1000 points gagnés',            categorie: 'points',      tier: 'epic'      },
+  { id: 'pts_5000',    nom: 'Maître',            description: '5000 points gagnés',            categorie: 'points',      tier: 'legendary' },
+  { id: 'streak_3',    nom: '3 jours de suite',  description: 'Actif 3 jours consécutifs',    categorie: 'streak',      tier: 'common'    },
+  { id: 'streak_7',    nom: 'Semaine parfaite',  description: 'Actif 7 jours consécutifs',    categorie: 'streak',      tier: 'rare'      },
+  { id: 'streak_30',   nom: 'Mois de feu',       description: 'Actif 30 jours consécutifs',   categorie: 'streak',      tier: 'legendary' },
+  { id: 'early_bird',  nom: 'Lève-tôt',          description: 'Tâche terminée avant 8h',      categorie: 'spécial',     tier: 'rare'      },
+  { id: 'night_owl',   nom: 'Noctambule',        description: 'Tâche terminée après 23h',     categorie: 'spécial',     tier: 'rare'      },
+  { id: 'speedster',   nom: 'Fulgurant',         description: '5 tâches terminées en 1 jour', categorie: 'spécial',     tier: 'epic'      },
 ]
 
 const SECTIONS = [
@@ -253,78 +292,189 @@ export default function Settings() {
       )
 
       // ── BADGES ──
-      case 'badges': return (
+      case 'badges': {
+        const pctTotal = Math.round(badgesObtenus.length / BADGES_CONFIG.length * 100)
+        const prochainBadge = BADGES_CONFIG.find(b => !badgesObtenus.find(ob => ob.id === b.id))
+        const ProchainIcon = prochainBadge ? BADGE_ICONS[prochainBadge.id] : null
+        const prochainTier = prochainBadge ? TIER_STYLES[prochainBadge.tier] : null
+        return (
         <motion.div key="badges" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <SectionTitle>Badges & Récompenses</SectionTitle>
 
-          {/* Résumé */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
-            <div style={{ background: `${T.accent}10`, border: `1px solid ${T.accent}25`, borderRadius: 16, padding: '18px', textAlign: 'center' }}>
-              <div style={{ fontSize: 36, fontWeight: 800, color: T.accent }}>{badgesObtenus.length}</div>
-              <div style={{ fontSize: 12, color: T.text2, marginTop: 4 }}>badges obtenus sur {BADGES_CONFIG.length}</div>
-              <div style={{ height: 4, background: `${T.accent}15`, borderRadius: 99, overflow: 'hidden', marginTop: 10 }}>
-                <div style={{ height: '100%', width: `${Math.round(badgesObtenus.length / BADGES_CONFIG.length * 100)}%`, background: T.accent, borderRadius: 99 }} />
+          {/* Résumé global */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div style={{ background: `linear-gradient(135deg, ${T.accent}12, ${T.accent2 ? T.accent2 + '08' : T.accent + '06'})`, border: `1px solid ${T.accent}25`, borderRadius: 16, padding: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: T.accent, letterSpacing: '-1px' }}>{badgesObtenus.length}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: T.text2 }}>/ {BADGES_CONFIG.length}</div>
+              </div>
+              <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>badges débloqués</div>
+              <div style={{ height: 5, background: `${T.accent}15`, borderRadius: 99, overflow: 'hidden', marginTop: 12 }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pctTotal}%` }}
+                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ height: '100%', background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: 99 }} />
               </div>
             </div>
-            <div style={{ background: 'rgba(224,138,60,0.08)', border: '1px solid rgba(224,138,60,0.2)', borderRadius: 16, padding: '18px', textAlign: 'center' }}>
-              <div style={{ fontSize: 36, fontWeight: 800, color: '#e08a3c' }}>{streak}</div>
-              <div style={{ fontSize: 12, color: T.text2, marginTop: 4 }}>jours de streak consécutifs</div>
-              <div style={{ fontSize: 20, marginTop: 8 }}>🔥</div>
+            <div style={{ background: 'linear-gradient(135deg, rgba(231,76,60,0.10), rgba(224,138,60,0.06))', border: '1px solid rgba(231,76,60,0.22)', borderRadius: 16, padding: '18px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Flame size={24} color="#e74c3c" strokeWidth={2} fill="#e74c3c" fillOpacity={0.15} />
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#e74c3c', letterSpacing: '-1px' }}>{streak}</div>
+              </div>
+              <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>jour{streak > 1 ? 's' : ''} de streak</div>
+              <div style={{ fontSize: 10, color: T.text2, marginTop: 4, opacity: 0.7 }}>{streak === 0 ? 'lance ta première journée 🎯' : streak < 7 ? `${7 - streak}j avant Semaine parfaite` : streak < 30 ? `${30 - streak}j avant Mois de feu` : 'streak légendaire 🔥'}</div>
             </div>
           </div>
 
+          {/* Prochain badge — motivation */}
+          {prochainBadge && ProchainIcon && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px',
+                background: `linear-gradient(90deg, ${prochainTier.bg}, transparent)`,
+                border: `1px solid ${prochainTier.border}`,
+                borderRadius: 16, marginBottom: 28, position: 'relative', overflow: 'hidden'
+              }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                background: prochainTier.bg, border: `1px solid ${prochainTier.border}`, position: 'relative'
+              }}>
+                <ProchainIcon size={20} color={prochainTier.color} strokeWidth={2} />
+                <Lock size={10} color={T.bg} strokeWidth={3} style={{ position: 'absolute', bottom: -3, right: -3, background: prochainTier.color, borderRadius: '50%', padding: 3 }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: prochainTier.color, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>Prochain badge · {prochainTier.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{prochainBadge.nom}</div>
+                <div style={{ fontSize: 11, color: T.text2, marginTop: 1 }}>{prochainBadge.description}</div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Badges par catégorie */}
-          {['performance', 'points', 'streak', 'spécial'].map(cat => (
-            <div key={cat} style={{ marginBottom: 28 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.5, marginBottom: 12, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>{cat}</span>
-                <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 99, background: `${T.accent}15`, color: T.accent, fontWeight: 700 }}>
-                  {BADGES_CONFIG.filter(b => b.categorie === cat && badgesObtenus.find(ob => ob.id === b.id)).length}/{BADGES_CONFIG.filter(b => b.categorie === cat).length}
-                </span>
+          {['performance', 'points', 'streak', 'spécial'].map((cat, catIdx) => {
+            const catBadges = BADGES_CONFIG.filter(b => b.categorie === cat)
+            const catUnlocked = catBadges.filter(b => badgesObtenus.find(ob => ob.id === b.id)).length
+            const catPct = Math.round(catUnlocked / catBadges.length * 100)
+            const catMeta = BADGE_CATEGORIES[cat]
+            const CatIcon = catMeta.icon
+            return (
+              <div key={cat} style={{ marginBottom: 28 }}>
+                {/* Category header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: `${catMeta.color}18`, border: `1px solid ${catMeta.color}30`, flexShrink: 0
+                  }}>
+                    <CatIcon size={16} color={catMeta.color} strokeWidth={2.2} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>{catMeta.label}</div>
+                      <div style={{ fontSize: 11, color: T.text2, fontWeight: 500 }}>{catUnlocked}/{catBadges.length}</div>
+                    </div>
+                    <div style={{ height: 3, background: `${catMeta.color}12`, borderRadius: 99, overflow: 'hidden' }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${catPct}%` }}
+                        transition={{ duration: 0.9, delay: 0.1 * catIdx, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ height: '100%', background: catMeta.color, borderRadius: 99 }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Badges grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                  {catBadges.map((b, idx) => {
+                    const obtenu = badgesObtenus.find(ob => ob.id === b.id)
+                    const IconComponent = BADGE_ICONS[b.id]
+                    const tier = TIER_STYLES[b.tier]
+                    return (
+                      <motion.div key={b.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 * idx + 0.1 * catIdx, ease: [0.16, 1, 0.3, 1] }}
+                        whileHover={obtenu ? { y: -3, boxShadow: `0 8px 28px ${tier.glow}` } : { y: -1 }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 14,
+                          background: obtenu
+                            ? `linear-gradient(135deg, ${tier.bg}, ${T.bg2})`
+                            : T.bg2,
+                          border: obtenu ? `1px solid ${tier.border}` : `1.5px dashed ${T.border}`,
+                          boxShadow: obtenu ? `0 0 18px ${tier.glow}` : 'none',
+                          transition: 'box-shadow 0.25s ease',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          cursor: obtenu ? 'default' : 'help'
+                        }}>
+                        {/* Tier shine — top right corner subtle gradient */}
+                        {obtenu && (
+                          <div style={{
+                            position: 'absolute', top: 0, right: 0, width: 70, height: 70,
+                            background: `radial-gradient(circle at top right, ${tier.glow}, transparent 70%)`,
+                            pointerEvents: 'none'
+                          }} />
+                        )}
+
+                        {/* Icon container */}
+                        <div style={{
+                          width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          background: obtenu ? tier.bg : `${T.text2}10`,
+                          border: obtenu ? `1px solid ${tier.border}` : `1px solid ${T.border}`,
+                          position: 'relative'
+                        }}>
+                          {IconComponent && <IconComponent size={22} color={obtenu ? tier.color : T.text2} strokeWidth={2} style={{ opacity: obtenu ? 1 : 0.45 }} />}
+                          {!obtenu && (
+                            <div style={{
+                              position: 'absolute', bottom: -4, right: -4,
+                              width: 18, height: 18, borderRadius: '50%',
+                              background: T.bg2, border: `1px solid ${T.border}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                              <Lock size={9} color={T.text2} strokeWidth={2.5} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            <div style={{ fontSize: 13, fontWeight: obtenu ? 700 : 500, color: obtenu ? T.text : T.text2, letterSpacing: '-0.1px' }}>{b.nom}</div>
+                            {obtenu && (
+                              <span style={{
+                                fontSize: 8, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase',
+                                padding: '2px 6px', borderRadius: 99,
+                                background: tier.bg, color: tier.color, border: `1px solid ${tier.border}`
+                              }}>{tier.label}</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: T.text2, opacity: obtenu ? 1 : 0.65, lineHeight: 1.4 }}>{b.description}</div>
+                        </div>
+
+                        {/* Status indicator */}
+                        {obtenu
+                          ? <div style={{
+                              width: 26, height: 26, borderRadius: '50%',
+                              background: `linear-gradient(135deg, ${tier.color}, ${tier.color}dd)`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                              boxShadow: `0 0 12px ${tier.glow}`,
+                              position: 'relative', zIndex: 1
+                            }}>
+                              <Check size={13} color="white" strokeWidth={2.8} />
+                            </div>
+                          : null
+                        }
+                      </motion.div>
+                    )
+                  })}
+                </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
-                {BADGES_CONFIG.filter(b => b.categorie === cat).map(b => {
-                  const obtenu = badgesObtenus.find(ob => ob.id === b.id)
-                  const IconComponent = BADGE_ICONS[b.id]
-                  return (
-                    <motion.div key={b.id}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px', borderRadius: 14,
-                        background: obtenu
-                          ? `linear-gradient(135deg, ${T.accent}12, ${T.accent2 ? T.accent2 + '08' : T.accent + '06'})`
-                          : T.bg2,
-                        border: obtenu ? `1px solid ${T.accent}40` : `2px dashed ${T.border}`,
-                        boxShadow: obtenu ? `0 0 20px ${T.accent}20` : 'none',
-                        opacity: obtenu ? 1 : 0.5,
-                        transition: 'all 0.2s',
-                        position: 'relative'
-                      }}
-                      whileHover={obtenu ? { scale: 1.02, boxShadow: `0 0 28px ${T.accent}30` } : {}}>
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        background: obtenu ? `${T.accent}15` : 'transparent',
-                        border: obtenu ? `1px solid ${T.accent}30` : 'none'
-                      }}>
-                        {IconComponent && <IconComponent size={20} color={obtenu ? T.accent : T.text2} strokeWidth={2} />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: obtenu ? 700 : 500, color: T.text }}>{b.nom}</div>
-                        <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>{b.description}</div>
-                      </div>
-                      {obtenu
-                        ? <motion.div style={{ width: 28, height: 28, borderRadius: '50%', background: '#4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 0 12px rgba(76,175,130,0.4)' }}>
-                            <Check size={14} color="white" strokeWidth={2.5} />
-                          </motion.div>
-                        : <div style={{ width: 28, height: 28, borderRadius: '50%', border: `2px dashed ${T.border}`, flexShrink: 0 }} />
-                      }
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </motion.div>
-      )
+        )
+      }
 
       // ── THÈME ──
       case 'theme': return (
