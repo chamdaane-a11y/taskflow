@@ -6,7 +6,8 @@ import { themes } from '../themes'
 import {
   ArrowLeft, Award, Palette, ExternalLink, LogOut, User,
   Zap, Bell, Shield, ChevronRight, Check, Flame, Star,
-  Settings as SettingsIcon
+  Settings as SettingsIcon, Sprout, Cpu, Trophy, Medal, Crown,
+  Calendar, Sun, Moon
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -14,6 +15,24 @@ import MobileBackButton from '../components/MobileBackButton'
 import OutilsIntegrations from './OutilsIntegrations'
 
 const API = 'https://getshift-backend.onrender.com'
+
+const BADGE_ICONS = {
+  'first_task': Sprout,
+  'five_tasks': Flame,
+  'ten_tasks': Zap,
+  'fifty_tasks': Cpu,
+  'century': Trophy,
+  'pts_100': Medal,
+  'pts_500': Medal,
+  'pts_1000': Medal,
+  'pts_5000': Crown,
+  'streak_3': Flame,
+  'streak_7': Calendar,
+  'streak_30': Star,
+  'early_bird': Sun,
+  'night_owl': Moon,
+  'speedster': Zap,
+}
 
 const niveaux = [
   { niveau: 1, label: 'Débutant',  min: 0 },
@@ -24,21 +43,21 @@ const niveaux = [
 ]
 
 const BADGES_CONFIG = [
-  { id: 'first_task',  nom: 'Premier pas',      icon: '🌱', description: 'Première tâche terminée',        categorie: 'performance' },
-  { id: 'five_tasks',  nom: 'En rythme',         icon: '🔥', description: '5 tâches terminées',            categorie: 'performance' },
-  { id: 'ten_tasks',   nom: 'Productif',         icon: '⚡', description: '10 tâches terminées',           categorie: 'performance' },
-  { id: 'fifty_tasks', nom: 'Machine',           icon: '🤖', description: '50 tâches terminées',           categorie: 'performance' },
-  { id: 'century',     nom: 'Centurion',         icon: '💯', description: '100 tâches terminées',          categorie: 'performance' },
-  { id: 'pts_100',     nom: 'Débutant',          icon: '🥉', description: '100 points gagnés',             categorie: 'points' },
-  { id: 'pts_500',     nom: 'Confirmé',          icon: '🥈', description: '500 points gagnés',             categorie: 'points' },
-  { id: 'pts_1000',    nom: 'Expert',            icon: '🥇', description: '1000 points gagnés',            categorie: 'points' },
-  { id: 'pts_5000',    nom: 'Maître',            icon: '👑', description: '5000 points gagnés',            categorie: 'points' },
-  { id: 'streak_3',    nom: '3 jours de suite',  icon: '🔥', description: 'Actif 3 jours consécutifs',    categorie: 'streak' },
-  { id: 'streak_7',    nom: 'Semaine parfaite',  icon: '📅', description: 'Actif 7 jours consécutifs',    categorie: 'streak' },
-  { id: 'streak_30',   nom: 'Mois de feu',       icon: '🌟', description: 'Actif 30 jours consécutifs',   categorie: 'streak' },
-  { id: 'early_bird',  nom: 'Lève-tôt',          icon: '🌅', description: 'Tâche terminée avant 8h',      categorie: 'spécial' },
-  { id: 'night_owl',   nom: 'Noctambule',        icon: '🦉', description: 'Tâche terminée après 23h',     categorie: 'spécial' },
-  { id: 'speedster',   nom: 'Fulgurant',         icon: '⚡', description: '5 tâches terminées en 1 jour', categorie: 'spécial' },
+  { id: 'first_task',  nom: 'Premier pas',      description: 'Première tâche terminée',        categorie: 'performance' },
+  { id: 'five_tasks',  nom: 'En rythme',         description: '5 tâches terminées',            categorie: 'performance' },
+  { id: 'ten_tasks',   nom: 'Productif',         description: '10 tâches terminées',           categorie: 'performance' },
+  { id: 'fifty_tasks', nom: 'Machine',           description: '50 tâches terminées',           categorie: 'performance' },
+  { id: 'century',     nom: 'Centurion',         description: '100 tâches terminées',          categorie: 'performance' },
+  { id: 'pts_100',     nom: 'Débutant',          description: '100 points gagnés',             categorie: 'points' },
+  { id: 'pts_500',     nom: 'Confirmé',          description: '500 points gagnés',             categorie: 'points' },
+  { id: 'pts_1000',    nom: 'Expert',            description: '1000 points gagnés',            categorie: 'points' },
+  { id: 'pts_5000',    nom: 'Maître',            description: '5000 points gagnés',            categorie: 'points' },
+  { id: 'streak_3',    nom: '3 jours de suite',  description: 'Actif 3 jours consécutifs',    categorie: 'streak' },
+  { id: 'streak_7',    nom: 'Semaine parfaite',  description: 'Actif 7 jours consécutifs',    categorie: 'streak' },
+  { id: 'streak_30',   nom: 'Mois de feu',       description: 'Actif 30 jours consécutifs',   categorie: 'streak' },
+  { id: 'early_bird',  nom: 'Lève-tôt',          description: 'Tâche terminée avant 8h',      categorie: 'spécial' },
+  { id: 'night_owl',   nom: 'Noctambule',        description: 'Tâche terminée après 23h',     categorie: 'spécial' },
+  { id: 'speedster',   nom: 'Fulgurant',         description: '5 tâches terminées en 1 jour', categorie: 'spécial' },
 ]
 
 const SECTIONS = [
@@ -266,20 +285,37 @@ export default function Settings() {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
                 {BADGES_CONFIG.filter(b => b.categorie === cat).map(b => {
                   const obtenu = badgesObtenus.find(ob => ob.id === b.id)
+                  const IconComponent = BADGE_ICONS[b.id]
                   return (
                     <motion.div key={b.id}
-                      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 14, background: obtenu ? `${T.accent}08` : T.bg2, border: `1px solid ${obtenu ? T.accent + '30' : T.border}`, opacity: obtenu ? 1 : 0.4, transition: 'all 0.2s' }}
-                      whileHover={obtenu ? { scale: 1.01 } : {}}>
-                      <span style={{ fontSize: 28, flexShrink: 0 }}>{b.icon}</span>
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px', borderRadius: 14,
+                        background: obtenu
+                          ? `linear-gradient(135deg, ${T.accent}12, ${T.accent2 ? T.accent2 + '08' : T.accent + '06'})`
+                          : T.bg2,
+                        border: obtenu ? `1px solid ${T.accent}40` : `2px dashed ${T.border}`,
+                        boxShadow: obtenu ? `0 0 20px ${T.accent}20` : 'none',
+                        opacity: obtenu ? 1 : 0.5,
+                        transition: 'all 0.2s',
+                        position: 'relative'
+                      }}
+                      whileHover={obtenu ? { scale: 1.02, boxShadow: `0 0 28px ${T.accent}30` } : {}}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        background: obtenu ? `${T.accent}15` : 'transparent',
+                        border: obtenu ? `1px solid ${T.accent}30` : 'none'
+                      }}>
+                        {IconComponent && <IconComponent size={20} color={obtenu ? T.accent : T.text2} strokeWidth={2} />}
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: obtenu ? 700 : 500, color: T.text }}>{b.nom}</div>
                         <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>{b.description}</div>
                       </div>
                       {obtenu
-                        ? <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Check size={13} color="white" strokeWidth={2.5} />
-                          </div>
-                        : <div style={{ width: 24, height: 24, borderRadius: '50%', border: `2px dashed ${T.border}`, flexShrink: 0 }} />
+                        ? <motion.div style={{ width: 28, height: 28, borderRadius: '50%', background: '#4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 0 12px rgba(76,175,130,0.4)' }}>
+                            <Check size={14} color="white" strokeWidth={2.5} />
+                          </motion.div>
+                        : <div style={{ width: 28, height: 28, borderRadius: '50%', border: `2px dashed ${T.border}`, flexShrink: 0 }} />
                       }
                     </motion.div>
                   )
