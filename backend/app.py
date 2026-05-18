@@ -1,3 +1,6 @@
+import sys
+print("[BOOT] Python:", sys.version, flush=True)
+print("[BOOT] Starting imports...", flush=True)
 import threading
 import schedule
 import time
@@ -29,12 +32,13 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from cryptography.fernet import Fernet
 
+print("[BOOT] Imports done", flush=True)
 load_dotenv()
-print("[BOOT] load_dotenv OK")
+print("[BOOT] load_dotenv OK", flush=True)
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-print("[BOOT] Groq client OK")
+print("[BOOT] Groq client OK", flush=True)
 sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
-print("[BOOT] SendGrid client OK")
+print("[BOOT] SendGrid client OK", flush=True)
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'getshift_secret')
@@ -1006,9 +1010,9 @@ def demarrer_scheduler():
         schedule.run_pending()
         time.sleep(60)
 
-print("[BOOT] Démarrage scheduler...")
+print("[BOOT] Démarrage scheduler...", flush=True)
 threading.Thread(target=demarrer_scheduler, daemon=True).start()
-print("[BOOT] Scheduler thread lancé")
+print("[BOOT] Scheduler thread lancé", flush=True)
 
 # ============================================
 # AUTO-MIGRATIONS (idempotentes)
@@ -1029,9 +1033,9 @@ def run_migrations():
     except Exception as e:
         print(f"[Migrations] erreur : {e}")
 
-print("[BOOT] run_migrations()...")
+print("[BOOT] run_migrations()...", flush=True)
 run_migrations()
-print("[BOOT] run_migrations() OK — app prête")
+print("[BOOT] run_migrations() OK — app prête", flush=True)
 
 # ============================================
 # AUTHENTIFICATION
