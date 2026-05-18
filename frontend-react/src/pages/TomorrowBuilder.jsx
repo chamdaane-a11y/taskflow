@@ -19,6 +19,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
+import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import {
   DndContext, closestCenter, DragOverlay,
   PointerSensor, TouchSensor, useSensor, useSensors
@@ -826,6 +827,16 @@ export default function TomorrowBuilder() {
   const theme = localStorage.getItem('theme') || 'dark'
   const T = themes[theme]
 
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
+  })
+  const toggleSidebar = () => {
+    const next = !sidebarOpen
+    setSidebarOpen(next)
+    try { localStorage.setItem('sidebar_open', String(next)) } catch {}
+  }
+  const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
+
   const [loading, setLoading] = useState(false)
   const [planning, setPlanning] = useState(null)
   const [savedPlan, setSavedPlan] = useState(null)
@@ -1227,7 +1238,17 @@ export default function TomorrowBuilder() {
   const pausesPlanning = planning?.planning?.filter(p => p.type === 'pause') || []
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
+    <>
+      <AppSidebar
+        T={T} user={user}
+        sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
+        toggleSidebar={toggleSidebar} isMobile={isMobile} />
+      <SidebarToggle T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
+      <FloatingLogo T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
+      <motion.div
+        animate={{ marginLeft: mainMargin }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* HEADER */}
       <div style={{ background: T.bg2, borderBottom: `1px solid ${T.border}`, padding: isMobile ? '14px 16px' : '16px 32px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 100 }}>
@@ -1868,8 +1889,9 @@ export default function TomorrowBuilder() {
           </motion.div>
         )}
       </div>
+      </motion.div>
       {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
-    </div>
+    </>
   )
 }
