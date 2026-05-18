@@ -1820,12 +1820,22 @@ export default function Collaboration() {
     if (!equipeActive) return
     setFiltreLabelId(null)
     setLoadingEquipe(true)
-    // Parallélise les 3 fetches au lieu de les attendre séquentiellement
-    Promise.all([
-      chargerMembres(equipeActive.id),
-      chargerTaches(equipeActive.id),
-      chargerLabels(equipeActive.id),
-    ]).finally(() => setLoadingEquipe(false))
+    // 1 seule requête au lieu de 3 — gros gain sur cold start Render
+    axios.get(`${API}/equipes/${equipeActive.id}/bootstrap`)
+      .then(r => {
+        setMembres(r.data.membres || [])
+        setTaches(r.data.taches || [])
+        setLabels(r.data.labels || [])
+      })
+      .catch(() => {
+        // Fallback : si l'endpoint bootstrap n'est pas dispo (ex: backend pas redéployé), recharge en 3 requêtes
+        return Promise.all([
+          chargerMembres(equipeActive.id),
+          chargerTaches(equipeActive.id),
+          chargerLabels(equipeActive.id),
+        ])
+      })
+      .finally(() => setLoadingEquipe(false))
   }, [equipeActive])
 
   // ===== POLLING INTELLIGENT =====

@@ -2852,6 +2852,78 @@ def get_taches_equipe(equipe_id):
         return jsonify({"erreur": str(e)}), 500
 
 
+@app.route('/equipes/<int:equipe_id>/bootstrap', methods=['GET'])
+def bootstrap_equipe(equipe_id):
+    """Endpoint groupé : retourne membres + tâches + labels en 1 seule requête HTTP.
+    Réduit 3 RTT à 1 (gros gain sur cold start Render + perception fluide)."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+
+        # Migrations lazy (idempotentes) — assure que les colonnes/tables existent
+        try:
+            curseur.execute("UPDATE taches_equipe SET statut='todo' WHERE statut='a_faire'")
+            db.commit()
+        except Exception:
+            pass
+        _ensure_taches_equipe_columns(curseur)
+        _ensure_labels_schema(curseur)
+        db.commit()
+
+        # 1. Membres
+        curseur.execute(
+            "SELECT u.id, u.nom, u.email, em.role, em.rejoint_le "
+            "FROM equipe_membres em JOIN users u ON em.user_id=u.id "
+            "WHERE em.equipe_id=%s ORDER BY em.rejoint_le ASC",
+            (equipe_id,)
+        )
+        membres = curseur.fetchall()
+
+        # 2. Labels
+        curseur.execute(
+            "SELECT id, nom, couleur FROM labels_equipe WHERE equipe_id=%s ORDER BY nom ASC",
+            (equipe_id,)
+        )
+        labels = curseur.fetchall()
+
+        # 3. Tâches (avec créateur/assignee/completed_by + counts sous-tâches & commentaires)
+        curseur.execute("""
+            SELECT te.*, u1.nom as createur_nom, u2.nom as assignee_nom,
+                u3.nom as completed_by_nom,
+                (SELECT COUNT(*) FROM commentaires_tache WHERE tache_id=te.id) as nb_commentaires,
+                (SELECT COUNT(*) FROM sous_taches_equipe WHERE tache_id=te.id) as nb_sous_taches,
+                (SELECT COUNT(*) FROM sous_taches_equipe WHERE tache_id=te.id AND terminee=1) as nb_sous_taches_done
+            FROM taches_equipe te
+            JOIN users u1 ON te.createur_id=u1.id
+            LEFT JOIN users u2 ON te.assignee_id=u2.id
+            LEFT JOIN users u3 ON te.completed_by=u3.id
+            WHERE te.equipe_id=%s ORDER BY te.created_at DESC
+        """, (equipe_id,))
+        taches = curseur.fetchall()
+
+        # Labels par tâche (jointure séparée pour éviter une cartesienne)
+        curseur.execute("""
+            SELECT tl.tache_id, l.id, l.nom, l.couleur
+            FROM taches_labels tl
+            JOIN labels_equipe l ON tl.label_id=l.id
+            WHERE l.equipe_id=%s
+        """, (equipe_id,))
+        labels_par_tache = {}
+        for row in curseur.fetchall():
+            labels_par_tache.setdefault(row['tache_id'], []).append({
+                'id': row['id'], 'nom': row['nom'], 'couleur': row['couleur']
+            })
+        for t in taches:
+            if t.get('completed_at'):
+                t['completed_at'] = t['completed_at'].isoformat() if hasattr(t['completed_at'], 'isoformat') else str(t['completed_at'])
+            t['labels'] = labels_par_tache.get(t['id'], [])
+
+        db.close()
+        return jsonify({"membres": membres, "labels": labels, "taches": taches})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
 @app.route('/equipes/taches/<int:tache_id>/toggle-fait', methods=['PATCH'])
 def toggle_tache_fait(tache_id):
     """Toggle done/undone par n'importe quel membre de l'équipe.
