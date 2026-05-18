@@ -376,8 +376,7 @@ def _html_resume_hebdo(nom, stats):
     diff = terminees - terminees_prec
     diff_color = "#4caf82" if diff > 0 else ("#e05c5c" if diff < 0 else "#8888a8")
     diff_label = f"{'▲ +' if diff > 0 else ('▼ ' if diff < 0 else '·')}{abs(diff)} vs semaine -1"
-    niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende",7:"Mythique",8:"Immortel"}
-    niveau_label = niveaux_labels.get(niveau, f"Niveau {niveau}")
+    niveau_nom = niveau_label(niveau)
     xp_semaine = xp_par_prio.get("haute", 0)*50 + xp_par_prio.get("moyenne", 0)*25 + xp_par_prio.get("basse", 0)*10
 
     # ── Vibe emoji : performance, pas confort ──
@@ -467,7 +466,7 @@ def _html_resume_hebdo(nom, stats):
         </div></td>
         <td width="33%" style="padding:0 0 0 5px;"><div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:14px;text-align:center;">
           <div style="font-size:16px;font-weight:800;color:#6c63ff;">Niveau {niveau}</div>
-          <div style="font-size:10px;color:#8888a8;margin-top:3px;">{niveau_label} · {points} pts</div>
+          <div style="font-size:10px;color:#8888a8;margin-top:3px;">{niveau_nom} · {points} pts</div>
         </div></td>
       </tr>
     </table>
@@ -1017,17 +1016,34 @@ def demarrer_scheduler():
 # AUTO-MIGRATIONS (idempotentes)
 # ============================================
 def run_migrations():
+    """Migrations idempotentes — vérifient l'existence avant ALTER."""
+    def col_exists(curseur, table, col):
+        curseur.execute("""
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = %s AND column_name = %s
+        """, (table, col))
+        return curseur.fetchone()[0] > 0
+
     try:
         db = connecter()
         curseur = db.cursor()
-        curseur.execute("""
-            SELECT COUNT(*) FROM information_schema.columns
-            WHERE table_schema = DATABASE() AND table_name = 'taches' AND column_name = 'focus_date'
-        """)
-        if curseur.fetchone()[0] == 0:
+
+        if not col_exists(curseur, 'taches', 'focus_date'):
             curseur.execute("ALTER TABLE taches ADD COLUMN focus_date DATE NULL")
-            db.commit()
-            print("[Migrations] focus_date ajouté à taches ✅")
+            print("[Migrations] taches.focus_date ✅")
+
+        # Gamification refonte 2026-05-18 — Streak Freeze + tracking terminee_le
+        if not col_exists(curseur, 'users', 'streak_freeze_used_at'):
+            curseur.execute("ALTER TABLE users ADD COLUMN streak_freeze_used_at DATE NULL")
+            print("[Migrations] users.streak_freeze_used_at ✅")
+
+        if not col_exists(curseur, 'taches', 'terminee_le'):
+            curseur.execute("ALTER TABLE taches ADD COLUMN terminee_le DATETIME NULL")
+            # Backfill: les tâches déjà terminées sans timestamp → NOW (on n'a pas l'historique)
+            curseur.execute("UPDATE taches SET terminee_le=NOW() WHERE terminee=TRUE AND terminee_le IS NULL")
+            print("[Migrations] taches.terminee_le ✅ (+backfill)")
+
+        db.commit()
         db.close()
     except Exception as e:
         print(f"[Migrations] erreur : {e}")
@@ -1463,32 +1479,71 @@ def update_points(id):
     curseur.execute("SELECT points FROM users WHERE id=%s", (id,))
     user = curseur.fetchone()
     total_pts = user['points']
-    paliers = [(1,0),(2,100),(3,250),(4,500),(5,1000),(6,2000),(7,5000),(8,10000)]
-    nouveau_niveau = max([n for n, m in paliers if total_pts >= m])
+    # Niveau via la constante centralisée (10 paliers — sync avec frontend)
+    nouveau_niveau, _ = niveau_for_points(total_pts)
     curseur.execute("UPDATE users SET niveau=%s WHERE id=%s", (nouveau_niveau, id))
     db.commit()
-    curseur.execute("SELECT streak, derniere_activite FROM users WHERE id=%s", (id,))
+
+    # ── STREAK avec Streak Freeze + détection comeback ─────────────────
+    curseur.execute("SELECT streak, derniere_activite, streak_freeze_used_at FROM users WHERE id=%s", (id,))
     u = curseur.fetchone()
     from datetime import date, timedelta
     aujourd_hui = date.today()
     derniere = u['derniere_activite'].date() if u['derniere_activite'] else None
     streak = u['streak'] or 0
-    if derniere is None or derniere < aujourd_hui - timedelta(days=1):
+    freeze_used = u.get('streak_freeze_used_at')
+    freeze_used_date = freeze_used if isinstance(freeze_used, date) else (freeze_used.date() if freeze_used else None)
+
+    comeback_unlocked = False
+    freeze_just_used = False
+
+    if derniere is None:
         streak = 1
+    elif derniere == aujourd_hui:
+        # Même jour : streak inchangé
+        pass
     elif derniere == aujourd_hui - timedelta(days=1):
         streak += 1
-    curseur.execute("UPDATE users SET streak=%s, derniere_activite=%s WHERE id=%s", (streak, aujourd_hui, id))
+    else:
+        gap_days = (aujourd_hui - derniere).days
+        # Freeze couvre un trou de 2 jours (1 jour manqué) si pas déjà utilisé cette semaine ISO
+        memes_semaine = (
+            freeze_used_date is not None
+            and freeze_used_date.isocalendar()[:2] == aujourd_hui.isocalendar()[:2]
+        )
+        peut_freeze = (gap_days == 2) and not memes_semaine
+        if peut_freeze:
+            streak += 1
+            freeze_just_used = True
+        else:
+            if gap_days >= 5:
+                comeback_unlocked = True
+            streak = 1
+
+    if freeze_just_used:
+        curseur.execute("UPDATE users SET streak=%s, derniere_activite=%s, streak_freeze_used_at=%s WHERE id=%s",
+                        (streak, aujourd_hui, aujourd_hui, id))
+    else:
+        curseur.execute("UPDATE users SET streak=%s, derniere_activite=%s WHERE id=%s",
+                        (streak, aujourd_hui, id))
     db.commit()
+
+    # Attribution immédiate du badge Phénix avant verifier_badges
+    if comeback_unlocked:
+        curseur.execute("SELECT 1 FROM badges_utilisateurs WHERE user_id=%s AND badge_id='comeback'", (id,))
+        if not curseur.fetchone():
+            curseur.execute("INSERT INTO badges_utilisateurs (user_id, badge_id) VALUES (%s, 'comeback')", (id,))
+            db.commit()
+
     curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=TRUE", (id,))
     nb_terminees = curseur.fetchone()['nb']
     nouveaux_badges = verifier_badges(curseur, db, id, nb_terminees, total_pts, streak)
 
     # ── HOOKS NOTIF instant : niveau-up + streak milestones + badges ──
     try:
-        niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende",7:"Mythique",8:"Immortel"}
         # 1. Niveau up
         if nouveau_niveau > niveau_avant:
-            label = niveaux_labels.get(nouveau_niveau, f"Niveau {nouveau_niveau}")
+            label = niveau_label(nouveau_niveau)
             envoyer_push_smart(curseur, db, id, f"levelup_{nouveau_niveau}",
                 f"🏆 Niveau {nouveau_niveau} débloqué — {label}",
                 f"Tu passes au palier supérieur. Continue à pousser.",
@@ -1517,37 +1572,252 @@ def update_points(id):
     return jsonify({"points": total_pts, "niveau": nouveau_niveau, "streak": streak, "nouveaux_badges": nouveaux_badges})
 
 # ============================================
-# BADGES
+# BADGES + NIVEAUX — refonte 2026-05-18 (4 piliers, anti-burnout)
 # ============================================
 
-REGLES_BADGES = [
-    {"id": "first_task",  "nom": "Premier pas",      "icon": "🌱", "description": "Première tâche terminée",        "condition": lambda t, p, s: t >= 1},
-    {"id": "five_tasks",  "nom": "En rythme",        "icon": "🔥", "description": "5 tâches terminées",             "condition": lambda t, p, s: t >= 5},
-    {"id": "ten_tasks",   "nom": "Productif",        "icon": "⚡", "description": "10 tâches terminées",            "condition": lambda t, p, s: t >= 10},
-    {"id": "fifty_tasks", "nom": "Machine",          "icon": "🤖", "description": "50 tâches terminées",            "condition": lambda t, p, s: t >= 50},
-    {"id": "century",     "nom": "Centurion",        "icon": "💯", "description": "100 tâches terminées",           "condition": lambda t, p, s: t >= 100},
-    {"id": "pts_100",     "nom": "Débutant",         "icon": "🥉", "description": "100 points gagnés",             "condition": lambda t, p, s: p >= 100},
-    {"id": "pts_500",     "nom": "Confirmé",         "icon": "🥈", "description": "500 points gagnés",             "condition": lambda t, p, s: p >= 500},
-    {"id": "pts_1000",    "nom": "Expert",           "icon": "🥇", "description": "1000 points gagnés",            "condition": lambda t, p, s: p >= 1000},
-    {"id": "pts_5000",    "nom": "Maître",           "icon": "👑", "description": "5000 points gagnés",            "condition": lambda t, p, s: p >= 5000},
-    {"id": "streak_3",    "nom": "3 jours de suite", "icon": "🔥", "description": "Actif 3 jours consécutifs",     "condition": lambda t, p, s: s >= 3},
-    {"id": "streak_7",    "nom": "Semaine parfaite", "icon": "📅", "description": "Actif 7 jours consécutifs",     "condition": lambda t, p, s: s >= 7},
-    {"id": "streak_30",   "nom": "Mois de feu",      "icon": "🌟", "description": "Actif 30 jours consécutifs",    "condition": lambda t, p, s: s >= 30},
-    {"id": "early_bird",  "nom": "Lève-tôt",         "icon": "🌅", "description": "Tâche terminée avant 8h",      "condition": lambda t, p, s: False},
-    {"id": "night_owl",   "nom": "Noctambule",       "icon": "🦉", "description": "Tâche terminée après 23h",     "condition": lambda t, p, s: False},
-    {"id": "speedster",   "nom": "Fulgurant",        "icon": "⚡", "description": "5 tâches terminées en 1 jour", "condition": lambda t, p, s: False},
+# 10 paliers — synchronisés avec frontend-react/src/data/badges.js
+NIVEAUX = [
+    (1,  0,     "Démarrage"),
+    (2,  100,   "Apprenti"),
+    (3,  250,   "Régulier"),
+    (4,  500,   "Discipliné"),
+    (5,  1000,  "Stratège"),
+    (6,  2000,  "Expert"),
+    (7,  4000,  "Maître"),
+    (8,  8000,  "Architecte"),
+    (9,  15000, "Visionnaire"),
+    (10, 30000, "Légende"),
 ]
 
+def niveau_for_points(pts):
+    """Retourne (niveau:int, label:str) à partir des points."""
+    current = (1, "Démarrage")
+    for n, m, label in NIVEAUX:
+        if pts >= m:
+            current = (n, label)
+        else:
+            break
+    return current
+
+def niveau_label(niveau):
+    for n, _, label in NIVEAUX:
+        if n == niveau:
+            return label
+    return f"Niveau {niveau}"
+
+# ── REGLES_BADGES : 27 badges, 4 piliers ─────────────────────────────
+# condition: lambda(t, p, s) pour les badges simples (t=nb terminées, p=points, s=streak)
+# complex: nom de fonction dans CONDITIONS_COMPLEXES pour les badges nécessitant une SQL spéciale
+REGLES_BADGES = [
+    # ── DISCIPLINE ────────────────────────────────────────────────────
+    {"id": "streak_3",    "nom": "En route",           "categorie": "discipline", "tier": "common",    "description": "Actif 3 jours consécutifs",                "condition": lambda t, p, s: s >= 3},
+    {"id": "streak_7",    "nom": "Semaine parfaite",   "categorie": "discipline", "tier": "rare",      "description": "Actif 7 jours consécutifs",                "condition": lambda t, p, s: s >= 7},
+    {"id": "streak_14",   "nom": "Quinzaine d'or",     "categorie": "discipline", "tier": "rare",      "description": "Actif 14 jours consécutifs",               "condition": lambda t, p, s: s >= 14},
+    {"id": "streak_21",   "nom": "Habit Loop",         "categorie": "discipline", "tier": "epic",      "description": "21 jours — l'habitude est ancrée",         "condition": lambda t, p, s: s >= 21},
+    {"id": "streak_30",   "nom": "Mois de feu",        "categorie": "discipline", "tier": "legendary", "description": "Actif 30 jours consécutifs",               "condition": lambda t, p, s: s >= 30},
+    {"id": "streak_100",  "nom": "Centurion du temps", "categorie": "discipline", "tier": "legendary", "description": "100 jours consécutifs — discipline ultime","condition": lambda t, p, s: s >= 100},
+    {"id": "comeback",    "nom": "Phénix",             "categorie": "discipline", "tier": "rare",      "description": "Reprendre après 5 jours d'absence",        "complex": "comeback"},
+
+    # ── EXCELLENCE ────────────────────────────────────────────────────
+    {"id": "priority_first", "nom": "Premier tir",         "categorie": "excellence", "tier": "common",    "description": "Tâche haute priorité en 1ère action du jour", "complex": "priority_first"},
+    {"id": "clean_week",     "nom": "Tableau propre",      "categorie": "excellence", "tier": "rare",      "description": "7 jours sans tâche en retard",                "complex": "clean_week"},
+    {"id": "triple_high",    "nom": "Triple impact",       "categorie": "excellence", "tier": "rare",      "description": "3 tâches haute priorité terminées en 1 jour", "complex": "triple_high"},
+    {"id": "deep_focus",     "nom": "Flow d'or",           "categorie": "excellence", "tier": "epic",      "description": "Session focus ≥ 90 min sans pause",           "condition": lambda t, p, s: False},  # nécessite infra pomodoro
+    {"id": "goal_crusher",   "nom": "Briseur d'objectif",  "categorie": "excellence", "tier": "legendary", "description": "Compléter un Goal Reverse entier",            "complex": "goal_crusher"},
+
+    # ── MAÎTRISE ──────────────────────────────────────────────────────
+    {"id": "first_task",        "nom": "Premier pas",          "categorie": "maitrise", "tier": "common",    "description": "Première tâche terminée", "condition": lambda t, p, s: t >= 1},
+    {"id": "five_tasks",        "nom": "En rythme",            "categorie": "maitrise", "tier": "common",    "description": "5 tâches terminées",      "condition": lambda t, p, s: t >= 5},
+    {"id": "ten_tasks",         "nom": "Productif",            "categorie": "maitrise", "tier": "rare",      "description": "10 tâches terminées",     "condition": lambda t, p, s: t >= 10},
+    {"id": "twenty_five_tasks", "nom": "Vitesse de croisière", "categorie": "maitrise", "tier": "rare",      "description": "25 tâches terminées",     "condition": lambda t, p, s: t >= 25},
+    {"id": "fifty_tasks",       "nom": "Machine",              "categorie": "maitrise", "tier": "epic",      "description": "50 tâches terminées",     "condition": lambda t, p, s: t >= 50},
+    {"id": "century",           "nom": "Centurion",            "categorie": "maitrise", "tier": "legendary", "description": "100 tâches terminées",    "condition": lambda t, p, s: t >= 100},
+    {"id": "pts_500",           "nom": "Ascension",            "categorie": "maitrise", "tier": "rare",      "description": "500 points gagnés",       "condition": lambda t, p, s: p >= 500},
+    {"id": "pts_2000",          "nom": "Sommet",               "categorie": "maitrise", "tier": "epic",      "description": "2 000 points gagnés",     "condition": lambda t, p, s: p >= 2000},
+    {"id": "pts_10000",         "nom": "Cinq chiffres",        "categorie": "maitrise", "tier": "legendary", "description": "10 000 points gagnés",    "condition": lambda t, p, s: p >= 10000},
+
+    # ── SAGESSE — features IA + équilibre ────────────────────────────
+    {"id": "tomorrow_user",  "nom": "Plan B+",                "categorie": "sagesse", "tier": "common",    "description": "Première utilisation de Tomorrow Builder",     "complex": "tomorrow_user"},
+    {"id": "goal_setter",    "nom": "Cap fixé",               "categorie": "sagesse", "tier": "rare",      "description": "Premier objectif créé avec Goal Reverse",      "complex": "goal_setter"},
+    {"id": "ai_coach",       "nom": "Disciple du coach",      "categorie": "sagesse", "tier": "rare",      "description": "5 conversations avec le Coach IA",             "complex": "ai_coach"},
+    {"id": "planner_pro",    "nom": "Architecte du lendemain","categorie": "sagesse", "tier": "epic",      "description": "Tomorrow Builder utilisé 7 jours d'affilée",   "complex": "planner_pro"},
+    {"id": "ia_power_user",  "nom": "Architecte IA",          "categorie": "sagesse", "tier": "epic",      "description": "Les 3 IA (Tomorrow, Goal, Coach) en 1 semaine","complex": "ia_power_user"},
+    {"id": "balance_master", "nom": "Équilibriste",           "categorie": "sagesse", "tier": "epic",      "description": "Streak 7j + 1 jour de pause volontaire",       "complex": "balance_master"},
+    {"id": "mentor",         "nom": "Bâtisseur",              "categorie": "sagesse", "tier": "legendary", "description": "Équipe avec ≥ 3 collaborateurs actifs",        "complex": "mentor"},
+]
+
+# ── Conditions complexes — évaluées via SQL ──────────────────────────
+def _check_comeback(curseur, user_id):
+    """A repris l'activité après ≥5 jours d'absence."""
+    curseur.execute("SELECT derniere_activite FROM users WHERE id=%s", (user_id,))
+    r = curseur.fetchone()
+    if not r or not r.get('derniere_activite'): return False
+    # Note: ce badge est attribué lors du reset streak. La fonction simple ici
+    # vérifie via metadata stockée (set par la logique streak quand reset après gap≥5j).
+    # Retour: True si flag _comeback_pending récent. On gère ça via la logique streak directement.
+    return False  # géré directement par la logique streak (voir terminer_tache hook)
+
+def _check_priority_first(curseur, user_id):
+    """La 1ère tâche terminée d'aujourd'hui était de priorité haute."""
+    curseur.execute("""
+        SELECT priorite FROM taches
+        WHERE user_id=%s AND terminee=TRUE AND DATE(terminee_le)=CURDATE()
+        ORDER BY terminee_le ASC LIMIT 1
+    """, (user_id,))
+    r = curseur.fetchone()
+    return bool(r and r.get('priorite') == 'haute')
+
+def _check_clean_week(curseur, user_id):
+    """Sur les 7 derniers jours, aucune tâche avec deadline passée et non terminée."""
+    # Vérifie l'absence de tâches en retard ANCIENNE (deadline < aujourd'hui mais non terminée)
+    # ET que l'user a au moins 1 tâche terminée dans la fenêtre (sinon trivial)
+    curseur.execute("""
+        SELECT COUNT(*) as nb_retard FROM taches
+        WHERE user_id=%s AND terminee=FALSE AND deadline IS NOT NULL
+              AND deadline < CURDATE()
+    """, (user_id,))
+    if (curseur.fetchone() or {}).get('nb_retard', 0) > 0: return False
+    curseur.execute("""
+        SELECT COUNT(*) as nb_done FROM taches
+        WHERE user_id=%s AND terminee=TRUE AND terminee_le >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    """, (user_id,))
+    return (curseur.fetchone() or {}).get('nb_done', 0) > 0
+
+def _check_triple_high(curseur, user_id):
+    """3 tâches de priorité haute terminées le même jour."""
+    curseur.execute("""
+        SELECT DATE(terminee_le) as jour, COUNT(*) as nb FROM taches
+        WHERE user_id=%s AND terminee=TRUE AND priorite='haute' AND terminee_le IS NOT NULL
+        GROUP BY DATE(terminee_le)
+        HAVING nb >= 3
+        LIMIT 1
+    """, (user_id,))
+    return curseur.fetchone() is not None
+
+def _check_goal_crusher(curseur, user_id):
+    """Au moins 1 objectif terminé dans la table objectifs."""
+    try:
+        curseur.execute("SELECT COUNT(*) as nb FROM objectifs WHERE user_id=%s AND statut='termine'", (user_id,))
+        return (curseur.fetchone() or {}).get('nb', 0) > 0
+    except Exception:
+        return False
+
+def _check_tomorrow_user(curseur, user_id):
+    """Au moins 1 planning Tomorrow Builder généré."""
+    try:
+        curseur.execute("SELECT COUNT(*) as nb FROM tomorrow_plans WHERE user_id=%s", (user_id,))
+        return (curseur.fetchone() or {}).get('nb', 0) > 0
+    except Exception:
+        return False
+
+def _check_goal_setter(curseur, user_id):
+    """Au moins 1 objectif créé dans la table objectifs."""
+    try:
+        curseur.execute("SELECT COUNT(*) as nb FROM objectifs WHERE user_id=%s", (user_id,))
+        return (curseur.fetchone() or {}).get('nb', 0) > 0
+    except Exception:
+        return False
+
+def _check_ai_coach(curseur, user_id):
+    """≥ 5 messages utilisateur dans coach_messages."""
+    try:
+        curseur.execute("SELECT COUNT(*) as nb FROM coach_messages WHERE user_id=%s AND role='user'", (user_id,))
+        return (curseur.fetchone() or {}).get('nb', 0) >= 5
+    except Exception:
+        return False
+
+def _check_planner_pro(curseur, user_id):
+    """7 jours d'affilée avec un Tomorrow Builder généré."""
+    try:
+        curseur.execute("""
+            SELECT DISTINCT DATE(cree_le) as jour FROM tomorrow_plans
+            WHERE user_id=%s AND cree_le >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+            ORDER BY jour DESC
+        """, (user_id,))
+        rows = [r['jour'] for r in curseur.fetchall()]
+        if len(rows) < 7: return False
+        # Compter le plus long run consécutif
+        from datetime import timedelta
+        run = 1; best = 1
+        for i in range(1, len(rows)):
+            if rows[i-1] - rows[i] == timedelta(days=1):
+                run += 1; best = max(best, run)
+            else:
+                run = 1
+        return best >= 7
+    except Exception:
+        return False
+
+def _check_ia_power_user(curseur, user_id):
+    """Les 3 features IA (tomorrow_plans + objectifs + coach_messages) utilisées dans une fenêtre 7j."""
+    try:
+        curseur.execute("SELECT 1 FROM tomorrow_plans WHERE user_id=%s AND cree_le >= DATE_SUB(NOW(), INTERVAL 7 DAY) LIMIT 1", (user_id,))
+        if not curseur.fetchone(): return False
+        curseur.execute("SELECT 1 FROM objectifs WHERE user_id=%s AND cree_le >= DATE_SUB(NOW(), INTERVAL 7 DAY) LIMIT 1", (user_id,))
+        if not curseur.fetchone(): return False
+        curseur.execute("SELECT 1 FROM coach_messages WHERE user_id=%s AND role='user' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) LIMIT 1", (user_id,))
+        return curseur.fetchone() is not None
+    except Exception:
+        return False
+
+def _check_balance_master(curseur, user_id):
+    """Streak ≥ 7 + au moins 1 freeze utilisé (preuve de pause volontaire)."""
+    curseur.execute("SELECT streak, streak_freeze_used_at FROM users WHERE id=%s", (user_id,))
+    r = curseur.fetchone() or {}
+    return (r.get('streak') or 0) >= 7 and r.get('streak_freeze_used_at') is not None
+
+def _check_mentor(curseur, user_id):
+    """L'utilisateur a créé une équipe avec ≥ 3 collaborateurs actifs (lui inclus)."""
+    try:
+        curseur.execute("""
+            SELECT e.id, COUNT(em.user_id) as nb FROM equipes e
+            JOIN equipe_membres em ON em.equipe_id=e.id
+            WHERE e.createur_id=%s
+            GROUP BY e.id
+            HAVING nb >= 3
+            LIMIT 1
+        """, (user_id,))
+        return curseur.fetchone() is not None
+    except Exception:
+        return False
+
+CONDITIONS_COMPLEXES = {
+    "comeback":       _check_comeback,
+    "priority_first": _check_priority_first,
+    "clean_week":     _check_clean_week,
+    "triple_high":    _check_triple_high,
+    "goal_crusher":   _check_goal_crusher,
+    "tomorrow_user":  _check_tomorrow_user,
+    "goal_setter":    _check_goal_setter,
+    "ai_coach":       _check_ai_coach,
+    "planner_pro":    _check_planner_pro,
+    "ia_power_user":  _check_ia_power_user,
+    "balance_master": _check_balance_master,
+    "mentor":         _check_mentor,
+}
+
 def verifier_badges(curseur, db, user_id, nb_terminees, points_total, streak):
+    """Évalue toutes les règles. Insère + retourne les nouveaux badges débloqués."""
     curseur.execute("SELECT badge_id FROM badges_utilisateurs WHERE user_id=%s", (user_id,))
     deja_obtenus = {r['badge_id'] for r in curseur.fetchall()}
     nouveaux = []
     for regle in REGLES_BADGES:
         if regle['id'] in deja_obtenus:
             continue
-        if regle['condition'](nb_terminees, points_total, streak):
+        ok = False
+        if "condition" in regle:
+            try:
+                ok = regle["condition"](nb_terminees, points_total, streak)
+            except Exception:
+                ok = False
+        elif "complex" in regle:
+            fn = CONDITIONS_COMPLEXES.get(regle["complex"])
+            if fn:
+                try: ok = fn(curseur, user_id)
+                except Exception: ok = False
+        if ok:
             curseur.execute("INSERT INTO badges_utilisateurs (user_id, badge_id) VALUES (%s, %s)", (user_id, regle['id']))
-            nouveaux.append({"id": regle['id'], "nom": regle['nom'], "icon": regle['icon'], "description": regle['description']})
+            nouveaux.append({"id": regle['id'], "nom": regle['nom'], "description": regle['description'], "tier": regle.get('tier'), "categorie": regle.get('categorie')})
     return nouveaux
 
 @app.route('/users/<int:id>/badges', methods=['GET'])
@@ -1557,15 +1827,40 @@ def get_badges(id):
         curseur = db.cursor(dictionary=True)
         curseur.execute("SELECT badge_id, obtenu_le FROM badges_utilisateurs WHERE user_id=%s", (id,))
         obtenus = {r['badge_id']: r['obtenu_le'] for r in curseur.fetchall()}
-        curseur.execute("SELECT points, streak FROM users WHERE id=%s", (id,))
+        curseur.execute("SELECT points, streak, streak_freeze_used_at FROM users WHERE id=%s", (id,))
         user = curseur.fetchone()
         db.close()
         result = []
         for b in REGLES_BADGES:
-            result.append({"id": b['id'], "nom": b['nom'], "icon": b['icon'], "description": b['description'], "obtenu": b['id'] in obtenus, "obtenu_le": str(obtenus[b['id']]) if b['id'] in obtenus else None})
-        return jsonify({"badges": result, "streak": user['streak'] if user else 0, "nb_obtenus": len(obtenus), "nb_total": len(REGLES_BADGES)})
+            result.append({
+                "id": b['id'],
+                "nom": b['nom'],
+                "description": b['description'],
+                "categorie": b.get('categorie'),
+                "tier": b.get('tier'),
+                "obtenu": b['id'] in obtenus,
+                "obtenu_le": str(obtenus[b['id']]) if b['id'] in obtenus else None,
+            })
+        return jsonify({
+            "badges": result,
+            "streak": user['streak'] if user else 0,
+            "streak_freeze_disponible": _freeze_disponible(user),
+            "nb_obtenus": len(obtenus),
+            "nb_total": len(REGLES_BADGES),
+        })
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
+
+def _freeze_disponible(user):
+    """Le Streak Freeze est dispo si pas utilisé cette semaine ISO."""
+    if not user: return True
+    from datetime import date
+    used = user.get('streak_freeze_used_at') if isinstance(user, dict) else None
+    if not used: return True
+    used_date = used if isinstance(used, date) else (used.date() if used else None)
+    if not used_date: return True
+    aujourd_hui = date.today()
+    return used_date.isocalendar()[:2] != aujourd_hui.isocalendar()[:2]
 
 @app.route('/users/<int:id>/streak', methods=['GET'])
 def get_streak(id):
@@ -1616,8 +1911,7 @@ def dashboard_stats(user_id):
         next_threshold = BRACKETS[niveau_actuel] if niveau_actuel < len(BRACKETS) else (BRACKETS[-1] + 1500)
         progres_niveau = round((points - prev_threshold) / max(1, next_threshold - prev_threshold) * 100)
         progres_niveau = max(0, min(100, progres_niveau))
-        niveaux_labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende"}
-        niveau_label = niveaux_labels.get(niveau_actuel, f"Niveau {niveau_actuel}")
+        niveau_nom = niveau_label(niveau_actuel)
 
         # Streak — auto-reset si > 1 jour d'inactivité
         streak = u['streak'] or 0
@@ -1649,7 +1943,7 @@ def dashboard_stats(user_id):
         db.close()
         return jsonify({
             "niveau": niveau_actuel,
-            "niveau_label": niveau_label,
+            "niveau_label": niveau_nom,
             "points": points,
             "points_to_next": max(0, next_threshold - points),
             "progres_niveau": progres_niveau,
@@ -1778,7 +2072,11 @@ def terminer_tache(id):
         curseur.execute("SELECT COUNT(*) as nb_bloquantes FROM dependances d JOIN taches t ON d.depend_de_id = t.id WHERE d.tache_id = %s AND t.terminee = FALSE", (id,))
         if curseur.fetchone()['nb_bloquantes'] > 0:
             db.close(); return jsonify({"erreur": "Cette tâche est bloquée par des dépendances non terminées"}), 400
-    curseur.execute("UPDATE taches SET terminee=%s WHERE id=%s", (data['terminee'], id))
+    # terminee_le = NOW() quand on coche, NULL quand on décoche (utile pour priority_first / triple_high)
+    if data.get('terminee'):
+        curseur.execute("UPDATE taches SET terminee=TRUE, terminee_le=NOW() WHERE id=%s", (id,))
+    else:
+        curseur.execute("UPDATE taches SET terminee=FALSE, terminee_le=NULL WHERE id=%s", (id,))
     db.commit(); db.close()
     return jsonify({"message": "Tâche mise à jour !"})
 
@@ -1925,7 +2223,7 @@ def executer_ia():
         if tache_id:
             db = connecter()
             curseur = db.cursor()
-            curseur.execute("UPDATE taches SET terminee=TRUE WHERE id=%s", (tache_id,))
+            curseur.execute("UPDATE taches SET terminee=TRUE, terminee_le=NOW() WHERE id=%s", (tache_id,))
             db.commit(); db.close()
         return jsonify({"reponse": reponse, "modele": modele, "tache_id": tache_id})
     except Exception as e:
@@ -6565,7 +6863,7 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
                 row = cur.fetchone()
                 if not row: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche non trouvée"}
                 titre = row['titre']
-            cur.execute("UPDATE taches SET terminee=TRUE WHERE id=%s AND user_id=%s", (tache_id, user_id))
+            cur.execute("UPDATE taches SET terminee=TRUE, terminee_le=NOW() WHERE id=%s AND user_id=%s", (tache_id, user_id))
             cur.execute("UPDATE users SET points = COALESCE(points,0) + 20 WHERE id=%s", (user_id,))
             db.commit()
             result.update({"id": tache_id, "titre": titre})
