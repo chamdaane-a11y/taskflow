@@ -1696,6 +1696,12 @@ def supprimer_categorie(id):
 def get_taches(user_id):
     db = connecter()
     curseur = db.cursor(dictionary=True)
+    # Migration lazy : aligne priorite='faible' (héritée des prompts IA) sur 'basse'
+    try:
+        curseur.execute("UPDATE taches SET priorite='basse' WHERE user_id=%s AND priorite='faible'", (user_id,))
+        db.commit()
+    except Exception:
+        pass
     curseur.execute("""
         SELECT t.*, c.nom as categorie_nom, c.couleur as categorie_couleur
         FROM taches t LEFT JOIN categories c ON t.categorie_id = c.id
@@ -5611,7 +5617,7 @@ FORMAT JSON STRICT (rien d'autre, pas de markdown):
     "titre": "<string>",
     "date_fin": "YYYY-MM-DD",
     "difficulte": "faible|moyenne|élevée",
-    "taches": [{{"titre": "<string>", "duree_estimee": <int>, "priorite": "faible|moyenne|haute", "deadline": "YYYY-MM-DD"}}]
+    "taches": [{{"titre": "<string>", "duree_estimee": <int>, "priorite": "basse|moyenne|haute", "deadline": "YYYY-MM-DD"}}]
   }}]
 }}"""
     try:
@@ -5661,12 +5667,18 @@ def goal_reverse_importer():
                  objectif_coach))
             objectif_id = cursor.lastrowid
         for t in taches:
+            # Normalisation : 'faible' (synonyme IA) → 'basse' pour cohérence frontend
+            prio = t['priorite']
+            if prio == 'faible':
+                prio = 'basse'
+            elif prio not in ('haute', 'moyenne', 'basse'):
+                prio = 'moyenne'
             if objectif_id:
                 cursor.execute("INSERT INTO taches (titre, priorite, deadline, user_id, objectif_id) VALUES (%s, %s, %s, %s, %s)",
-                    (t['titre'], t['priorite'], t['deadline'], user_id, objectif_id))
+                    (t['titre'], prio, t['deadline'], user_id, objectif_id))
             else:
                 cursor.execute("INSERT INTO taches (titre, priorite, deadline, user_id) VALUES (%s, %s, %s, %s)",
-                    (t['titre'], t['priorite'], t['deadline'], user_id))
+                    (t['titre'], prio, t['deadline'], user_id))
             ids_crees.append(cursor.lastrowid)
         conn.commit(); cursor.close(); conn.close()
         return jsonify({"message": f"{len(ids_crees)} tâches importées avec succès",
@@ -5817,7 +5829,7 @@ FORMAT JSON STRICT (rien d'autre) — même schéma que le plan actuel:
   "risques": ["<string>"],
   "jalons": [{{"semaine": <int>, "titre": "<string>", "date_fin": "YYYY-MM-DD",
     "difficulte": "faible|moyenne|élevée",
-    "taches": [{{"titre": "<string>", "duree_estimee": <int>, "priorite": "faible|moyenne|haute", "deadline": "YYYY-MM-DD"}}]}}]
+    "taches": [{{"titre": "<string>", "duree_estimee": <int>, "priorite": "basse|moyenne|haute", "deadline": "YYYY-MM-DD"}}]}}]
 }}"""
 
         response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile",

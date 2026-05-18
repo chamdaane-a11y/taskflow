@@ -266,8 +266,10 @@ export function getGanttDays(n = 30, offsetDays = -5) {
   })
 }
 
-export const pColor = (p) => ({ haute: '#ef4444', moyenne: '#f59e0b', basse: '#10b981' })[p] ?? '#6366f1'
-export const pBg    = (p) => ({ haute: '#ef444415', moyenne: '#f59e0b15', basse: '#10b98115' })[p] ?? '#6366f115'
+// 'faible' est un synonyme de 'basse' que l'IA utilise parfois — on aligne pour éviter le fallback violet
+const _normP = (p) => (p === 'faible' ? 'basse' : p)
+export const pColor = (p) => ({ haute: '#ef4444', moyenne: '#f59e0b', basse: '#10b981' })[_normP(p)] ?? '#10b981'
+export const pBg    = (p) => ({ haute: '#ef444415', moyenne: '#f59e0b15', basse: '#10b98115' })[_normP(p)] ?? '#10b98115'
 
 // ── Month helpers ─────────────────────────────────────────────────────
 
