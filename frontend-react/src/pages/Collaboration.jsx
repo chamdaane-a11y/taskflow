@@ -1733,6 +1733,7 @@ export default function Collaboration() {
   const [labels, setLabels] = useState([])
   const [filtreLabelId, setFiltreLabelId] = useState(null)
   const [showLabelsPopover, setShowLabelsPopover] = useState(false)
+  const [loadingEquipe, setLoadingEquipe] = useState(false)
 
   const isAdmin = membres.some(m => m.id === user?.id && m.role === 'admin')
 
@@ -1816,7 +1817,15 @@ export default function Collaboration() {
   }, [])
 
   useEffect(() => {
-    if (equipeActive) { chargerMembres(equipeActive.id); chargerTaches(equipeActive.id); chargerLabels(equipeActive.id); setFiltreLabelId(null) }
+    if (!equipeActive) return
+    setFiltreLabelId(null)
+    setLoadingEquipe(true)
+    // Parallélise les 3 fetches au lieu de les attendre séquentiellement
+    Promise.all([
+      chargerMembres(equipeActive.id),
+      chargerTaches(equipeActive.id),
+      chargerLabels(equipeActive.id),
+    ]).finally(() => setLoadingEquipe(false))
   }, [equipeActive])
 
   // ===== POLLING INTELLIGENT =====
@@ -2259,14 +2268,8 @@ export default function Collaboration() {
           )}
 
           {isMobile ? (
-            /* Mobile — +Tâche + ••• overflow */
+            /* Mobile — ••• overflow (le +Tâche est au niveau de chaque colonne du kanban) */
             <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
-              {equipeActive && (
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `${T.accent}18`, border: `1px solid ${T.accent}35`, borderRadius: 9, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                  onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileTap={{ scale: 0.95 }}>
-                  <Plus size={14} />
-                </motion.button>
-              )}
               <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showMoreMenu ? `${T.accent}18` : T.bg3, border: `1px solid ${showMoreMenu ? T.accent + '55' : T.border}`, borderRadius: 9, color: showMoreMenu ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
                 onClick={() => setShowMoreMenu(p => !p)} whileTap={{ scale: 0.95 }}>
                 <MoreHorizontal size={14} />
@@ -2346,12 +2349,6 @@ export default function Collaboration() {
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, cursor: 'pointer' }}
                   onClick={() => setShowPartage(equipeActive)} whileHover={{ borderColor: T.accent, color: T.accent }}>
                   <Share2 size={13} /> Inviter
-                </motion.button>
-              )}
-              {equipeActive && (
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `${T.accent}18`, border: `1px solid ${T.accent}35`, borderRadius: 9, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                  onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileHover={{ scale: 1.02 }}>
-                  <Plus size={13} /> Tâche
                 </motion.button>
               )}
               <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, cursor: 'pointer' }}
@@ -2523,7 +2520,7 @@ export default function Collaboration() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.couleur }} />
                         <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{col.label}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: col.bg, color: col.couleur }}>{tachesCol(col.id).length}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: col.bg, color: col.couleur }}>{loadingEquipe ? '·' : tachesCol(col.id).length}</span>
                       </div>
                       <motion.button style={{ width: 24, height: 24, borderRadius: 7, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileHover={{ borderColor: col.couleur, color: col.couleur }}>
@@ -2532,22 +2529,34 @@ export default function Collaboration() {
                     </div>
                     <ColonneDroppable T={T} col={col} isOver={overCol === col.id}>
                       <QuickAddInline T={T} col={col} onAdd={(titre) => creerTacheRapide(titre, col.id)} />
-                      <AnimatePresence>
-                        {tachesCol(col.id).map(t => (
-                          <CarteTache key={t.id} T={T} tache={t} membres={membres} user={user}
-                            onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
-                            onOuvrir={setTacheCommentaires}
-                            onAssign={quickAssigner}
-                            onToggleFait={toggleFait}
-                            onDemarrer={demarrerTache} />
-                        ))}
-                      </AnimatePresence>
-                      {tachesCol(col.id).length === 0 && (
-                        <div style={{ padding: '24px 0', textAlign: 'center', border: `2px dashed ${overCol === col.id ? col.couleur + '60' : T.border}`, borderRadius: 10, transition: 'border-color 0.2s' }}>
-                          <p style={{ fontSize: 11, color: overCol === col.id ? col.couleur : T.text2, opacity: 0.6 }}>
-                            {overCol === col.id ? '↓ Déposer ici' : 'Vide'}
-                          </p>
-                        </div>
+                      {loadingEquipe ? (
+                        // Skeleton : 2 cartes shimmer pendant le 1er chargement (perception fluide)
+                        [0, 1].map(k => (
+                          <motion.div key={`sk-${k}`}
+                            animate={{ opacity: [0.4, 0.7, 0.4] }}
+                            transition={{ duration: 1.4, repeat: Infinity, delay: k * 0.2 }}
+                            style={{ height: 64, marginBottom: 8, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}` }} />
+                        ))
+                      ) : (
+                        <>
+                          <AnimatePresence>
+                            {tachesCol(col.id).map(t => (
+                              <CarteTache key={t.id} T={T} tache={t} membres={membres} user={user}
+                                onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
+                                onOuvrir={setTacheCommentaires}
+                                onAssign={quickAssigner}
+                                onToggleFait={toggleFait}
+                                onDemarrer={demarrerTache} />
+                            ))}
+                          </AnimatePresence>
+                          {tachesCol(col.id).length === 0 && (
+                            <div style={{ padding: '24px 0', textAlign: 'center', border: `2px dashed ${overCol === col.id ? col.couleur + '60' : T.border}`, borderRadius: 10, transition: 'border-color 0.2s' }}>
+                              <p style={{ fontSize: 11, color: overCol === col.id ? col.couleur : T.text2, opacity: 0.6 }}>
+                                {overCol === col.id ? '↓ Déposer ici' : 'Vide'}
+                              </p>
+                            </div>
+                          )}
+                        </>
                       )}
                     </ColonneDroppable>
                   </div>
