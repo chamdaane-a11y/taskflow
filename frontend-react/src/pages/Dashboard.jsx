@@ -24,6 +24,7 @@ import OutilsIntegrations from './OutilsIntegrations'
 import TemplateIconBox from './CustomIcons'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import ProchainBadgeBanner from '../components/ProchainBadgeBanner'
 import { BADGES_CONFIG } from '../data/badges'
 import { parseTaskInput, getPrioriteColor, getPrioriteBg } from '../utils/parseTask'
 
@@ -2610,6 +2611,9 @@ export default function Dashboard() {
 
           {/* Stats HUD — Niveau / Streak / Points semaine / Réussite (caché si nouveau user) */}
           {!isNewUser && <StatsHUD d={d} T={T} isMobile={isMobile} />}
+
+          {/* Prochain badge à débloquer — motivation forward-looking */}
+          {!isNewUser && <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />}
 
           {/* Objectifs Goal Reverse en cours */}
           {!isNewUser && <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />}
