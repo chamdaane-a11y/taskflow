@@ -25,7 +25,9 @@ function LoginInner() {
       const res = await axios.post(`${API}/login`, { email, password }, { withCredentials: true })
       localStorage.setItem('user', JSON.stringify(res.data.user))
       localStorage.setItem('theme', res.data.user.theme || 'dark')
-      navigate('/dashboard')
+      // Reprise d'une invitation d'équipe interrompue (scan QR sans compte)
+      const pendingCode = (() => { try { return sessionStorage.getItem('pending_invite_code') } catch { return null } })()
+      navigate(pendingCode ? `/collaboration?code=${encodeURIComponent(pendingCode)}` : '/dashboard')
     } catch (err) {
       const data = err.response?.data
       if (data?.non_verifie) { setNonVerifie(true); setErreur(data.erreur) }

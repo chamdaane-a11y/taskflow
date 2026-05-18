@@ -47,7 +47,8 @@ function RegisterInner() {
         }, { withCredentials: true })
         localStorage.setItem('user', JSON.stringify(res.data.user))
         localStorage.setItem('theme', res.data.user.theme || 'dark')
-        navigate('/dashboard')
+        const pendingCode = (() => { try { return sessionStorage.getItem('pending_invite_code') } catch { return null } })()
+        navigate(pendingCode ? `/collaboration?code=${encodeURIComponent(pendingCode)}` : '/dashboard')
       } catch (err) {
         setErreur(err.response?.data?.erreur || 'Erreur Google')
       }

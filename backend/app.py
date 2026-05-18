@@ -2290,19 +2290,45 @@ def creer_equipe():
 @app.route('/equipes/rejoindre', methods=['POST'])
 def rejoindre_equipe():
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
+        code = (data.get('code') or '').strip()
+        user_id = data.get('user_id')
+
+        # Validation entrée
+        if not code:
+            return jsonify({"erreur": "Code d'invitation requis"}), 400
+        if not user_id or not isinstance(user_id, int):
+            return jsonify({"erreur": "Tu dois être connecté pour rejoindre une équipe", "code_erreur": "AUTH_REQUIRED"}), 401
+
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("SELECT * FROM equipes WHERE code_invitation=%s", (data['code'],))
+
+        # Vérif user_id existe vraiment (sinon FK 1452 sur l'INSERT)
+        curseur.execute("SELECT id FROM users WHERE id=%s", (user_id,))
+        if not curseur.fetchone():
+            db.close()
+            return jsonify({
+                "erreur": "Ton compte n'existe plus. Reconnecte-toi.",
+                "code_erreur": "USER_INVALID"
+            }), 410
+
+        # Vérif code → équipe
+        curseur.execute("SELECT * FROM equipes WHERE code_invitation=%s", (code,))
         equipe = curseur.fetchone()
         if not equipe:
-            return jsonify({"erreur": "Code invalide"}), 404
-        curseur.execute("SELECT id FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe['id'], data['user_id']))
+            db.close()
+            return jsonify({"erreur": "Code d'invitation invalide ou expiré"}), 404
+
+        # Idempotence : déjà membre ?
+        curseur.execute("SELECT id FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe['id'], user_id))
         if curseur.fetchone():
-            return jsonify({"erreur": "Deja membre", "equipe": equipe}), 200
-        curseur.execute("INSERT INTO equipe_membres (equipe_id, user_id, role) VALUES (%s, %s, 'membre')", (equipe['id'], data['user_id']))
-        db.commit(); db.close()
-        return jsonify({"message": f"Vous avez rejoint {equipe['nom']} !", "equipe": equipe})
+            db.close()
+            return jsonify({"message": f"Tu es déjà membre de {equipe['nom']}", "equipe": equipe, "deja_membre": True}), 200
+
+        curseur.execute("INSERT INTO equipe_membres (equipe_id, user_id, role) VALUES (%s, %s, 'membre')", (equipe['id'], user_id))
+        db.commit()
+        db.close()
+        return jsonify({"message": f"Tu as rejoint {equipe['nom']} !", "equipe": equipe})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
