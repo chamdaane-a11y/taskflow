@@ -1010,9 +1010,8 @@ def demarrer_scheduler():
         schedule.run_pending()
         time.sleep(60)
 
-print("[BOOT] Démarrage scheduler...", flush=True)
-threading.Thread(target=demarrer_scheduler, daemon=True).start()
-print("[BOOT] Scheduler thread lancé", flush=True)
+# NOTE: le scheduler est lancé en fin de fichier, après la définition de tous
+# les job_* (notamment job_backup_quotidien défini après les routes).
 
 # ============================================
 # AUTO-MIGRATIONS (idempotentes)
@@ -2737,7 +2736,7 @@ def _ensure_sous_taches_schema(curseur):
 
 
 @app.route('/equipes/taches/<int:tache_id>/sous-taches', methods=['GET'])
-def get_sous_taches(tache_id):
+def get_sous_taches_equipe(tache_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
@@ -2751,7 +2750,7 @@ def get_sous_taches(tache_id):
 
 
 @app.route('/equipes/taches/<int:tache_id>/sous-taches', methods=['POST'])
-def creer_sous_tache(tache_id):
+def creer_sous_tache_equipe(tache_id):
     try:
         data = request.get_json() or {}
         titre = (data.get('titre') or '').strip()
@@ -2778,7 +2777,7 @@ def creer_sous_tache(tache_id):
 
 
 @app.route('/equipes/sous-taches/<int:sous_tache_id>/toggle', methods=['PATCH'])
-def toggle_sous_tache(sous_tache_id):
+def toggle_sous_tache_equipe(sous_tache_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
@@ -2797,7 +2796,7 @@ def toggle_sous_tache(sous_tache_id):
 
 
 @app.route('/equipes/sous-taches/<int:sous_tache_id>', methods=['DELETE'])
-def supprimer_sous_tache(sous_tache_id):
+def supprimer_sous_tache_equipe(sous_tache_id):
     try:
         db = connecter()
         curseur = db.cursor()
@@ -7582,6 +7581,13 @@ def telecharger_backup(backup_id):
 
 
 
+
+
+# ============================================
+# Scheduler — lancé ici pour que tous les job_* soient déjà définis
+print("[BOOT] Démarrage scheduler...", flush=True)
+threading.Thread(target=demarrer_scheduler, daemon=True).start()
+print("[BOOT] Scheduler thread lancé", flush=True)
 
 
 # ============================================
