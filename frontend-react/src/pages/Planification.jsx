@@ -11,7 +11,7 @@ import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import {
-  CalendarDays, LogOut, Layers, Sparkles,
+  Calendar, CalendarDays, LogOut, Layers, Sparkles,
   Menu, Columns, BarChart, CheckSquare, Check, Zap, Target, X,
   TrendingUp, AlertTriangle, Brain,
   ChevronRight, ChevronLeft, ChevronUp, Settings, User, Star, Flame, Flag,
