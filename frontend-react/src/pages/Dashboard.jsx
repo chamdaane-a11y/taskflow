@@ -1327,9 +1327,10 @@ const DnaInsightFooter = memo(function DnaInsightFooter({ d, T, isMobile }) {
   )
 })
 
-// ── TomorrowBuilderCTA — CTA contextuel pour planifier demain ────────────────
+// ── TomorrowBuilderCTA — CTA flottant contextuel pour planifier demain ────────
 // Apparaît uniquement après 17h ET si tâches actives > 0. Dismissible per day.
-const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, navigate }) {
+// Position: fixed en bas — toujours visible sans scroll.
+const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, navigate, mainMarginL = 0 }) {
   const hour = new Date().getHours()
   const tachesActives = d.dashboardStats?.taches_actives ?? d.statsTaches?.enCours ?? 0
 
@@ -1351,19 +1352,24 @@ const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, na
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
       onClick={() => navigate('/tomorrow')}
       whileHover={{ y: -2 }}
       style={{
-        position: 'relative',
+        position: 'fixed',
+        bottom: isMobile ? BOTTOM_NAV_HEIGHT + 12 : 20,
+        left: isMobile ? 12 : mainMarginL + 24,
+        right: isMobile ? 12 : 24,
+        maxWidth: isMobile ? undefined : 680,
+        marginLeft: isMobile ? undefined : 'auto',
+        marginRight: isMobile ? undefined : 'auto',
+        zIndex: 90,
         background: 'linear-gradient(135deg, #f59e0b 0%, #ec4899 60%, #6366f1 100%)',
         borderRadius: 16,
-        padding: isMobile ? '14px 14px' : '18px 22px',
-        marginTop: 22,
-        marginBottom: 12,
+        padding: isMobile ? '12px 14px' : '16px 22px',
         cursor: 'pointer',
         overflow: 'hidden',
-        boxShadow: '0 10px 32px rgba(236,72,153,0.25), 0 0 0 1px rgba(255,255,255,0.06)',
+        boxShadow: '0 12px 36px rgba(236,72,153,0.32), 0 0 0 1px rgba(255,255,255,0.08)',
       }}>
       {/* Décor : halo lumineux */}
       <div style={{
@@ -2959,10 +2965,11 @@ export default function Dashboard() {
             </AnimatePresence>
           )}
 
-          {/* Tomorrow Builder CTA — contextuel : après 17h + tâches actives */}
-          <TomorrowBuilderCTA d={d} T={T} isMobile={isMobile} navigate={navigate} />
         </div>
       </motion.main>
+
+      {/* Tomorrow Builder CTA flottant — toujours visible (après 17h + tâches actives) */}
+      <TomorrowBuilderCTA d={d} T={T} isMobile={isMobile} navigate={navigate} mainMarginL={mainMarginL} />
 
       {/* BottomSheet ajout mobile */}
       <BottomSheetAjout open={showBottomSheet} onClose={() => setShowBottomSheet(false)} d={d} T={T} />
@@ -3031,10 +3038,10 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* FAB Coach */}
-      {!d.showCoach && (
+      {/* FAB Coach — desktop only (mobile a déjà Coach dans la BottomNavMobile) */}
+      {!d.showCoach && !isMobile && (
         <motion.button onClick={d.ouvrirCoach} initial={{ scale: 0 }} animate={{ scale: 1 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
-          style={{ position: 'fixed', bottom: isMobile ? 24 : 24, right: 24, width: 48, height: 48, borderRadius: '50%', background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, border: 'none', cursor: 'pointer', zIndex: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 6px 20px ${T.accent}50` }}>
+          style={{ position: 'fixed', bottom: 24, right: 24, width: 48, height: 48, borderRadius: '50%', background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, border: 'none', cursor: 'pointer', zIndex: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 6px 20px ${T.accent}50` }}>
           <Target size={20} color="white" />
         </motion.button>
       )}
