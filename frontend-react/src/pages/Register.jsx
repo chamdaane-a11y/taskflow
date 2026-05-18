@@ -24,7 +24,13 @@ function RegisterInner() {
     if (form.password.length < 6) { setErreur('Le mot de passe doit faire au moins 6 caractères'); return }
     setLoading(true); setErreur('')
     try {
-      await axios.post(`${API}/register`, { nom: form.nom, email: form.email, password: form.password })
+      // Si l'user vient d'un scan QR : on passe le code au backend (stocké en pending_invitations).
+      // Comme ça même s'il change de navigateur entre register et email-verify, l'auto-join marche.
+      const pendingCode = (() => { try { return localStorage.getItem('pending_invite_code') } catch { return null } })()
+      await axios.post(`${API}/register`, {
+        nom: form.nom, email: form.email, password: form.password,
+        invite_code: pendingCode || undefined,
+      })
       setSucces(true)
     } catch (err) {
       setErreur(err.response?.data?.erreur || 'Erreur lors de l\'inscription')
@@ -39,15 +45,19 @@ function RegisterInner() {
         const userInfo = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
         })
+        const pendingCode = (() => { try { return localStorage.getItem('pending_invite_code') } catch { return null } })()
         const res = await axios.post(`${API}/auth/google`, {
           google_id: userInfo.data.sub,
           email: userInfo.data.email,
           nom: userInfo.data.name,
           avatar: userInfo.data.picture,
+          invite_code: pendingCode || undefined,
         }, { withCredentials: true })
         localStorage.setItem('user', JSON.stringify(res.data.user))
         localStorage.setItem('theme', res.data.user.theme || 'dark')
-        const pendingCode = (() => { try { return localStorage.getItem('pending_invite_code') } catch { return null } })()
+        if (res.data.equipes_rejointes && res.data.equipes_rejointes.length > 0) {
+          try { localStorage.removeItem('pending_invite_code') } catch {}
+        }
         navigate(pendingCode ? `/collaboration?code=${encodeURIComponent(pendingCode)}` : '/dashboard')
       } catch (err) {
         setErreur(err.response?.data?.erreur || 'Erreur Google')

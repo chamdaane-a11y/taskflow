@@ -1057,6 +1057,18 @@ def run_migrations():
         )""")
         print("[Migrations] sous_taches_equipe ✅")
 
+        # Pending invitations — flow invitation QR/lien sans localStorage côté ami
+        curseur.execute("""CREATE TABLE IF NOT EXISTS pending_invitations (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            code VARCHAR(50) NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME NOT NULL,
+            INDEX idx_email (email),
+            INDEX idx_code (code)
+        )""")
+        print("[Migrations] pending_invitations ✅")
+
         db.commit()
         db.close()
     except Exception as e:
@@ -1075,6 +1087,54 @@ GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleuse
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok'}), 200
+
+
+# ── Pending invitations (flow QR sans localStorage côté ami) ─────────
+def _stocker_invitation_pending(curseur, db, email, code):
+    """Stocke un code d'invitation pending pour cet email (TTL 7 jours).
+    Idempotent : supprime les anciennes pendings sur même couple email+code."""
+    if not code or not email: return
+    try:
+        curseur.execute("DELETE FROM pending_invitations WHERE email=%s AND code=%s", (email, code))
+        curseur.execute(
+            "INSERT INTO pending_invitations (email, code, expires_at) VALUES (%s, %s, DATE_ADD(NOW(), INTERVAL 7 DAY))",
+            (email, code)
+        )
+        db.commit()
+    except Exception as e:
+        print(f"[Invitations] stocker erreur: {e}")
+
+def consommer_invitations_pending(curseur, db, user_id, email):
+    """Si pending pour cet email, auto-attache l'user aux équipes correspondantes.
+    Retourne la liste des noms d'équipes rejointes (vide si aucune)."""
+    rejointes = []
+    if not email: return rejointes
+    try:
+        curseur.execute(
+            "SELECT id, code FROM pending_invitations WHERE email=%s AND expires_at > NOW()",
+            (email,)
+        )
+        pendings = curseur.fetchall() or []
+        for p in pendings:
+            curseur.execute("SELECT id, nom FROM equipes WHERE code_invitation=%s", (p['code'],))
+            equipe = curseur.fetchone()
+            if equipe:
+                curseur.execute(
+                    "SELECT id FROM equipe_membres WHERE equipe_id=%s AND user_id=%s",
+                    (equipe['id'], user_id)
+                )
+                if not curseur.fetchone():
+                    curseur.execute(
+                        "INSERT INTO equipe_membres (equipe_id, user_id, role) VALUES (%s, %s, 'membre')",
+                        (equipe['id'], user_id)
+                    )
+                    rejointes.append(equipe['nom'])
+            # Consommé : supprimer le pending (qu'il ait matché ou pas — code invalide expire au lieu de rester)
+            curseur.execute("DELETE FROM pending_invitations WHERE id=%s", (p['id'],))
+        db.commit()
+    except Exception as e:
+        print(f"[Invitations] consommer erreur: {e}")
+    return rejointes
 
 
 @app.route('/auth/google', methods=['POST'])
@@ -1110,9 +1170,21 @@ def auth_google():
             cursor.execute("INSERT INTO users (nom, email, password, google_id, email_verifie, points, niveau, theme) VALUES (%s, %s, %s, %s, TRUE, 0, 1, 'dark')", (nom, email, secrets.token_hex(32), google_id))
             db.commit()
             user_id = cursor.lastrowid; nom_final = nom; niveau = 1; points = 0; theme = 'dark'
+
+        # Si invite_code fourni : consommer immédiatement (Google = email auto-vérifié)
+        invite_code = (request.json.get('invite_code') or '').strip()
+        equipes_rejointes = []
+        if invite_code:
+            _stocker_invitation_pending(cursor, db, email, invite_code)
+            equipes_rejointes = consommer_invitations_pending(cursor, db, user_id, email)
+
         cursor.close(); db.close()
         access_token = create_access_token(identity=str(user_id))
-        response = make_response(jsonify({"message": "Connexion Google réussie", "user": {"id": user_id, "nom": nom_final, "email": email, "niveau": niveau, "points": points, "theme": theme, "avatar": avatar_url}}))
+        response = make_response(jsonify({
+            "message": "Connexion Google réussie",
+            "user": {"id": user_id, "nom": nom_final, "email": email, "niveau": niveau, "points": points, "theme": theme, "avatar": avatar_url},
+            "equipes_rejointes": equipes_rejointes,
+        }))
         set_access_cookies(response, access_token)
         return response, 200
     except ValueError:
@@ -1142,7 +1214,14 @@ def register():
             curseur.close(); db.close()
             return jsonify({"erreur": "Email déjà utilisé !"}), 400
         curseur.execute("INSERT INTO users (nom, email, password, verification_token, email_verifie) VALUES (%s, %s, %s, %s, FALSE)", (nom, email, password_hash, verification_token))
-        db.commit(); curseur.close(); db.close()
+        db.commit()
+
+        # Pending invitation : stocker pour consommation auto au verify-email
+        invite_code = (data.get('invite_code') or '').strip()
+        if invite_code:
+            _stocker_invitation_pending(curseur, db, email, invite_code)
+
+        curseur.close(); db.close()
         threading.Thread(target=envoyer_email_verification, args=(email, nom, verification_token)).start()
         return jsonify({"message": "Compte créé ! Vérifiez votre email."})
     except Exception as e:
@@ -1162,10 +1241,23 @@ def verify_email(token):
                 <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
             </body></html>""", 400
         curseur.execute("UPDATE users SET email_verifie=TRUE, verification_token=NULL WHERE id=%s", (user['id'],))
-        db.commit(); db.close()
-        return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
+        db.commit()
+
+        # Récupère l'email pour consommer les pending invitations
+        curseur.execute("SELECT email FROM users WHERE id=%s", (user['id'],))
+        u = curseur.fetchone()
+        equipes_rejointes = consommer_invitations_pending(curseur, db, user['id'], u.get('email') if u else None) if u else []
+
+        db.close()
+        # Message bonus si invitation auto-consommée
+        bonus_msg = ""
+        if equipes_rejointes:
+            noms = ", ".join(equipes_rejointes)
+            bonus_msg = f'<p style="color:#4caf82;font-size:14px;margin-top:8px">✅ Tu as rejoint l\'équipe : {noms}</p>'
+        return f"""<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
             <h1 style="color:#6c63ff">Email vérifié !</h1>
             <p>Votre compte GetShift est maintenant actif.</p>
+            {bonus_msg}
             <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">Se connecter →</a>
         </body></html>"""
     except Exception as e:
@@ -1190,8 +1282,26 @@ def login():
             return jsonify({"erreur": "Email ou mot de passe incorrect !"}), 401
         if not user.get('email_verifie'):
             return jsonify({"erreur": "Veuillez vérifier votre email avant de vous connecter !", "non_verifie": True}), 403
+
+        # Si invite_code fourni OU si pending existe pour cet email → auto-attach
+        equipes_rejointes = []
+        try:
+            db2 = connecter()
+            cur2 = db2.cursor(dictionary=True)
+            invite_code = (data.get('invite_code') or '').strip()
+            if invite_code:
+                _stocker_invitation_pending(cur2, db2, user['email'], invite_code)
+            equipes_rejointes = consommer_invitations_pending(cur2, db2, user['id'], user['email'])
+            cur2.close(); db2.close()
+        except Exception as e:
+            print(f"[login] consommer invitations erreur: {e}")
+
         access_token = create_access_token(identity=str(user['id']))
-        response = make_response(jsonify({"message": "Connecté !", "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'dark')}}))
+        response = make_response(jsonify({
+            "message": "Connecté !",
+            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'dark')},
+            "equipes_rejointes": equipes_rejointes,
+        }))
         set_access_cookies(response, access_token)
         return response
     except Exception as e:
