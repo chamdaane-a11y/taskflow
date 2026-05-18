@@ -30,8 +30,11 @@ from googleapiclient.discovery import build
 from cryptography.fernet import Fernet
 
 load_dotenv()
+print("[BOOT] load_dotenv OK")
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+print("[BOOT] Groq client OK")
 sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+print("[BOOT] SendGrid client OK")
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'getshift_secret')
@@ -1003,7 +1006,9 @@ def demarrer_scheduler():
         schedule.run_pending()
         time.sleep(60)
 
+print("[BOOT] Démarrage scheduler...")
 threading.Thread(target=demarrer_scheduler, daemon=True).start()
+print("[BOOT] Scheduler thread lancé")
 
 # ============================================
 # AUTO-MIGRATIONS (idempotentes)
@@ -1024,7 +1029,9 @@ def run_migrations():
     except Exception as e:
         print(f"[Migrations] erreur : {e}")
 
+print("[BOOT] run_migrations()...")
 run_migrations()
+print("[BOOT] run_migrations() OK — app prête")
 
 # ============================================
 # AUTHENTIFICATION
