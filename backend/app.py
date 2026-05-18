@@ -1043,6 +1043,20 @@ def run_migrations():
             curseur.execute("UPDATE taches SET terminee_le=NOW() WHERE terminee=TRUE AND terminee_le IS NULL")
             print("[Migrations] taches.terminee_le ✅ (+backfill)")
 
+        # Table sous_taches_equipe — référencée par GET /equipes/<id>/taches (sous-requête COUNT)
+        # Sans ça, l'endpoint plante 500 et casse le polling Collaboration
+        curseur.execute("""CREATE TABLE IF NOT EXISTS sous_taches_equipe (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            tache_id INT NOT NULL,
+            titre VARCHAR(255) NOT NULL,
+            terminee TINYINT(1) DEFAULT 0,
+            position INT DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_tache (tache_id),
+            FOREIGN KEY (tache_id) REFERENCES taches_equipe(id) ON DELETE CASCADE
+        )""")
+        print("[Migrations] sous_taches_equipe ✅")
+
         db.commit()
         db.close()
     except Exception as e:
