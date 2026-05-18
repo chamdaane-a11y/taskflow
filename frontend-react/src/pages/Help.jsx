@@ -6,12 +6,12 @@ import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import {
-  LayoutDashboard, Bot, BarChart2, Calendar, Users,
   Layers, Menu, Settings, Award, Palette, LogOut,
   ChevronRight, HelpCircle, CheckSquare, Plus, Sparkles,
   Bell, Target, Star, ArrowRight, Play, ChevronDown, ChevronUp,
   UserPlus, ListTodo, Trophy, TrendingUp, Share2
 } from 'lucide-react'
+import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -318,14 +318,15 @@ export default function Help() {
   const user = JSON.parse(localStorage.getItem('user'))
   const T = themes[theme]
 
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/dashboard' },
-    { icon: Bot, label: 'Assistant IA', path: '/ia' },
-    { icon: BarChart2, label: 'Analytiques', path: '/analytics' },
-    { icon: Calendar, label: 'Planification', path: '/planification' },
-    { icon: Users, label: 'Collaboration', path: '/collaboration' },
-    { icon: HelpCircle, label: 'Aide', path: '/help' },
-  ]
+  // Sidebar toggle persistant (clé globale partagée)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
+  })
+  const toggleSidebar = () => {
+    const next = !sidebarOpen
+    setSidebarOpen(next)
+    try { localStorage.setItem('sidebar_open', String(next)) } catch {}
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
@@ -337,103 +338,33 @@ export default function Help() {
         }
       `}</style>
 
-      {/* Sidebar */}
-      <aside style={{ width: 'min(248px, 80%)', maxWidth: '248px', background: T.bg2, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', padding: 'clamp(16px, 3vh, 24px) clamp(12px, 2vw, 16px)', position: 'fixed', top: 0, left: isMobile ? (showSidebar ? 0 : '-100%') : 0, height: '100vh', transition: 'left 0.3s ease', zIndex: 100, overflowY: 'auto' }}>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32, padding: '0 8px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Layers size={16} color={T.bg} strokeWidth={2.5} />
-          </div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>GetShift</span>
+      {/* ── SIDEBAR (shared component) ── */}
+      <AppSidebar
+        T={T} user={user}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        isMobile={isMobile}>
+        {/* Help-specific: thème picker */}
+        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
+        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>THÈME</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '0 4px' }}>
+          {Object.entries(themes).map(([key, t]) => (
+            <motion.button key={key}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px', borderRadius: 8, background: theme === key ? `${T.accent}20` : 'transparent', border: `1px solid ${theme === key ? T.accent + '50' : T.border}`, color: theme === key ? T.accent : T.text2, cursor: 'pointer', fontSize: 11, fontWeight: theme === key ? 600 : 400 }}
+              onClick={() => { setTheme(key); localStorage.setItem('theme', key) }} whileHover={{ x: 1 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.accent }} />
+              {t.name}
+            </motion.button>
+          ))}
         </div>
+      </AppSidebar>
 
-        {user && (
-          <div style={{ background: T.bg3, borderRadius: 12, padding: 14, marginBottom: 24, border: `1px solid ${T.border}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 36, height: 36, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, color: T.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                {user?.nom?.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.nom}</div>
-                <div style={{ fontSize: 11, color: T.text2 }}>Connecté</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <nav style={{ flex: 1 }}>
-          <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>NAVIGATION</p>
-          {navItems.filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path)).map(item => {
-            const Icon = item.icon
-            const active = window.location.pathname === item.path
-            return (
-              <motion.button key={item.path}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, color: active ? T.accent : T.text2, background: active ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2, transition: 'all 0.15s' }}
-                onClick={() => { navigate(item.path); if (isMobile) setShowSidebar(false) }}
-                whileHover={{ x: 2, color: T.accent }}>
-                <Icon size={16} strokeWidth={active ? 2.5 : 1.8} />
-                {item.label}
-              </motion.button>
-            )
-          })}
-        </nav>
-
-        {/* Paramètres */}
-        <div style={{ position: 'relative', marginTop: 8 }}>
-          <motion.button
-            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', borderRadius: 10, background: showSettings ? `${T.accent}15` : 'transparent', border: 'none', color: showSettings ? T.accent : T.text2, cursor: 'pointer', fontSize: 13, textAlign: 'left' }}
-            onClick={() => setShowSettings(!showSettings)} whileHover={{ color: T.accent }}>
-            <Settings size={16} strokeWidth={1.8} />
-            Paramètres
-          </motion.button>
-          <AnimatePresence>
-            {showSettings && (
-              <motion.div style={{ background: T.bg3, borderRadius: 12, padding: 8, marginTop: 4, border: `1px solid ${T.border}` }}
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 12 }}
-                  onClick={() => setShowThemes(!showThemes)} whileHover={{ color: T.accent }}>
-                  <Palette size={14} /> Thème
-                </motion.button>
-                <AnimatePresence>
-                  {showThemes && (
-                    <motion.div style={{ background: T.bg2, borderRadius: 8, padding: 6, margin: '4px 0', border: `1px solid ${T.border}` }}
-                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                      {Object.entries(themes).map(([key, t]) => (
-                        <motion.button key={key}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 8px', borderRadius: 6, background: theme === key ? `${T.accent}20` : 'transparent', border: 'none', color: theme === key ? T.accent : T.text2, cursor: 'pointer', fontSize: 11, marginBottom: 2 }}
-                          onClick={() => { setTheme(key); localStorage.setItem('theme', key) }} whileHover={{ x: 2 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.accent }} />
-                          {t.name}
-                        </motion.button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <motion.button
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: '#e05c5c', cursor: 'pointer', fontSize: 12, marginTop: 4 }}
-                  onClick={() => { localStorage.removeItem('user'); navigate('/') }}
-                  whileHover={{ background: 'rgba(224,92,92,0.1)' }}>
-                  <LogOut size={14} /> Déconnexion
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </aside>
-
-      {/* Burger mobile */}
-      {isMobile && (
-        <motion.button style={{ position: 'fixed', top: 16, left: 16, zIndex: 200, width: 40, height: 40, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setShowSidebar(!showSidebar)}>
-          <Menu size={20} />
-        </motion.button>
-      )}
-      {isMobile && showSidebar && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }} onClick={() => setShowSidebar(false)} />
-      )}
+      <SidebarToggle T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
+      <FloatingLogo T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
 
       {/* Main */}
-      <main className="main-padding" style={{ marginLeft: isMobile ? 0 : 248, flex: 1, padding: 'clamp(16px, 4vw, 40px)', minWidth: 0, paddingTop: isMobile ? 72 : 'clamp(16px, 4vw, 40px)' }}>
+      <main className="main-padding" style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0), transition: 'margin-left 0.3s ease', flex: 1, padding: 'clamp(16px, 4vw, 40px)', minWidth: 0, paddingTop: isMobile ? 72 : 'clamp(16px, 4vw, 40px)' }}>
 
         {/* Header */}
         <motion.div style={{ marginBottom: 40 }} initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>

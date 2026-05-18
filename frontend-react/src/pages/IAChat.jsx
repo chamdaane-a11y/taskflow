@@ -5,15 +5,16 @@ import axios from 'axios'
 import confetti from 'canvas-confetti'
 import { useTheme } from '../useTheme'
 import {
-  Send, History, Link, LayoutDashboard, BarChart2, Calendar,
-  LogOut, Copy, Plus, X, ChevronRight, Layers, Menu,
-  Users, Sparkles, Zap, Globe, CheckCircle, Trash2,
+  Send, History, Link, BarChart2, Calendar,
+  Copy, Plus, X, ChevronRight, Layers,
+  Sparkles, Zap, Globe, CheckCircle, Trash2,
   Search, AlertCircle, Check, Brain, ChevronDown, Database,
-  Heart, Flame, BarChart, Target, Flag, Bot, HelpCircle, Paperclip, Bookmark,
+  Heart, Flame, BarChart, Target, Paperclip, Bookmark,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
+import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -38,17 +39,6 @@ const INTENTION_META = {
   action_planifier: { label: 'Planification',   color: '#f59e0b', Icon: Calendar    },
   chat:             { label: 'GetShift AI',     color: '#a855f7', Icon: Sparkles    },
 }
-
-const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: 'Tableau de bord', path: '/dashboard' },
-  { icon: Bot,             label: 'Assistant IA',    path: '/ia' },
-  { icon: Sparkles,        label: 'Tomorrow Builder',path: '/tomorrow' },
-  { icon: Flag,            label: 'Goal Reverse',    path: '/goal' },
-  { icon: BarChart2,       label: 'Analytiques',     path: '/analytics' },
-  { icon: Calendar,        label: 'Planification',   path: '/planification' },
-  { icon: Users,           label: 'Collaboration',   path: '/collaboration' },
-  { icon: HelpCircle,      label: 'Aide',            path: '/help' },
-]
 
 // ── Personas Coach (lien avec le drawer Coach du Dashboard) ────────────
 const COACHES = {
@@ -407,6 +397,15 @@ export default function IAChat() {
   const [forceSearch,       setForceSearch]       = useState(false)
   const [copie,             setCopie]             = useState(null)
   const [showSidebar,       setShowSidebar]       = useState(false)
+  // Sidebar toggle persistant (clé globale partagée avec les autres pages)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
+  })
+  const toggleSidebar = () => {
+    const next = !sidebarOpen
+    setSidebarOpen(next)
+    try { localStorage.setItem('sidebar_open', String(next)) } catch {}
+  }
   const [memoryCount,       setMemoryCount]       = useState(0)
   const [pinnedMessages,    setPinnedMessages]    = useState(() => {
     try { return JSON.parse(localStorage.getItem(`shift_pins_${user?.id}`) || '[]') } catch { return [] }
@@ -779,63 +778,35 @@ export default function IAChat() {
         <div style={{ position: 'absolute', top: '40%', left: '40%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, #0ea5e910 0%, transparent 70%)', filter: 'blur(60px)' }} />
       </div>
 
-      {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
-      <aside style={{ width: 'min(250px, 85%)', maxWidth: 250, display: 'flex', flexDirection: 'column', padding: '22px 14px', position: 'fixed', top: 0, left: isMobile ? (showSidebar ? 0 : '-100%') : 0, height: '100vh', transition: 'left 0.3s ease', zIndex: 100, overflowY: 'auto', borderRight: `1px solid ${T.border}`, background: T.bg2, backdropFilter: 'blur(40px)' }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '0 4px' }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${accent}, ${accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 20px ${accent}40` }}>
-            <Layers size={16} color="#fff" strokeWidth={2.5} />
-          </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: T.text, fontFamily: "'Clash Display', sans-serif", letterSpacing: '-0.3px' }}>GetShift</div>
-            <div style={{ fontSize: 9, color: T.text2, letterSpacing: '1.5px', fontWeight: 600 }}>GETSHIFT AI</div>
-          </div>
-        </div>
-
-        {/* Profil */}
-        {profil && (
-          <div className="glass" style={{ borderRadius: 12, padding: '11px 12px', marginBottom: 22 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, ${accent}, ${accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: T.text, flexShrink: 0 }}>
-                {user?.nom?.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.nom}</div>
-                <div style={{ fontSize: 10, color: T.text2, marginTop: 1 }}>{profil.points || 0} pts · Niveau {profil.niveau || 1}</div>
-              </div>
-            </div>
-            {memoryCount > 0 && (
-              <motion.button
-                onClick={ouvrirMemoryDrawer}
-                whileHover={{ background: `${accent}22` }}
-                whileTap={{ scale: 0.97 }}
-                style={{ width: '100%', marginTop: 9, display: 'flex', alignItems: 'center', gap: 5, padding: '4px 8px', background: `${accent}12`, borderRadius: 6, border: `1px solid ${accent}30`, cursor: 'pointer' }}>
-                <Database size={9} color={accent} />
-                <span style={{ fontSize: 9, color: accent, fontWeight: 700, letterSpacing: '0.5px', flex: 1, textAlign: 'left' }}>{memoryCount} SOUVENIRS</span>
-                <ChevronRight size={9} color={accent} />
-              </motion.button>
-            )}
-          </div>
+      {/* ── SIDEBAR (shared component) ── */}
+      <AppSidebar
+        T={T} user={user}
+        niveau={profil?.niveau ?? 1}
+        points={profil?.points ?? 0}
+        streak={profil?.streak ?? 0}
+        niveauActuel={{ label: profil?.label || '' }}
+        pctNiveau={profil?.pctNiveau ?? 0}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        isMobile={isMobile}>
+        {/* IAChat-specific: SOUVENIRS button */}
+        {memoryCount > 0 && (
+          <>
+            <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
+            <motion.button
+              onClick={ouvrirMemoryDrawer}
+              whileHover={{ background: `${accent}22` }}
+              whileTap={{ scale: 0.97 }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', background: `${accent}12`, borderRadius: 8, border: `1px solid ${accent}30`, cursor: 'pointer', marginBottom: 8 }}>
+              <Database size={11} color={accent} />
+              <span style={{ fontSize: 10, color: accent, fontWeight: 700, letterSpacing: '0.5px', flex: 1, textAlign: 'left' }}>{memoryCount} SOUVENIRS</span>
+              <ChevronRight size={11} color={accent} />
+            </motion.button>
+          </>
         )}
 
-        {/* Navigation */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>NAVIGATION</div>
-        {NAV_ITEMS.filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path)).map(item => {
-          const Icon = item.icon
-          const active = item.path === '/ia'
-          return (
-            <motion.button key={item.path}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', borderRadius: 9, color: active ? T.text : T.text2, background: active ? `${accent}20` : 'transparent', border: active ? `1px solid ${accent}35` : '1px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
-              onClick={() => { navigate(item.path); if (isMobile) setShowSidebar(false) }}
-              whileHover={{ color: T.text, x: 2 }}>
-              <Icon size={14} strokeWidth={active ? 2.5 : 1.8} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-              {active && <div style={{ marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%', background: accent }} />}
-            </motion.button>
-          )
-        })}
-
-        <div style={{ height: 1, background: T.bg3, margin: '16px 0' }} />
+        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
 
         {/* Insights — messages épinglés */}
         <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -875,7 +846,7 @@ export default function IAChat() {
         <div style={{ maxHeight: 130, overflowY: 'auto', marginBottom: 6 }}>
           {[{ id: null, titre: 'Aucune', priorite: '' }, ...tachesEnCours.slice(0, 8)].map(t => (
             <motion.button key={t.id || 'none'}
-              style={{ width: '100%', padding: '6px 10px', borderRadius: 8, background: tacheSelectionnee === t.id ? `${accent}18` : 'transparent', border: `1px solid ${tacheSelectionnee === t.id ? accent + '40' : 'transparent'}`, color: tacheSelectionnee === t.id ? '#fff' : 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 11, textAlign: 'left', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              style={{ width: '100%', padding: '6px 10px', borderRadius: 8, background: tacheSelectionnee === t.id ? `${accent}18` : 'transparent', border: `1px solid ${tacheSelectionnee === t.id ? accent + '40' : 'transparent'}`, color: tacheSelectionnee === t.id ? T.text : T.text2, cursor: 'pointer', fontSize: 11, textAlign: 'left', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               onClick={() => setTacheSelectionnee(t.id)}
               whileHover={{ color: T.text }}>
               {tacheSelectionnee === t.id ? '● ' : '○ '}{t.titre}
@@ -883,31 +854,19 @@ export default function IAChat() {
           ))}
         </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: `1px solid ${T.border}` }}>
+        <div style={{ marginTop: 12 }}>
           <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 12, marginBottom: 2 }}
             onClick={() => setShowHistorique(!showHistorique)} whileHover={{ color: T.text }}>
             <History size={13} strokeWidth={1.8} />Historique ({historique.length})
           </motion.button>
-          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 12 }}
-            onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ color: '#ef4444' }}>
-            <LogOut size={13} strokeWidth={1.8} />Déconnexion
-          </motion.button>
         </div>
-      </aside>
+      </AppSidebar>
 
-      {/* Mobile */}
-      {isMobile && (
-        <motion.button style={{ position: 'fixed', top: 14, left: 14, zIndex: 200, width: 38, height: 38, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}
-          onClick={() => setShowSidebar(!showSidebar)}>
-          <Menu size={17} />
-        </motion.button>
-      )}
-      {isMobile && showSidebar && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 99, backdropFilter: 'blur(4px)' }} onClick={() => setShowSidebar(false)} />
-      )}
+      <SidebarToggle T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
+      <FloatingLogo T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
 
       {/* ── MAIN ────────────────────────────────────────────────────── */}
-      <main style={{ marginLeft: isMobile ? 0 : 250, flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', minWidth: 0, position: 'relative', zIndex: 1 }}>
+      <main style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0), transition: 'margin-left 0.3s ease', flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', minWidth: 0, position: 'relative', zIndex: 1 }}>
 
         {/* Header */}
         <div style={{ padding: '12px clamp(16px,4vw,28px)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: T.bg2, backdropFilter: 'blur(30px)' }}>

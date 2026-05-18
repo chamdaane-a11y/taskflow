@@ -16,6 +16,7 @@ import {
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
+import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 
 registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
@@ -62,6 +63,16 @@ export default function GoalReverse() {
   const [iterating, setIterating] = useState(false)
   const [iterationInput, setIterationInput] = useState('')
   const isMobile = window.innerWidth <= 768
+
+  // Sidebar toggle persistant (clé globale partagée)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
+  })
+  const toggleSidebar = () => {
+    const next = !sidebarOpen
+    setSidebarOpen(next)
+    try { localStorage.setItem('sidebar_open', String(next)) } catch {}
+  }
 
   useEffect(() => {
     axios.get(`${API}/ia/goal-reverse/templates`)
@@ -200,36 +211,27 @@ export default function GoalReverse() {
         )}
       </AnimatePresence>
 
-      {/* Sidebar minimaliste */}
-      {!isMobile && (
-  <aside style={{ width: 248, background: T.bg2, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 100 }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32, padding: '0 8px' }}>
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Layers size={16} color={T.bg} strokeWidth={2.5} />
-      </div>
-      <span style={{ fontSize: 16, fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>GetShift</span>
-    </div>
-    <motion.button onClick={() => navigate('/dashboard')}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, color: T.text2, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, textAlign: 'left', marginBottom: 4 }}
-      whileHover={{ x: 2, color: T.accent }}>
-      <ChevronLeft size={16} strokeWidth={1.8} />Tableau de bord
-    </motion.button>
-    <motion.button
-      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 10, color: T.accent, background: `${T.accent}15`, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, textAlign: 'left' }}>
-      <Flag size={16} strokeWidth={2} />Goal Reverse
-    </motion.button>
-  </aside>
-)}
+      {/* ── SIDEBAR (shared component) ── */}
+      <AppSidebar
+        T={T} user={user}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        isMobile={isMobile} />
+
+      <SidebarToggle T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
+      <FloatingLogo T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
 
       {/* Main */}
-<main style={{ 
-  marginLeft: isMobile ? 0 : 248, 
-  flex: 1, 
+<main style={{
+  marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0),
+  transition: 'margin-left 0.3s ease',
+  flex: 1,
   padding: isMobile ? '16px' : '40px',
   paddingTop: isMobile ? '70px' : '40px',
-  minWidth: 0, 
-  maxWidth: 900, 
-  margin: isMobile ? '0 auto' : '0 auto 0 248px'
+  minWidth: 0,
+  maxWidth: 900,
+  margin: isMobile ? '0 auto' : `0 auto 0 ${sidebarOpen ? SIDEBAR_W : 0}px`
 }}>
  
     {isMobile && (
