@@ -3126,13 +3126,19 @@ def get_analytics(user_id):
         taux = round((terminees / total * 100), 1) if total > 0 else 0
         curseur.execute("SELECT priorite, COUNT(*) as count FROM taches WHERE user_id=%s GROUP BY priorite", (user_id,))
         priorites = {r['priorite']: r['count'] for r in curseur.fetchall()}
-        curseur.execute("SELECT DATE(updated_at) as jour, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY) GROUP BY DATE(updated_at) ORDER BY jour ASC", (user_id, jours))
+        # Bucket par jour de COMPLÉTION (terminee_le), pas updated_at.
+        # updated_at change à chaque édition → toutes les tâches éditées récemment
+        # se regroupaient sur le jour de l'édition. terminee_le est le timestamp
+        # figé au moment du toggle terminée. COALESCE pour les anciennes complétions
+        # qui pourraient avoir terminee_le NULL (avant migration).
+        date_col = "COALESCE(terminee_le, updated_at)"
+        curseur.execute(f"SELECT DATE({date_col}) as jour, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL %s DAY) GROUP BY DATE({date_col}) ORDER BY jour ASC", (user_id, jours))
         par_jour = curseur.fetchall()
-        curseur.execute("SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)", (user_id,))
+        curseur.execute(f"SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)", (user_id,))
         cette_semaine = curseur.fetchone()['count']
-        curseur.execute("SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND updated_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY)", (user_id,))
+        curseur.execute(f"SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND {date_col} < DATE_SUB(CURDATE(), INTERVAL 7 DAY)", (user_id,))
         semaine_precedente = curseur.fetchone()['count']
-        curseur.execute("SELECT HOUR(updated_at) as heure, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) GROUP BY HOUR(updated_at) ORDER BY heure", (user_id,))
+        curseur.execute(f"SELECT HOUR({date_col}) as heure, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) GROUP BY HOUR({date_col}) ORDER BY heure", (user_id,))
         par_heure = [0] * 24
         for row in curseur.fetchall():
             if row['heure'] is not None: par_heure[row['heure']] = row['count']
