@@ -33,11 +33,16 @@ Cf. commit `44b80f1` et `268574d` pour le fix complet.
 
 ### Garde-fou automatique
 
-Un pre-commit hook (`.git/hooks/pre-commit`) bloque tout `terminee=TRUE`
-combiné à `DATE(updated_at)` / `HOUR(updated_at)` / `updated_at >= DATE_SUB`
-/ `ORDER BY updated_at`. Si tu as besoin de bypass exceptionnel (genre
-query qui veut vraiment "tâches dernièrement éditées"), `--no-verify`
-fonctionne mais réfléchis bien.
+Un pre-commit hook tracké dans `.githooks/pre-commit` bloque tout usage nu
+de `DATE(updated_at)` / `HOUR(updated_at)` / etc. Les usages légitimes
+passent toujours via `COALESCE(terminee_le, updated_at)`.
+
+**Setup une fois après clone** (le hook ne s'active pas tout seul) :
+```bash
+git config core.hooksPath .githooks
+```
+
+Bypass exceptionnel (rare) : `git commit --no-verify`.
 
 ## Discipline migration
 

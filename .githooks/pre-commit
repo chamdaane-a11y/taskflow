@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Bloque les usages "nu" de updated_at pour des analytics temporelles.
+# updated_at bouge à chaque édition → corrompt toute stat groupée par date
+# de "complétion". Toujours utiliser COALESCE(terminee_le, updated_at).
+# Cf. CLAUDE.md "Contrat des colonnes timestamp".
+
+set -e
+
+# Ne scanne que les .py modifiés/ajoutés dans ce commit
+files=$(git diff --cached --name-only --diff-filter=ACM -- '*.py')
+[ -z "$files" ] && exit 0
+
+# Patterns interdits — DATE(updated_at) et HOUR(updated_at) nus.
+# Les usages légitimes passent via COALESCE(terminee_le, updated_at) :
+#   DATE(COALESCE(terminee_le, updated_at))  ← OK, ne match pas le pattern
+#   DATE(updated_at)                          ← REFUSÉ
+bad=$(git grep -nE \
+  -e '\bDATE\(updated_at\)' \
+  -e '\bHOUR\(updated_at\)' \
+  -e '\b(YEAR|MONTH|WEEK|DAY|DAYOFWEEK)\(updated_at\)' \
+  -- $files 2>/dev/null || true)
+
+if [ -n "$bad" ]; then
+  echo "❌ Pre-commit refusé : usage nu de DATE/HOUR(updated_at)"
+  echo ""
+  echo "$bad"
+  echo ""
+  echo "→ Remplace par COALESCE(terminee_le, updated_at) à l'intérieur du DATE()/HOUR()."
+  echo "  Ex: DATE(updated_at) → DATE(COALESCE(terminee_le, updated_at))"
+  echo ""
+  echo "  updated_at bouge à chaque édition de tâche : si tu groupes des"
+  echo "  complétions par jour avec, toutes les tâches éditées se collent"
+  echo "  sur le jour de la dernière édition au lieu du jour de complétion."
+  echo ""
+  echo "Bypass exceptionnel (rare): git commit --no-verify"
+  exit 1
+fi
+
+exit 0
