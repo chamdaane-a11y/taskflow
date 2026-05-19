@@ -242,7 +242,7 @@ function tempsRelatif(iso) {
   } catch { return '' }
 }
 
-function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, onToggleFait, onDemarrer, isDragOverlay = false }) {
+function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocked, onModifier, onOuvrir, onToggleFait, onDemarrer, isDragOverlay = false }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(tache.id) })
   const [assignOpen, setAssignOpen] = useState(false)
   const [checkHover, setCheckHover] = useState(false)
@@ -416,12 +416,20 @@ function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, o
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            {/* Avatar cliquable : assigner / désassigner rapidement */}
+            {/* Avatar cliquable : assigner / désassigner rapidement (admin only) */}
             <motion.button
-              onClick={e => { e.stopPropagation(); setAssignOpen(o => !o) }}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              title={assignee ? `Assigné à ${assignee.nom} — cliquer pour changer` : 'Cliquer pour assigner'}
+              onClick={e => {
+                e.stopPropagation()
+                if (!isAdmin) { onAssignBlocked?.(); return }
+                setAssignOpen(o => !o)
+              }}
+              whileHover={isAdmin ? { scale: 1.08 } : {}}
+              whileTap={isAdmin ? { scale: 0.92 } : {}}
+              title={
+                isAdmin
+                  ? (assignee ? `Assigné à ${assignee.nom} — cliquer pour changer` : 'Cliquer pour assigner')
+                  : (assignee ? `Assigné à ${assignee.nom} — admin requis pour modifier` : 'Non assigné — admin requis pour assigner')
+              }
               style={{
                 width: 22, height: 22, borderRadius: 7,
                 background: assignee ? `${T.accent}22` : 'transparent',
@@ -429,8 +437,9 @@ function CarteTache({ T, tache, membres, user, onModifier, onOuvrir, onAssign, o
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 10, fontWeight: 700,
                 color: assignee ? T.accent : T.text2,
-                cursor: 'pointer',
+                cursor: isAdmin ? 'pointer' : 'default',
                 flexShrink: 0,
+                opacity: isAdmin ? 1 : 0.85,
               }}>
               {assignee ? assignee.nom.charAt(0).toUpperCase() : <Plus size={10} />}
             </motion.button>
@@ -562,7 +571,7 @@ function ColonneDroppable({ T, col, children, isOver }) {
 }
 
 // ===== MODALE TÂCHE =====
-function ModaleTache({ T, membres, tache, user, labels = [], onToggleLabel, onFermer, onSauvegarder }) {
+function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], onToggleLabel, onFermer, onSauvegarder }) {
   const [form, setForm] = useState({ titre: tache?.titre || '', description: tache?.description || '', priorite: tache?.priorite || 'moyenne', statut: tache?.statut || 'todo', assignee_id: tache?.assignee_id || '' })
   const [sousTaches, setSousTaches] = useState([])
   const [nouvelleST, setNouvelleST] = useState('')
@@ -635,8 +644,18 @@ function ModaleTache({ T, membres, tache, user, labels = [], onToggleLabel, onFe
             </div>
           </div>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: T.text2, display: 'block', marginBottom: 5 }}>ASSIGNER À</label>
-            <select style={{ width: '100%', padding: '9px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 13, outline: 'none', cursor: 'pointer' }}
+            <label style={{ fontSize: 11, fontWeight: 600, color: T.text2, display: 'block', marginBottom: 5 }}>
+              ASSIGNER À {!isAdmin && <span style={{ color: T.text2, fontWeight: 500, textTransform: 'none', marginLeft: 4 }}>· admin uniquement</span>}
+            </label>
+            <select
+              disabled={!isAdmin}
+              style={{
+                width: '100%', padding: '9px 12px', background: T.bg3,
+                border: `1px solid ${T.border}`, borderRadius: 9, color: T.text,
+                fontSize: 13, outline: 'none',
+                cursor: isAdmin ? 'pointer' : 'not-allowed',
+                opacity: isAdmin ? 1 : 0.55,
+              }}
               value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
               <option value="">Non assigné</option>
               {membres.map(m => <option key={m.id} value={m.id}>{m.nom}{m.id === user.id ? ' (moi)' : ''}</option>)}
@@ -2557,10 +2576,11 @@ export default function Collaboration() {
                         <>
                           <AnimatePresence>
                             {tachesCol(col.id).map(t => (
-                              <CarteTache key={t.id} T={T} tache={t} membres={membres} user={user}
+                              <CarteTache key={t.id} T={T} tache={t} membres={membres} user={user} isAdmin={isAdmin}
                                 onModifier={(t) => { setTacheAModifier(t); setShowModaleTache(true) }}
                                 onOuvrir={setTacheCommentaires}
                                 onAssign={quickAssigner}
+                                onAssignBlocked={() => addToast('Seul un admin peut assigner', '🔒', '#f59e0b')}
                                 onToggleFait={toggleFait}
                                 onDemarrer={demarrerTache} />
                             ))}
@@ -2621,7 +2641,7 @@ export default function Collaboration() {
         )}
         {showPartage && <ModalePartage key="partage" T={T} equipe={showPartage} onFermer={() => setShowPartage(null)} />}
         {showModaleTache && equipeActive && (
-          <ModaleTache key="tache" T={T} membres={membres} tache={tacheAModifier} user={user}
+          <ModaleTache key="tache" T={T} membres={membres} tache={tacheAModifier} user={user} isAdmin={isAdmin}
             labels={labels} onToggleLabel={toggleLabelTache}
             onFermer={() => { setShowModaleTache(false); setTacheAModifier(null) }}
             onSauvegarder={sauvegarderTache} />

@@ -3561,6 +3561,24 @@ def creer_tache_equipe():
             curseur.execute("UPDATE taches_equipe SET statut='todo' WHERE statut='a_faire'")
         except Exception:
             pass
+
+        # Vérifie que le créateur appartient à l'équipe + récupère son rôle
+        curseur.execute(
+            "SELECT role FROM equipe_membres WHERE equipe_id=%s AND user_id=%s",
+            (data['equipe_id'], data['createur_id'])
+        )
+        row = curseur.fetchone()
+        if not row:
+            db.close()
+            return jsonify({"erreur": "Non membre de l'equipe"}), 403
+        est_admin = row['role'] == 'admin'
+
+        # Guard : un non-admin ne peut assigner qu'à lui-même
+        assignee_id = data.get('assignee_id')
+        if assignee_id and not est_admin and assignee_id != data['createur_id']:
+            db.close()
+            return jsonify({"erreur": "Seul un admin peut assigner a un autre membre"}), 403
+
         # Whitelist du statut côté frontend
         statut_in = data.get('statut', 'todo')
         if statut_in not in ('todo', 'en_cours', 'termine'):
@@ -3569,7 +3587,7 @@ def creer_tache_equipe():
             "INSERT INTO taches_equipe (equipe_id, titre, description, priorite, assignee_id, createur_id, deadline, statut) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
             (data['equipe_id'], data['titre'], data.get('description', ''),
-             data.get('priorite', 'moyenne'), data.get('assignee_id'),
+             data.get('priorite', 'moyenne'), assignee_id,
              data['createur_id'], data.get('deadline'), statut_in)
         )
         tache_id = curseur.lastrowid
@@ -3586,11 +3604,52 @@ def creer_tache_equipe():
 @app.route('/equipes/taches/<int:tache_id>', methods=['PUT'])
 def modifier_tache_equipe(tache_id):
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
+        user_id = data.get('user_id')
         db = connecter()
         curseur = db.cursor(dictionary=True)
+
+        curseur.execute("SELECT equipe_id, createur_id, titre FROM taches_equipe WHERE id=%s", (tache_id,))
+        tache = curseur.fetchone()
+        if not tache:
+            db.close()
+            return jsonify({"erreur": "Tache introuvable"}), 404
+
+        # Récupère le rôle de l'auteur de la requête dans cette équipe
+        role_appelant = None
+        if user_id:
+            curseur.execute(
+                "SELECT role FROM equipe_membres WHERE equipe_id=%s AND user_id=%s",
+                (tache['equipe_id'], user_id)
+            )
+            row = curseur.fetchone()
+            role_appelant = row['role'] if row else None
+
+        if not role_appelant:
+            db.close()
+            return jsonify({"erreur": "Non membre de l'equipe"}), 403
+
+        est_admin = role_appelant == 'admin'
+        est_createur = user_id == tache['createur_id']
+
+        # Règle d'autorisation :
+        # - statut : tout membre (pour bouger la tâche dans le Kanban)
+        # - titre/description/priorite/deadline : créateur OU admin
+        # - assignee_id : admin uniquement (sinon contournement trivial via création)
+        AUTEUR_OR_ADMIN = {'titre', 'description', 'priorite', 'deadline'}
+        ADMIN_ONLY = {'assignee_id'}
+        FREE = {'statut'}
+
+        for key in data:
+            if key in ADMIN_ONLY and not est_admin:
+                db.close()
+                return jsonify({"erreur": "Seul un admin peut reassigner une tache"}), 403
+            if key in AUTEUR_OR_ADMIN and not (est_admin or est_createur):
+                db.close()
+                return jsonify({"erreur": f"Reserve au createur ou aux admins (champ: {key})"}), 403
+
         fields, vals = [], []
-        for key in ['titre', 'statut', 'priorite', 'assignee_id', 'deadline', 'description']:
+        for key in AUTEUR_OR_ADMIN | ADMIN_ONLY | FREE:
             if key in data:
                 fields.append(f"{key}=%s")
                 vals.append(data[key])
@@ -3598,16 +3657,15 @@ def modifier_tache_equipe(tache_id):
             vals.append(tache_id)
             curseur.execute(f"UPDATE taches_equipe SET {', '.join(fields)} WHERE id=%s", vals)
             db.commit()
-        curseur.execute("SELECT titre, equipe_id FROM taches_equipe WHERE id=%s", (tache_id,))
-        tache_info = curseur.fetchone()
+
         db.close()
-        if tache_info and data.get('user_id') and data.get('nom_user'):
+        if data.get('nom_user'):
             statut_labels = {'todo': 'À faire', 'en_cours': 'En cours', 'termine': 'Terminé'}
             if 'statut' in data:
                 action = f"a déplacé vers {statut_labels.get(data['statut'], data['statut'])}"
             else:
                 action = 'a modifié la tâche'
-            log_activite(tache_info['equipe_id'], data['user_id'], data['nom_user'], action, tache_info['titre'], tache_id)
+            log_activite(tache['equipe_id'], user_id, data['nom_user'], action, tache['titre'], tache_id)
         return jsonify({"message": "Tache mise a jour"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
