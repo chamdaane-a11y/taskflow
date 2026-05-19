@@ -1030,8 +1030,8 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
   )
 }
 
-// ===== DRAWER GESTION ÉQUIPE (admin) =====
-function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, onMembreExclu, onRoleChange }) {
+// ===== DRAWER ÉQUIPE — vue admin (mutations) + vue membre (lecture seule) =====
+function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, onMembreExclu, onRoleChange, viewOnly = false }) {
   const [nomEdit, setNomEdit] = useState(equipe.nom)
   const [editingNom, setEditingNom] = useState(false)
   const [confirmKick, setConfirmKick] = useState(null)
@@ -1078,8 +1078,8 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
             <Shield size={16} color={T.accent} />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Gérer l'équipe</h3>
-            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>Paramètres admin</p>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{viewOnly ? 'Membres de l\'équipe' : 'Gérer l\'équipe'}</h3>
+            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{viewOnly ? `${membres.length} membre${membres.length > 1 ? 's' : ''}` : 'Paramètres admin'}</p>
           </div>
         </div>
         <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1089,7 +1089,9 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-        {/* Renommer l'équipe */}
+        {/* Renommer l'équipe — admin uniquement */}
+        {!viewOnly && (
+        <>
         <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.3, marginBottom: 10 }}>NOM DE L'ÉQUIPE</p>
         {editingNom ? (
           <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
@@ -1111,6 +1113,8 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
             <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{nomEdit}</span>
             <Edit3 size={13} color={T.text2} />
           </motion.div>
+        )}
+        </>
         )}
 
         {/* Liste membres */}
@@ -1136,7 +1140,7 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
                       {isCreateur && <span style={{ fontSize: 9, background: `${T.accent}18`, color: T.accent, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>CRÉATEUR</span>}
                     </div>
                   </div>
-                  {!isMe && !isCreateur && (
+                  {!viewOnly && !isMe && !isCreateur && (
                     <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
                       <motion.button title={m.role === 'admin' ? 'Rétrograder' : 'Promouvoir admin'}
                         style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: loadingAction === 'role-' + m.id ? 0.5 : 1 }}
@@ -1844,7 +1848,8 @@ export default function Collaboration() {
 
   const chargerTachesSilent = useCallback(async (equipe_id) => {
     try {
-      const r = await axios.get(`${API}/equipes/${equipe_id}/taches`)
+      // Cache-buster pour bypasser le cache browser (sinon le polling renvoie du stale)
+      const r = await axios.get(`${API}/equipes/${equipe_id}/taches?_t=${Date.now()}`)
       const nouvelles = r.data
       const anciennes = tachesRef.current
 
@@ -1897,7 +1902,7 @@ export default function Collaboration() {
   // ── Polling MEMBRES (détecte nouveaux arrivants live) ──
   const chargerMembresSilent = useCallback(async (equipe_id) => {
     try {
-      const r = await axios.get(`${API}/equipes/${equipe_id}/membres`)
+      const r = await axios.get(`${API}/equipes/${equipe_id}/membres?_t=${Date.now()}`)
       const nouveaux = r.data
       const anciens = membresRef.current
       if (anciens.length > 0) {
@@ -1920,7 +1925,8 @@ export default function Collaboration() {
     }
 
     const demarrerPolling = () => {
-      pollingRef.current = setInterval(refreshAll, 8000)
+      // Polling rapproché (3s) pour une perception "temps-réel" en collaboration.
+      pollingRef.current = setInterval(refreshAll, 3000)
     }
 
     const handleVisibility = () => {
@@ -2295,7 +2301,7 @@ export default function Collaboration() {
                         { icon: Brain, label: 'Coach IA', active: showIAEquipe, onClick: () => { fermerTousDrawers(); setShowIAEquipe(p => !p); setShowMoreMenu(false) } },
                         { icon: TrendingUp, label: 'Stats', active: showAnalytiques, onClick: () => { fermerTousDrawers(); setShowAnalytiques(p => !p); setShowMoreMenu(false) } },
                         { icon: Sparkles, label: 'Labels', active: showLabelsDrawer, onClick: () => { fermerTousDrawers(); setShowLabelsDrawer(p => !p); setShowMoreMenu(false) } },
-                        ...(isAdmin ? [{ icon: Shield, label: 'Gérer', active: showGestion, onClick: () => { fermerTousDrawers(); setShowGestion(p => !p); setShowMoreMenu(false) } }] : []),
+                        { icon: Users, label: isAdmin ? 'Gérer' : 'Membres', active: showGestion, onClick: () => { fermerTousDrawers(); setShowGestion(p => !p); setShowMoreMenu(false) } },
                         { icon: Activity, label: 'Activité', active: showActivite, onClick: () => { fermerTousDrawers(); setShowActivite(p => !p); setShowMoreMenu(false) } },
                         { icon: Share2, label: 'Inviter', active: false, onClick: () => { setShowPartage(equipeActive); setShowMoreMenu(false) } },
                       ].map(({ icon: Icon, label, active, onClick }) => (
@@ -2343,10 +2349,10 @@ export default function Collaboration() {
                   <Sparkles size={13} /> Labels{labels.length > 0 && <span style={{ marginLeft: 2, fontSize: 10, padding: '1px 5px', borderRadius: 99, background: T.accent + '20', color: T.accent, fontWeight: 700 }}>{labels.length}</span>}
                 </motion.button>
               )}
-              {equipeActive && isAdmin && (
+              {equipeActive && (
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showGestion ? `${T.accent}18` : T.bg3, border: `1px solid ${showGestion ? T.accent + '35' : T.border}`, borderRadius: 9, color: showGestion ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
                   onClick={() => { fermerTousDrawers(); setShowGestion(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
-                  <Shield size={13} /> Gérer
+                  <Users size={13} /> {isAdmin ? 'Gérer' : 'Membres'}
                 </motion.button>
               )}
               {equipeActive && (
@@ -2594,8 +2600,9 @@ export default function Collaboration() {
         {showAnalytiques && equipeActive && (
           <DrawerAnalytiques key="analytiques" T={T} equipe_id={equipeActive.id} onFermer={() => setShowAnalytiques(false)} />
         )}
-        {showGestion && equipeActive && isAdmin && (
+        {showGestion && equipeActive && (
           <DrawerGestion key="gestion" T={T} equipe={equipeActive} membres={membres} user={user}
+            viewOnly={!isAdmin}
             onFermer={() => setShowGestion(false)}
             onEquipeRenommee={(nom) => {
               setEquipeActive(e => ({ ...e, nom }))

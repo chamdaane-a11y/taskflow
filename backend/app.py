@@ -56,6 +56,20 @@ limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="m
 
 CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 
+@app.after_request
+def disable_api_cache(response):
+    """Empêche les browsers de cacher les réponses JSON des endpoints temps-réel.
+    Sans ça, axios.get polling renvoie du cache stale → l'user doit Ctrl+Shift+R."""
+    try:
+        path = request.path or ''
+        if path.startswith('/equipes/') or path.startswith('/users/'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+    except Exception:
+        pass
+    return response
+
 VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
 VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
