@@ -6,6 +6,8 @@ import {
   User, Lock, ArrowLeft, CheckCircle, AlertCircle,
   Edit3, Award, Layers, Snowflake, ChevronRight, ChevronDown, Clock, UserPlus,
   Sprout, Zap, Target, Brain, Trophy, Sparkles, Crown, Flame, Star, CheckCircle2,
+  Eye, EyeOff, ShieldCheck, Mail, Smartphone, Monitor, Tablet, LogOut, Loader, X,
+  AlertTriangle, Download, Trash2,
 } from 'lucide-react'
 import { themes } from '../themes'
 import { useTheme } from '../useTheme'
@@ -326,8 +328,22 @@ export default function Profile() {
   const [ancienPwd, setAncienPwd]   = useState('')
   const [newPwd, setNewPwd]         = useState('')
   const [confirmPwd, setConfirmPwd] = useState('')
+  const [showPwd, setShowPwd]       = useState({})
   const [message, setMessage]       = useState(null)
   const [loading, setLoading]       = useState(false)
+  const [sessions, setSessions]         = useState([])
+  const [sessionsLoading, setSessionsLoading] = useState(false)
+  const [deletingSession, setDeletingSession] = useState(null)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [newEmail, setNewEmail]             = useState('')
+  const [emailModalPwd, setEmailModalPwd]   = useState('')
+  const [showEmailPwd, setShowEmailPwd]     = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm]   = useState('')
+  const [deletePwd, setDeletePwd]           = useState('')
+  const [showDeletePwd, setShowDeletePwd]   = useState(false)
+  const [exporting, setExporting]           = useState(false)
+  const [deleting, setDeleting]             = useState(false)
 
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem('user') || '{}')
@@ -337,6 +353,12 @@ export default function Profile() {
     chargerBadges(u.id)
     chargerTimeline(u.id)
   }, [])
+
+  useEffect(() => {
+    if (onglet === 'securite' && user?.id && sessions.length === 0 && !sessionsLoading) {
+      chargerSessions(user.id)
+    }
+  }, [onglet])
 
   const chargerUser = async (id) => {
     try {
@@ -363,6 +385,95 @@ export default function Profile() {
       const res = await axios.get(`${API}/users/${id}/timeline`, { withCredentials: true })
       setTimeline(res.data.events || [])
     } catch {}
+  }
+
+  const chargerSessions = async (id) => {
+    setSessionsLoading(true)
+    try {
+      const res = await axios.get(`${API}/users/${id}/sessions`, { withCredentials: true })
+      setSessions(res.data.sessions || [])
+    } catch {}
+    setSessionsLoading(false)
+  }
+
+  const deconnecterSession = async (sessionId) => {
+    setDeletingSession(sessionId)
+    try {
+      await axios.delete(`${API}/users/${user.id}/sessions/${sessionId}`, { withCredentials: true })
+      setSessions(prev => prev.filter(s => s.id !== sessionId))
+    } catch { showMessage('Erreur lors de la déconnexion', 'erreur') }
+    setDeletingSession(null)
+  }
+
+  const demanderChangementEmail = async () => {
+    if (!newEmail.trim() || !emailModalPwd) { showMessage('Email et mot de passe requis', 'erreur'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) { showMessage('Email invalide', 'erreur'); return }
+    setLoading(true)
+    try {
+      await axios.post(`${API}/users/${user.id}/email-change/request`,
+        { new_email: newEmail.trim(), password: emailModalPwd },
+        { withCredentials: true })
+      showMessage('Email de confirmation envoyé à ta nouvelle adresse')
+      const updated = { ...user, email_change_new: newEmail.trim() }
+      setUser(updated); localStorage.setItem('user', JSON.stringify(updated))
+      setEmailModalOpen(false); setNewEmail(''); setEmailModalPwd(''); setShowEmailPwd(false)
+    } catch (e) { showMessage(e.response?.data?.erreur || 'Erreur', 'erreur') }
+    setLoading(false)
+  }
+
+  const exporterDonnees = async () => {
+    setExporting(true)
+    try {
+      const res = await axios.get(`${API}/users/${user.id}/export`, {
+        withCredentials: true, responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `getshift-export-${user.id}-${new Date().toISOString().slice(0,10)}.json`
+      document.body.appendChild(a); a.click(); a.remove()
+      window.URL.revokeObjectURL(url)
+      showMessage('Export téléchargé')
+    } catch { showMessage('Erreur lors de l\'export', 'erreur') }
+    setExporting(false)
+  }
+
+  const supprimerCompte = async () => {
+    if (deleteConfirm !== 'SUPPRIMER') { showMessage('Tape SUPPRIMER en majuscules', 'erreur'); return }
+    if (!user.google_id && !deletePwd) { showMessage('Mot de passe requis', 'erreur'); return }
+    setDeleting(true)
+    try {
+      await axios.delete(`${API}/users/${user.id}`, {
+        withCredentials: true,
+        data: { confirmation: deleteConfirm, password: deletePwd },
+      })
+      localStorage.clear()
+      navigate('/')
+    } catch (e) {
+      showMessage(e.response?.data?.erreur || 'Erreur', 'erreur')
+      setDeleting(false)
+    }
+  }
+
+  const annulerChangementEmail = async () => {
+    setLoading(true)
+    try {
+      await axios.post(`${API}/users/${user.id}/email-change/cancel`, {}, { withCredentials: true })
+      const updated = { ...user, email_change_new: null }
+      setUser(updated); localStorage.setItem('user', JSON.stringify(updated))
+      showMessage('Changement annulé')
+    } catch { showMessage('Erreur', 'erreur') }
+    setLoading(false)
+  }
+
+  const deconnecterAutres = async () => {
+    setDeletingSession('others')
+    try {
+      await axios.delete(`${API}/users/${user.id}/sessions/others`, { withCredentials: true })
+      setSessions(prev => prev.filter(s => s.is_current))
+      showMessage('Autres sessions déconnectées')
+    } catch { showMessage('Erreur', 'erreur') }
+    setDeletingSession(null)
   }
 
   const showMessage = (texte, type = 'succes') => {
@@ -425,6 +536,26 @@ export default function Profile() {
 
   const NiveauIcon = niveauInfo.Icon
 
+  const pwdChecks = {
+    len:     newPwd.length >= 8,
+    upper:   /[A-Z]/.test(newPwd),
+    digit:   /[0-9]/.test(newPwd),
+    special: /[^a-zA-Z0-9]/.test(newPwd),
+  }
+  const confirmOk  = confirmPwd.length > 0 && confirmPwd === newPwd
+  const confirmBad = confirmPwd.length > 0 && confirmPwd !== newPwd
+
+  const secuItems = [
+    { label: 'Email vérifié', Icon: Mail,        ok: !!user.email_verifie, sub: user.email_verifie ? 'Adresse confirmée' : 'Vérifie ta boîte' },
+    { label: 'Google lié',    Icon: ShieldCheck, ok: !!user.google_id,     sub: user.google_id ? 'Connexion active' : 'Non connecté' },
+    { label: 'Mot de passe',  Icon: Lock,        ok: true,                  sub: user.google_id ? 'Via Google' : 'Défini' },
+    { label: '2FA',           Icon: Smartphone,  ok: false,                 sub: 'Bientôt', soon: true },
+  ]
+  const secuScore = secuItems.filter(c => !c.soon && c.ok).length
+  const secuMax   = secuItems.filter(c => !c.soon).length
+  const secuPct   = Math.round(secuScore / secuMax * 100)
+  const secuColor = secuPct >= 100 ? '#00C896' : secuPct >= 60 ? '#facc15' : '#ef4444'
+
   return (
     <div style={{ minHeight: '100vh', background: bg, fontFamily: "'DM Sans', sans-serif", color: text, position: 'relative', overflowX: 'hidden' }}>
       <style>{`
@@ -442,6 +573,133 @@ export default function Profile() {
         <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', filter: 'blur(140px)', opacity: isLight ? 0.05 : 0.08, background: `radial-gradient(circle, ${accent}, transparent)`, top: '-15%', left: '-10%' }} />
         <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', filter: 'blur(120px)', opacity: isLight ? 0.04 : 0.06, background: 'radial-gradient(circle, #00C896, transparent)', bottom: '5%', right: '-5%' }} />
       </div>
+
+      {/* Modal changement email */}
+      <AnimatePresence>
+        {emailModalOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => !loading && setEmailModalOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 18, padding: 28, maxWidth: 440, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 11, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Mail size={16} color={accent} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Changer mon email</h3>
+                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>On enverra un lien de confirmation</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => !loading && setEmailModalOpen(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: text2, padding: 4 }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>Nouvelle adresse</label>
+                <input className="pf-input" type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="nouvel@email.com"
+                  style={{ background: inputBg, border: `1.5px solid ${inputBorder}`, color: text }} />
+              </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>Confirme ton mot de passe</label>
+                <div style={{ position: 'relative' }}>
+                  <input className="pf-input" type={showEmailPwd ? 'text' : 'password'} value={emailModalPwd}
+                    onChange={e => setEmailModalPwd(e.target.value)} placeholder="Ton mot de passe actuel"
+                    onKeyDown={e => e.key === 'Enter' && demanderChangementEmail()}
+                    style={{ background: inputBg, border: `1.5px solid ${inputBorder}`, color: text, paddingRight: 44 }} />
+                  <button type="button" onClick={() => setShowEmailPwd(p => !p)}
+                    style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: text2, display: 'flex', alignItems: 'center', padding: 0 }}>
+                    {showEmailPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => !loading && setEmailModalOpen(false)}
+                  style={{ padding: '11px 18px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 10, color: text2, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                <motion.button onClick={demanderChangementEmail} disabled={loading || !newEmail || !emailModalPwd} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  style={{ padding: '11px 22px', background: `linear-gradient(135deg, ${accent}, #00C896)`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', opacity: (!newEmail || !emailModalPwd) ? 0.5 : 1 }}>
+                  {loading ? 'Envoi...' : 'Envoyer le lien'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal suppression compte */}
+      <AnimatePresence>
+        {deleteModalOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => !deleting && setDeleteModalOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: cardBg, border: '1px solid #ef444440', borderRadius: 18, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 20px 60px rgba(239,68,68,0.25)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 11, background: '#ef444418', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AlertTriangle size={16} color="#ef4444" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Supprimer mon compte</h3>
+                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Cette action est irréversible</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => !deleting && setDeleteModalOpen(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: text2, padding: 4 }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ background: '#ef444410', border: '1px solid #ef444430', borderRadius: 11, padding: '12px 14px', marginBottom: 18 }}>
+                <div style={{ fontSize: 12, color: text, lineHeight: 1.6 }}>
+                  Toutes tes données seront <strong>définitivement</strong> supprimées : tâches, badges ({badgesData.nb_obtenus}), historique IA, intégrations, niveau {user.niveau || 1}, {user.points || 0} points. Aucune récupération possible.
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>Tape <code style={{ color: '#ef4444', background: '#ef444418', padding: '1px 6px', borderRadius: 4 }}>SUPPRIMER</code> pour confirmer</label>
+                <input className="pf-input" value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)} placeholder="SUPPRIMER"
+                  style={{ background: inputBg, border: `1.5px solid ${deleteConfirm === 'SUPPRIMER' ? '#ef4444' : inputBorder}`, color: text }} />
+              </div>
+
+              {!user.google_id && (
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>Ton mot de passe</label>
+                  <div style={{ position: 'relative' }}>
+                    <input className="pf-input" type={showDeletePwd ? 'text' : 'password'} value={deletePwd}
+                      onChange={e => setDeletePwd(e.target.value)} placeholder="Mot de passe actuel"
+                      style={{ background: inputBg, border: `1.5px solid ${inputBorder}`, color: text, paddingRight: 44 }} />
+                    <button type="button" onClick={() => setShowDeletePwd(p => !p)}
+                      style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: text2, display: 'flex', alignItems: 'center', padding: 0 }}>
+                      {showDeletePwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => !deleting && setDeleteModalOpen(false)}
+                  style={{ padding: '11px 18px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 10, color: text2, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                <motion.button onClick={supprimerCompte} disabled={deleting || deleteConfirm !== 'SUPPRIMER' || (!user.google_id && !deletePwd)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  style={{ padding: '11px 22px', background: '#ef4444', border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: deleting ? 'wait' : 'pointer', opacity: (deleteConfirm !== 'SUPPRIMER' || (!user.google_id && !deletePwd)) ? 0.5 : 1 }}>
+                  {deleting ? 'Suppression...' : 'Supprimer définitivement'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Toast */}
       <AnimatePresence>
@@ -609,9 +867,33 @@ export default function Profile() {
               </div>
               <div style={{ marginBottom: 28 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>Adresse e-mail</label>
-                <input className="pf-input" value={user.email} disabled
-                  style={{ background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.02)', border: `1.5px solid ${inputBorder}`, color: text2, cursor: 'not-allowed', opacity: 0.7 }} />
-                <p style={{ fontSize: 11, color: text2, marginTop: 6 }}>L'email ne peut pas être modifié pour des raisons de sécurité.</p>
+                <div style={{ position: 'relative' }}>
+                  <input className="pf-input" value={user.email} disabled
+                    style={{ background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.02)', border: `1.5px solid ${inputBorder}`, color: text2, cursor: 'not-allowed', opacity: 0.7, paddingRight: user.google_id ? 16 : 110 }} />
+                  {!user.google_id && !user.email_change_new && (
+                    <button type="button" onClick={() => setEmailModalOpen(true)}
+                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: '7px 14px', background: `${accent}18`, border: `1px solid ${accent}40`, borderRadius: 8, color: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      Modifier
+                    </button>
+                  )}
+                </div>
+                {user.google_id ? (
+                  <p style={{ fontSize: 11, color: text2, marginTop: 6 }}>Email géré par Google — change-le côté Google si besoin.</p>
+                ) : user.email_change_new ? (
+                  <div style={{ marginTop: 10, padding: '10px 14px', background: '#f9731610', border: '1px solid #f9731640', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Clock size={14} color="#f97316" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: text }}>Changement en attente</div>
+                      <div style={{ fontSize: 11, color: text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Confirme via le lien envoyé à <strong>{user.email_change_new}</strong></div>
+                    </div>
+                    <button type="button" onClick={annulerChangementEmail}
+                      style={{ padding: '5px 10px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 7, color: text2, fontSize: 11, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}>
+                      Annuler
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 11, color: text2, marginTop: 6 }}>On t'enverra un lien de confirmation à ta nouvelle adresse.</p>
+                )}
               </div>
               <motion.button onClick={modifierNom} disabled={loading || nom === user.nom} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 style={{ padding: '13px 28px', background: nom !== user.nom ? `linear-gradient(135deg, ${accent}, #00C896)` : (isLight ? '#f1f5f9' : bg3), border: 'none', borderRadius: 11, color: nom !== user.nom ? 'white' : text2, fontWeight: 700, fontSize: 14, cursor: nom !== user.nom ? 'pointer' : 'not-allowed', fontFamily: "'DM Sans', sans-serif", boxShadow: nom !== user.nom ? `0 8px 24px ${accent}33` : 'none', transition: 'all 0.2s' }}>
@@ -623,40 +905,230 @@ export default function Profile() {
           {onglet === 'securite' && (
             <motion.div key="securite" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 20, padding: 'clamp(20px, 4vw, 36px)', boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.05)' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 11, background: '#C9A84C18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Lock size={16} color="#C9A84C" />
+
+              {/* ── Santé du compte ── */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 11, background: `${secuColor}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ShieldCheck size={16} color={secuColor} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Santé du compte</h3>
+                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{secuScore}/{secuMax} critères remplis</p>
+                  </div>
+                  <div style={{ padding: '4px 12px', borderRadius: 99, background: `${secuColor}18`, border: `1px solid ${secuColor}40`, fontSize: 13, fontWeight: 800, color: secuColor }}>
+                    {secuPct}%
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Changer le mot de passe</h3>
-                  <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Gardez votre compte sécurisé</p>
+                <div style={{ height: 4, background: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden', marginBottom: 14 }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${secuPct}%` }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ height: '100%', background: secuColor, borderRadius: 99 }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
+                  {secuItems.map((item, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: isLight ? '#f8f9fc' : bg3, border: `1px solid ${item.soon ? cardBorder : item.ok ? '#00C89630' : '#ef444420'}` }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: item.soon ? `${text2}10` : item.ok ? '#00C89618' : '#ef444418' }}>
+                        <item.Icon size={14} color={item.soon ? text2 : item.ok ? '#00C896' : '#ef4444'} />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</div>
+                        <div style={{ fontSize: 10, color: item.soon ? text2 : item.ok ? '#00C896' : '#ef4444', marginTop: 1, fontWeight: 500 }}>{item.sub}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              {[
-                { label: 'Mot de passe actuel',              val: ancienPwd,  set: setAncienPwd,  ph: 'Votre mot de passe actuel' },
-                { label: 'Nouveau mot de passe',             val: newPwd,     set: setNewPwd,     ph: 'Min. 8 caractères' },
-                { label: 'Confirmer le nouveau mot de passe', val: confirmPwd, set: setConfirmPwd, ph: 'Répétez' },
-              ].map((f, i) => (
-                <div key={i} style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>{f.label}</label>
-                  <input className="pf-input" type="password" value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph}
-                    style={{ background: inputBg, border: `1.5px solid ${inputBorder}`, color: text }} />
-                </div>
-              ))}
-              {newPwd && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-                    {[1,2,3,4].map(i => (
-                      <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= forceLvl ? forceColor : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.08)'), transition: 'background 0.2s' }} />
-                    ))}
+
+              <div style={{ height: 1, background: cardBorder, marginBottom: 28 }} />
+
+              {/* ── Changer le mot de passe ── */}
+              {user.google_id ? (
+                <div style={{ display: 'flex', gap: 12, padding: '16px', background: isLight ? '#f0f9ff' : `${accent}0d`, border: `1px solid ${accent}30`, borderRadius: 12 }}>
+                  <ShieldCheck size={18} color={accent} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: text, marginBottom: 4 }}>Connexion via Google</div>
+                    <div style={{ fontSize: 12, color: text2, lineHeight: 1.6 }}>Ton compte est géré par Google. Pour définir un mot de passe local, utilise le lien <strong>« Mot de passe oublié »</strong> sur la page de connexion.</div>
                   </div>
-                  <p style={{ fontSize: 12, color: forceColor, fontWeight: 500 }}>{forceLabel}</p>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 11, background: '#C9A84C18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Lock size={16} color="#C9A84C" />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Changer le mot de passe</h3>
+                      <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Gardez votre compte sécurisé</p>
+                    </div>
+                  </div>
+
+                  {[
+                    { label: 'Mot de passe actuel',               val: ancienPwd,  set: setAncienPwd,  ph: 'Votre mot de passe actuel', idx: 0 },
+                    { label: 'Nouveau mot de passe',              val: newPwd,     set: setNewPwd,     ph: 'Min. 8 caractères',         idx: 1 },
+                    { label: 'Confirmer le nouveau mot de passe', val: confirmPwd, set: setConfirmPwd, ph: 'Répétez',                   idx: 2 },
+                  ].map((f) => {
+                    const isConfirm   = f.idx === 2
+                    const borderColor = isConfirm && confirmBad ? '#ef4444'
+                      : isConfirm && confirmOk ? '#00C896'
+                      : inputBorder
+                    return (
+                      <div key={f.idx} style={{ marginBottom: 16 }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>{f.label}</label>
+                        <div style={{ position: 'relative' }}>
+                          <input className="pf-input" type={showPwd[f.idx] ? 'text' : 'password'} value={f.val}
+                            onChange={e => f.set(e.target.value)} placeholder={f.ph}
+                            style={{ background: inputBg, border: `1.5px solid ${borderColor}`, color: text, paddingRight: 44 }} />
+                          <button type="button" onClick={() => setShowPwd(p => ({ ...p, [f.idx]: !p[f.idx] }))}
+                            style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: text2, display: 'flex', alignItems: 'center', padding: 0 }}>
+                            {showPwd[f.idx] ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        {isConfirm && confirmBad && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 5, fontWeight: 500 }}>Les mots de passe ne correspondent pas</p>}
+                        {isConfirm && confirmOk  && <p style={{ fontSize: 11, color: '#00C896', marginTop: 5, fontWeight: 500 }}>✓ Les mots de passe correspondent</p>}
+                      </div>
+                    )
+                  })}
+
+                  {newPwd && (
+                    <div style={{ marginBottom: 24 }}>
+                      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                        {[1,2,3,4].map(i => (
+                          <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= forceLvl ? forceColor : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.08)'), transition: 'background 0.2s' }} />
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+                        <span style={{ fontSize: 12, color: forceColor, fontWeight: 600 }}>{forceLabel}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {[
+                          { label: '8 caractères min',   ok: pwdChecks.len     },
+                          { label: 'Majuscule (A-Z)',     ok: pwdChecks.upper   },
+                          { label: 'Chiffre (0-9)',       ok: pwdChecks.digit   },
+                          { label: 'Caractère spécial',  ok: pwdChecks.special },
+                        ].map((c, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                            <div style={{ width: 15, height: 15, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.ok ? '#00C89618' : (isLight ? '#f1f5f9' : 'rgba(255,255,255,0.05)'), border: `1.5px solid ${c.ok ? '#00C896' : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)')}`, transition: 'all 0.15s' }}>
+                              {c.ok && <span style={{ color: '#00C896', fontSize: 9, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                            </div>
+                            <span style={{ fontSize: 11, color: c.ok ? text : text2, fontWeight: c.ok ? 600 : 400, transition: 'color 0.15s' }}>{c.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <motion.button onClick={modifierPassword} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    style={{ padding: '13px 28px', background: 'linear-gradient(135deg, #C9A84C, #6C63FF)', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 8px 24px rgba(201,168,76,0.25)', transition: 'all 0.2s' }}>
+                    {loading ? 'Modification...' : 'Modifier le mot de passe'}
+                  </motion.button>
+                </>
+              )}
+
+              {/* ── Sessions actives ── */}
+              <div style={{ height: 1, background: cardBorder, margin: '28px 0' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 11, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Monitor size={16} color={accent} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Sessions actives</h3>
+                  <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Appareils connectés à ton compte</p>
+                </div>
+                {sessions.filter(s => !s.is_current).length > 0 && (
+                  <motion.button onClick={deconnecterAutres} disabled={deletingSession === 'others'} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'transparent', border: `1px solid #ef444440`, borderRadius: 9, color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <LogOut size={13} /> Déconnecter tout
+                  </motion.button>
+                )}
+              </div>
+
+              {sessionsLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+                  <Loader size={20} color={text2} style={{ animation: 'spin 1s linear infinite' }} />
+                  <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', border: `1.5px dashed ${cardBorder}`, borderRadius: 12, fontSize: 13, color: text2 }}>
+                  Aucune session enregistrée
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {sessions.map(s => {
+                    const isPhone  = s.device?.includes('Mobile')
+                    const isTablet = s.device?.includes('Tablette')
+                    const DevIcon  = isPhone ? Smartphone : isTablet ? Tablet : Monitor
+                    return (
+                      <motion.div key={s.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: isLight ? '#f8f9fc' : bg3, border: `1px solid ${s.is_current ? `${accent}40` : cardBorder}`, borderRadius: 13 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: s.is_current ? `${accent}18` : `${text2}10` }}>
+                          <DevIcon size={17} color={s.is_current ? accent : text2} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.device || '—'}</span>
+                            {s.is_current && (
+                              <span style={{ fontSize: 9, fontWeight: 700, color: accent, letterSpacing: 0.6, textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: `${accent}18`, border: `1px solid ${accent}30` }}>Session actuelle</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: text2 }}>{s.ip} · {s.last_seen ? dateRelative(s.last_seen) : '—'}</div>
+                        </div>
+                        {!s.is_current && (
+                          <motion.button onClick={() => deconnecterSession(s.id)} disabled={deletingSession === s.id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            style={{ padding: '6px 12px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 8, color: text2, fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}>
+                            {deletingSession === s.id ? '...' : 'Déconnecter'}
+                          </motion.button>
+                        )}
+                      </motion.div>
+                    )
+                  })}
                 </div>
               )}
-              <motion.button onClick={modifierPassword} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                style={{ padding: '13px 28px', background: 'linear-gradient(135deg, #C9A84C, #6C63FF)', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 8px 24px rgba(201,168,76,0.25)', transition: 'all 0.2s' }}>
-                {loading ? 'Modification...' : 'Modifier le mot de passe'}
-              </motion.button>
+
+              {/* ── Zone danger ── */}
+              <div style={{ height: 1, background: cardBorder, margin: '28px 0' }} />
+              <div style={{ background: isLight ? '#fef2f2' : 'rgba(239,68,68,0.05)', border: '1px solid #ef444440', borderRadius: 14, padding: 'clamp(16px, 3vw, 22px)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 11, background: '#ef444418', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AlertTriangle size={16} color="#ef4444" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Zone danger</h3>
+                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Actions irréversibles sur ton compte</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {/* Export */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 11 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 9, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Download size={15} color={accent} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: text }}>Exporter mes données</div>
+                      <div style={{ fontSize: 11, color: text2 }}>Télécharge un JSON avec ton profil, tâches, badges, etc.</div>
+                    </div>
+                    <motion.button onClick={exporterDonnees} disabled={exporting} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      style={{ padding: '8px 14px', background: `${accent}18`, border: `1px solid ${accent}40`, borderRadius: 9, color: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                      {exporting ? 'Export...' : 'Exporter'}
+                    </motion.button>
+                  </div>
+
+                  {/* Delete */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: cardBg, border: '1px solid #ef444430', borderRadius: 11 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 9, background: '#ef444418', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Trash2 size={15} color="#ef4444" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: text }}>Supprimer mon compte</div>
+                      <div style={{ fontSize: 11, color: text2 }}>Suppression définitive : profil, tâches, badges, historique.</div>
+                    </div>
+                    <motion.button onClick={() => setDeleteModalOpen(true)} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      style={{ padding: '8px 14px', background: '#ef444418', border: '1px solid #ef444440', borderRadius: 9, color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                      Supprimer
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 

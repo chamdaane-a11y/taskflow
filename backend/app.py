@@ -7,7 +7,7 @@ import time
 import urllib.parse
 from flask import Flask, jsonify, request, make_response, redirect
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies, jwt_required, get_jwt, get_jwt_identity, decode_token
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from database import connecter
@@ -17,6 +17,7 @@ import json
 import re
 import secrets
 import base64
+import uuid
 from datetime import timedelta, datetime
 from dotenv import load_dotenv
 from groq import Groq
@@ -62,6 +63,34 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 # ============================================
 # HELPERS EMAIL & SLACK
 # ============================================
+
+def get_client_ip():
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr or '—'
+
+def parse_device(ua):
+    ua = ua or ''
+    if 'iPhone' in ua or ('Android' in ua and 'Mobile' in ua):
+        device_type = 'Mobile'
+    elif 'iPad' in ua or ('Android' in ua and 'Mobile' not in ua):
+        device_type = 'Tablette'
+    else:
+        device_type = 'Ordinateur'
+    if 'Edg/' in ua or 'EdgA/' in ua:
+        browser = 'Edge'
+    elif 'OPR/' in ua or 'Opera' in ua:
+        browser = 'Opera'
+    elif 'Firefox/' in ua:
+        browser = 'Firefox'
+    elif 'Chrome/' in ua:
+        browser = 'Chrome'
+    elif 'Safari/' in ua:
+        browser = 'Safari'
+    else:
+        browser = 'Navigateur'
+    return f"{device_type} · {browser}"
 
 def envoyer_notification_slack(webhook_url, message):
     try:
@@ -112,6 +141,79 @@ def envoyer_push(subscription_json, titre, body, url="/dashboard"):
     except WebPushException as e:
         print(f"[Push] Erreur: {e}")
         return False
+
+
+# ── Changement d'email ────────────────────────────────────────────────
+_email_change_columns_ready = False
+
+def _ensure_email_change_columns():
+    """Idempotent : ne lance l'ALTER qu'une fois par process. Log les vraies erreurs (sauf 'duplicate column')."""
+    global _email_change_columns_ready
+    if _email_change_columns_ready:
+        return
+    try:
+        db = connecter(); cur = db.cursor()
+        for col_def in [
+            "email_change_token VARCHAR(64)",
+            "email_change_new VARCHAR(255)",
+            "email_change_expiry DATETIME",
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE users ADD COLUMN {col_def}")
+            except Exception as e:
+                msg = str(e).lower()
+                # On ignore uniquement le cas "colonne existe déjà"
+                if 'duplicate column' not in msg and 'errno: 1060' not in msg:
+                    print(f"[email_change] ALTER {col_def} → {e}", flush=True)
+        db.commit(); cur.close(); db.close()
+        _email_change_columns_ready = True
+    except Exception as e:
+        print(f"[email_change] schema error: {e}", flush=True)
+
+def envoyer_email_changement(new_email, nom, token):
+    lien = f"https://getshift-backend.onrender.com/confirm-email-change/{token}"
+    html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
+        <h1 style="color:#6c63ff;">GetShift</h1>
+        <h2>Bonjour {nom},</h2>
+        <p>Tu as demandé à changer l'email de ton compte GetShift vers cette adresse. Confirme ci-dessous :</p>
+        <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
+            Confirmer le changement d'email
+        </a>
+        <p style="color:#888;font-size:12px;">Ce lien expire dans 24h. Si tu n'as pas demandé ce changement, ignore ce message.</p>
+    </div>"""
+    threading.Thread(target=envoyer_email, args=(new_email, "Confirme ton nouvel email GetShift", html)).start()
+
+
+# ── Sessions actives ──────────────────────────────────────────────────
+def _ensure_sessions_table(curseur):
+    curseur.execute("""
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            jti VARCHAR(64) NOT NULL UNIQUE,
+            device VARCHAR(200),
+            ip VARCHAR(45),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_seen DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+def _enregistrer_session(user_id, access_token):
+    try:
+        token_data = decode_token(access_token)
+        jti = token_data.get('jti', str(uuid.uuid4()))
+        device = parse_device(request.headers.get('User-Agent', ''))
+        ip = get_client_ip()
+        db = connecter(); cur = db.cursor()
+        _ensure_sessions_table(cur)
+        cur.execute(
+            "INSERT INTO user_sessions (user_id, jti, device, ip) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE last_seen=NOW()",
+            (user_id, jti, device, ip)
+        )
+        db.commit(); cur.close(); db.close()
+    except Exception as e:
+        print(f"[session] enregistrement erreur: {e}")
 
 
 # ── Système anti-doublons : tracking des notifs envoyées ──────────────
@@ -1185,6 +1287,7 @@ def auth_google():
 
         cursor.close(); db.close()
         access_token = create_access_token(identity=str(user_id))
+        _enregistrer_session(user_id, access_token)
         response = make_response(jsonify({
             "message": "Connexion Google réussie",
             "user": {"id": user_id, "nom": nom_final, "email": email, "niveau": niveau, "points": points, "theme": theme, "avatar": avatar_url},
@@ -1302,6 +1405,7 @@ def login():
             print(f"[login] consommer invitations erreur: {e}")
 
         access_token = create_access_token(identity=str(user['id']))
+        _enregistrer_session(user['id'], access_token)
         response = make_response(jsonify({
             "message": "Connecté !",
             "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'dark')},
@@ -1313,7 +1417,18 @@ def login():
         return jsonify({"erreur": str(e)}), 500
 
 @app.route('/logout', methods=['POST'])
+@jwt_required(optional=True)
 def logout():
+    try:
+        claims = get_jwt()
+        if claims:
+            jti = claims.get('jti')
+            if jti:
+                db = connecter(); cur = db.cursor()
+                cur.execute("DELETE FROM user_sessions WHERE jti=%s", (jti,))
+                db.commit(); cur.close(); db.close()
+    except Exception:
+        pass
     response = make_response(jsonify({"message": "Déconnecté !"}))
     unset_jwt_cookies(response)
     return response
@@ -1397,11 +1512,13 @@ def reset_password():
 
 @app.route('/users/<int:id>', methods=['GET'])
 def get_user(id):
+    _ensure_email_change_columns()
     db = connecter()
     curseur = db.cursor(dictionary=True)
     curseur.execute(
         "SELECT id, nom, email, points, niveau, theme, streak, derniere_activite, "
-        "streak_freeze_used_at, created_at FROM users WHERE id=%s",
+        "streak_freeze_used_at, created_at, email_verifie, google_id, "
+        "email_change_new, email_change_expiry FROM users WHERE id=%s",
         (id,)
     )
     user = curseur.fetchone()
@@ -1409,9 +1526,12 @@ def get_user(id):
         curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=TRUE", (id,))
         user['taches_count'] = (curseur.fetchone() or {}).get('nb', 0)
         # Sérialiser les dates pour JSON
-        for k in ('derniere_activite', 'streak_freeze_used_at', 'created_at'):
+        for k in ('derniere_activite', 'streak_freeze_used_at', 'created_at', 'email_change_expiry'):
             if user.get(k) is not None:
                 user[k] = user[k].isoformat() if hasattr(user[k], 'isoformat') else str(user[k])
+        # Booléens propres
+        user['email_verifie'] = bool(user.get('email_verifie'))
+        user['google_id'] = user.get('google_id') or None
     db.close()
     return jsonify(user)
 
@@ -1450,6 +1570,264 @@ def update_password(id):
         curseur.execute("UPDATE users SET password=%s WHERE id=%s", (nouveau_hash, id))
         db.commit(); db.close()
         return jsonify({"message": "Mot de passe modifié avec succès !"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/email-change/request', methods=['POST'])
+def request_email_change(id):
+    try:
+        _ensure_email_change_columns()
+        data = request.get_json() or {}
+        new_email = (data.get('new_email') or '').strip().lower()
+        password  = (data.get('password') or '').strip()
+        if not new_email or not password:
+            return jsonify({"erreur": "Email et mot de passe requis"}), 400
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', new_email):
+            return jsonify({"erreur": "Email invalide"}), 400
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT id, nom, email, password, google_id FROM users WHERE id=%s", (id,))
+        user = cur.fetchone()
+        if not user:
+            cur.close(); db.close()
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        if user.get('google_id'):
+            cur.close(); db.close()
+            return jsonify({"erreur": "Ton compte est géré par Google, change d'abord d'adresse côté Google"}), 400
+        if new_email == (user.get('email') or '').lower():
+            cur.close(); db.close()
+            return jsonify({"erreur": "C'est déjà ton email actuel"}), 400
+        pwd_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        if pwd_hash != user.get('password'):
+            cur.close(); db.close()
+            return jsonify({"erreur": "Mot de passe incorrect"}), 401
+        cur.execute("SELECT id FROM users WHERE email=%s AND id!=%s", (new_email, id))
+        if cur.fetchone():
+            cur.close(); db.close()
+            return jsonify({"erreur": "Cet email est déjà utilisé"}), 409
+        token = secrets.token_urlsafe(32)
+        expiry = datetime.now() + timedelta(hours=24)
+        cur.execute(
+            "UPDATE users SET email_change_token=%s, email_change_new=%s, email_change_expiry=%s WHERE id=%s",
+            (token, new_email, expiry, id)
+        )
+        db.commit(); cur.close(); db.close()
+        envoyer_email_changement(new_email, user['nom'], token)
+        return jsonify({"message": "Un email de confirmation a été envoyé à ta nouvelle adresse"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/confirm-email-change/<token>', methods=['GET'])
+def confirm_email_change(token):
+    try:
+        _ensure_email_change_columns()
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute(
+            "SELECT id, nom, email_change_new, email_change_expiry FROM users WHERE email_change_token=%s",
+            (token,)
+        )
+        user = cur.fetchone()
+        if not user:
+            cur.close(); db.close()
+            return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
+                <h1 style="color:#e05c5c">Lien invalide ou déjà utilisé</h1>
+                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
+            </body></html>""", 400
+        if user.get('email_change_expiry') and datetime.now() > user['email_change_expiry']:
+            cur.execute(
+                "UPDATE users SET email_change_token=NULL, email_change_new=NULL, email_change_expiry=NULL WHERE id=%s",
+                (user['id'],)
+            )
+            db.commit(); cur.close(); db.close()
+            return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
+                <h1 style="color:#e05c5c">Ce lien a expiré</h1>
+                <p>Demande un nouveau changement d'email depuis ton profil.</p>
+                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
+            </body></html>""", 400
+        # Vérifier que personne d'autre n'a pris cet email entre-temps
+        cur.execute("SELECT id FROM users WHERE email=%s AND id!=%s", (user['email_change_new'], user['id']))
+        if cur.fetchone():
+            cur.close(); db.close()
+            return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
+                <h1 style="color:#e05c5c">Cet email est déjà utilisé</h1>
+                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
+            </body></html>""", 409
+        cur.execute(
+            "UPDATE users SET email=%s, email_verifie=TRUE, email_change_token=NULL, email_change_new=NULL, email_change_expiry=NULL WHERE id=%s",
+            (user['email_change_new'], user['id'])
+        )
+        db.commit(); cur.close(); db.close()
+        return f"""<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
+            <h1 style="color:#6c63ff">Email mis à jour !</h1>
+            <p>Ton nouvel email est <strong>{user['email_change_new']}</strong>.</p>
+            <p style="color:#888;font-size:13px">Reconnecte-toi avec cette nouvelle adresse.</p>
+            <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">Se connecter →</a>
+        </body></html>"""
+    except Exception as e:
+        return f"""<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
+            <h1 style="color:#e05c5c">Erreur</h1><p>{e}</p>
+        </body></html>""", 500
+
+@app.route('/users/<int:id>/export', methods=['GET'])
+@jwt_required()
+def export_user_data(id):
+    try:
+        if str(get_jwt_identity()) != str(id):
+            return jsonify({"erreur": "Accès refusé"}), 403
+        db = connecter(); cur = db.cursor(dictionary=True)
+        dump = {"exported_at": datetime.now().isoformat(), "version": 1}
+
+        def _safe_fetch(sql, params=()):
+            try:
+                cur.execute(sql, params)
+                rows = cur.fetchall()
+                # Sérialiser les datetime
+                for row in rows:
+                    for k, v in list(row.items()):
+                        if hasattr(v, 'isoformat'):
+                            row[k] = v.isoformat()
+                return rows
+            except Exception:
+                return []
+
+        dump['profile']         = (_safe_fetch("SELECT id, nom, email, niveau, points, streak, theme, created_at FROM users WHERE id=%s", (id,)) or [None])[0]
+        dump['taches']          = _safe_fetch("SELECT * FROM taches WHERE user_id=%s", (id,))
+        dump['objectifs']       = _safe_fetch("SELECT * FROM objectifs WHERE user_id=%s", (id,))
+        dump['categories']      = _safe_fetch("SELECT * FROM categories WHERE user_id=%s", (id,))
+        dump['badges']          = _safe_fetch("SELECT * FROM badges_utilisateurs WHERE user_id=%s", (id,))
+        dump['templates']       = _safe_fetch("SELECT * FROM templates WHERE user_id=%s", (id,))
+        dump['planification']   = _safe_fetch("SELECT * FROM planification WHERE user_id=%s", (id,))
+        dump['tomorrow_plans']  = _safe_fetch("SELECT * FROM tomorrow_plans WHERE user_id=%s", (id,))
+        dump['checkin_soir']    = _safe_fetch("SELECT * FROM checkin_soir WHERE user_id=%s", (id,))
+        dump['coach_messages']  = _safe_fetch("SELECT * FROM coach_messages WHERE user_id=%s ORDER BY id DESC LIMIT 200", (id,))
+        dump['user_memory']     = _safe_fetch("SELECT * FROM user_memory WHERE user_id=%s", (id,))
+        dump['integrations']    = _safe_fetch("SELECT id, type, cree_le FROM integrations WHERE user_id=%s", (id,))
+        dump['sessions']        = _safe_fetch("SELECT id, device, ip, created_at, last_seen FROM user_sessions WHERE user_id=%s", (id,))
+
+        cur.close(); db.close()
+        from flask import Response
+        return Response(
+            json.dumps(dump, ensure_ascii=False, indent=2, default=str),
+            mimetype='application/json',
+            headers={'Content-Disposition': f'attachment; filename="getshift-export-{id}-{datetime.now().strftime("%Y%m%d")}.json"'}
+        )
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>', methods=['DELETE'])
+@jwt_required()
+def delete_user(id):
+    try:
+        if str(get_jwt_identity()) != str(id):
+            return jsonify({"erreur": "Accès refusé"}), 403
+        data = request.get_json() or {}
+        confirmation = (data.get('confirmation') or '').strip()
+        password     = (data.get('password') or '').strip()
+        if confirmation != 'SUPPRIMER':
+            return jsonify({"erreur": "Confirmation invalide (tape SUPPRIMER en majuscules)"}), 400
+
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT id, password, google_id FROM users WHERE id=%s", (id,))
+        user = cur.fetchone()
+        if not user:
+            cur.close(); db.close()
+            return jsonify({"erreur": "Compte introuvable"}), 404
+
+        # Compte email : exige le mot de passe. Compte Google : confirmation suffit.
+        if not user.get('google_id'):
+            if not password:
+                cur.close(); db.close()
+                return jsonify({"erreur": "Mot de passe requis"}), 400
+            pwd_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+            if pwd_hash != user.get('password'):
+                cur.close(); db.close()
+                return jsonify({"erreur": "Mot de passe incorrect"}), 401
+
+        # Suppression explicite sur toutes les tables liées
+        cur2 = db.cursor()
+        tables = [
+            'badges_utilisateurs', 'categories', 'checkin_soir', 'coach_daily_messages',
+            'coach_messages', 'historique_ia', 'integrations', 'objectifs',
+            'planification', 'push_subscriptions', 'taches', 'task_dna_analyses',
+            'templates', 'tomorrow_plans', 'user_memory', 'user_sessions',
+            'notifications_envoyees', 'oauth_states',
+        ]
+        for t in tables:
+            try:
+                cur2.execute(f"DELETE FROM {t} WHERE user_id=%s", (id,))
+            except Exception:
+                pass
+        cur2.execute("DELETE FROM users WHERE id=%s", (id,))
+        db.commit(); cur.close(); cur2.close(); db.close()
+
+        response = make_response(jsonify({"message": "Compte supprimé"}))
+        unset_jwt_cookies(response)
+        return response
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/email-change/cancel', methods=['POST'])
+def cancel_email_change(id):
+    try:
+        _ensure_email_change_columns()
+        db = connecter(); cur = db.cursor()
+        cur.execute(
+            "UPDATE users SET email_change_token=NULL, email_change_new=NULL, email_change_expiry=NULL WHERE id=%s",
+            (id,)
+        )
+        db.commit(); cur.close(); db.close()
+        return jsonify({"message": "Changement annulé"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/sessions', methods=['GET'])
+@jwt_required()
+def list_sessions(id):
+    try:
+        current_jti = get_jwt().get('jti', '')
+        db = connecter(); cur = db.cursor(dictionary=True)
+        _ensure_sessions_table(cur)
+        cur.execute(
+            "SELECT id, device, ip, created_at, last_seen FROM user_sessions WHERE user_id=%s ORDER BY last_seen DESC",
+            (id,)
+        )
+        rows = cur.fetchall()
+        cur.execute("SELECT jti FROM user_sessions WHERE user_id=%s ORDER BY last_seen DESC", (id,))
+        jtis = [r['jti'] for r in cur.fetchall()]
+        cur.close(); db.close()
+        sessions = []
+        for i, row in enumerate(rows):
+            sessions.append({
+                "id":         row['id'],
+                "device":     row['device'] or '—',
+                "ip":         row['ip'] or '—',
+                "created_at": row['created_at'].isoformat() if row['created_at'] else None,
+                "last_seen":  row['last_seen'].isoformat() if row['last_seen'] else None,
+                "is_current": jtis[i] == current_jti if i < len(jtis) else False,
+            })
+        return jsonify({"sessions": sessions})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/sessions/<int:session_id>', methods=['DELETE'])
+@jwt_required()
+def delete_session(id, session_id):
+    try:
+        db = connecter(); cur = db.cursor()
+        cur.execute("DELETE FROM user_sessions WHERE id=%s AND user_id=%s", (session_id, id))
+        db.commit(); cur.close(); db.close()
+        return jsonify({"message": "Session déconnectée"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/sessions/others', methods=['DELETE'])
+@jwt_required()
+def delete_other_sessions(id):
+    try:
+        current_jti = get_jwt().get('jti', '')
+        db = connecter(); cur = db.cursor()
+        cur.execute("DELETE FROM user_sessions WHERE user_id=%s AND jti!=%s", (id, current_jti))
+        db.commit(); cur.close(); db.close()
+        return jsonify({"message": "Autres sessions déconnectées"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 

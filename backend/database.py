@@ -9,5 +9,7 @@ def connecter():
         database=os.getenv('MYSQLDATABASE', 'todo_app'),
         port=int(os.getenv('MYSQLPORT', 3306)),
         connection_timeout=10,
+        charset='utf8mb4',
+        collation='utf8mb4_unicode_ci',
     )
     return connexion
