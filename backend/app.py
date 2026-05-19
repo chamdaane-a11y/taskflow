@@ -1783,27 +1783,43 @@ def cancel_email_change(id):
 @jwt_required()
 def list_sessions(id):
     try:
+        if str(get_jwt_identity()) != str(id):
+            return jsonify({"erreur": "Accès refusé"}), 403
         current_jti = get_jwt().get('jti', '')
         db = connecter(); cur = db.cursor(dictionary=True)
         _ensure_sessions_table(cur)
+
+        # Migration douce : si la session courante n'a jamais été enregistrée
+        # (user logué avant le déploiement de cette feature), on l'inscrit maintenant.
+        if current_jti:
+            cur.execute("SELECT id FROM user_sessions WHERE jti=%s", (current_jti,))
+            if not cur.fetchone():
+                device = parse_device(request.headers.get('User-Agent', ''))
+                ip = get_client_ip()
+                cur.execute(
+                    "INSERT INTO user_sessions (user_id, jti, device, ip) VALUES (%s, %s, %s, %s)",
+                    (id, current_jti, device, ip)
+                )
+                db.commit()
+            else:
+                # Ping last_seen
+                cur.execute("UPDATE user_sessions SET last_seen=NOW() WHERE jti=%s", (current_jti,))
+                db.commit()
+
         cur.execute(
-            "SELECT id, device, ip, created_at, last_seen FROM user_sessions WHERE user_id=%s ORDER BY last_seen DESC",
+            "SELECT id, jti, device, ip, created_at, last_seen FROM user_sessions WHERE user_id=%s ORDER BY last_seen DESC",
             (id,)
         )
         rows = cur.fetchall()
-        cur.execute("SELECT jti FROM user_sessions WHERE user_id=%s ORDER BY last_seen DESC", (id,))
-        jtis = [r['jti'] for r in cur.fetchall()]
         cur.close(); db.close()
-        sessions = []
-        for i, row in enumerate(rows):
-            sessions.append({
-                "id":         row['id'],
-                "device":     row['device'] or '—',
-                "ip":         row['ip'] or '—',
-                "created_at": row['created_at'].isoformat() if row['created_at'] else None,
-                "last_seen":  row['last_seen'].isoformat() if row['last_seen'] else None,
-                "is_current": jtis[i] == current_jti if i < len(jtis) else False,
-            })
+        sessions = [{
+            "id":         row['id'],
+            "device":     row['device'] or '—',
+            "ip":         row['ip'] or '—',
+            "created_at": row['created_at'].isoformat() if row['created_at'] else None,
+            "last_seen":  row['last_seen'].isoformat() if row['last_seen'] else None,
+            "is_current": row['jti'] == current_jti,
+        } for row in rows]
         return jsonify({"sessions": sessions})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -1812,6 +1828,8 @@ def list_sessions(id):
 @jwt_required()
 def delete_session(id, session_id):
     try:
+        if str(get_jwt_identity()) != str(id):
+            return jsonify({"erreur": "Accès refusé"}), 403
         db = connecter(); cur = db.cursor()
         cur.execute("DELETE FROM user_sessions WHERE id=%s AND user_id=%s", (session_id, id))
         db.commit(); cur.close(); db.close()
@@ -1823,6 +1841,8 @@ def delete_session(id, session_id):
 @jwt_required()
 def delete_other_sessions(id):
     try:
+        if str(get_jwt_identity()) != str(id):
+            return jsonify({"erreur": "Accès refusé"}), 403
         current_jti = get_jwt().get('jti', '')
         db = connecter(); cur = db.cursor()
         cur.execute("DELETE FROM user_sessions WHERE user_id=%s AND jti!=%s", (id, current_jti))
