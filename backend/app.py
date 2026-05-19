@@ -294,7 +294,7 @@ def job_resume_matin():
                 COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as taches_en_cours,
                 COUNT(CASE WHEN t.terminee = FALSE AND t.deadline = CURDATE() THEN 1 END) as deadlines_aujourd_hui,
                 COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() THEN 1 END) as taches_en_retard,
-                COUNT(CASE WHEN t.terminee = TRUE AND DATE(t.updated_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) THEN 1 END) as terminees_hier
+                COUNT(CASE WHEN t.terminee = TRUE AND DATE(COALESCE(t.terminee_le, t.updated_at)) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) THEN 1 END) as terminees_hier
             FROM users u
             LEFT JOIN taches t ON u.id = t.user_id
             WHERE u.email_verifie = TRUE
@@ -378,7 +378,7 @@ def job_encouragements():
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
             SELECT u.id, u.nom,
-                COUNT(CASE WHEN t.terminee = TRUE AND DATE(t.updated_at) = CURDATE() THEN 1 END) as terminees_auj
+                COUNT(CASE WHEN t.terminee = TRUE AND DATE(COALESCE(t.terminee_le, t.updated_at)) = CURDATE() THEN 1 END) as terminees_auj
             FROM users u LEFT JOIN taches t ON u.id = t.user_id
             WHERE u.email_verifie = TRUE GROUP BY u.id HAVING terminees_auj > 0
         """)
@@ -885,11 +885,15 @@ def job_email_taches_retard():
 def _collecter_stats_hebdo(cursor, user_id, base_user):
     """Récupère toutes les données enrichies pour le rapport hebdo d'un utilisateur."""
     # ── Jours actifs (7 derniers jours, par jour de la semaine) ──
+    # COALESCE(terminee_le, updated_at) : terminee_le est figé au toggle,
+    # updated_at change à chaque édition → ne reflète pas la date de complétion.
     cursor.execute("""
-        SELECT DATE(updated_at) AS jour, DAYOFWEEK(updated_at) AS dow_sql, COUNT(*) AS count
+        SELECT DATE(COALESCE(terminee_le, updated_at)) AS jour,
+               DAYOFWEEK(COALESCE(terminee_le, updated_at)) AS dow_sql,
+               COUNT(*) AS count
         FROM taches WHERE user_id=%s AND terminee=TRUE
-          AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        GROUP BY DATE(updated_at) ORDER BY jour
+          AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE(COALESCE(terminee_le, updated_at)) ORDER BY jour
     """, (user_id,))
     jours_raw = cursor.fetchall()
     # Construire les 7 derniers jours avec count (0 si rien)
@@ -909,8 +913,8 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
     cursor.execute("""
         SELECT titre FROM taches
         WHERE user_id=%s AND terminee=TRUE AND priorite='haute'
-          AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        ORDER BY updated_at DESC LIMIT 5
+          AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        ORDER BY COALESCE(terminee_le, updated_at) DESC LIMIT 5
     """, (user_id,))
     taches_haute_done = [r['titre'] for r in cursor.fetchall()]
 
@@ -928,7 +932,7 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
         FROM taches t
         LEFT JOIN categories c ON t.categorie_id = c.id
         WHERE t.user_id=%s AND t.terminee=TRUE
-          AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+          AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)
           AND c.nom IS NOT NULL
         GROUP BY c.nom ORDER BY count DESC LIMIT 4
     """, (user_id,))
@@ -938,7 +942,7 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
     cursor.execute("""
         SELECT priorite, COUNT(*) AS count
         FROM taches WHERE user_id=%s AND terminee=TRUE
-          AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+          AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         GROUP BY priorite
     """, (user_id,))
     prio_rows = cursor.fetchall()
@@ -948,10 +952,10 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
 
     # ── Heure de pointe (la plus productive sur 7 jours) ──
     cursor.execute("""
-        SELECT HOUR(updated_at) AS h, COUNT(*) AS count
+        SELECT HOUR(COALESCE(terminee_le, updated_at)) AS h, COUNT(*) AS count
         FROM taches WHERE user_id=%s AND terminee=TRUE
-          AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        GROUP BY HOUR(updated_at) ORDER BY count DESC LIMIT 1
+          AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY HOUR(COALESCE(terminee_le, updated_at)) ORDER BY count DESC LIMIT 1
     """, (user_id,))
     h_row = cursor.fetchone()
     heure_pointe = h_row['h'] if h_row else None
@@ -1043,8 +1047,8 @@ def job_email_resume_hebdo():
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
             SELECT u.id, u.nom, u.email, u.points, u.niveau,
-                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
-                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND t.updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
+                COUNT(CASE WHEN t.terminee = TRUE AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
+                COUNT(CASE WHEN t.terminee = TRUE AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(t.terminee_le, t.updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
                 COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as en_cours,
                 COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
                 COUNT(t.id) as total
@@ -1958,7 +1962,7 @@ def get_taches_jour(id, date):
             LEFT JOIN planification p ON p.tache_id = t.id AND DATE(p.date_planifiee) = %s
             WHERE t.user_id = %s
               AND (
-                (t.terminee = TRUE AND DATE(t.updated_at) = %s)
+                (t.terminee = TRUE AND DATE(COALESCE(t.terminee_le, t.updated_at)) = %s)
                 OR DATE(t.created_at) = %s
                 OR p.id IS NOT NULL
               )
@@ -2514,8 +2518,8 @@ def dashboard_stats(user_id):
             db.close(); return jsonify({"erreur": "User non trouvé"}), 404
 
         c.execute("""SELECT
-            COUNT(CASE WHEN terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
-            COUNT(CASE WHEN terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine_prec,
+            COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
+            COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(terminee_le, updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine_prec,
             COUNT(CASE WHEN terminee=1 THEN 1 END) as terminees_total,
             COUNT(CASE WHEN terminee=0 THEN 1 END) as actives,
             COUNT(*) as total
@@ -4500,7 +4504,7 @@ def job_notifs_daily_midi():
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
             SELECT u.id, u.nom,
-                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=TRUE AND DATE(t.updated_at)=CURDATE()) AS faites_today,
+                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=TRUE AND DATE(COALESCE(t.terminee_le, t.updated_at))=CURDATE()) AS faites_today,
                 (SELECT COUNT(*) FROM planification p JOIN taches t ON p.tache_id=t.id WHERE p.user_id=u.id AND DATE(p.date_planifiee)=CURDATE() AND t.terminee=FALSE) AS restantes_today
             FROM users u
             WHERE u.email_verifie = TRUE
@@ -4540,7 +4544,7 @@ def job_notifs_daily_soir():
         cursor.execute("""
             SELECT u.id, u.nom, u.streak,
                 DATEDIFF(NOW(), u.derniere_activite) AS jours_inactif,
-                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=TRUE AND DATE(t.updated_at)=CURDATE()) AS faites_today
+                (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=TRUE AND DATE(COALESCE(t.terminee_le, t.updated_at))=CURDATE()) AS faites_today
             FROM users u
             WHERE u.email_verifie = TRUE
               AND EXISTS (SELECT 1 FROM push_subscriptions ps WHERE ps.user_id=u.id)
@@ -4619,8 +4623,8 @@ def test_email_user(user_id):
         extra = _collecter_stats_hebdo(cursor, user_id, u)
         cursor.execute("""
             SELECT
-                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
-                COUNT(CASE WHEN t.terminee = TRUE AND t.updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND t.updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
+                COUNT(CASE WHEN t.terminee = TRUE AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
+                COUNT(CASE WHEN t.terminee = TRUE AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(t.terminee_le, t.updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
                 COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as en_cours,
                 COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
                 COUNT(t.id) as total
@@ -5794,7 +5798,7 @@ def supprimer_template(template_id):
 
 def calculer_score_energie(user_id, db_cursor):
     try:
-        db_cursor.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND DATE(updated_at) = CURDATE()", (user_id,))
+        db_cursor.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND DATE(COALESCE(terminee_le, updated_at)) = CURDATE()", (user_id,))
         taches_aujourd_hui = (db_cursor.fetchone() or {}).get('nb', 0)
         db_cursor.execute("SELECT streak FROM users WHERE id=%s", (user_id,))
         streak = (db_cursor.fetchone() or {}).get('streak', 0)
@@ -5883,7 +5887,7 @@ def estimer_duree_tache_smart(titre, priorite, user_id, db_cursor):
 
 def detecter_heure_productive(user_id, db_cursor):
     try:
-        db_cursor.execute("SELECT HOUR(updated_at) as heure, COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY HOUR(updated_at) ORDER BY nb DESC LIMIT 1", (user_id,))
+        db_cursor.execute("SELECT HOUR(COALESCE(terminee_le, updated_at)) as heure, COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY HOUR(COALESCE(terminee_le, updated_at)) ORDER BY nb DESC LIMIT 1", (user_id,))
         row = db_cursor.fetchone()
         if row: return row['heure']
     except:
@@ -6156,10 +6160,10 @@ def energie_courbe(user_id):
         }
         HEURES = list(range(6, 23))
         curseur.execute("""
-            SELECT HOUR(updated_at) as heure, COUNT(*) as nb
+            SELECT HOUR(COALESCE(terminee_le, updated_at)) as heure, COUNT(*) as nb
             FROM taches WHERE user_id=%s AND terminee=1
-            AND updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            GROUP BY HOUR(updated_at)
+            AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY HOUR(COALESCE(terminee_le, updated_at))
         """, (user_id,))
         rows = {r['heure']: r['nb'] for r in curseur.fetchall()}
         total = sum(rows.values())
@@ -6494,7 +6498,7 @@ def coach_rapport(user_id):
         db = connecter()
         curseur = db.cursor(dictionary=True)
         ctx = get_coach_context(user_id, curseur)
-        curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", (user_id,))
+        curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)", (user_id,))
         terminees_semaine = curseur.fetchone()['nb']
         curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", (user_id,))
         creees_semaine = curseur.fetchone()['nb']
@@ -7696,7 +7700,7 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
             cur.execute("SELECT points, niveau, streak FROM users WHERE id=%s", (user_id,))
             u = cur.fetchone() or {}
             cur.execute("""SELECT
-                COUNT(CASE WHEN terminee=1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
+                COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
                 COUNT(CASE WHEN terminee=1 THEN 1 END) as terminees_total,
                 COUNT(*) as total,
                 COUNT(CASE WHEN terminee=0 AND deadline < NOW() THEN 1 END) as en_retard
@@ -8089,7 +8093,7 @@ def ia_suggestions(user_id):
             COUNT(CASE WHEN terminee=0 AND deadline < NOW() THEN 1 END) as en_retard,
             COUNT(CASE WHEN terminee=0 AND priorite='haute' THEN 1 END) as haute,
             COUNT(CASE WHEN terminee=0 THEN 1 END) as actives,
-            COUNT(CASE WHEN terminee=1 AND DATE(updated_at)=CURDATE() THEN 1 END) as terminees_aujourdhui,
+            COUNT(CASE WHEN terminee=1 AND DATE(COALESCE(terminee_le, updated_at))=CURDATE() THEN 1 END) as terminees_aujourdhui,
             COUNT(CASE WHEN focus_date=CURDATE() AND terminee=0 THEN 1 END) as focus_jour
             FROM taches WHERE user_id=%s""", (user_id,))
         cnt = c.fetchone() or {}
