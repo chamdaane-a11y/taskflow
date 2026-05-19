@@ -1037,6 +1037,11 @@ def run_migrations():
             curseur.execute("ALTER TABLE users ADD COLUMN streak_freeze_used_at DATE NULL")
             print("[Migrations] users.streak_freeze_used_at ✅")
 
+        # Profile timeline — date d'inscription pour calculer "jours d'utilisation"
+        if not col_exists(curseur, 'users', 'created_at'):
+            curseur.execute("ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+            print("[Migrations] users.created_at ✅ (defaults NOW pour anciens)")
+
         if not col_exists(curseur, 'taches', 'terminee_le'):
             curseur.execute("ALTER TABLE taches ADD COLUMN terminee_le DATETIME NULL")
             # Backfill: les tâches déjà terminées sans timestamp → NOW (on n'a pas l'historique)
@@ -1394,8 +1399,19 @@ def reset_password():
 def get_user(id):
     db = connecter()
     curseur = db.cursor(dictionary=True)
-    curseur.execute("SELECT id, nom, email, points, niveau, theme FROM users WHERE id=%s", (id,))
+    curseur.execute(
+        "SELECT id, nom, email, points, niveau, theme, streak, derniere_activite, "
+        "streak_freeze_used_at, created_at FROM users WHERE id=%s",
+        (id,)
+    )
     user = curseur.fetchone()
+    if user:
+        curseur.execute("SELECT COUNT(*) as nb FROM taches WHERE user_id=%s AND terminee=TRUE", (id,))
+        user['taches_count'] = (curseur.fetchone() or {}).get('nb', 0)
+        # Sérialiser les dates pour JSON
+        for k in ('derniere_activite', 'streak_freeze_used_at', 'created_at'):
+            if user.get(k) is not None:
+                user[k] = user[k].isoformat() if hasattr(user[k], 'isoformat') else str(user[k])
     db.close()
     return jsonify(user)
 

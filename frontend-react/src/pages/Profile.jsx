@@ -4,25 +4,42 @@ import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import {
   User, Lock, ArrowLeft, CheckCircle, AlertCircle,
-  Edit3, Shield, Zap, Trophy, Star, Flame, Layers
+  Edit3, Award, Layers, Snowflake,
+  Sprout, Zap, Target, Brain, Trophy, Sparkles, Crown, Flame, Star, CheckCircle2,
 } from 'lucide-react'
 import { themes } from '../themes'
 import { useTheme } from '../useTheme'
+import { niveaux as NIVEAUX_SOURCE, BADGES_CONFIG } from '../data/badges'
 
 const API = 'https://getshift-backend.onrender.com'
 
-const NIVEAUX = [
-  { niveau: 1, nom: 'Débutant',  couleur: '#4ade80', min: 0,    Icon: Zap     },
-  { niveau: 2, nom: 'Apprenti',  couleur: '#facc15', min: 100,  Icon: Star    },
-  { niveau: 3, nom: 'Confirmé',  couleur: '#f97316', min: 300,  Icon: Flame   },
-  { niveau: 4, nom: 'Expert',    couleur: '#6C63FF', min: 600,  Icon: Trophy  },
-  { niveau: 5, nom: 'Maître',    couleur: '#C9A84C', min: 1000, Icon: Shield  },
-]
+// Icône + couleur progression (bronze → iridescent légende) pour chaque niveau
+const NIVEAU_META = {
+  1:  { Icon: Sprout,        couleur: '#a78f6f' },                                       // Démarrage
+  2:  { Icon: Zap,           couleur: '#4ade80' },                                       // Apprenti
+  3:  { Icon: CheckCircle2,  couleur: '#facc15' },                                       // Régulier
+  4:  { Icon: Target,        couleur: '#f97316' },                                       // Discipliné
+  5:  { Icon: Brain,         couleur: '#5fb4d6' },                                       // Stratège
+  6:  { Icon: Award,         couleur: '#6c63ff' },                                       // Expert
+  7:  { Icon: Trophy,        couleur: '#a78bfa' },                                       // Maître
+  8:  { Icon: Layers,        couleur: '#f5b942' },                                       // Architecte
+  9:  { Icon: Sparkles,      couleur: '#ff7ab8' },                                       // Visionnaire
+  10: { Icon: Crown,         couleur: '#ffd700', gradient: 'linear-gradient(135deg, #ffd700, #ff7ab8, #5fb4d6)' }, // Légende — iridescent
+}
+
+// Enrichit niveaux avec icon + couleur (source: data/badges.js)
+const NIVEAUX = NIVEAUX_SOURCE.map(n => ({
+  niveau: n.niveau,
+  nom: n.label,
+  min: n.min,
+  ...NIVEAU_META[n.niveau],
+}))
 
 export default function Profile() {
   const navigate = useNavigate()
   const { theme, T } = useTheme()
   const [user, setUser]             = useState(null)
+  const [badgesData, setBadgesData] = useState({ nb_obtenus: 0, nb_total: 28, streak_freeze_disponible: true })
   const [onglet, setOnglet]         = useState('profil')
   const [nom, setNom]               = useState('')
   const [ancienPwd, setAncienPwd]   = useState('')
@@ -36,6 +53,7 @@ export default function Profile() {
     if (!u?.id) { navigate('/'); return }
     setUser(u); setNom(u.nom)
     chargerUser(u.id)
+    chargerBadges(u.id)
   }, [])
 
   const chargerUser = async (id) => {
@@ -43,6 +61,18 @@ export default function Profile() {
       const res = await axios.get(`${API}/users/${id}`, { withCredentials: true })
       setUser(res.data); setNom(res.data.nom)
       localStorage.setItem('user', JSON.stringify(res.data))
+    } catch {}
+  }
+
+  const chargerBadges = async (id) => {
+    try {
+      const res = await axios.get(`${API}/users/${id}/badges`, { withCredentials: true })
+      setBadgesData({
+        nb_obtenus: res.data.nb_obtenus || 0,
+        nb_total: res.data.nb_total || BADGES_CONFIG.length,
+        streak_freeze_disponible: res.data.streak_freeze_disponible !== false,
+        badges: res.data.badges || [],
+      })
     } catch {}
   }
 
@@ -152,14 +182,32 @@ export default function Profile() {
 
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${accent}, #00C896)` }} />
 
-          <div className="pf-hero" style={{ display: 'flex', alignItems: 'center', gap: 28, marginBottom: 28 }}>
-            {/* Avatar */}
+          {/* Halo de prestige derrière le hero pour les niveaux élevés (≥8) */}
+          {(user.niveau || 1) >= 8 && (
+            <motion.div aria-hidden
+              animate={{ opacity: [0.15, 0.28, 0.15] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', width: 320, height: 320, borderRadius: '50%', filter: 'blur(80px)', background: `radial-gradient(circle, ${niveauInfo.couleur}, transparent 70%)`, pointerEvents: 'none' }} />
+          )}
+
+          <div className="pf-hero" style={{ display: 'flex', alignItems: 'center', gap: 28, marginBottom: 28, position: 'relative' }}>
+            {/* Avatar — anneau gradient animé pour les niveaux ≥ 7 */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{ width: 88, height: 88, borderRadius: 24, background: `linear-gradient(135deg, ${accent}, #00C896)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'white', boxShadow: `0 8px 32px ${accent}44`, fontFamily: "'Bricolage Grotesque', sans-serif", overflow: 'hidden' }}>
+              {(user.niveau || 1) >= 7 && (
+                <motion.div aria-hidden
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
+                  style={{
+                    position: 'absolute', inset: -5, borderRadius: 28,
+                    background: niveauInfo.gradient || `conic-gradient(from 0deg, ${niveauInfo.couleur}, transparent 60%, ${niveauInfo.couleur})`,
+                    pointerEvents: 'none', zIndex: 0
+                  }} />
+              )}
+              <div style={{ position: 'relative', zIndex: 1, width: 88, height: 88, borderRadius: 24, background: `linear-gradient(135deg, ${accent}, #00C896)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'white', boxShadow: `0 8px 32px ${niveauInfo.couleur}55`, fontFamily: "'Bricolage Grotesque', sans-serif", overflow: 'hidden' }}>
                 {user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initiales}
               </div>
-              <div style={{ position: 'absolute', bottom: -6, right: -6, width: 28, height: 28, borderRadius: 8, background: niveauInfo.couleur, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${bg}`, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                <NiveauIcon size={13} color="white" strokeWidth={2.5} />
+              <div style={{ position: 'absolute', bottom: -6, right: -6, width: 30, height: 30, borderRadius: 9, background: niveauInfo.gradient || niveauInfo.couleur, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${bg}`, boxShadow: `0 2px 12px ${niveauInfo.couleur}aa`, zIndex: 2 }}>
+                <NiveauIcon size={14} color="white" strokeWidth={2.5} />
               </div>
             </div>
 
@@ -167,36 +215,55 @@ export default function Profile() {
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
                 <h1 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, color: text, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{user.nom}</h1>
-                <span style={{ padding: '3px 10px', background: `${niveauInfo.couleur}22`, border: `1px solid ${niveauInfo.couleur}44`, borderRadius: 99, fontSize: 11, fontWeight: 700, color: niveauInfo.couleur, letterSpacing: 0.5 }}>
-                  {niveauInfo.nom.toUpperCase()}
+                <span style={{
+                  padding: '3px 12px',
+                  background: niveauInfo.gradient || `${niveauInfo.couleur}22`,
+                  border: `1px solid ${niveauInfo.couleur}55`,
+                  borderRadius: 99,
+                  fontSize: 11, fontWeight: 800,
+                  color: niveauInfo.gradient ? 'white' : niveauInfo.couleur,
+                  letterSpacing: 0.8,
+                  boxShadow: niveauInfo.gradient ? `0 0 14px ${niveauInfo.couleur}66` : 'none',
+                }}>
+                  NIV. {user.niveau || 1} · {niveauInfo.nom.toUpperCase()}
                 </span>
               </div>
               <p style={{ fontSize: 14, color: text2, marginBottom: 16 }}>{user.email}</p>
               <div style={{ maxWidth: 340 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: text2, marginBottom: 6 }}>
                   <span>{pointsActuels} pts</span>
-                  <span style={{ color: accent, fontWeight: 600 }}>{niveauSuivant ? `→ ${niveauSuivant.nom} à ${niveauSuivant.min} pts` : 'Niveau max atteint'}</span>
+                  <span style={{ color: niveauInfo.couleur, fontWeight: 600 }}>{niveauSuivant ? `→ ${niveauSuivant.nom} à ${niveauSuivant.min} pts` : 'Niveau max atteint 🏆'}</span>
                 </div>
                 <div style={{ height: 6, background: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${progression}%` }} transition={{ duration: 1, ease: 'easeOut' }}
-                    style={{ height: '100%', background: `linear-gradient(90deg, ${accent}, #00C896)`, borderRadius: 99 }} />
+                    style={{ height: '100%', background: niveauInfo.gradient || `linear-gradient(90deg, ${niveauInfo.couleur}, ${accent})`, borderRadius: 99 }} />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* KPIs */}
-          <div className="pf-stats" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {/* KPIs — 6 cards (Points / Niveau / Tâches / Streak / Badges / Freeze) */}
+          <div className="pf-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
             {[
-              { label: 'Points',  val: pointsActuels,          color: accent },
-              { label: 'Niveau',  val: user.niveau || 1,       color: niveauInfo.couleur },
-              { label: 'Tâches',  val: user.taches_count || 0, color: '#00C896' },
-              { label: 'Streak',  val: `${user.streak || 0}j`, color: '#f97316' },
+              { label: 'Points',  val: pointsActuels,                                         color: accent,                Icon: Zap },
+              { label: 'Niveau',  val: user.niveau || 1,                                      color: niveauInfo.couleur,    Icon: NiveauIcon },
+              { label: 'Tâches',  val: user.taches_count || 0,                                color: '#00C896',             Icon: CheckCircle2 },
+              { label: 'Streak',  val: `${user.streak || 0}j`,                                color: '#f97316',             Icon: Flame },
+              { label: 'Badges',  val: `${badgesData.nb_obtenus}/${badgesData.nb_total}`,    color: '#a78bfa',             Icon: Award },
+              {
+                label: 'Streak Freeze',
+                val: badgesData.streak_freeze_disponible ? 'Dispo' : 'Utilisé',
+                color: badgesData.streak_freeze_disponible ? '#5fb4d6' : text2,
+                Icon: Snowflake,
+              },
             ].map((s, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
-                style={{ flex: '1 1 80px', background: isLight ? '#f8f9fc' : bg3, border: `1px solid ${cardBorder}`, borderRadius: 14, padding: '14px 18px', minWidth: 80 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{s.val}</div>
-                <div style={{ fontSize: 11, color: text2, marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+              <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.04 }}
+                style={{ background: isLight ? '#f8f9fc' : bg3, border: `1px solid ${cardBorder}`, borderRadius: 14, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <s.Icon size={12} color={s.color} strokeWidth={2.2} />
+                  <div style={{ fontSize: 10, color: text2, fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase' }}>{s.label}</div>
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: s.color, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{s.val}</div>
               </motion.div>
             ))}
           </div>
