@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import {
   User, Lock, ArrowLeft, CheckCircle, AlertCircle,
-  Edit3, Award, Layers, Snowflake, ChevronRight,
+  Edit3, Award, Layers, Snowflake, ChevronRight, ChevronDown, Clock, UserPlus,
   Sprout, Zap, Target, Brain, Trophy, Sparkles, Crown, Flame, Star, CheckCircle2,
 } from 'lucide-react'
 import { themes } from '../themes'
@@ -53,6 +53,122 @@ function progresBadge(badgeId, ctx) {
 
 // Ordre de prestige des tiers pour le tri des obtenus
 const TIER_ORDER = { legendary: 0, epic: 1, rare: 2, common: 3 }
+
+// Helper : date relative en français ("il y a 3 jours")
+function dateRelative(iso) {
+  if (!iso || iso === 'now') return 'En cours'
+  try {
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return ''
+    const diff = (Date.now() - d.getTime()) / 1000
+    if (diff < 60) return "À l'instant"
+    if (diff < 3600) { const m = Math.floor(diff / 60); return `il y a ${m} min` }
+    if (diff < 86400) { const h = Math.floor(diff / 3600); return `il y a ${h}h` }
+    if (diff < 604800) { const j = Math.floor(diff / 86400); return `il y a ${j}j` }
+    if (diff < 2592000) { const s = Math.floor(diff / 604800); return `il y a ${s} sem` }
+    if (diff < 31536000) { const mo = Math.floor(diff / 2592000); return `il y a ${mo} mois` }
+    const an = Math.floor(diff / 31536000); return `il y a ${an} an${an > 1 ? 's' : ''}`
+  } catch { return '' }
+}
+
+// Section Timeline — historique chronologique
+function TimelineSection({ T, cardBg, cardBorder, isLight, text, text2, accent, bg3, events }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!events || events.length === 0) return null
+
+  const DEFAULT_LIMIT = 6
+  const visibles = expanded ? events : events.slice(0, DEFAULT_LIMIT)
+  const reste = events.length - DEFAULT_LIMIT
+
+  const renderEvent = (ev, i) => {
+    let Icon, color, bg
+    if (ev.type === 'register') {
+      Icon = UserPlus; color = accent; bg = `${accent}18`
+    } else if (ev.type === 'streak') {
+      Icon = Flame; color = '#f97316'; bg = '#f9731618'
+    } else if (ev.type === 'badge') {
+      const tier = TIER_STYLES[ev.tier] || TIER_STYLES.common
+      Icon = BADGE_ICONS[ev.badge_id] || Award
+      color = tier.color; bg = tier.bg
+    } else {
+      Icon = Clock; color = text2; bg = `${text2}18`
+    }
+
+    const isLast = i === visibles.length - 1
+
+    return (
+      <motion.div key={`${ev.type}-${i}`}
+        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.03 * i }}
+        style={{ display: 'flex', gap: 14, position: 'relative', paddingBottom: isLast ? 0 : 16 }}>
+        {/* Marker + ligne verticale */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 10,
+            background: bg, border: `1px solid ${color}30`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'relative', zIndex: 1,
+          }}>
+            <Icon size={15} color={color} strokeWidth={2.2} />
+          </div>
+          {!isLast && (
+            <div style={{
+              position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)',
+              width: 2, height: 'calc(100% - 12px)',
+              background: `linear-gradient(180deg, ${color}30, ${cardBorder})`,
+            }} />
+          )}
+        </div>
+
+        {/* Contenu */}
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: text, letterSpacing: '-0.1px' }}>{ev.title}</span>
+            {ev.tier && (
+              <span style={{
+                fontSize: 9, fontWeight: 700, color, letterSpacing: 0.6, textTransform: 'uppercase',
+                padding: '1px 6px', borderRadius: 99,
+                background: bg, border: `1px solid ${color}30`,
+              }}>{TIER_STYLES[ev.tier]?.label || ev.tier}</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: text2, lineHeight: 1.5 }}>
+            {ev.description && <span style={{ flex: 1 }}>{ev.description}</span>}
+            <span style={{ color, fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>{dateRelative(ev.date)}</span>
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+      style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 20, padding: 'clamp(18px, 3vw, 28px)', marginBottom: 20, boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.04)' : 'none' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 11, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Clock size={16} color={accent} strokeWidth={2.2} />
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: text, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Mon parcours</h3>
+          <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{events.length} événement{events.length > 1 ? 's' : ''} dans ton historique</p>
+        </div>
+      </div>
+
+      {/* Liste */}
+      <div>{visibles.map(renderEvent)}</div>
+
+      {/* Bouton Voir plus */}
+      {reste > 0 && (
+        <motion.button onClick={() => setExpanded(p => !p)} whileHover={{ x: 2 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 14, padding: '8px 12px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 9, color: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          {expanded ? 'Voir moins' : `Voir ${reste} de plus`}
+          <ChevronDown size={13} style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        </motion.button>
+      )}
+    </motion.div>
+  )
+}
 
 // Composant Showcase — vitrine des badges débloqués + prochain à débloquer
 function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, bg3, badges, points, streak, nbTerminees, navigate }) {
@@ -204,6 +320,7 @@ export default function Profile() {
   const { theme, T } = useTheme()
   const [user, setUser]             = useState(null)
   const [badgesData, setBadgesData] = useState({ nb_obtenus: 0, nb_total: 28, streak_freeze_disponible: true })
+  const [timeline, setTimeline]     = useState([])
   const [onglet, setOnglet]         = useState('profil')
   const [nom, setNom]               = useState('')
   const [ancienPwd, setAncienPwd]   = useState('')
@@ -218,6 +335,7 @@ export default function Profile() {
     setUser(u); setNom(u.nom)
     chargerUser(u.id)
     chargerBadges(u.id)
+    chargerTimeline(u.id)
   }, [])
 
   const chargerUser = async (id) => {
@@ -237,6 +355,13 @@ export default function Profile() {
         streak_freeze_disponible: res.data.streak_freeze_disponible !== false,
         badges: res.data.badges || [],
       })
+    } catch {}
+  }
+
+  const chargerTimeline = async (id) => {
+    try {
+      const res = await axios.get(`${API}/users/${id}/timeline`, { withCredentials: true })
+      setTimeline(res.data.events || [])
     } catch {}
   }
 
@@ -440,6 +565,12 @@ export default function Profile() {
           badges={badgesData.badges}
           points={pointsActuels} streak={user.streak || 0} nbTerminees={user.taches_count || 0}
           navigate={navigate} />
+
+        {/* ══ TIMELINE PARCOURS ══ */}
+        <TimelineSection
+          T={T} cardBg={cardBg} cardBorder={cardBorder} isLight={isLight}
+          text={text} text2={text2} accent={accent} bg3={bg3}
+          events={timeline} />
 
         {/* ══ ONGLETS ══ */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}

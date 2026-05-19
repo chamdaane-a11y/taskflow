@@ -2002,6 +2002,80 @@ def _freeze_disponible(user):
     aujourd_hui = date.today()
     return used_date.isocalendar()[:2] != aujourd_hui.isocalendar()[:2]
 
+@app.route('/users/<int:id>/timeline', methods=['GET'])
+def get_timeline(id):
+    """Reconstruit l'historique du user à partir des tables existantes (pas d'event log dédié).
+    Events: inscription + badges débloqués + jalons streak. Triés DESC par date."""
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+
+        # 1. Données user
+        curseur.execute("SELECT created_at, streak, points, niveau FROM users WHERE id=%s", (id,))
+        u = curseur.fetchone() or {}
+
+        events = []
+
+        # 2. Inscription
+        if u.get('created_at'):
+            events.append({
+                "type": "register",
+                "date": u['created_at'].isoformat() if hasattr(u['created_at'], 'isoformat') else str(u['created_at']),
+                "title": "Compte créé",
+                "description": "Début de l'aventure GetShift",
+            })
+
+        # 3. Badges débloqués — enrichis avec config (tier, categorie, description)
+        curseur.execute(
+            "SELECT badge_id, obtenu_le FROM badges_utilisateurs WHERE user_id=%s ORDER BY obtenu_le DESC",
+            (id,)
+        )
+        rows = curseur.fetchall() or []
+        # Lookup config par id pour récup nom + tier + categorie
+        config_par_id = {b['id']: b for b in REGLES_BADGES}
+        for r in rows:
+            cfg = config_par_id.get(r['badge_id'])
+            if not cfg or not r.get('obtenu_le'):
+                continue
+            events.append({
+                "type": "badge",
+                "date": r['obtenu_le'].isoformat() if hasattr(r['obtenu_le'], 'isoformat') else str(r['obtenu_le']),
+                "title": cfg.get('nom', r['badge_id']),
+                "description": cfg.get('description', ''),
+                "badge_id": r['badge_id'],
+                "tier": cfg.get('tier'),
+                "categorie": cfg.get('categorie'),
+            })
+
+        # 4. Streak actuel comme repère (uniquement si > 0)
+        if (u.get('streak') or 0) > 0:
+            events.append({
+                "type": "streak",
+                "date": "now",  # marqueur "ongoing" — frontend sait l'afficher
+                "title": f"Streak en cours · {u['streak']} jour{'s' if u['streak'] > 1 else ''}",
+                "description": "Continue, ne casse pas la chaîne",
+                "streak_value": u['streak'],
+            })
+
+        db.close()
+
+        # Tri DESC par date (l'event "streak ongoing" reste en tête)
+        from datetime import datetime
+        def sort_key(e):
+            d = e.get('date')
+            if d == 'now':
+                return datetime.max  # tout en haut
+            try:
+                return datetime.fromisoformat(d.replace('Z', '+00:00')) if d else datetime.min
+            except Exception:
+                return datetime.min
+        events.sort(key=sort_key, reverse=True)
+
+        return jsonify({"events": events, "total": len(events)})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
 @app.route('/users/<int:id>/streak', methods=['GET'])
 def get_streak(id):
     try:
