@@ -4,12 +4,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import {
   User, Lock, ArrowLeft, CheckCircle, AlertCircle,
-  Edit3, Award, Layers, Snowflake,
+  Edit3, Award, Layers, Snowflake, ChevronRight,
   Sprout, Zap, Target, Brain, Trophy, Sparkles, Crown, Flame, Star, CheckCircle2,
 } from 'lucide-react'
 import { themes } from '../themes'
 import { useTheme } from '../useTheme'
-import { niveaux as NIVEAUX_SOURCE, BADGES_CONFIG } from '../data/badges'
+import {
+  niveaux as NIVEAUX_SOURCE, BADGES_CONFIG,
+  BADGE_ICONS, TIER_STYLES, BADGE_CATEGORIES, getProchainBadge,
+} from '../data/badges'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -34,6 +37,167 @@ const NIVEAUX = NIVEAUX_SOURCE.map(n => ({
   min: n.min,
   ...NIVEAU_META[n.niveau],
 }))
+
+// Calcule la progression vers un badge simple (streak/pts/tâches)
+function progresBadge(badgeId, ctx) {
+  const map = {
+    'streak_3':[ctx.streak,3], 'streak_7':[ctx.streak,7], 'streak_14':[ctx.streak,14],
+    'streak_21':[ctx.streak,21], 'streak_30':[ctx.streak,30], 'streak_100':[ctx.streak,100],
+    'first_task':[ctx.nbTerminees,1], 'five_tasks':[ctx.nbTerminees,5],
+    'ten_tasks':[ctx.nbTerminees,10], 'twenty_five_tasks':[ctx.nbTerminees,25],
+    'fifty_tasks':[ctx.nbTerminees,50], 'century':[ctx.nbTerminees,100],
+    'pts_500':[ctx.points,500], 'pts_2000':[ctx.points,2000], 'pts_10000':[ctx.points,10000],
+  }
+  return map[badgeId] || null
+}
+
+// Ordre de prestige des tiers pour le tri des obtenus
+const TIER_ORDER = { legendary: 0, epic: 1, rare: 2, common: 3 }
+
+// Composant Showcase — vitrine des badges débloqués + prochain à débloquer
+function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, bg3, badges, points, streak, nbTerminees, navigate }) {
+  // Hydrate les badges avec leur config (tier, categorie)
+  const obtenusFull = (badges || [])
+    .filter(b => b.obtenu)
+    .map(b => {
+      const cfg = BADGES_CONFIG.find(c => c.id === b.id)
+      return cfg ? { ...cfg, obtenu: true } : null
+    })
+    .filter(Boolean)
+    .sort((a, b) => (TIER_ORDER[a.tier] ?? 9) - (TIER_ORDER[b.tier] ?? 9))
+
+  const nbObtenus = obtenusFull.length
+  const total = BADGES_CONFIG.length
+  const pct = Math.round(nbObtenus / total * 100)
+
+  // Pour le prochain badge
+  const badgesObtenusIds = obtenusFull.map(b => ({ id: b.id }))
+  const prochain = getProchainBadge(badgesObtenusIds)
+  const prochainTier = prochain ? (TIER_STYLES[prochain.tier] || TIER_STYLES.common) : null
+  const ProchainIcon = prochain ? BADGE_ICONS[prochain.id] : null
+  const prochainProg = prochain ? progresBadge(prochain.id, { points, streak, nbTerminees }) : null
+  const prochainPct = prochainProg ? Math.min(100, Math.round(prochainProg[0] / prochainProg[1] * 100)) : null
+
+  // Top 6 badges à afficher (priorité légendaires)
+  const featured = obtenusFull.slice(0, 6)
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+      style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 20, padding: 'clamp(18px, 3vw, 28px)', marginBottom: 20, boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.04)' : 'none' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Award size={18} color={accent} strokeWidth={2.2} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: text, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Mes badges</h3>
+            <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>
+              <span style={{ color: accent, fontWeight: 700 }}>{nbObtenus}</span> / {total} débloqués · {pct}%
+            </p>
+          </div>
+        </div>
+        <motion.button onClick={() => navigate('/settings#badges')} whileHover={{ x: 2 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 9, color: text2, fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+          Tous voir <ChevronRight size={13} />
+        </motion.button>
+      </div>
+
+      {/* Progress bar globale */}
+      <div style={{ height: 5, background: `${accent}15`, borderRadius: 99, overflow: 'hidden', marginBottom: 20 }}>
+        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+          style={{ height: '100%', background: `linear-gradient(90deg, ${accent}, #00C896)`, borderRadius: 99 }} />
+      </div>
+
+      {/* Vitrine des badges débloqués (priorité légendaires) */}
+      {featured.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, marginBottom: prochain ? 20 : 0 }}>
+          {featured.map((b, i) => {
+            const tier = TIER_STYLES[b.tier] || TIER_STYLES.common
+            const Icon = BADGE_ICONS[b.id]
+            return (
+              <motion.div key={b.id}
+                initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 * i }}
+                whileHover={{ y: -3, boxShadow: `0 10px 24px ${tier.glow}` }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12,
+                  background: `linear-gradient(135deg, ${tier.bg}, ${isLight ? 'white' : bg3})`,
+                  border: `1px solid ${tier.border}`,
+                  boxShadow: `0 0 14px ${tier.glow}`,
+                  transition: 'box-shadow 0.25s ease', cursor: 'default',
+                  position: 'relative', overflow: 'hidden'
+                }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  background: tier.bg, border: `1px solid ${tier.border}`,
+                }}>
+                  {Icon && <Icon size={17} color={tier.color} strokeWidth={2} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: text, letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.nom}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: tier.color, letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 1 }}>{tier.label}</div>
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+      ) : (
+        /* Empty state — encourager */
+        <div style={{ padding: '20px 16px', textAlign: 'center', border: `1.5px dashed ${cardBorder}`, borderRadius: 12, marginBottom: prochain ? 20 : 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: text, marginBottom: 4 }}>Aucun badge encore</div>
+          <div style={{ fontSize: 11, color: text2 }}>Termine une tâche pour débloquer ton premier badge 🎯</div>
+        </div>
+      )}
+
+      {/* Prochain badge à débloquer */}
+      {prochain && ProchainIcon && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+          background: `linear-gradient(90deg, ${prochainTier.bg}, transparent)`,
+          border: `1px solid ${prochainTier.border}`,
+          borderRadius: 12, position: 'relative', overflow: 'hidden',
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            background: prochainTier.bg, border: `1px solid ${prochainTier.border}`, position: 'relative'
+          }}>
+            <ProchainIcon size={18} color={prochainTier.color} strokeWidth={2} />
+            <Lock size={8} color={isLight ? 'white' : T.bg} strokeWidth={3}
+              style={{ position: 'absolute', bottom: -2, right: -2, background: prochainTier.color, borderRadius: '50%', padding: 2.5 }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: prochainTier.color, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                Prochain · {prochainTier.label}
+              </span>
+              {BADGE_CATEGORIES[prochain.categorie] && (
+                <span style={{ fontSize: 9, fontWeight: 600, color: BADGE_CATEGORIES[prochain.categorie].color, opacity: 0.85 }}>
+                  · {BADGE_CATEGORIES[prochain.categorie].label}
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: text, letterSpacing: '-0.1px' }}>{prochain.nom}</div>
+            {prochainProg ? (
+              <div style={{ marginTop: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: text2, marginBottom: 3 }}>
+                  <span>{prochainProg[0]}/{prochainProg[1]}</span>
+                  <span style={{ color: prochainTier.color, fontWeight: 600 }}>{prochainPct}%</span>
+                </div>
+                <div style={{ height: 3, background: `${prochainTier.color}15`, borderRadius: 99, overflow: 'hidden' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${prochainPct}%` }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ height: '100%', background: prochainTier.color, borderRadius: 99 }} />
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: text2, marginTop: 3 }}>{prochain.description}</div>
+            )}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
+}
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -268,6 +432,14 @@ export default function Profile() {
             ))}
           </div>
         </motion.div>
+
+        {/* ══ VITRINE BADGES ══ */}
+        <BadgesShowcase
+          T={T} cardBg={cardBg} cardBorder={cardBorder} isLight={isLight}
+          text={text} text2={text2} accent={accent} bg3={bg3}
+          badges={badgesData.badges}
+          points={pointsActuels} streak={user.streak || 0} nbTerminees={user.taches_count || 0}
+          navigate={navigate} />
 
         {/* ══ ONGLETS ══ */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
