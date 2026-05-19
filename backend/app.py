@@ -58,12 +58,12 @@ CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.g
 
 @app.after_request
 def disable_api_cache(response):
-    """Empêche les browsers de cacher les réponses JSON des endpoints temps-réel.
+    """Empêche les browsers de cacher les réponses JSON.
     Sans ça, axios.get polling renvoie du cache stale → l'user doit Ctrl+Shift+R."""
     try:
-        path = request.path or ''
-        if path.startswith('/equipes/') or path.startswith('/users/'):
-            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'application/json' in ctype:
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'
     except Exception:
