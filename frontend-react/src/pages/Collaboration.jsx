@@ -2289,14 +2289,28 @@ export default function Collaboration() {
                 <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{equipeActive.nom}</h1>
                 <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{membres.length} membre{membres.length !== 1 ? 's' : ''} · {taches.length} tâche{taches.length !== 1 ? 's' : ''}</p>
               </div>
-              <div style={{ display: 'flex', marginLeft: 2 }}>
+              {/* Avatar stack cliquable → ouvre le drawer membres */}
+              <motion.button
+                onClick={() => { fermerTousDrawers(); setShowGestion(p => !p) }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                title={`Voir les ${membres.length} membre${membres.length !== 1 ? 's' : ''} de l'équipe`}
+                style={{
+                  display: 'flex', alignItems: 'center',
+                  marginLeft: 2, padding: '3px 8px 3px 4px',
+                  background: showGestion ? `${T.accent}15` : 'transparent',
+                  border: `1px solid ${showGestion ? T.accent + '40' : 'transparent'}`,
+                  borderRadius: 999,
+                  cursor: 'pointer',
+                }}>
                 {membres.slice(0, 5).map((m, i) => (
                   <div key={m.id} title={m.nom} style={{ width: 26, height: 26, borderRadius: '50%', background: `linear-gradient(135deg, ${T.accent}bb, ${T.accent2 || '#4caf82'}bb)`, border: `2px solid ${T.bg2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
                     {m.nom.charAt(0).toUpperCase()}
                   </div>
                 ))}
                 {membres.length > 5 && <div style={{ width: 26, height: 26, borderRadius: '50%', background: T.bg3, border: `2px solid ${T.bg2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: T.text2, marginLeft: -8 }}>+{membres.length - 5}</div>}
-              </div>
+                <Users size={12} color={showGestion ? T.accent : T.text2} style={{ marginLeft: 6 }} />
+              </motion.button>
             </div>
           ) : (
             <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0 }}>Collaboration</h1>
