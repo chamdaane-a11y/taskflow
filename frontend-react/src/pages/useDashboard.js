@@ -19,6 +19,15 @@ const API = 'https://getshift-backend.onrender.com'
 // Axios avec timeout 8s pour éviter le spinner infini sur cold start
 const api = axios.create({ baseURL: API, timeout: 8000 })
 
+// Même cache-buster que main.jsx — les instances axios.create() n'héritent pas
+// des interceptors globaux d'axios, il faut le réappliquer.
+api.interceptors.request.use(config => {
+  if ((config.method || 'get').toLowerCase() === 'get') {
+    config.params = { ...(config.params || {}), _t: Date.now() }
+  }
+  return config
+})
+
 export function useDashboard() {
   const navigate = useNavigate()
   const user = useMemo(() => {
