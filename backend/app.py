@@ -80,8 +80,13 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 # à cette seconde-là → elles s'agrègent toutes sur lundi 18 mai dans les analytics.
 # Les requêtes analytics doivent exclure cette fenêtre pour ne pas montrer le pic
 # artificiel. Cf. CLAUDE.md "Contrat des colonnes timestamp".
-MIGRATION_BACKFILL_START = '2026-05-18 20:25:00'
-MIGRATION_BACKFILL_END = '2026-05-18 20:35:00'
+# Fenêtre élargie à toute la journée du 18 mai : le pic lundi persistait avec
+# la fenêtre 20:25-20:35, soit parce que le backfill a pris plus d'une minute
+# en prod, soit parce que d'autres updates de cette journée sont également
+# corrompus. Tradeoff assumé par l'user : on perd les complétions légitimes
+# du 18 mai mais on garantit un graphe propre.
+MIGRATION_BACKFILL_START = '2026-05-18 00:00:00'
+MIGRATION_BACKFILL_END = '2026-05-18 23:59:59'
 # Clause SQL réutilisable. Doit être appliquée sur la colonne effective
 # (généralement COALESCE(terminee_le, updated_at)).
 def _excl_backfill(col_expr):
