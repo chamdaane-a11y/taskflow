@@ -76,7 +76,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-20-remap-v3'
+APP_BUILD_MARKER = '2026-05-20-email-diag-v4'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1245,6 +1245,33 @@ GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleuse
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'build': APP_BUILD_MARKER}), 200
+
+
+@app.route('/debug/email-status', methods=['GET'])
+def debug_email_status():
+    """Diagnose le pipeline SendGrid : env var, sender, et test d'envoi optionnel.
+    Usage: GET /debug/email-status?to=email@test.com (test envoi)
+       OU: GET /debug/email-status (info seule, pas d'envoi)
+    """
+    info = {
+        'sendgrid_api_key_set': bool(os.getenv('SENDGRID_API_KEY')),
+        'sendgrid_api_key_prefix': (os.getenv('SENDGRID_API_KEY') or '')[:8] + '...' if os.getenv('SENDGRID_API_KEY') else None,
+        'mail_default_sender': os.getenv('MAIL_DEFAULT_SENDER', 'chamdaane@gmail.com'),
+    }
+    to = request.args.get('to')
+    if to:
+        try:
+            message = SGMail(
+                from_email=info['mail_default_sender'],
+                to_emails=to,
+                subject='[DEBUG] GetShift — test SendGrid',
+                html_content='<p>Test du pipeline email. Si tu lis ça, SendGrid fonctionne.</p>'
+            )
+            resp = sg.send(message)
+            info['test_send'] = {'success': True, 'status_code': resp.status_code, 'to': to}
+        except Exception as e:
+            info['test_send'] = {'success': False, 'error': str(e), 'error_type': type(e).__name__, 'to': to}
+    return jsonify(info), 200
 
 
 # ── Pending invitations (flow QR sans localStorage côté ami) ─────────
