@@ -10,7 +10,6 @@ py-vapid==1.9.4
 pywebpush==2.3.0
 python-dotenv==1.2.1
 requests==2.32.5
-sendgrid==6.11.0
 cryptography==46.0.5
 Werkzeug==3.1.6
 google-auth

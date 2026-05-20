@@ -23,8 +23,6 @@ from dotenv import load_dotenv
 from groq import Groq
 from pywebpush import webpush, WebPushException
 import requests as http_requests
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail as SGMail
 from google.oauth2 import id_token
 from google.oauth2.credentials import Credentials
 from google.auth.transport import requests as google_requests
@@ -38,8 +36,7 @@ load_dotenv()
 print("[BOOT] load_dotenv OK", flush=True)
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 print("[BOOT] Groq client OK", flush=True)
-sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
-print("[BOOT] SendGrid client OK", flush=True)
+print(f"[BOOT] Brevo API key set: {bool(os.getenv('BREVO_API_KEY'))}", flush=True)
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'getshift_secret')
@@ -76,7 +73,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-20-push-diag-v5'
+APP_BUILD_MARKER = '2026-05-20-brevo-v6'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -116,18 +113,39 @@ def envoyer_notification_slack(webhook_url, message):
     except Exception as e:
         print(f"Erreur Slack: {e}")
 
-def envoyer_email(to_email, subject, html_content):
+def envoyer_email(to_email, subject, html_content, attachment=None):
+    """Envoie un email via l'API Brevo.
+    attachment optionnel : dict {'name': 'file.sql', 'content_b64': '...'}"""
+    api_key = os.getenv('BREVO_API_KEY', '')
+    if not api_key:
+        print("Erreur email Brevo: BREVO_API_KEY non definie")
+        return False
+    sender_email = os.getenv('MAIL_DEFAULT_SENDER', 'chamdaane@gmail.com')
+    payload = {
+        'sender': {'name': 'GetShift', 'email': sender_email},
+        'to': [{'email': to_email}],
+        'subject': subject,
+        'htmlContent': html_content,
+    }
+    if attachment:
+        payload['attachment'] = [{'name': attachment['name'], 'content': attachment['content_b64']}]
     try:
-        message = SGMail(
-            from_email=os.getenv('MAIL_DEFAULT_SENDER', 'chamdaane@gmail.com'),
-            to_emails=to_email,
-            subject=subject,
-            html_content=html_content
+        r = http_requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={
+                'api-key': api_key,
+                'accept': 'application/json',
+                'content-type': 'application/json',
+            },
+            json=payload,
+            timeout=15,
         )
-        sg.send(message)
-        return True
+        if r.status_code in (200, 201):
+            return True
+        print(f"Erreur email Brevo: HTTP {r.status_code} {r.text[:300]}")
+        return False
     except Exception as e:
-        print(f"Erreur email SendGrid: {e}")
+        print(f"Erreur email Brevo (exception): {e}")
         return False
 
 def envoyer_email_verification(email, nom, token):
@@ -1284,28 +1302,24 @@ def debug_push_status():
 
 @app.route('/debug/email-status', methods=['GET'])
 def debug_email_status():
-    """Diagnose le pipeline SendGrid : env var, sender, et test d'envoi optionnel.
+    """Diagnose le pipeline Brevo : env var, sender, et test d'envoi optionnel.
     Usage: GET /debug/email-status?to=email@test.com (test envoi)
        OU: GET /debug/email-status (info seule, pas d'envoi)
     """
+    api_key = os.getenv('BREVO_API_KEY', '')
     info = {
-        'sendgrid_api_key_set': bool(os.getenv('SENDGRID_API_KEY')),
-        'sendgrid_api_key_prefix': (os.getenv('SENDGRID_API_KEY') or '')[:8] + '...' if os.getenv('SENDGRID_API_KEY') else None,
+        'brevo_api_key_set': bool(api_key),
+        'brevo_api_key_prefix': (api_key[:10] + '...') if api_key else None,
         'mail_default_sender': os.getenv('MAIL_DEFAULT_SENDER', 'chamdaane@gmail.com'),
     }
     to = request.args.get('to')
     if to:
-        try:
-            message = SGMail(
-                from_email=info['mail_default_sender'],
-                to_emails=to,
-                subject='[DEBUG] GetShift — test SendGrid',
-                html_content='<p>Test du pipeline email. Si tu lis ça, SendGrid fonctionne.</p>'
-            )
-            resp = sg.send(message)
-            info['test_send'] = {'success': True, 'status_code': resp.status_code, 'to': to}
-        except Exception as e:
-            info['test_send'] = {'success': False, 'error': str(e), 'error_type': type(e).__name__, 'to': to}
+        ok = envoyer_email(
+            to,
+            '[DEBUG] GetShift — test Brevo',
+            '<p>Test du pipeline email. Si tu lis ca, Brevo fonctionne.</p>',
+        )
+        info['test_send'] = {'success': ok, 'to': to, 'note': 'check Render logs si False'}
     return jsonify(info), 200
 
 
@@ -8624,10 +8638,9 @@ def job_backup_quotidien():
 
 
 def _envoyer_backup_email(nom, contenu_sql, taille_ko, nb_lignes, nb_tables, duree):
-    """Envoie le backup par email avec le fichier SQL en pièce jointe simulée."""
+    """Envoie le backup par email avec le fichier SQL en pièce jointe (via Brevo)."""
     try:
         import base64
-        from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
 
         date_str = datetime.now().strftime('%d/%m/%Y à %H:%M')
 
@@ -8684,28 +8697,20 @@ def _envoyer_backup_email(nom, contenu_sql, taille_ko, nb_lignes, nb_tables, dur
             </div>
         </div>"""
 
-        # Créer l'email avec pièce jointe
-        message = Mail(
-            from_email=os.getenv('MAIL_DEFAULT_SENDER', 'chamdaane@gmail.com'),
-            to_emails='chamdaane@gmail.com',
-            subject=f"Backup GetShift — {datetime.now().strftime('%d/%m/%Y')} ✅",
-            html_content=html
-        )
-
         # Pièce jointe SQL (encodée en base64)
         sql_bytes = contenu_sql.encode('utf-8')
         encoded = base64.b64encode(sql_bytes).decode()
 
-        attachment = Attachment(
-            file_content=FileContent(encoded),
-            file_name=FileName(nom),
-            file_type=FileType('application/sql'),
-            disposition=Disposition('attachment')
+        ok = envoyer_email(
+            'chamdaane@gmail.com',
+            f"Backup GetShift — {datetime.now().strftime('%d/%m/%Y')} ✅",
+            html,
+            attachment={'name': nom, 'content_b64': encoded},
         )
-        message.attachment = attachment
-
-        sg.send(message)
-        print(f"[Backup] Email envoyé à chamdaane@gmail.com ({taille_ko} Ko)")
+        if ok:
+            print(f"[Backup] Email envoyé à chamdaane@gmail.com ({taille_ko} Ko)")
+        else:
+            print(f"[Backup] Erreur email: envoyer_email a retourné False")
 
     except Exception as e:
         print(f"[Backup] Erreur email: {e}")
