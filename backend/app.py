@@ -76,7 +76,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-20-email-diag-v4'
+APP_BUILD_MARKER = '2026-05-20-push-diag-v5'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1245,6 +1245,41 @@ GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleuse
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'build': APP_BUILD_MARKER}), 200
+
+
+@app.route('/debug/push-status', methods=['GET'])
+def debug_push_status():
+    """Diagnose le pipeline Web Push : VAPID keys, subscriptions en DB,
+    et test d'envoi optionnel.
+    Usage: GET /debug/push-status (info seule)
+       OU: GET /debug/push-status?user_id=1 (test push)
+    """
+    info = {
+        'vapid_public_key_set': bool(VAPID_PUBLIC_KEY),
+        'vapid_private_key_set': bool(VAPID_PRIVATE_KEY),
+        'vapid_public_prefix': (VAPID_PUBLIC_KEY or '')[:20] + '...' if VAPID_PUBLIC_KEY else None,
+        'vapid_claims': VAPID_CLAIMS,
+    }
+    try:
+        db = connecter()
+        c = db.cursor(dictionary=True)
+        c.execute("SELECT COUNT(*) as nb FROM push_subscriptions")
+        info['total_subscriptions'] = c.fetchone()['nb']
+        c.execute("SELECT user_id, COUNT(*) as nb FROM push_subscriptions GROUP BY user_id LIMIT 10")
+        info['subscriptions_par_user'] = c.fetchall()
+        user_id = request.args.get('user_id', type=int)
+        if user_id:
+            c.execute("SELECT subscription FROM push_subscriptions WHERE user_id=%s LIMIT 1", (user_id,))
+            sub = c.fetchone()
+            if not sub:
+                info['test_send'] = {'success': False, 'error': f'Aucune subscription pour user_id={user_id}'}
+            else:
+                ok = envoyer_push(sub['subscription'], '[DEBUG] GetShift', 'Test du pipeline push.')
+                info['test_send'] = {'success': ok, 'user_id': user_id, 'note': 'check console logs si False'}
+        db.close()
+    except Exception as e:
+        info['db_error'] = str(e)
+    return jsonify(info), 200
 
 
 @app.route('/debug/email-status', methods=['GET'])
