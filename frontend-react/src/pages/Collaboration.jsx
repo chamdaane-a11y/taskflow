@@ -806,22 +806,97 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
   const [mentionIdx, setMentionIdx] = useState(0)
   const endRef = useRef(null)
   const textareaRef = useRef(null)
+  const scrollRef = useRef(null)
+  const wasAtBottomRef = useRef(true)
 
-  useEffect(() => { charger() }, [tache.id])
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [commentaires])
-
-  const charger = async () => {
-    try { const r = await axios.get(`${API}/equipes/taches/${tache.id}/commentaires`); setCommentaires(r.data) } catch {}
+  const isAtBottom = () => {
+    const c = scrollRef.current
+    if (!c) return true
+    return c.scrollHeight - c.scrollTop - c.clientHeight < 60
   }
 
+  const charger = useCallback(async () => {
+    try {
+      const r = await axios.get(`${API}/equipes/taches/${tache.id}/commentaires?_t=${Date.now()}`)
+      // Fusion : on garde les optimistic encore non confirmés par le serveur
+      setCommentaires(prev => {
+        const serverIds = new Set(r.data.map(c => c.id))
+        const pendings = prev.filter(c => (c._pending || c._failed) && !serverIds.has(c.id))
+        return [...r.data, ...pendings]
+      })
+    } catch {}
+  }, [tache.id])
+
+  // Charge initial + polling 2s (pause si onglet caché)
+  useEffect(() => {
+    wasAtBottomRef.current = true
+    charger()
+    const iv = setInterval(() => {
+      if (document.hidden) return
+      charger()
+    }, 2000)
+    const onVisible = () => { if (!document.hidden) charger() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(iv)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [tache.id, charger])
+
+  // Auto-scroll seulement si on était déjà en bas
+  useEffect(() => {
+    if (wasAtBottomRef.current) {
+      endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [commentaires])
+
+  const handleScroll = () => { wasAtBottomRef.current = isAtBottom() }
+
   const envoyer = async () => {
-    if (!texte.trim()) return
+    const contenu = texte.trim()
+    if (!contenu) return
+    const tempId = `_temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    const optimistic = {
+      id: tempId,
+      contenu,
+      nom: user.nom,
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+      _pending: true,
+    }
+    setCommentaires(prev => [...prev, optimistic])
+    setTexte('')
+    setMentionQuery(null)
+    wasAtBottomRef.current = true
     try {
       await axios.post(`${API}/equipes/taches/commentaires`, {
-        tache_id: tache.id, user_id: user.id, contenu: texte, equipe_id: tache.equipe_id
+        tache_id: tache.id, user_id: user.id, contenu, equipe_id: tache.equipe_id
       })
-      setTexte(''); setMentionQuery(null); charger()
-    } catch {}
+      // POST OK → on retire le temp ; le vrai commentaire arrive via charger()
+      setCommentaires(prev => prev.filter(c => c.id !== tempId))
+      charger()
+    } catch {
+      setCommentaires(prev => prev.map(c =>
+        c.id === tempId ? { ...c, _pending: false, _failed: true } : c
+      ))
+    }
+  }
+
+  const renvoyer = async (failedC) => {
+    setCommentaires(prev => prev.map(c =>
+      c.id === failedC.id ? { ...c, _pending: true, _failed: false } : c
+    ))
+    try {
+      await axios.post(`${API}/equipes/taches/commentaires`, {
+        tache_id: tache.id, user_id: user.id, contenu: failedC.contenu, equipe_id: tache.equipe_id
+      })
+      setCommentaires(prev => prev.filter(c => c.id !== failedC.id))
+      charger()
+    } catch {
+      setCommentaires(prev => prev.map(c =>
+        c.id === failedC.id ? { ...c, _pending: false, _failed: true } : c
+      ))
+    }
   }
 
   const handleTexteChange = (e) => {
@@ -891,21 +966,34 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
         )}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div ref={scrollRef} onScroll={handleScroll}
+        style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {commentaires.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 48 }}>
             <MessageCircle size={26} color={T.border} strokeWidth={1.2} style={{ margin: '0 auto 10px', display: 'block' }} />
             <p style={{ fontSize: 12, color: T.text2 }}>Aucun commentaire. Tape @ pour mentionner quelqu'un.</p>
           </div>
         ) : commentaires.map(c => (
-          <div key={c.id} style={{ display: 'flex', gap: 10 }}>
+          <div key={c.id} style={{ display: 'flex', gap: 10, opacity: c._pending ? 0.55 : 1, transition: 'opacity 0.2s' }}>
             <div style={{ width: 28, height: 28, borderRadius: 9, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: T.accent, flexShrink: 0 }}>
               {c.nom?.charAt(0).toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{c.nom}</span>
-                <span style={{ fontSize: 10, color: T.text2 }}>{new Date(c.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                <span style={{ fontSize: 10, color: c._failed ? '#e05c5c' : T.text2 }}>
+                  {c._pending
+                    ? 'envoi…'
+                    : c._failed
+                      ? '⚠ échec'
+                      : new Date(c.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {c._failed && (
+                  <button onClick={() => renvoyer(c)}
+                    style={{ fontSize: 10, color: T.accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                    réessayer
+                  </button>
+                )}
               </div>
               <div style={{ padding: '9px 12px', background: T.bg3, borderRadius: '4px 12px 12px 12px', fontSize: 13, color: T.text, lineHeight: 1.55 }}>
                 <HighlightMentions texte={c.contenu} T={T} />
