@@ -10,14 +10,15 @@ set -e
 files=$(git diff --cached --name-only --diff-filter=ACM -- '*.py')
 [ -z "$files" ] && exit 0
 
-# Patterns interdits — DATE(updated_at) et HOUR(updated_at) nus.
+# Patterns interdits — DATE(updated_at) / DATE(t.updated_at) et variantes.
+# Couvre aussi les préfixes de table (t.updated_at, te.updated_at, etc.)
 # Les usages légitimes passent via COALESCE(terminee_le, updated_at) :
-#   DATE(COALESCE(terminee_le, updated_at))  ← OK, ne match pas le pattern
-#   DATE(updated_at)                          ← REFUSÉ
+#   DATE(COALESCE(terminee_le, updated_at))  ← OK
+#   DATE(t.updated_at)                        ← REFUSÉ
 bad=$(git grep -nE \
-  -e '\bDATE\(updated_at\)' \
-  -e '\bHOUR\(updated_at\)' \
-  -e '\b(YEAR|MONTH|WEEK|DAY|DAYOFWEEK)\(updated_at\)' \
+  -e '\bDATE\(([a-zA-Z_][a-zA-Z0-9_]*\.)?updated_at\)' \
+  -e '\bHOUR\(([a-zA-Z_][a-zA-Z0-9_]*\.)?updated_at\)' \
+  -e '\b(YEAR|MONTH|WEEK|DAY|DAYOFWEEK)\(([a-zA-Z_][a-zA-Z0-9_]*\.)?updated_at\)' \
   -- $files 2>/dev/null || true)
 
 if [ -n "$bad" ]; then

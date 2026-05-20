@@ -1949,12 +1949,12 @@ def get_taches_jour(id, date):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        # Tâches terminées ce jour-là (basé sur updated_at quand terminee=TRUE)
+        # Tâches terminées ce jour-là (terminee_le, fallback updated_at pour les vieilles lignes)
         # OU créées ce jour
         # OU planifiées ce jour
         curseur.execute("""
             SELECT DISTINCT t.id, t.titre, t.priorite, t.terminee,
-                   DATE(t.updated_at) AS terminee_le,
+                   DATE(COALESCE(t.terminee_le, t.updated_at)) AS terminee_le,
                    DATE(t.created_at) AS creee_le,
                    c.nom AS categorie
             FROM taches t
