@@ -87,6 +87,10 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 # du 18 mai mais on garantit un graphe propre.
 MIGRATION_BACKFILL_START = '2026-05-18 00:00:00'
 MIGRATION_BACKFILL_END = '2026-05-18 23:59:59'
+
+# Marker version pour diagnostiquer les retards de déploiement Render
+# (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
+APP_BUILD_MARKER = '2026-05-20-floor-v2'
 # Clause SQL réutilisable. Doit être appliquée sur la colonne effective
 # (généralement COALESCE(terminee_le, updated_at)).
 def _excl_backfill(col_expr):
@@ -1231,7 +1235,7 @@ GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleuse
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'ok'}), 200
+    return jsonify({'status': 'ok', 'build': APP_BUILD_MARKER}), 200
 
 
 # ── Pending invitations (flow QR sans localStorage côté ami) ─────────
