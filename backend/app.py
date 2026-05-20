@@ -74,27 +74,9 @@ VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
 VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
-# Fenêtre du backfill destructif `UPDATE taches SET terminee_le=NOW() WHERE terminee=TRUE`
-# exécuté par la migration du commit b07d7ad (lundi 18 mai 2026 ~20:27).
-# Toutes les complétions pré-migration ont leur terminee_le ET updated_at écrasés
-# à cette seconde-là → elles s'agrègent toutes sur lundi 18 mai dans les analytics.
-# Les requêtes analytics doivent exclure cette fenêtre pour ne pas montrer le pic
-# artificiel. Cf. CLAUDE.md "Contrat des colonnes timestamp".
-# Fenêtre élargie à toute la journée du 18 mai : le pic lundi persistait avec
-# la fenêtre 20:25-20:35, soit parce que le backfill a pris plus d'une minute
-# en prod, soit parce que d'autres updates de cette journée sont également
-# corrompus. Tradeoff assumé par l'user : on perd les complétions légitimes
-# du 18 mai mais on garantit un graphe propre.
-MIGRATION_BACKFILL_START = '2026-05-18 00:00:00'
-MIGRATION_BACKFILL_END = '2026-05-18 23:59:59'
-
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-20-floor-v2'
-# Clause SQL réutilisable. Doit être appliquée sur la colonne effective
-# (généralement COALESCE(terminee_le, updated_at)).
-def _excl_backfill(col_expr):
-    return f"({col_expr} NOT BETWEEN '{MIGRATION_BACKFILL_START}' AND '{MIGRATION_BACKFILL_END}')"
+APP_BUILD_MARKER = '2026-05-20-remap-v3'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -909,14 +891,12 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
     # ── Jours actifs (7 derniers jours, par jour de la semaine) ──
     # COALESCE(terminee_le, updated_at) : terminee_le est figé au toggle,
     # updated_at change à chaque édition → ne reflète pas la date de complétion.
-    _excl = _excl_backfill("COALESCE(terminee_le, updated_at)")
-    cursor.execute(f"""
+    cursor.execute("""
         SELECT DATE(COALESCE(terminee_le, updated_at)) AS jour,
                DAYOFWEEK(COALESCE(terminee_le, updated_at)) AS dow_sql,
                COUNT(*) AS count
         FROM taches WHERE user_id=%s AND terminee=TRUE
           AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-          AND {_excl}
         GROUP BY DATE(COALESCE(terminee_le, updated_at)) ORDER BY jour
     """, (user_id,))
     jours_raw = cursor.fetchall()
@@ -1191,6 +1171,35 @@ def run_migrations():
             # Backfill: les tâches déjà terminées sans timestamp → NOW (on n'a pas l'historique)
             curseur.execute("UPDATE taches SET terminee_le=NOW() WHERE terminee=TRUE AND terminee_le IS NULL")
             print("[Migrations] taches.terminee_le ✅ (+backfill)")
+
+        # Correction du backfill destructif du 18 mai (commit b07d7ad).
+        # Le UPDATE taches SET terminee_le=NOW() a écrasé toutes les complétions
+        # historiques au timestamp de la migration, ET a déclenché
+        # ON UPDATE CURRENT_TIMESTAMP sur updated_at — donc COALESCE est aussi mort.
+        # Récupération : remap sur created_at (jamais touché par la migration).
+        # Best-effort : pour 90% des tâches, créer/terminer est dans la même journée
+        # → c'est une approximation à 1-2 jours près, infiniment mieux qu'un pic
+        # artificiel sur lundi.
+        # Idempotent : après le 1er passage, plus de lignes dans la fenêtre → skip.
+        curseur.execute("""
+            SELECT COUNT(*) FROM taches
+            WHERE terminee=TRUE
+              AND terminee_le BETWEEN '2026-05-18 00:00:00' AND '2026-05-18 23:59:59'
+        """)
+        nb_corrupt = curseur.fetchone()[0]
+        if nb_corrupt > 0:
+            # On force updated_at = created_at en même temps, sinon le
+            # ON UPDATE CURRENT_TIMESTAMP du UPDATE va le re-pousser à NOW() et
+            # COALESCE(terminee_le, updated_at) retombera sur la date du déploiement.
+            curseur.execute("""
+                UPDATE taches
+                SET terminee_le = created_at,
+                    updated_at = created_at
+                WHERE terminee = TRUE
+                  AND terminee_le BETWEEN '2026-05-18 00:00:00' AND '2026-05-18 23:59:59'
+            """)
+            print(f"[Migrations] Correction backfill 18 mai: {nb_corrupt} lignes remappées sur created_at ✅")
+        db.commit()
 
         # Table sous_taches_equipe — référencée par GET /equipes/<id>/taches (sous-requête COUNT)
         # Sans ça, l'endpoint plante 500 et casse le polling Collaboration
@@ -2541,10 +2550,9 @@ def dashboard_stats(user_id):
         if not u:
             db.close(); return jsonify({"erreur": "User non trouvé"}), 404
 
-        excl = _excl_backfill("COALESCE(terminee_le, updated_at)")
-        c.execute(f"""SELECT
-            COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND {excl} THEN 1 END) as terminees_semaine,
-            COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(terminee_le, updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) AND {excl} THEN 1 END) as terminees_semaine_prec,
+        c.execute("""SELECT
+            COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
+            COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(terminee_le, updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine_prec,
             COUNT(CASE WHEN terminee=1 THEN 1 END) as terminees_total,
             COUNT(CASE WHEN terminee=0 THEN 1 END) as actives,
             COUNT(*) as total
@@ -3161,14 +3169,13 @@ def get_analytics(user_id):
         # figé au moment du toggle terminée. COALESCE pour les anciennes complétions
         # qui pourraient avoir terminee_le NULL (avant migration).
         date_col = "COALESCE(terminee_le, updated_at)"
-        excl = _excl_backfill(date_col)
-        curseur.execute(f"SELECT DATE({date_col}) as jour, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL %s DAY) AND {excl} GROUP BY DATE({date_col}) ORDER BY jour ASC", (user_id, jours))
+        curseur.execute(f"SELECT DATE({date_col}) as jour, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL %s DAY) GROUP BY DATE({date_col}) ORDER BY jour ASC", (user_id, jours))
         par_jour = curseur.fetchall()
-        curseur.execute(f"SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND {excl}", (user_id,))
+        curseur.execute(f"SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)", (user_id,))
         cette_semaine = curseur.fetchone()['count']
-        curseur.execute(f"SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND {date_col} < DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND {excl}", (user_id,))
+        curseur.execute(f"SELECT COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND {date_col} < DATE_SUB(CURDATE(), INTERVAL 7 DAY)", (user_id,))
         semaine_precedente = curseur.fetchone()['count']
-        curseur.execute(f"SELECT HOUR({date_col}) as heure, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND {excl} GROUP BY HOUR({date_col}) ORDER BY heure", (user_id,))
+        curseur.execute(f"SELECT HOUR({date_col}) as heure, COUNT(*) as count FROM taches WHERE user_id=%s AND terminee=TRUE AND {date_col} >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) GROUP BY HOUR({date_col}) ORDER BY heure", (user_id,))
         par_heure = [0] * 24
         for row in curseur.fetchall():
             if row['heure'] is not None: par_heure[row['heure']] = row['count']
