@@ -1,1 +1,0 @@
-import{d as e,g as t}from"./jsx-runtime-DP-1czXy.js";import{n,t as r}from"./themes-B54bHkyG.js";var i=t(e(),1);r();function a(){let[e]=(0,i.useState)(()=>localStorage.getItem(`theme`)||`dark`);return{theme:e,T:n[e]||n.dark}}export{a as t};
