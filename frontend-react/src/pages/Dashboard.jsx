@@ -2362,6 +2362,34 @@ export default function Dashboard() {
 
   const [showBottomSheet, setShowBottomSheet] = useState(false)
 
+  // ── Import automatique GCal → tâches (une fois par jour par session) ──
+  const [gcalImportNotif, setGcalImportNotif] = useState(null) // null | {count, tasks}
+  const handleGcalImport = useCallback(async (silent = false) => {
+    if (!d.user?.id) return
+    try {
+      const res = await axios.post(
+        `https://getshift-backend.onrender.com/integrations/google-calendar/import-events/${d.user.id}`,
+        {}, { withCredentials: true }
+      )
+      const count = res.data?.created || 0
+      if (count > 0) {
+        d.chargerTaches()
+        setGcalImportNotif({ count, tasks: res.data.tasks || [] })
+        if (!silent) sessionStorage.setItem('gs_gcal_imported', new Date().toISOString().split('T')[0])
+      } else if (!silent) {
+        sessionStorage.setItem('gs_gcal_imported', new Date().toISOString().split('T')[0])
+      }
+    } catch {}
+  }, [d.user?.id, d.chargerTaches])
+
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+    if (sessionStorage.getItem('gs_gcal_imported') === today) return
+    // Petit délai pour laisser le temps à useCalendarEvents de vérifier la connexion
+    const t = setTimeout(() => handleGcalImport(true), 2500)
+    return () => clearTimeout(t)
+  }, [handleGcalImport])
+
   // Auto-ouvrir BottomSheet ou Coach drawer si on arrive depuis la BottomNav d'une autre page
   useEffect(() => {
     if (location.state?.openAddSheet) {
@@ -2592,7 +2620,28 @@ export default function Dashboard() {
               <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
 
               {/* Agenda Google Calendar du jour */}
-              <AgendaSection user={d.user} T={T} />
+              {/* Toast import GCal */}
+              {gcalImportNotif && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  style={{
+                    background: 'linear-gradient(90deg, rgba(26,115,232,0.12), rgba(66,133,244,0.08))',
+                    border: '1px solid rgba(26,115,232,0.3)',
+                    borderRadius: 12, padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    marginBottom: 8, fontSize: 12,
+                  }}>
+                  <span style={{ fontSize: 16 }}>📅</span>
+                  <span style={{ flex: 1, color: d.T.text }}>
+                    <strong style={{ color: '#1A73E8' }}>{gcalImportNotif.count} tâche{gcalImportNotif.count > 1 ? 's' : ''}</strong> importée{gcalImportNotif.count > 1 ? 's' : ''} depuis Google Calendar
+                    {gcalImportNotif.tasks[0] && <span style={{ color: d.T.text2 }}> — "{gcalImportNotif.tasks[0].titre}"…</span>}
+                  </span>
+                  <button onClick={() => setGcalImportNotif(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: d.T.text2, fontSize: 16, lineHeight: 1 }}>×</button>
+                </motion.div>
+              )}
+
+              <AgendaSection user={d.user} T={T} onImport={() => handleGcalImport(false)} />
             </>
           )}
 

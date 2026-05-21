@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-complete-v14'
+APP_BUILD_MARKER = '2026-05-21-gcal-reverse-sync-v15'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1209,6 +1209,10 @@ def run_migrations():
         if not col_exists(curseur, 'users', 'autosync_calendar'):
             curseur.execute("ALTER TABLE users ADD COLUMN autosync_calendar TINYINT(1) NOT NULL DEFAULT 1")
             print("[Migrations] users.autosync_calendar ✅ (default ON)")
+        # gcal_imported_event_id : id de l'event Google dont cette tâche a été créée par import
+        if not col_exists(curseur, 'taches', 'gcal_imported_event_id'):
+            curseur.execute("ALTER TABLE taches ADD COLUMN gcal_imported_event_id VARCHAR(255) NULL")
+            print("[Migrations] taches.gcal_imported_event_id ✅")
 
         # Correction du backfill destructif du 18 mai (commit b07d7ad).
         # Le UPDATE taches SET terminee_le=NOW() a écrasé toutes les complétions
@@ -5594,6 +5598,68 @@ def gcal_unsync_task(task_id):
     c.execute("UPDATE taches SET google_event_id=NULL, gcal_sync_mode=NULL WHERE id=%s", (task_id,))
     db.commit(); db.close()
     return jsonify({'success': ok})
+
+@app.route('/integrations/google-calendar/import-events/<int:user_id>', methods=['POST'])
+def gcal_import_events(user_id):
+    """Importe les events Google Calendar à venir (30j) comme tâches GetShift.
+    Idempotent — ne recrée pas une tâche déjà importée (check gcal_imported_event_id).
+    Retourne {created, skipped, tasks: [{titre, deadline}]}
+    """
+    service = _gcal_service(user_id)
+    if not service:
+        return jsonify({'error': 'Google Calendar non connecté'}), 400
+
+    today = datetime.now().date()
+    to_dt  = today + timedelta(days=30)
+    try:
+        result = service.events().list(
+            calendarId='primary',
+            timeMin=datetime.combine(today, datetime.min.time()).isoformat() + 'Z',
+            timeMax=datetime.combine(to_dt, datetime.min.time()).isoformat() + 'Z',
+            singleEvents=True, orderBy='startTime', maxResults=100,
+        ).execute()
+        events = result.get('items', [])
+    except Exception as e:
+        return jsonify({'error': str(e)[:200]}), 500
+
+    db = connecter()
+    c  = db.cursor(dictionary=True)
+
+    # Charger les event_ids déjà importés pour cet user (évite N requêtes)
+    c.execute("SELECT gcal_imported_event_id FROM taches WHERE user_id=%s AND gcal_imported_event_id IS NOT NULL", (user_id,))
+    already = {row['gcal_imported_event_id'] for row in c.fetchall()}
+
+    created_tasks = []
+    skipped = 0
+
+    for ev in events:
+        event_id = ev.get('id')
+        titre = (ev.get('summary') or '').strip()
+        if not event_id or not titre:
+            continue
+        if event_id in already:
+            skipped += 1
+            continue
+
+        start = ev.get('start', {})
+        start_dt = start.get('dateTime') or start.get('date')
+        if not start_dt:
+            continue
+        deadline = start_dt[:10]
+
+        c.execute(
+            "INSERT INTO taches (titre, priorite, deadline, user_id, gcal_imported_event_id) VALUES (%s, %s, %s, %s, %s)",
+            (titre[:200], 'moyenne', deadline, user_id, event_id),
+        )
+        created_tasks.append({'titre': titre, 'deadline': deadline})
+        already.add(event_id)
+
+    if created_tasks:
+        db.commit()
+    db.close()
+
+    return jsonify({'created': len(created_tasks), 'skipped': skipped, 'tasks': created_tasks})
+
 
 # ============================================
 # GMAIL — OAuth réel + extraction tâches IA

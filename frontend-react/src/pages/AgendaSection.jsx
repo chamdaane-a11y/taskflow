@@ -4,13 +4,14 @@
 // ══════════════════════════════════════════════════════════════════════
 import { memo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar, ExternalLink, MapPin, ChevronDown } from 'lucide-react'
+import { Calendar, ExternalLink, MapPin, ChevronDown, Download } from 'lucide-react'
 import { useCalendarEvents } from './useCalendarEvents'
+import axios from 'axios'
 
 const API = 'https://getshift-backend.onrender.com'
 const STORAGE_KEY = 'gs_agenda_section_open'
 
-const AgendaSection = memo(function AgendaSection({ user, T, dateStr }) {
+const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }) {
   const today = dateStr || new Date().toISOString().split('T')[0]
   const { events, loading, connected, refresh } = useCalendarEvents(user?.id, today)
 
@@ -22,6 +23,30 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr }) {
     const next = !open
     setOpen(next)
     try { localStorage.setItem(STORAGE_KEY, String(next)) } catch {}
+  }
+
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState(null) // null | {count}
+
+  const handleImport = async (e) => {
+    e?.stopPropagation()
+    if (!user?.id || importing) return
+    setImporting(true)
+    try {
+      const res = await axios.post(
+        `${API}/integrations/google-calendar/import-events/${user.id}`,
+        {}, { withCredentials: true }
+      )
+      const count = res.data?.created || 0
+      setImportResult({ count })
+      if (count > 0 && onImport) onImport()
+      setTimeout(() => setImportResult(null), 4000)
+    } catch {
+      setImportResult({ count: 0, error: true })
+      setTimeout(() => setImportResult(null), 3000)
+    } finally {
+      setImporting(false)
+    }
   }
 
   const titreDate = new Date(today).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -216,6 +241,41 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr }) {
                     <div style={{ textAlign: 'center', fontSize: 10, color: T.text2, opacity: 0.6, padding: '4px 0' }}>
                       +{events.length - 10} autre(s) événement(s)
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Bouton import events → tâches */}
+              {connected && (
+                <div style={{ marginTop: 10 }}>
+                  {importResult ? (
+                    <div style={{
+                      textAlign: 'center', fontSize: 11, padding: '6px 10px', borderRadius: 8,
+                      background: importResult.error ? 'rgba(239,68,68,0.08)' : 'rgba(26,115,232,0.08)',
+                      color: importResult.error ? '#ef4444' : '#1A73E8',
+                      border: `1px solid ${importResult.error ? 'rgba(239,68,68,0.2)' : 'rgba(26,115,232,0.2)'}`,
+                    }}>
+                      {importResult.error
+                        ? 'Erreur lors de l\'import'
+                        : importResult.count === 0
+                          ? 'Tout est déjà synchronisé ✓'
+                          : `${importResult.count} tâche${importResult.count > 1 ? 's' : ''} importée${importResult.count > 1 ? 's' : ''} ✓`}
+                    </div>
+                  ) : (
+                    <motion.button
+                      onClick={handleImport}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      style={{
+                        width: '100%', padding: '7px 12px',
+                        background: importing ? 'transparent' : 'rgba(26,115,232,0.07)',
+                        border: '1px solid rgba(26,115,232,0.25)',
+                        borderRadius: 8, cursor: importing ? 'not-allowed' : 'pointer',
+                        color: '#1A73E8', fontSize: 11, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      }}>
+                      <Download size={11} />
+                      {importing ? 'Import en cours…' : 'Importer comme tâches GetShift'}
+                    </motion.button>
                   )}
                 </div>
               )}
