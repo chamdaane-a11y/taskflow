@@ -20,8 +20,8 @@ const Settings         = lazy(() => import('./pages/Settings'))
 const GoalReverse      = lazy(() => import('./pages/GoalReverse'))
 
 const PageLoader = () => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0f1117' }}>
-    <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid rgba(108,99,255,0.2)', borderTopColor: '#6c63ff', animation: 'spin 0.7s linear infinite' }} />
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-base)' }}>
+    <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid var(--ember-soft)', borderTopColor: 'var(--ember)', animation: 'spin 0.7s linear infinite' }} />
     <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
   </div>
 )

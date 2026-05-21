@@ -194,7 +194,7 @@ export default function CGU() {
   const sections = onglet === 'cgu' ? SECTIONS_CGU : SECTIONS_CONFIDENTIALITE
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F8F9FC', fontFamily: "var(--font-ui)", color: '#1a1a2e' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', fontFamily: "var(--font-ui)", color: 'var(--text-primary)' }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }

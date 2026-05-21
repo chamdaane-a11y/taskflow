@@ -1308,7 +1308,7 @@ export default function Analytics() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'var(--surface-1)' || '#1a1a2e',
+        backgroundColor: 'var(--surface-1)',
         titleColor: 'var(--text-primary)' || '#fff',
         bodyColor: 'var(--text-secondary)' || '#888',
         borderColor: 'transparent',

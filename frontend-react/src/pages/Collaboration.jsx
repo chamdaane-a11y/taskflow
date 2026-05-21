@@ -40,7 +40,7 @@ function Toast({ toasts, removeToast }) {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 60, scale: 0.9 }}
             transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.bg || '#1a1a2e', border: `1px solid ${t.border || 'var(--ember)44'}`, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.bg || 'var(--surface-1)', border: `1px solid ${t.border || 'var(--ember-ring)'}`, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', cursor: 'pointer' }}
             onClick={() => removeToast(t.id)}>
             <div style={{ fontSize: 15 }}>{t.icon || '🔔'}</div>
             <span style={{ fontSize: 12.5, color: t.color || '#e2e2ff', lineHeight: 1.4, flex: 1 }}>{t.message}</span>

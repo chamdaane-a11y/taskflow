@@ -120,7 +120,7 @@ const steps = [
     num: 4,
     icon: '🏅',
     title: 'Gagner des points et monter de niveau',
-    color: '#c9a84c',
+    color: 'var(--ember)',
     description: 'Chaque tâche terminée te rapporte des points et des badges.',
     details: [
       'Tâche basse priorité = +10 pts',
@@ -134,19 +134,19 @@ const steps = [
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Niveau 3 — Confirmé</span>
-            <span style={{ fontSize: 12, color: '#c9a84c', fontWeight: 700 }}>340 pts</span>
+            <span style={{ fontSize: 12, color: 'var(--ember)', fontWeight: 700 }}>340 pts</span>
           </div>
           <div style={{ height: 6, background: 'var(--surface-1)', borderRadius: 99, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: '72%', background: 'linear-gradient(90deg, #c9a84c, #e08a3c)', borderRadius: 99 }} />
+            <div style={{ height: '100%', width: '72%', background: 'linear-gradient(90deg, var(--ember), var(--ember-hover))', borderRadius: 99 }} />
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {['🏅 1ère tâche', '⭐ 5 tâches', '💯 100 pts'].map((b, i) => (
-              <div key={i} style={{ padding: '4px 10px', borderRadius: 99, background: `#c9a84c20`, border: `1px solid #c9a84c40`, fontSize: 11, color: '#c9a84c' }}>{b}</div>
+              <div key={i} style={{ padding: '4px 10px', borderRadius: 99, background: `var(--ember-soft)`, border: `1px solid var(--ember-ring)`, fontSize: 11, color: 'var(--ember)' }}>{b}</div>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {[1,2,3,4,5].map(n => (
-              <div key={n} style={{ flex: 1, height: 4, borderRadius: 99, background: n <= 3 ? '#c9a84c' : 'var(--surface-1)' }} />
+              <div key={n} style={{ flex: 1, height: 4, borderRadius: 99, background: n <= 3 ? 'var(--ember)' : 'var(--surface-1)' }} />
             ))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)' }}>
@@ -264,7 +264,7 @@ const steps = [
     num: 8,
     icon: '🎨',
     title: 'Changer le thème',
-    color: '#c9a84c',
+    color: 'var(--ember)',
     description: 'Personnalisez l\'apparence de GetShift selon vos préférences.',
     details: [
       'Cliquez sur "Paramètres" dans la barre latérale',
@@ -277,11 +277,8 @@ const steps = [
         <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: 0.5, marginBottom: 12 }}>THÈMES DISPONIBLES</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
-            { name: 'Sombre', bg: '#0f0f13', bg2: '#16161d', accent: '#c9a84c', text: '#f0f0f5' },
-            { name: 'Clair', bg: '#f5f5f0', bg2: '#ffffff', accent: 'var(--ember)', text: '#1a1a2e' },
-            { name: 'Océan', bg: '#0a1628', bg2: '#0d2137', accent: '#00b4d8', text: '#e0f0ff' },
-            { name: 'Forêt', bg: '#0a1a0f', bg2: '#0f2318', accent: '#4caf82', text: '#e0ffe8' },
-            { name: 'Coucher de soleil', bg: '#1a0a0f', bg2: '#2d0f18', accent: '#ff6b6b', text: '#ffe8e8' },
+            { name: 'Graphite ◆', bg: '#0E1011', bg2: '#171A1C', accent: '#E07A3E', text: '#ECEAE5' },
+            { name: 'Parchemin ◇', bg: '#F4F1EB', bg2: '#FFFFFF', accent: '#B8521C', text: '#1A1A1B' },
           ].map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: t.bg2, borderRadius: 10, border: `2px solid ${t.accent}30` }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: t.bg, border: `1px solid ${t.accent}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

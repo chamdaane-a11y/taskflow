@@ -2432,7 +2432,7 @@ export default function Dashboard() {
         /* Generic hide-scrollbar utility (template modal cat pills, picker, etc.) */
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        select option { background: #1a1a2e; }
+        select option { background: var(--surface-1); }
       `}</style>
 
       {/* NOTIFICATIONS */}

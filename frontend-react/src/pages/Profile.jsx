@@ -523,7 +523,7 @@ export default function Profile() {
   const border     = T?.border || 'var(--border-default)'
   const accent     = T?.accent || 'var(--ember)'
   const isLight    = theme === 'light'
-  const cardBg     = isLight ? 'var(--surface-card)' : bg2
+  const cardBg     = isLight ? 'var(--surface-1)' : bg2
   const cardBorder = isLight ? 'var(--border-subtle)' : border
   const inputBg    = isLight ? 'var(--surface-1)' : 'rgba(0,0,0,0.2)'
   const inputBorder = isLight ? 'var(--border-default)' : border
