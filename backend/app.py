@@ -5817,8 +5817,21 @@ def gcal_import_events(user_id):
 
     if created_tasks:
         db.commit()
-    db.close()
 
+    # Setup watch push notification si pas encore actif (pour les users déjà connectés)
+    db2 = connecter()
+    c2  = db2.cursor(dictionary=True)
+    now_ms = int(datetime.now().timestamp() * 1000)
+    c2.execute(
+        "SELECT id FROM gcal_watch_channels WHERE user_id=%s AND expiration > %s LIMIT 1",
+        (user_id, now_ms)
+    )
+    has_watch = c2.fetchone()
+    db2.close()
+    if not has_watch:
+        threading.Thread(target=_gcal_setup_watch, args=(user_id,), daemon=True).start()
+
+    db.close()
     return jsonify({'created': len(created_tasks), 'skipped': skipped, 'tasks': created_tasks})
 
 
