@@ -21,6 +21,7 @@ import { useDashboard } from './useDashboard'
 import React from 'react'
 import axios from 'axios'
 import OutilsIntegrations from './OutilsIntegrations'
+import AgendaSection from './AgendaSection'
 import TemplateIconBox from './CustomIcons'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
@@ -2589,6 +2590,9 @@ export default function Dashboard() {
 
               {/* Focus du jour */}
               <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
+
+              {/* Agenda Google Calendar du jour */}
+              <AgendaSection user={d.user} T={T} />
             </>
           )}
 

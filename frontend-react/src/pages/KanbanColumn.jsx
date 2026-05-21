@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════════════
 import { memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GripVertical, Plus, Clock, Flag, Sparkles } from 'lucide-react'
+import { GripVertical, Plus, Clock, Flag, Sparkles, Calendar, CheckCircle2 } from 'lucide-react'
 import { pColor, pBg } from './calendarUtils'
 
 /**
@@ -20,10 +20,14 @@ import { pColor, pBg } from './calendarUtils'
  *  onDragLeave()     — clear dragOver
  *  onDrop(colId)     — handle drop
  *  onEstimate(task)  — open estimate modal
+ *  onSyncCalendar(task)    — sync this task to Google Calendar (mode deadline)
+ *  onUnsyncCalendar(task)  — remove sync for this task
+ *  gcalConnected           — bool, true si Calendar connecté (sinon on cache le bouton)
  */
 const KanbanColumn = memo(function KanbanColumn({
   col, tasks, allCount, dragging, dragOver, T,
   onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onEstimate,
+  onSyncCalendar, onUnsyncCalendar, gcalConnected,
 }) {
   const isDrop = dragOver === col.id
   const pct = allCount > 0 ? (tasks.length / allCount) * 100 : 0
@@ -191,6 +195,44 @@ const KanbanColumn = memo(function KanbanColumn({
                 }}>
                   #{Math.round(task._score)}
                 </span>
+              )}
+
+              {/* Bouton sync Google Calendar — visible si Calendar connecté */}
+              {gcalConnected && onSyncCalendar && (
+                task.google_event_id ? (
+                  <motion.button
+                    title="Synchronisé avec Google Calendar — clic pour retirer"
+                    onClick={e => { e.stopPropagation(); onUnsyncCalendar?.(task) }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.96 }}
+                    style={{
+                      fontSize: 10, color: '#1A73E8',
+                      background: 'rgba(26,115,232,0.10)',
+                      border: '1px solid rgba(26,115,232,0.25)',
+                      padding: '2px 8px', borderRadius: 99,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <CheckCircle2 size={9} /> Synced
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    title="Synchroniser cette tâche avec Google Calendar"
+                    onClick={e => { e.stopPropagation(); onSyncCalendar(task) }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.96 }}
+                    style={{
+                      fontSize: 10, color: T.text2,
+                      background: `${T.border}40`,
+                      border: `1px solid ${T.border}`,
+                      padding: '2px 8px', borderRadius: 99,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
+                    }}
+                  >
+                    <Calendar size={9} /> Sync
+                  </motion.button>
+                )
               )}
             </div>
           </motion.div>

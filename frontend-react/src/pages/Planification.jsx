@@ -20,6 +20,7 @@ import {
 
 import CalendarGrid from './CalendarGrid'
 import KanbanColumn from './KanbanColumn'
+import { useCalendarEvents } from './useCalendarEvents'
 import { FocusBar, InsightCard, DailyScore } from './PlanificationInsights'
 import { CoachFloat } from './CoachFloat'
 import { PomodoroWidget } from './PomodoroWidget'
@@ -85,6 +86,49 @@ export default function Planification() {
 
   // ── Core state ─────────────────────────────────────────────────────
   const [taches, setTaches] = useState([])
+
+  // ── Google Calendar status (pour activer le bouton sync sur les cartes Kanban) ──
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], [])
+  const { connected: gcalConnected, refresh: refreshGcal } = useCalendarEvents(user?.id, todayStr)
+
+  // Sync manuel d'une tâche → Google Calendar (mode 'deadline' par défaut)
+  const handleSyncCalendar = useCallback(async (task) => {
+    try {
+      const mode = task.focus_date ? 'focus' : 'deadline'
+      const res = await axios.post(
+        `${API}/integrations/google-calendar/sync-task/${task.id}`,
+        { mode },
+        { withCredentials: true }
+      )
+      if (res.data?.event_id) {
+        setTaches(cur => cur.map(t => t.id === task.id
+          ? { ...t, google_event_id: res.data.event_id, gcal_sync_mode: mode }
+          : t))
+        refreshGcal()
+      }
+    } catch (e) {
+      alert("Sync Google Calendar impossible. Vérifie que Calendar est bien connecté avec les permissions read+write.")
+    }
+  }, [refreshGcal])
+
+  const handleUnsyncCalendar = useCallback(async (task) => {
+    try {
+      await axios.delete(
+        `${API}/integrations/google-calendar/sync-task/${task.id}`,
+        { withCredentials: true }
+      )
+      setTaches(cur => cur.map(t => t.id === task.id
+        ? { ...t, google_event_id: null, gcal_sync_mode: null }
+        : t))
+      refreshGcal()
+    } catch (e) {
+      // Silencieux — l'event est probablement déjà parti
+      setTaches(cur => cur.map(t => t.id === task.id
+        ? { ...t, google_event_id: null, gcal_sync_mode: null }
+        : t))
+    }
+  }, [refreshGcal])
+
   const [planification, setPlanification] = useState([])
   const [priorites, setPriorities] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1009,6 +1053,9 @@ export default function Planification() {
                     onDragLeave={() => setKanbanDragOver(null)}
                     onDrop={handleKanbanDrop}
                     onEstimate={setShowEstimer}
+                    onSyncCalendar={handleSyncCalendar}
+                    onUnsyncCalendar={handleUnsyncCalendar}
+                    gcalConnected={!!gcalConnected}
                   />
                 ))}
               </div>
