@@ -296,6 +296,13 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
               <span style={{ fontSize: 9, fontWeight: 700, color: '#0ea5e9', letterSpacing: '0.5px' }}>LIVE</span>
             </motion.div>
           )}
+          {msg.calendar_used && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', background: 'rgba(26,115,232,0.12)', border: '1px solid rgba(26,115,232,0.25)', borderRadius: 99 }}>
+              <span style={{ fontSize: 9 }}>📅</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: '#1A73E8', letterSpacing: '0.5px' }}>CALENDAR</span>
+            </motion.div>
+          )}
         </div>
 
         {/* Bulle */}
@@ -594,6 +601,7 @@ export default function IAChat() {
           role: 'ia', content: data.reponse, modele: data.modele || modele,
           intention: data.intention, action: data.action || null, actions: data.actions || [],
           search_results: data.search_results || null, web_searched: data.web_searched || false,
+          calendar_used: data.calendar_used || false,
           abrev_expandees: data.abrev_expandees, message_original: data.message_original,
           message_expande: data.message_expande, coach_style: coachStyle, timestamp: Date.now(),
         }])

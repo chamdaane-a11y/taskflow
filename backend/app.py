@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-autoplan-v13'
+APP_BUILD_MARKER = '2026-05-21-gcal-complete-v14'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -3157,7 +3157,13 @@ def planifier_semaine():
         taches = curseur.fetchall()
         if not taches: return jsonify({"erreur": "Aucune tache a planifier"}), 400
         taches_str = "\n".join([f"- {t['titre']} (priorite: {t['priorite']}, deadline: {t['deadline']}, temps: {t['temps_estime'] or 30} min)" for t in taches])
-        completion = groq_client.chat.completions.create(model='llama-3.3-70b-versatile', messages=[{"role": "user", "content": f'Planifie ces taches sur 7 jours ({heures_dispo_par_jour}h/jour):\n{taches_str}\nReponds UNIQUEMENT en JSON: {{"planification": [{{"titre": "...", "date": "YYYY-MM-DD", "heure_debut": "HH:MM", "heure_fin": "HH:MM", "raison": "..."}}], "conseil": "..."}}'}], max_tokens=1500, temperature=0.3)
+        cal_ctx, calendar_used = _build_calendar_context(user_id)
+        prompt = (
+            f'Planifie ces taches sur 7 jours ({heures_dispo_par_jour}h/jour):\n{taches_str}'
+            f'{cal_ctx}'
+            '\nReponds UNIQUEMENT en JSON: {"planification": [{"titre": "...", "date": "YYYY-MM-DD", "heure_debut": "HH:MM", "heure_fin": "HH:MM", "raison": "..."}], "conseil": "..."}'
+        )
+        completion = groq_client.chat.completions.create(model='llama-3.3-70b-versatile', messages=[{"role": "user", "content": prompt}], max_tokens=1500, temperature=0.3)
         reponse = completion.choices[0].message.content.strip()
         match = re.search(r'\{.*\}', reponse, re.S)
         if not match: raise ValueError("Reponse IA invalide")
@@ -3167,7 +3173,7 @@ def planifier_semaine():
             if tache:
                 curseur.execute("INSERT INTO planification (user_id, tache_id, date_planifiee, heure_debut, heure_fin, charge_minutes, genere_par_ia) VALUES (%s, %s, %s, %s, %s, %s, TRUE)", (user_id, tache['id'], item['date'], item['heure_debut'], item['heure_fin'], tache.get('temps_estime', 30)))
         db.commit(); db.close()
-        return jsonify({"planification": plan['planification'], "conseil": plan.get('conseil', ''), "message": f"{len(plan['planification'])} taches planifiees !"})
+        return jsonify({"planification": plan['planification'], "conseil": plan.get('conseil', ''), "message": f"{len(plan['planification'])} taches planifiees !", "calendar_used": calendar_used})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
@@ -5196,6 +5202,44 @@ def auth_google_calendar_callback():
         return f"<pre>Erreur OAuth: {str(e)[:200]}</pre>", 500
 
 # ─── Helpers Google Calendar : create/update/delete events depuis une tâche ───
+
+def _build_calendar_context(user_id, from_date=None, to_date=None):
+    """Retourne une string décrivant les créneaux occupés sur une période.
+    Utilisé pour enrichir les prompts IA (planifier, assistant).
+    Retourne ("", False) si Calendar non connecté ou erreur.
+    Retourne (context_str, True) si des events ont été trouvés.
+    """
+    if from_date is None:
+        from_date = datetime.now().date()
+    if to_date is None:
+        to_date = from_date + timedelta(days=7)
+    service = _gcal_service(user_id)
+    if not service:
+        return "", False
+    try:
+        result = service.events().list(
+            calendarId='primary',
+            timeMin=datetime.combine(from_date, datetime.min.time()).isoformat() + 'Z',
+            timeMax=datetime.combine(to_date, datetime.min.time()).isoformat() + 'Z',
+            singleEvents=True, orderBy='startTime', maxResults=50,
+        ).execute()
+        lignes = []
+        for ev in result.get('items', []):
+            start = ev.get('start', {})
+            end   = ev.get('end', {})
+            if 'dateTime' not in start:
+                continue  # skip all-day events pour le contexte planning
+            lignes.append(
+                f"{start['dateTime'][:10]} {start['dateTime'][11:16]}–{end.get('dateTime','')[:16][11:]} : {ev.get('summary','Réservé')[:50]}"
+            )
+        if not lignes:
+            return "", True  # connecté mais aucun event timed
+        ctx = "\nAGENDA GOOGLE CALENDAR OCCUPÉ (ne pas proposer de créneaux qui chevauchent) :\n" + "\n".join(lignes[:20])
+        return ctx, True
+    except Exception as e:
+        print(f"[GCal context] Erreur user_id={user_id}: {e}")
+        return "", False
+
 
 def _gcal_service(user_id):
     """Construit un service Google Calendar prêt à l'emploi. None si user pas connecté."""
@@ -8533,6 +8577,11 @@ def assistant_augmente():
             recent_coach=recent_coach,
         )
 
+        # Contexte Google Calendar — injecté si connecté (non bloquant)
+        cal_ctx, calendar_used = _build_calendar_context(user_id)
+        if cal_ctx:
+            system_prompt += cal_ctx
+
         # 7. Messages API
         messages_api = [{"role": "system", "content": system_prompt}]
         for h in historique[-16:]:
@@ -8623,6 +8672,7 @@ def assistant_augmente():
             "search_results": search_results if search_results else None,
             "web_searched": bool(search_results) or any(a.get('tool') == 'rechercher_web' for a in actions_executees),
             "modele": modele,
+            "calendar_used": calendar_used,
         })
 
     except Exception as e:
