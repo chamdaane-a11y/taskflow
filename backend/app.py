@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-reverse-sync-v15'
+APP_BUILD_MARKER = '2026-05-21-gcal-webhook-v16'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1213,6 +1213,19 @@ def run_migrations():
         if not col_exists(curseur, 'taches', 'gcal_imported_event_id'):
             curseur.execute("ALTER TABLE taches ADD COLUMN gcal_imported_event_id VARCHAR(255) NULL")
             print("[Migrations] taches.gcal_imported_event_id ✅")
+        # gcal_watch_channels : canaux push notifications Google Calendar
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS gcal_watch_channels (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                channel_id VARCHAR(255) NOT NULL UNIQUE,
+                resource_id VARCHAR(255),
+                expiration BIGINT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        print("[Migrations] gcal_watch_channels ✅")
 
         # Correction du backfill destructif du 18 mai (commit b07d7ad).
         # Le UPDATE taches SET terminee_le=NOW() a écrasé toutes les complétions
@@ -5197,6 +5210,8 @@ def auth_google_calendar_callback():
         curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='google_calendar'", (user_id,))
         curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, 'google_calendar', %s)", (user_id, encrypted))
         db.commit(); db.close()
+        # Démarrer le watch push notification en arrière-plan (non bloquant)
+        threading.Thread(target=_gcal_setup_watch, args=(user_id,), daemon=True).start()
         return """<script>
             window.opener && window.opener.postMessage({type:'oauth_success',integration:'google_calendar'},'*');
             window.close();
@@ -5598,6 +5613,152 @@ def gcal_unsync_task(task_id):
     c.execute("UPDATE taches SET google_event_id=NULL, gcal_sync_mode=NULL WHERE id=%s", (task_id,))
     db.commit(); db.close()
     return jsonify({'success': ok})
+
+GCAL_WEBHOOK_URL = 'https://getshift-backend.onrender.com/integrations/google-calendar/webhook'
+
+
+def _do_gcal_import(user_id):
+    """Import standalone (hors-request) : crée les tâches manquantes depuis les events GCal.
+    Appelé par le webhook push et par l'endpoint HTTP.
+    Retourne {created, skipped}.
+    """
+    import uuid as _uuid_mod
+    service = _gcal_service(user_id)
+    if not service:
+        return {'created': 0, 'skipped': 0}
+    today = datetime.now().date()
+    to_dt = today + timedelta(days=30)
+    try:
+        result = service.events().list(
+            calendarId='primary',
+            timeMin=datetime.combine(today, datetime.min.time()).isoformat() + 'Z',
+            timeMax=datetime.combine(to_dt, datetime.min.time()).isoformat() + 'Z',
+            singleEvents=True, orderBy='startTime', maxResults=100,
+        ).execute()
+        events = result.get('items', [])
+    except Exception as e:
+        print(f"[GCal Import] Erreur fetch user_id={user_id}: {e}")
+        return {'created': 0, 'skipped': 0}
+    db = connecter()
+    c = db.cursor(dictionary=True)
+    c.execute("SELECT gcal_imported_event_id FROM taches WHERE user_id=%s AND gcal_imported_event_id IS NOT NULL", (user_id,))
+    already = {row['gcal_imported_event_id'] for row in c.fetchall()}
+    created = 0
+    skipped = 0
+    for ev in events:
+        event_id = ev.get('id')
+        titre = (ev.get('summary') or '').strip()
+        if not event_id or not titre:
+            continue
+        if event_id in already:
+            skipped += 1
+            continue
+        start = ev.get('start', {})
+        start_dt = start.get('dateTime') or start.get('date')
+        if not start_dt:
+            continue
+        deadline = start_dt[:10]
+        c.execute(
+            "INSERT INTO taches (titre, priorite, deadline, user_id, gcal_imported_event_id) VALUES (%s, %s, %s, %s, %s)",
+            (titre[:200], 'moyenne', deadline, user_id, event_id),
+        )
+        created += 1
+        already.add(event_id)
+    if created > 0:
+        db.commit()
+        print(f"[GCal Import] {created} tâche(s) créée(s) pour user_id={user_id}", flush=True)
+    db.close()
+    return {'created': created, 'skipped': skipped}
+
+
+def _gcal_setup_watch(user_id):
+    """Crée (ou renouvelle) un watch channel Google Calendar push pour l'user.
+    Stocke channel_id + resource_id + expiration dans gcal_watch_channels.
+    Retourne True si succès, False sinon (domaine non vérifié ou erreur).
+    """
+    import uuid as _uuid_mod
+    service = _gcal_service(user_id)
+    if not service:
+        return False
+    channel_id = str(_uuid_mod.uuid4())
+    # On demande ~7j (max autorisé par Google)
+    expiration_ms = int((datetime.now() + timedelta(days=6, hours=23)).timestamp() * 1000)
+    db = connecter()
+    c = db.cursor(dictionary=True)
+    # Arrêter l'ancien canal s'il existe
+    c.execute("SELECT channel_id, resource_id FROM gcal_watch_channels WHERE user_id=%s", (user_id,))
+    old = c.fetchone()
+    if old:
+        try:
+            service.channels().stop(body={'id': old['channel_id'], 'resourceId': old['resource_id']}).execute()
+        except Exception:
+            pass
+        c.execute("DELETE FROM gcal_watch_channels WHERE user_id=%s", (user_id,))
+        db.commit()
+    try:
+        resp = service.events().watch(
+            calendarId='primary',
+            body={
+                'id': channel_id,
+                'type': 'web_hook',
+                'address': GCAL_WEBHOOK_URL,
+                'expiration': str(expiration_ms),
+            }
+        ).execute()
+        resource_id       = resp.get('resourceId')
+        actual_expiration = int(resp.get('expiration', expiration_ms))
+        c.execute(
+            "INSERT INTO gcal_watch_channels (user_id, channel_id, resource_id, expiration) VALUES (%s, %s, %s, %s)",
+            (user_id, channel_id, resource_id, actual_expiration),
+        )
+        db.commit()
+        print(f"[GCal Watch] Canal créé user_id={user_id} exp={actual_expiration}", flush=True)
+        db.close()
+        return True
+    except Exception as e:
+        print(f"[GCal Watch] Erreur setup user_id={user_id}: {e}", flush=True)
+        db.close()
+        return False
+
+
+@app.route('/integrations/google-calendar/webhook', methods=['POST'])
+def gcal_webhook():
+    """Réceptionne les push notifications Google Calendar.
+    Google appelle cette URL dès qu'un event est créé/modifié/supprimé.
+    """
+    channel_id     = request.headers.get('X-Goog-Channel-ID', '')
+    resource_state = request.headers.get('X-Goog-Resource-State', '')
+
+    if resource_state == 'sync':
+        return '', 200  # message d'init, on confirme
+
+    if resource_state not in ('exists', 'not_exists') or not channel_id:
+        return '', 200
+
+    db = connecter()
+    c = db.cursor(dictionary=True)
+    c.execute("SELECT user_id, resource_id, expiration FROM gcal_watch_channels WHERE channel_id=%s", (channel_id,))
+    row = c.fetchone()
+    db.close()
+
+    if not row:
+        return '', 200
+
+    user_id    = row['user_id']
+    expiration = row.get('expiration') or 0
+
+    print(f"[GCal Webhook] Notification user_id={user_id} state={resource_state}", flush=True)
+
+    # Import async (ne bloque pas la réponse — Google attend 200 rapidement)
+    threading.Thread(target=_do_gcal_import, args=(user_id,), daemon=True).start()
+
+    # Renouveler le canal si < 24h avant expiration
+    now_ms = int(datetime.now().timestamp() * 1000)
+    if expiration and expiration - now_ms < 24 * 3600 * 1000:
+        threading.Thread(target=_gcal_setup_watch, args=(user_id,), daemon=True).start()
+
+    return '', 200
+
 
 @app.route('/integrations/google-calendar/import-events/<int:user_id>', methods=['POST'])
 def gcal_import_events(user_id):

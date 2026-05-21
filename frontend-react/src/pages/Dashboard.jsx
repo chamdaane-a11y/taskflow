@@ -2375,19 +2375,23 @@ export default function Dashboard() {
       if (count > 0) {
         d.chargerTaches()
         setGcalImportNotif({ count, tasks: res.data.tasks || [] })
-        if (!silent) sessionStorage.setItem('gs_gcal_imported', new Date().toISOString().split('T')[0])
-      } else if (!silent) {
-        sessionStorage.setItem('gs_gcal_imported', new Date().toISOString().split('T')[0])
       }
     } catch {}
   }, [d.user?.id, d.chargerTaches])
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
-    if (sessionStorage.getItem('gs_gcal_imported') === today) return
-    // Petit délai pour laisser le temps à useCalendarEvents de vérifier la connexion
+    // Import au montage (léger délai pour laisser l'auth s'établir)
     const t = setTimeout(() => handleGcalImport(true), 2500)
-    return () => clearTimeout(t)
+    // Polling toutes les 60s (fallback si webhook absent)
+    const interval = setInterval(() => handleGcalImport(true), 60000)
+    // Import immédiat quand l'onglet reprend le focus
+    const onFocus = () => handleGcalImport(true)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearTimeout(t)
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [handleGcalImport])
 
   // Auto-ouvrir BottomSheet ou Coach drawer si on arrive depuis la BottomNav d'une autre page
