@@ -34,6 +34,7 @@ from google.auth.transport import requests as google_requests
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from cryptography.fernet import Fernet
 
 print("[BOOT] Imports done", flush=True)
@@ -78,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-foundation-v8'
+APP_BUILD_MARKER = '2026-05-21-gcal-sync-endpoints-v9'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -4960,22 +4961,175 @@ def auth_google_calendar_callback():
         db.close()
         return f"<pre>Erreur OAuth: {str(e)[:200]}</pre>", 500
 
-@app.route('/integrations/google-calendar/events/<int:user_id>', methods=['GET'])
-def get_calendar_events(user_id):
-    date_str = request.args.get('date')
-    if not date_str:
-        date_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+# ─── Helpers Google Calendar : create/update/delete events depuis une tâche ───
+
+def _gcal_service(user_id):
+    """Construit un service Google Calendar prêt à l'emploi. None si user pas connecté."""
     creds = get_google_calendar_creds(user_id)
     if not creds:
-        return jsonify({"events": [], "connected": False, "date": date_str})
+        return None
     try:
+        return build('calendar', 'v3', credentials=creds, cache_discovery=False)
+    except Exception as e:
+        print(f"[GCal] Erreur build service user_id={user_id}: {e}")
+        return None
+
+
+def _task_to_gcal_body(task, mode, start=None, end=None):
+    """Construit le body d'un event Google depuis une tâche GetShift.
+    mode='deadline' → all-day event sur task['deadline']
+    mode='focus' → time block 09:00 + temps_estime (min) sur task['focus_date']
+    mode='manual' → time block avec start/end ISO8601 fournis par le frontend
+    Retour : dict body ou None si données insuffisantes.
+    """
+    titre = (task.get('titre') or '(Sans titre)').strip()
+    priorite = (task.get('priorite') or '').lower()
+    emoji = {'haute': '🔴', 'moyenne': '🟡', 'basse': '🟢'}.get(priorite, '🔵')
+    body = {
+        'summary': f"{emoji} {titre}",
+        'description': f"Tâche GetShift (priorité : {priorite or 'normale'})\nID interne : {task.get('id')}",
+        'source': {'title': 'GetShift', 'url': 'https://chamdaane-a11y.github.io/taskflow'},
+    }
+    if mode == 'deadline':
+        deadline = task.get('deadline')
+        if not deadline:
+            return None
+        d_str = deadline.strftime('%Y-%m-%d') if hasattr(deadline, 'strftime') else str(deadline)[:10]
+        d_obj = datetime.strptime(d_str, '%Y-%m-%d').date()
+        body['start'] = {'date': d_str}
+        body['end'] = {'date': (d_obj + timedelta(days=1)).strftime('%Y-%m-%d')}  # end exclusif côté Google
+    elif mode == 'focus':
+        focus_date = task.get('focus_date')
+        if not focus_date:
+            return None
+        d_str = focus_date.strftime('%Y-%m-%d') if hasattr(focus_date, 'strftime') else str(focus_date)[:10]
+        try:
+            duree_min = int(task.get('temps_estime') or 60)
+        except Exception:
+            duree_min = 60
+        if duree_min <= 0:
+            duree_min = 60
+        start_dt = datetime.strptime(d_str, '%Y-%m-%d').replace(hour=9, minute=0)
+        end_dt = start_dt + timedelta(minutes=duree_min)
+        body['start'] = {'dateTime': start_dt.isoformat(), 'timeZone': 'Europe/Paris'}
+        body['end'] = {'dateTime': end_dt.isoformat(), 'timeZone': 'Europe/Paris'}
+    elif mode == 'manual':
+        if not start or not end:
+            return None
+        body['start'] = {'dateTime': start, 'timeZone': 'Europe/Paris'}
+        body['end'] = {'dateTime': end, 'timeZone': 'Europe/Paris'}
+    else:
+        return None
+    return body
+
+
+def _gcal_create_event(user_id, task, mode, start=None, end=None):
+    """Crée un event Google depuis une tâche. Retour {event_id, html_link} ou None."""
+    service = _gcal_service(user_id)
+    if not service:
+        return None
+    body = _task_to_gcal_body(task, mode, start, end)
+    if not body:
+        return None
+    try:
+        ev = service.events().insert(calendarId='primary', body=body).execute()
+        return {'event_id': ev.get('id'), 'html_link': ev.get('htmlLink')}
+    except HttpError as e:
+        if getattr(e, 'resp', None) is not None and e.resp.status == 403:
+            print(f"[GCal] 403 insufficient permissions user_id={user_id} — user doit reconnecter Calendar avec scope read+write")
+        else:
+            print(f"[GCal] HttpError create user_id={user_id}: {e}")
+        return None
+    except Exception as e:
+        print(f"[GCal] Exception create user_id={user_id}: {e}")
+        return None
+
+
+def _gcal_update_event(user_id, event_id, task, mode, start=None, end=None):
+    """Patch un event existant. 404 → reset google_event_id en DB (event a disparu côté user)."""
+    service = _gcal_service(user_id)
+    if not service:
+        return None
+    body = _task_to_gcal_body(task, mode, start, end)
+    if not body:
+        return None
+    try:
+        ev = service.events().patch(calendarId='primary', eventId=event_id, body=body).execute()
+        return {'event_id': ev.get('id'), 'html_link': ev.get('htmlLink')}
+    except HttpError as e:
+        status = getattr(e.resp, 'status', None) if getattr(e, 'resp', None) is not None else None
+        if status in (404, 410):
+            print(f"[GCal] event {event_id} introuvable côté Google — reset en DB")
+            try:
+                db = connecter()
+                c = db.cursor()
+                c.execute("UPDATE taches SET google_event_id=NULL, gcal_sync_mode=NULL WHERE google_event_id=%s AND user_id=%s", (event_id, user_id))
+                db.commit(); db.close()
+            except Exception:
+                pass
+            return None
+        print(f"[GCal] HttpError update user_id={user_id}: {e}")
+        return None
+    except Exception as e:
+        print(f"[GCal] Exception update user_id={user_id}: {e}")
+        return None
+
+
+def _gcal_delete_event(user_id, event_id):
+    """Supprime un event Google. 404/410 = déjà parti = considéré OK."""
+    service = _gcal_service(user_id)
+    if not service:
+        return False
+    try:
+        service.events().delete(calendarId='primary', eventId=event_id).execute()
+        return True
+    except HttpError as e:
+        status = getattr(e.resp, 'status', None) if getattr(e, 'resp', None) is not None else None
+        if status in (404, 410):
+            return True
+        print(f"[GCal] HttpError delete user_id={user_id} event={event_id}: {e}")
+        return False
+    except Exception as e:
+        print(f"[GCal] Exception delete user_id={user_id} event={event_id}: {e}")
+        return False
+
+
+# ─── Endpoints ────────────────────────────────────────────────────────────────
+
+@app.route('/integrations/google-calendar/events/<int:user_id>', methods=['GET'])
+def get_calendar_events(user_id):
+    """Récupère les events Google Calendar.
+    Usage :
+      ?date=YYYY-MM-DD              → events du jour (rétrocompat TomorrowBuilder)
+      ?from=YYYY-MM-DD&to=YYYY-MM-DD → events sur range (inclusif sur les 2 bornes)
+    """
+    from_str = request.args.get('from')
+    to_str = request.args.get('to')
+    date_str = request.args.get('date')
+
+    creds = get_google_calendar_creds(user_id)
+    if not creds:
+        return jsonify({"events": [], "connected": False})
+
+    try:
+        if from_str and to_str:
+            time_min = datetime.strptime(from_str, '%Y-%m-%d').isoformat() + 'Z'
+            time_max = (datetime.strptime(to_str, '%Y-%m-%d') + timedelta(days=1)).isoformat() + 'Z'
+            range_info = {'from': from_str, 'to': to_str}
+            max_results = 100
+        else:
+            if not date_str:
+                date_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+            date_dt = datetime.strptime(date_str, '%Y-%m-%d')
+            time_min = date_dt.isoformat() + 'Z'
+            time_max = (date_dt + timedelta(days=1)).isoformat() + 'Z'
+            range_info = {'date': date_str}
+            max_results = 25
+
         service = build('calendar', 'v3', credentials=creds, cache_discovery=False)
-        date_dt = datetime.strptime(date_str, '%Y-%m-%d')
-        time_min = date_dt.isoformat() + 'Z'
-        time_max = (date_dt + timedelta(days=1)).isoformat() + 'Z'
         result = service.events().list(
             calendarId='primary', timeMin=time_min, timeMax=time_max,
-            singleEvents=True, orderBy='startTime', maxResults=25
+            singleEvents=True, orderBy='startTime', maxResults=max_results
         ).execute()
         events = []
         for ev in result.get('items', []):
@@ -4987,16 +5141,87 @@ def get_calendar_events(user_id):
                 continue
             all_day = 'dateTime' not in start
             events.append({
+                'event_id': ev.get('id'),
                 'titre': ev.get('summary', '(Sans titre)'),
+                'start': start_dt,
+                'end': end_dt,
                 'heure_debut': start_dt[11:16] if not all_day else '00:00',
                 'heure_fin': end_dt[11:16] if not all_day else '23:59',
                 'all_day': all_day,
                 'location': ev.get('location', ''),
                 'html_link': ev.get('htmlLink', ''),
             })
-        return jsonify({"events": events, "connected": True, "date": date_str})
+        return jsonify({"events": events, "connected": True, **range_info})
     except Exception as e:
         return jsonify({"events": [], "connected": False, "erreur": str(e)[:200]}), 200
+
+
+@app.route('/integrations/google-calendar/sync-task/<int:task_id>', methods=['POST'])
+def gcal_sync_task(task_id):
+    """Sync manuelle d'une tâche vers Google Calendar.
+    Body : {mode: 'deadline'|'focus'|'manual', start?: ISO8601, end?: ISO8601}
+    """
+    body = request.get_json(silent=True) or {}
+    mode = body.get('mode')
+    if mode not in ('deadline', 'focus', 'manual'):
+        return jsonify({'error': "mode requis : 'deadline' | 'focus' | 'manual'"}), 400
+    start = body.get('start')
+    end = body.get('end')
+    if mode == 'manual' and (not start or not end):
+        return jsonify({'error': "start et end (ISO8601) requis pour mode manual"}), 400
+
+    db = connecter()
+    c = db.cursor(dictionary=True)
+    c.execute("SELECT * FROM taches WHERE id=%s", (task_id,))
+    task = c.fetchone()
+    if not task:
+        db.close()
+        return jsonify({'error': 'Tâche introuvable'}), 404
+    user_id = task['user_id']
+    existing_event_id = task.get('google_event_id')
+
+    if existing_event_id:
+        result = _gcal_update_event(user_id, existing_event_id, task, mode, start, end)
+    else:
+        result = _gcal_create_event(user_id, task, mode, start, end)
+
+    if not result:
+        db.close()
+        return jsonify({
+            'error': 'Échec sync Google Calendar',
+            'hint': "Vérifier que Google Calendar est connecté avec les permissions read+write (reconnecter depuis /integrations)"
+        }), 502
+
+    c.execute("UPDATE taches SET google_event_id=%s, gcal_sync_mode=%s WHERE id=%s",
+              (result['event_id'], mode, task_id))
+    db.commit(); db.close()
+    return jsonify({
+        'success': True,
+        'event_id': result['event_id'],
+        'html_link': result['html_link'],
+        'sync_mode': mode,
+    })
+
+
+@app.route('/integrations/google-calendar/sync-task/<int:task_id>', methods=['DELETE'])
+def gcal_unsync_task(task_id):
+    """Retire le sync Google Calendar d'une tâche (supprime l'event Google + nettoie la DB)."""
+    db = connecter()
+    c = db.cursor(dictionary=True)
+    c.execute("SELECT user_id, google_event_id FROM taches WHERE id=%s", (task_id,))
+    task = c.fetchone()
+    if not task:
+        db.close()
+        return jsonify({'error': 'Tâche introuvable'}), 404
+    event_id = task.get('google_event_id')
+    if not event_id:
+        db.close()
+        return jsonify({'success': True, 'note': 'Tâche déjà non synchronisée'})
+
+    ok = _gcal_delete_event(task['user_id'], event_id)
+    c.execute("UPDATE taches SET google_event_id=NULL, gcal_sync_mode=NULL WHERE id=%s", (task_id,))
+    db.commit(); db.close()
+    return jsonify({'success': ok})
 
 # ============================================
 # GMAIL — OAuth réel + extraction tâches IA
