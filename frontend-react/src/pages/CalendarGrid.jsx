@@ -8,8 +8,8 @@ import { useMediaQuery } from '../useMediaQuery'
 import TimeBlock from './TimeBlock'
 import {
   DAY_START, DAY_END, COL_HEIGHT, PX_PER_MIN,
-  pxToMins, minsToPx, minsToTime, clampMins,
-  resolveCollisions, SNAP_MINS, getWeekDays, getSingleDay
+  pxToMins, minsToPx, minsToTime, timeToMins, clampMins,
+  resolveCollisions, detectConflicts, SNAP_MINS, getWeekDays, getSingleDay
 } from './calendarUtils'
 
 const CalendarGrid = memo(function CalendarGrid({
@@ -19,6 +19,7 @@ const CalendarGrid = memo(function CalendarGrid({
   onQuickSchedule,
   daysToShow = 7,
   heuresDispo = 8,
+  gcalEvents = [],
 }) {
   const gridRef = useRef(null)
   const isMobile = useMediaQuery('(max-width: 768px)')
@@ -577,21 +578,72 @@ const CalendarGrid = memo(function CalendarGrid({
                       </div>
                     )}
 
+                    {/* Google Calendar event overlays (non-draggable) */}
+                    {gcalEvents
+                      .filter(ev => (ev.start?.substring(0, 10) || '') === jour.date)
+                      .map(ev => {
+                        if (ev.all_day) return null
+                        const evStart = timeToMins(ev.heure_debut)
+                        const evEnd   = Math.max(timeToMins(ev.heure_fin), evStart + 15)
+                        const top     = minsToPx(evStart)
+                        const height  = Math.max(minsToPx(evEnd) - top, 15 * PX_PER_MIN)
+                        return (
+                          <div
+                            key={ev.event_id}
+                            title={`${ev.titre} (${ev.heure_debut}–${ev.heure_fin})`}
+                            style={{
+                              position: 'absolute',
+                              top, left: 3, right: 3, height,
+                              background: 'repeating-linear-gradient(45deg, rgba(100,116,139,0.06), rgba(100,116,139,0.06) 4px, rgba(100,116,139,0.12) 4px, rgba(100,116,139,0.12) 8px)',
+                              border: '1px dashed rgba(100,116,139,0.45)',
+                              borderRadius: 7,
+                              zIndex: 3,
+                              pointerEvents: 'none',
+                              overflow: 'hidden',
+                              display: 'flex', alignItems: 'flex-start',
+                              padding: '3px 5px',
+                              gap: 4,
+                            }}
+                          >
+                            <span style={{
+                              fontSize: 9, fontWeight: 700, color: 'rgba(100,116,139,0.9)',
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                              flex: 1,
+                            }}>
+                              {ev.titre}
+                            </span>
+                            <span style={{
+                              fontSize: 8, fontWeight: 800, color: '#1A73E8',
+                              background: 'rgba(26,115,232,0.12)',
+                              padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+                            }}>
+                              G
+                            </span>
+                          </div>
+                        )
+                      })
+                    }
+
                     {/* Task blocks */}
-                    {entries.map(entry => (
-                      <TimeBlock
-                        key={entry.id}
-                        entry={entry}
-                        colIndex={entry.colIndex}
-                        numCols={entry.numCols}
-                        colWidth={COL_W}
-                        T={T}
-                        ghost={dragging?.id === entry.id}
-                        onDragStart={e => setDragging(e)}
-                        onResize={(id, newEnd) => onResize?.({ entryId: id, newEndMins: newEnd })}
-                        onResizeEnd={(id, newEnd) => onResizeEnd?.({ entryId: id, newEndMins: newEnd })}
-                      />
-                    ))}
+                    {entries.map(entry => {
+                      const dayGcalEvs = gcalEvents.filter(ev => (ev.start?.substring(0, 10) || '') === jour.date)
+                      const conflicts  = detectConflicts(entry, dayGcalEvs)
+                      return (
+                        <TimeBlock
+                          key={entry.id}
+                          entry={entry}
+                          colIndex={entry.colIndex}
+                          numCols={entry.numCols}
+                          colWidth={COL_W}
+                          T={T}
+                          ghost={dragging?.id === entry.id}
+                          conflicts={conflicts}
+                          onDragStart={e => setDragging(e)}
+                          onResize={(id, newEnd) => onResize?.({ entryId: id, newEndMins: newEnd })}
+                          onResizeEnd={(id, newEnd) => onResizeEnd?.({ entryId: id, newEndMins: newEnd })}
+                        />
+                      )
+                    })}
                   </div>
                 )
               })}

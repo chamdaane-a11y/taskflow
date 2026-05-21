@@ -271,6 +271,24 @@ const _normP = (p) => (p === 'faible' ? 'basse' : p)
 export const pColor = (p) => ({ haute: '#ef4444', moyenne: '#f59e0b', basse: '#10b981' })[_normP(p)] ?? '#10b981'
 export const pBg    = (p) => ({ haute: '#ef444415', moyenne: '#f59e0b15', basse: '#10b98115' })[_normP(p)] ?? '#10b98115'
 
+// ── Google Calendar conflict detection ────────────────────────────────
+
+/**
+ * Détecte les events Google Calendar qui chevauchent un time block GetShift.
+ * @param {{startMins:number, endMins:number}} timeBlock
+ * @param {Array<{heure_debut:string, heure_fin:string, all_day:boolean, titre:string}>} gcalEvents
+ * @returns {Array} les gcalEvents en conflit
+ */
+export function detectConflicts(timeBlock, gcalEvents) {
+  if (!gcalEvents?.length) return []
+  return gcalEvents.filter(ev => {
+    if (ev.all_day) return false
+    const evStart = timeToMins(ev.heure_debut)
+    const evEnd   = timeToMins(ev.heure_fin)
+    return timeBlock.startMins < evEnd && timeBlock.endMins > evStart
+  })
+}
+
 // ── Month helpers ─────────────────────────────────────────────────────
 
 export function getMonthDays(monthOffset = 0) {

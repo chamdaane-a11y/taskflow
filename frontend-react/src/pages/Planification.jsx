@@ -27,7 +27,7 @@ import { PomodoroWidget } from './PomodoroWidget'
 import {
   calcPriorityScore, binPackTasks, getGanttDays,
   minsToTime, timeToMins, pColor, pBg,
-  getWeekDays, getMonthDays
+  getWeekDays, getSingleDay, getMonthDays
 } from './calendarUtils'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -90,6 +90,22 @@ export default function Planification() {
   // ── Google Calendar status (pour activer le bouton sync sur les cartes Kanban) ──
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], [])
   const { connected: gcalConnected, refresh: refreshGcal } = useCalendarEvents(user?.id, todayStr)
+
+  // ── Google Calendar events pour overlay dans les vues calendrier/jour ──
+  const gcalWeekRange = useMemo(() => {
+    if (!gcalConnected) return null
+    if (vue === 'jour') {
+      const days = getSingleDay(semaineOffset)
+      return { from: days[0].date, to: days[0].date }
+    }
+    if (vue === 'calendrier') {
+      const days = getWeekDays(semaineOffset)
+      return { from: days[0].date, to: days[days.length - 1].date }
+    }
+    return null
+  }, [gcalConnected, vue, semaineOffset])
+
+  const { events: gcalWeekEvents } = useCalendarEvents(user?.id, gcalWeekRange)
 
   // Sync manuel d'une tâche → Google Calendar (mode 'deadline' par défaut)
   const handleSyncCalendar = useCallback(async (task) => {
@@ -1078,6 +1094,7 @@ export default function Planification() {
                 onQuickSchedule={quickSchedule}
                 daysToShow={1}
                 heuresDispo={heuresDispo}
+                gcalEvents={gcalWeekEvents}
               />
             </motion.div>
           )}
@@ -1098,6 +1115,7 @@ export default function Planification() {
                 onQuickSchedule={quickSchedule}
                 daysToShow={7}
                 heuresDispo={heuresDispo}
+                gcalEvents={gcalWeekEvents}
               />
             </motion.div>
           )}

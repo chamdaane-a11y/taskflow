@@ -25,7 +25,8 @@ import {
  */
 const TimeBlock = memo(function TimeBlock({
   entry, colIndex, numCols, colWidth, T,
-  onDragStart, onResize, onResizeEnd, ghost = false
+  onDragStart, onResize, onResizeEnd, ghost = false,
+  conflicts = [],
 }) {
   const resizeRef   = useRef(null)
   const startYRef   = useRef(0)
@@ -124,6 +125,26 @@ const TimeBlock = memo(function TimeBlock({
       <div style={{ position: 'absolute', top: 5, right: 5, opacity: 0.25 }}>
         <GripVertical size={10} color={color} />
       </div>
+
+      {/* Conflict badge */}
+      {conflicts.length > 0 && (
+        <div
+          title={`Conflit avec : ${conflicts.map(c => c.titre).join(', ')}`}
+          style={{
+            position: 'absolute', top: 4, left: 6,
+            fontSize: 8, fontWeight: 800,
+            color: '#f59e0b',
+            background: 'rgba(245,158,11,0.18)',
+            border: '1px solid rgba(245,158,11,0.35)',
+            padding: '1px 5px', borderRadius: 4,
+            display: 'flex', alignItems: 'center', gap: 2,
+            pointerEvents: 'none', zIndex: 50,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          ⚠ Conflit
+        </div>
+      )}
 
       {/* Content */}
       <p style={{
