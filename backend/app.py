@@ -18,6 +18,11 @@ import re
 import secrets
 import base64
 import uuid
+
+# Google OAuth ajoute automatiquement userinfo.email + userinfo.profile aux
+# scopes demandés (via openid). oauthlib râle car scopes retournés != demandés.
+# Cette env var demande à oauthlib d'accepter le scope élargi.
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 from datetime import timedelta, datetime
 from dotenv import load_dotenv
 from groq import Groq
@@ -73,7 +78,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-20-brevo-v6'
+APP_BUILD_MARKER = '2026-05-21-oauth-relax-v7'
 
 # ============================================
 # HELPERS EMAIL & SLACK
