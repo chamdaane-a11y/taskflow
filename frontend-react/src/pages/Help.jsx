@@ -30,19 +30,19 @@ const steps = [
       'Connecte-toi avec tes identifiants',
     ],
     illustration: (T) => (
-      <div style={{ background: T.bg3, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, #6c63ff, #4caf82)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 18 }}>📝</span>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ height: 8, background: T.border, borderRadius: 99, width: '60%', marginBottom: 4 }} />
-              <div style={{ height: 6, background: T.border, borderRadius: 99, width: '40%', opacity: 0.5 }} />
+              <div style={{ height: 8, background: 'var(--border-subtle)', borderRadius: 99, width: '60%', marginBottom: 4 }} />
+              <div style={{ height: 6, background: 'var(--border-subtle)', borderRadius: 99, width: '40%', opacity: 0.5 }} />
             </div>
           </div>
           {['Nom complet', 'Email', 'Mot de passe'].map((f, i) => (
-            <div key={i} style={{ padding: '8px 12px', background: T.bg2, borderRadius: 8, border: `1px solid ${T.border}`, fontSize: 12, color: T.text2 }}>{f}</div>
+            <div key={i} style={{ padding: '8px 12px', background: 'var(--surface-1)', borderRadius: 8, border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-secondary)' }}>{f}</div>
           ))}
           <div style={{ padding: '9px', background: '#6c63ff', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'white' }}>Créer mon compte</div>
         </div>
@@ -62,19 +62,19 @@ const steps = [
       'Clique sur "Ajouter" ou appuie sur Entrée',
     ],
     illustration: (T) => (
-      <div style={{ background: T.bg3, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ padding: '8px 12px', background: T.bg2, borderRadius: 8, border: `1px solid #4caf82`, fontSize: 12, color: T.text }}>Finir le projet React...</div>
+          <div style={{ padding: '8px 12px', background: 'var(--surface-1)', borderRadius: 8, border: `1px solid #4caf82`, fontSize: 12, color: 'var(--text-primary)' }}>Finir le projet React...</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1, padding: '7px 10px', background: T.bg2, borderRadius: 8, border: `1px solid ${T.border}`, fontSize: 11, color: '#e05c5c' }}>🔴 Haute</div>
-            <div style={{ flex: 1, padding: '7px 10px', background: T.bg2, borderRadius: 8, border: `1px solid ${T.border}`, fontSize: 11, color: T.text2 }}>📅 14/03</div>
+            <div style={{ flex: 1, padding: '7px 10px', background: 'var(--surface-1)', borderRadius: 8, border: '1px solid var(--border-subtle)', fontSize: 11, color: '#e05c5c' }}>🔴 Haute</div>
+            <div style={{ flex: 1, padding: '7px 10px', background: 'var(--surface-1)', borderRadius: 8, border: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-secondary)' }}>📅 14/03</div>
             <div style={{ padding: '7px 14px', background: '#4caf82', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'white' }}>+ Ajouter</div>
           </div>
-          <div style={{ height: 1, background: T.border }} />
+          <div style={{ height: 1, background: 'var(--border-subtle)' }} />
           {['Finir le projet React', 'Réviser les maths', 'Appeler le médecin'].map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }}>
-              <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${i === 0 ? '#4caf82' : T.border}`, background: i === 0 ? '#4caf82' : 'transparent', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: i === 0 ? T.text2 : T.text, textDecoration: i === 0 ? 'line-through' : 'none' }}>{t}</span>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${i === 0 ? '#4caf82' : 'var(--border-subtle)'}`, background: i === 0 ? '#4caf82' : 'transparent', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: i === 0 ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: i === 0 ? 'line-through' : 'none' }}>{t}</span>
             </div>
           ))}
         </div>
@@ -94,22 +94,22 @@ const steps = [
       'Tu peux aussi chatter avec l\'IA pour des conseils',
     ],
     illustration: (T) => (
-      <div style={{ background: T.bg3, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, #e08a3c, #6c63ff)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Sparkles size={14} color="white" />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>Assistant IA</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Assistant IA</span>
           </div>
-          <div style={{ padding: '10px 12px', background: `#e08a3c15`, borderRadius: 8, border: `1px solid #e08a3c30`, fontSize: 11, color: T.text2 }}>
+          <div style={{ padding: '10px 12px', background: `#e08a3c15`, borderRadius: 8, border: `1px solid #e08a3c30`, fontSize: 11, color: 'var(--text-secondary)' }}>
             💬 "Apprendre React en 30 jours"
           </div>
-          <div style={{ fontSize: 11, color: T.text2, padding: '4px 0' }}>✨ Tâches générées :</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '4px 0' }}>✨ Tâches générées :</div>
           {['Bases JavaScript ES6', 'Composants et props', 'Hooks useState/useEffect'].map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#e08a3c' }} />
-              <span style={{ fontSize: 11, color: T.text }}>{t}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-primary)' }}>{t}</span>
             </div>
           ))}
         </div>
@@ -130,13 +130,13 @@ const steps = [
       'Monte de Débutant jusqu\'à Maître',
     ],
     illustration: (T) => (
-      <div style={{ background: T.bg3, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: T.text2 }}>Niveau 3 — Confirmé</span>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Niveau 3 — Confirmé</span>
             <span style={{ fontSize: 12, color: '#c9a84c', fontWeight: 700 }}>340 pts</span>
           </div>
-          <div style={{ height: 6, background: T.bg2, borderRadius: 99, overflow: 'hidden' }}>
+          <div style={{ height: 6, background: 'var(--surface-1)', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: '72%', background: 'linear-gradient(90deg, #c9a84c, #e08a3c)', borderRadius: 99 }} />
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -146,10 +146,10 @@ const steps = [
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {[1,2,3,4,5].map(n => (
-              <div key={n} style={{ flex: 1, height: 4, borderRadius: 99, background: n <= 3 ? '#c9a84c' : T.bg2 }} />
+              <div key={n} style={{ flex: 1, height: 4, borderRadius: 99, background: n <= 3 ? '#c9a84c' : 'var(--surface-1)' }} />
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.text2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)' }}>
             <span>Débutant</span><span>Maître</span>
           </div>
         </div>
@@ -169,16 +169,16 @@ const steps = [
       'Planifie tes tâches dans le calendrier',
     ],
     illustration: (T) => (
-      <div style={{ background: T.bg3, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {[
               { label: 'Total', val: '24', color: '#6c63ff' },
               { label: 'Terminées', val: '18', color: '#4caf82' },
             ].map((s, i) => (
-              <div key={i} style={{ flex: 1, padding: '10px', background: T.bg2, borderRadius: 8, border: `1px solid ${T.border}` }}>
+              <div key={i} style={{ flex: 1, padding: '10px', background: 'var(--surface-1)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.val}</div>
-                <div style={{ fontSize: 10, color: T.text2 }}>{s.label}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -187,7 +187,7 @@ const steps = [
               <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 5 ? '#6c63ff' : `#6c63ff40`, borderRadius: 4 }} />
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: T.text2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-secondary)' }}>
             {['L','M','M','J','V','S','D'].map((d,i) => <span key={i}>{d}</span>)}
           </div>
         </div>
@@ -207,21 +207,21 @@ const steps = [
       'Les notifications arrivent même quand l\'app est fermée',
     ],
     illustration: (T) => (
-      <div style={{ background: T.bg3, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
-          <div style={{ width: 56, height: 100, borderRadius: 12, background: T.bg2, border: `2px solid ${T.border}`, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 16, height: 3, borderRadius: 99, background: T.border }} />
-            <div style={{ position: 'absolute', top: 16, left: 0, right: 0, bottom: 0, background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 40, padding: 6, background: T.bg3, borderRadius: 6, border: `1px solid #e05c5c40` }}>
+          <div style={{ width: 56, height: 100, borderRadius: 12, background: 'var(--surface-1)', border: '2px solid var(--border-subtle)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 16, height: 3, borderRadius: 99, background: 'var(--border-subtle)' }} />
+            <div style={{ position: 'absolute', top: 16, left: 0, right: 0, bottom: 0, background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 40, padding: 6, background: 'var(--surface-2)', borderRadius: 6, border: `1px solid #e05c5c40` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 3 }}>
                   <Bell size={8} color="#e05c5c" />
-                  <span style={{ fontSize: 7, fontWeight: 600, color: T.text }}>GetShift</span>
+                  <span style={{ fontSize: 7, fontWeight: 600, color: 'var(--text-primary)' }}>GetShift</span>
                 </div>
-                <div style={{ fontSize: 6, color: T.text2, lineHeight: 1.4 }}>⏰ Deadline demain !</div>
+                <div style={{ fontSize: 6, color: 'var(--text-secondary)', lineHeight: 1.4 }}>⏰ Deadline demain !</div>
               </div>
             </div>
           </div>
-          <span style={{ fontSize: 11, color: T.text2, textAlign: 'center' }}>Notification push sur ton téléphone</span>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center' }}>Notification push sur ton téléphone</span>
         </div>
       </div>
     )
@@ -239,21 +239,21 @@ const steps = [
       'Il reçoit une invitation et peut voir/commenter tes tâches',
     ],
     illustration: (T) => (
-      <div style={{ background: T.bg3, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>Partager "Projet React"</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Partager "Projet React"</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1, padding: '7px 10px', background: T.bg2, borderRadius: 8, border: `1px solid ${T.border}`, fontSize: 11, color: T.text2 }}>email@exemple.com</div>
+            <div style={{ flex: 1, padding: '7px 10px', background: 'var(--surface-1)', borderRadius: 8, border: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-secondary)' }}>email@exemple.com</div>
             <div style={{ padding: '7px 12px', background: '#4caf82', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'white' }}>Inviter</div>
           </div>
-          <div style={{ height: 1, background: T.border }} />
-          <div style={{ fontSize: 11, color: T.text2 }}>Membres :</div>
+          <div style={{ height: 1, background: 'var(--border-subtle)' }} />
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Membres :</div>
           {['Toi (propriétaire)', 'Alice (Actif)', 'Bob (En attente)'].map((m, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 24, height: 24, borderRadius: '50%', background: `linear-gradient(135deg, #4caf82, #6c63ff)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'white', fontWeight: 700 }}>
                 {m.charAt(0)}
               </div>
-              <span style={{ fontSize: 11, color: T.text }}>{m}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-primary)' }}>{m}</span>
             </div>
           ))}
         </div>
@@ -273,8 +273,8 @@ const steps = [
       'Le thème est sauvegardé automatiquement',
     ],
     illustration: (T) => (
-      <div style={{ background: T.bg3, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
-        <div style={{ fontSize: 11, color: T.text2, fontWeight: 600, letterSpacing: 0.5, marginBottom: 12 }}>THÈMES DISPONIBLES</div>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: 0.5, marginBottom: 12 }}>THÈMES DISPONIBLES</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { name: 'Sombre', bg: '#0f0f13', bg2: '#16161d', accent: '#c9a84c', text: '#f0f0f5' },
@@ -329,7 +329,7 @@ export default function Help() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
 
       <style>{`
         @media (max-width: 768px) {
@@ -346,12 +346,12 @@ export default function Help() {
         toggleSidebar={toggleSidebar}
         isMobile={isMobile}>
         {/* Help-specific: thème picker */}
-        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
-        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>THÈME</p>
+        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
+        <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>THÈME</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '0 4px' }}>
           {Object.entries(themes).map(([key, t]) => (
             <motion.button key={key}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px', borderRadius: 8, background: theme === key ? `${T.accent}20` : 'transparent', border: `1px solid ${theme === key ? T.accent + '50' : T.border}`, color: theme === key ? T.accent : T.text2, cursor: 'pointer', fontSize: 11, fontWeight: theme === key ? 600 : 400 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px', borderRadius: 8, background: theme === key ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${theme === key ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, color: theme === key ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontWeight: theme === key ? 600 : 400 }}
               onClick={() => { setTheme(key); localStorage.setItem('theme', key) }} whileHover={{ x: 1 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.accent }} />
               {t.name}
@@ -369,23 +369,23 @@ export default function Help() {
         {/* Header */}
         <motion.div style={{ marginBottom: 40 }} initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <HelpCircle size={20} color={T.bg} strokeWidth={2.5} />
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <HelpCircle size={20} color={'var(--bg-base)'} strokeWidth={2.5} />
             </div>
             <div>
-              <h1 style={{ fontSize: 'clamp(22px, 4vw, 28px)', fontWeight: 700, color: T.text, letterSpacing: '-0.5px' }}>Guide d'utilisation</h1>
-              <p style={{ color: T.text2, fontSize: 13, marginTop: 2 }}>Tout ce qu'il faut savoir pour maîtriser GetShift</p>
+              <h1 style={{ fontSize: 'clamp(22px, 4vw, 28px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>Guide d'utilisation</h1>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 2 }}>Tout ce qu'il faut savoir pour maîtriser GetShift</p>
             </div>
           </div>
 
           {/* Barre de progression */}
-          <div style={{ background: T.bg2, borderRadius: 14, padding: '16px 20px', marginTop: 24, border: `1px solid ${T.border}` }}>
+          <div style={{ background: 'var(--surface-1)', borderRadius: 14, padding: '16px 20px', marginTop: 24, border: '1px solid var(--border-subtle)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
-              <span style={{ color: T.text2, fontWeight: 500 }}>Progression du tutoriel</span>
-              <span style={{ color: T.accent, fontWeight: 700 }}>{activeStep + 1}/{steps.length}</span>
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Progression du tutoriel</span>
+              <span style={{ color: 'var(--ember)', fontWeight: 700 }}>{activeStep + 1}/{steps.length}</span>
             </div>
-            <div style={{ height: 6, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
-              <motion.div style={{ height: '100%', background: `linear-gradient(90deg, ${T.accent}, ${T.accent2})`, borderRadius: 99 }}
+            <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
+              <motion.div style={{ height: '100%', background: `linear-gradient(90deg, var(--ember), var(--ember-hover))`, borderRadius: 99 }}
                 animate={{ width: `${((activeStep + 1) / steps.length) * 100}%` }}
                 transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} />
             </div>
@@ -394,7 +394,7 @@ export default function Help() {
                 const StepIcon = stepIcons[i]
                 return (
                   <motion.button key={i}
-                    style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${i <= activeStep ? s.color : T.border}`, background: i < activeStep ? s.color : i === activeStep ? `${s.color}20` : 'transparent', color: i <= activeStep ? (i < activeStep ? 'white' : s.color) : T.text2, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s' }}
+                    style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${i <= activeStep ? s.color : 'var(--border-subtle)'}`, background: i < activeStep ? s.color : i === activeStep ? `${s.color}20` : 'transparent', color: i <= activeStep ? (i < activeStep ? 'white' : s.color) : 'var(--text-secondary)', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s' }}
                     onClick={() => setActiveStep(i)}
                     whileHover={{ scale: 1.15 }}
                     whileTap={{ scale: 0.95 }}>
@@ -422,21 +422,21 @@ export default function Help() {
                   </div>
                   <div>
                     <div style={{ fontSize: 11, color: steps[activeStep].color, fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>ÉTAPE {steps[activeStep].num}</div>
-                    <h2 style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 700, color: T.text, letterSpacing: '-0.3px' }}>{steps[activeStep].title}</h2>
+                    <h2 style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>{steps[activeStep].title}</h2>
                   </div>
                 </div>
 
-                <p style={{ fontSize: 14, color: T.text2, lineHeight: 1.7, marginBottom: 20 }}>{steps[activeStep].description}</p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>{steps[activeStep].description}</p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {steps[activeStep].details.map((detail, i) => (
                     <motion.div key={i}
-                      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', background: T.bg2, borderRadius: 10, border: `1px solid ${T.border}` }}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', background: 'var(--surface-1)', borderRadius: 10, border: '1px solid var(--border-subtle)' }}
                       initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}>
                       <div style={{ width: 22, height: 22, borderRadius: '50%', background: `${steps[activeStep].color}20`, border: `1px solid ${steps[activeStep].color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: steps[activeStep].color, flexShrink: 0, marginTop: 1 }}>
                         {i + 1}
                       </div>
-                      <span style={{ fontSize: 13, color: T.text, lineHeight: 1.5 }}>{detail}</span>
+                      <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{detail}</span>
                     </motion.div>
                   ))}
                 </div>
@@ -446,7 +446,7 @@ export default function Help() {
               <div>
                 <div style={{ position: 'sticky', top: 24 }}>
                   <div style={{ marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, color: T.text2, fontWeight: 500 }}>APERÇU</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>APERÇU</span>
                   </div>
                   {steps[activeStep].illustration(T)}
                 </div>
@@ -456,13 +456,13 @@ export default function Help() {
             {/* Navigation entre étapes */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
               <motion.button
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 13, fontWeight: 500, cursor: activeStep === 0 ? 'not-allowed' : 'pointer', opacity: activeStep === 0 ? 0.4 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: activeStep === 0 ? 'not-allowed' : 'pointer', opacity: activeStep === 0 ? 0.4 : 1 }}
                 onClick={() => activeStep > 0 && setActiveStep(activeStep - 1)}
-                whileHover={activeStep > 0 ? { borderColor: T.accent, color: T.accent } : {}}>
+                whileHover={activeStep > 0 ? { borderColor: 'var(--ember)', color: 'var(--ember)' } : {}}>
                 ← Précédent
               </motion.button>
 
-              <span style={{ fontSize: 12, color: T.text2 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 {activeStep + 1} / {steps.length}
               </span>
 
@@ -475,7 +475,7 @@ export default function Help() {
                 </motion.button>
               ) : (
                 <motion.button
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, border: 'none', borderRadius: 10, color: T.bg, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, border: 'none', borderRadius: 10, color: 'var(--bg-base)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                   onClick={() => navigate('/dashboard')}
                   whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                   <Star size={14} /> Commencer !
@@ -488,16 +488,16 @@ export default function Help() {
         {/* Toutes les étapes (aperçu rapide) */}
         <motion.div style={{ marginTop: 48 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <div style={{ height: 1, flex: 1, background: T.border }} />
-            <span style={{ fontSize: 12, color: T.text2, fontWeight: 600, letterSpacing: 1 }}>TOUTES LES ÉTAPES</span>
-            <div style={{ height: 1, flex: 1, background: T.border }} />
+            <div style={{ height: 1, flex: 1, background: 'var(--border-subtle)' }} />
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: 1 }}>TOUTES LES ÉTAPES</span>
+            <div style={{ height: 1, flex: 1, background: 'var(--border-subtle)' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
             {steps.map((step, i) => {
               const StepIcon = stepIcons[i]
               return (
                 <motion.button key={i}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: activeStep === i ? `${step.color}15` : T.bg2, border: `1px solid ${activeStep === i ? step.color : T.border}`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: activeStep === i ? `${step.color}15` : 'var(--surface-1)', border: `1px solid ${activeStep === i ? step.color : 'var(--border-subtle)'}`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}
                   onClick={() => setActiveStep(i)}
                   whileHover={{ y: -2, borderColor: step.color }}
                   whileTap={{ scale: 0.98 }}>
@@ -506,7 +506,7 @@ export default function Help() {
                   </div>
                   <div>
                     <div style={{ fontSize: 10, color: step.color, fontWeight: 600, marginBottom: 2 }}>Étape {step.num}</div>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: T.text }}>{step.title}</div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{step.title}</div>
                   </div>
                 </motion.button>
               )

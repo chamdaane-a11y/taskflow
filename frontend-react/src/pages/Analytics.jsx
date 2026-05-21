@@ -247,7 +247,7 @@ const Skeleton = memo(({ width = '100%', height = 20, radius = 8, style = {} }) 
     <motion.div
       animate={{ opacity: [0.4, 0.8, 0.4] }}
       transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-      style={{ width, height, borderRadius: radius, background: T.border, ...style }}
+      style={{ width, height, borderRadius: radius, background: 'var(--border-subtle)', ...style }}
     />
   )
 })
@@ -287,25 +287,25 @@ const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
           initial={{ scale: 0.92, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 12 }}
           transition={{ type: 'spring', damping: 26, stiffness: 280 }}
           style={{
-            background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 18,
+            background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 18,
             width: isMobile ? '100%' : 460, maxWidth: '100%',
             maxHeight: '85vh', overflow: 'hidden',
             display: 'flex', flexDirection: 'column',
             boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
           }}>
           {/* Header */}
-          <div style={{ padding: '16px 18px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12, background: `linear-gradient(135deg, ${T.accent}15, transparent)` }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 12, background: `linear-gradient(135deg, var(--ember-soft), transparent)` }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Calendar size={18} color="#fff" strokeWidth={2.4} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: T.text, textTransform: 'capitalize' }}>{dateFmt}</div>
-              <div style={{ fontSize: 11, color: T.text2 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', textTransform: 'capitalize' }}>{dateFmt}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                 {loading ? '...' : `${data?.total || 0} tâche${(data?.total || 0) > 1 ? 's' : ''}`}
               </div>
             </div>
             <motion.button onClick={onClose} whileTap={{ scale: 0.9 }}
-              style={{ width: 30, height: 30, borderRadius: 8, background: T.bg3 || 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface-2)' || 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={14} />
             </motion.button>
           </div>
@@ -317,13 +317,13 @@ const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
                 {[1, 2, 3].map(i => <Skeleton key={i} height={50} radius={10} />)}
               </div>
             ) : !data?.taches?.length ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: T.text2, fontSize: 13 }}>
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-secondary)', fontSize: 13 }}>
                 Aucune tâche enregistrée ce jour.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {data.taches.map(t => {
-                  const c = prioColor[t.priorite] || T.accent
+                  const c = prioColor[t.priorite] || 'var(--ember)'
                   return (
                     <motion.div
                       key={t.id}
@@ -331,15 +331,15 @@ const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 12px',
-                        background: t.terminee ? '#4caf820d' : T.bg3 || T.bg,
-                        border: `1px solid ${t.terminee ? '#4caf8230' : T.border}`,
+                        background: t.terminee ? '#4caf820d' : 'var(--surface-2)' || 'var(--bg-base)',
+                        border: `1px solid ${t.terminee ? '#4caf8230' : 'var(--border-subtle)'}`,
                         borderLeft: `3px solid ${c}`,
                         borderRadius: 10,
                       }}>
                       {/* Statut */}
                       <div style={{
                         width: 22, height: 22, borderRadius: '50%',
-                        border: `2px solid ${t.terminee ? '#4caf82' : T.border}`,
+                        border: `2px solid ${t.terminee ? '#4caf82' : 'var(--border-subtle)'}`,
                         background: t.terminee ? '#4caf82' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexShrink: 0,
@@ -347,10 +347,10 @@ const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
                         {t.terminee && <CheckSquare size={12} color="#fff" strokeWidth={3} />}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, textDecoration: t.terminee ? 'line-through' : 'none', opacity: t.terminee ? 0.7 : 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textDecoration: t.terminee ? 'line-through' : 'none', opacity: t.terminee ? 0.7 : 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t.titre}
                         </div>
-                        <div style={{ fontSize: 10, color: T.text2, marginTop: 2, display: 'flex', gap: 8 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', gap: 8 }}>
                           <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.priorite}</span>
                           {t.categorie && <span>· {t.categorie}</span>}
                         </div>
@@ -433,11 +433,11 @@ const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
 
   const getColor = (intensity, isFuture) => {
     if (isFuture) return 'transparent'
-    if (intensity === 0) return T.border
-    if (intensity < 0.25) return T.accent + '40'
-    if (intensity < 0.5)  return T.accent + '70'
-    if (intensity < 0.75) return T.accent + 'aa'
-    return T.accent
+    if (intensity === 0) return 'var(--border-subtle)'
+    if (intensity < 0.25) return 'var(--ember-ring)'
+    if (intensity < 0.5)  return 'var(--ember)' + '70'
+    if (intensity < 0.75) return 'var(--ember)' + 'aa'
+    return 'var(--ember)'
   }
 
   // Dim Lun Mar Mer Jeu Ven Sam
@@ -449,7 +449,7 @@ const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
         {/* Étiquettes jours */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginRight: 6 }}>
           {dayLabels.map((l, i) => (
-            <div key={i} style={{ height: 12, fontSize: 9, color: T.text2, display: 'flex', alignItems: 'center' }}>{l}</div>
+            <div key={i} style={{ height: 12, fontSize: 9, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>{l}</div>
           ))}
         </div>
         {/* Grille */}
@@ -471,11 +471,11 @@ const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
       </div>
       {/* Légende */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 10, justifyContent: 'flex-end' }}>
-        <span style={{ fontSize: 10, color: T.text2 }}>Moins</span>
+        <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Moins</span>
         {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
           <div key={i} style={{ width: 12, height: 12, borderRadius: 3, background: getColor(v, false) }} />
         ))}
-        <span style={{ fontSize: 10, color: T.text2 }}>Plus</span>
+        <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Plus</span>
       </div>
     </div>
   )
@@ -490,7 +490,7 @@ const KPICard = memo(({ icon: Icon, label, value, sub, color, delta, loading }) 
 
   return (
     <motion.div
-      style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}
+      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2, borderColor: color + '60' }}
@@ -518,9 +518,9 @@ const KPICard = memo(({ icon: Icon, label, value, sub, color, delta, loading }) 
         </>
       ) : (
         <>
-          <div style={{ fontSize: 28, fontWeight: 800, color: T.text, letterSpacing: '-1px', lineHeight: 1, marginBottom: 4 }}>{value}</div>
-          <div style={{ fontSize: 12, color: T.text2, fontWeight: 500 }}>{label}</div>
-          {sub && <div style={{ fontSize: 11, color: T.text2, opacity: 0.6, marginTop: 3 }}>{sub}</div>}
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-1px', lineHeight: 1, marginBottom: 4 }}>{value}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</div>
+          {sub && <div style={{ fontSize: 11, color: 'var(--text-secondary)', opacity: 0.6, marginTop: 3 }}>{sub}</div>}
         </>
       )}
     </motion.div>
@@ -542,7 +542,7 @@ const InsightCard = memo(({ icon: Icon, color, text, delay = 0 }) => {
       <div style={{ width: 28, height: 28, borderRadius: 8, background: color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
         <Icon size={14} color={color} strokeWidth={2} />
       </div>
-      <p style={{ fontSize: 13, color: T.text, lineHeight: 1.6, margin: 0 }}>{text}</p>
+      <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, margin: 0 }}>{text}</p>
     </motion.div>
   )
 })
@@ -607,7 +607,7 @@ const ChartCarousel = ({ T, children }) => {
             onClick={() => goTo(i)}
             style={{
               width: i === activeIdx ? 22 : 6, height: 6, borderRadius: 99,
-              background: i === activeIdx ? T.accent : T.border,
+              background: i === activeIdx ? 'var(--ember)' : 'var(--border-subtle)',
               border: 'none', padding: 0, cursor: 'pointer',
               transition: 'width 0.25s, background 0.25s',
             }}
@@ -629,11 +629,11 @@ const ChartCard = memo(({ title, subtitle, children, delay = 0, style = {} }) =>
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '22px 24px', ...style }}
+      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '22px 24px', ...style }}
     >
       <div style={{ marginBottom: 18 }}>
-        <p style={{ fontSize: 14, fontWeight: 700, color: T.text || '#fff', margin: 0 }}>{title}</p>
-        {subtitle && <p style={{ fontSize: 12, color: T.text2, marginTop: 3, marginBottom: 0 }}>{subtitle}</p>}
+        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' || '#fff', margin: 0 }}>{title}</p>
+        {subtitle && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, marginBottom: 0 }}>{subtitle}</p>}
       </div>
       {children}
     </motion.div>
@@ -673,16 +673,16 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
         style={{
-          background: T.bg2, border: `1px solid ${T.border}`,
+          background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
           borderRadius: 14, padding: '18px 20px', marginBottom: 16,
           display: 'flex', alignItems: 'center', gap: 14,
         }}>
-        <div style={{ width: 40, height: 40, borderRadius: 11, background: T.accent + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Brain size={18} color={T.accent} strokeWidth={2.2} />
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Brain size={18} color="var(--ember)" strokeWidth={2.2} />
         </div>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>Task DNA — Calibration</div>
-          <div style={{ fontSize: 12, color: T.text2 }}>{message || 'Termine plus de tâches en notant le temps réel pour activer.'}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>Task DNA — Calibration</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{message || 'Termine plus de tâches en notant le temps réel pour activer.'}</div>
         </div>
       </motion.div>
     )
@@ -697,17 +697,17 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
     <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       style={{
-        background: T.bg2, border: `1px solid ${T.border}`,
+        background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
         borderRadius: 14, padding: '18px 20px', marginBottom: 16,
       }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px ${T.accent}40` }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, var(--ember), #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px var(--ember-soft)` }}>
           <Brain size={16} color="#fff" strokeWidth={2.4} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.text, letterSpacing: '-0.2px' }}>Task DNA — Calibration</div>
-          <div style={{ fontSize: 11, color: T.text2 }}>Estimation vs réalité sur {totalAnalyses} tâches mesurées</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>Task DNA — Calibration</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Estimation vs réalité sur {totalAnalyses} tâches mesurées</div>
         </div>
       </div>
 
@@ -715,7 +715,7 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 14px', background: ringColor + '0d', border: `1px solid ${ringColor}25`, borderRadius: 10, marginBottom: 16 }}>
         {/* Anneau SVG */}
         <svg width={56} height={56} viewBox="0 0 56 56" style={{ flexShrink: 0 }}>
-          <circle cx="28" cy="28" r="22" fill="none" stroke={T.border} strokeWidth="5" />
+          <circle cx="28" cy="28" r="22" fill="none" stroke={'var(--border-subtle)'} strokeWidth="5" />
           <motion.circle
             cx="28" cy="28" r="22" fill="none"
             stroke={ringColor} strokeWidth="5"
@@ -731,7 +731,7 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
         </svg>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: ringColor, marginBottom: 2 }}>{verdict}</div>
-          <div style={{ fontSize: 11.5, color: T.text2, lineHeight: 1.45 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
             % de tâches dans la zone ±20% du temps estimé
           </div>
         </div>
@@ -747,8 +747,8 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
             {sousEstimes.map((s, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: '#e05c5c0d', borderRadius: 8, marginBottom: 6, border: `1px solid #e05c5c20` }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.categorie}</div>
-                  <div style={{ fontSize: 10, color: T.text2 }}>{s.nbTaches} tâches</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.categorie}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{s.nbTaches} tâches</div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#e05c5c', flexShrink: 0, marginLeft: 8 }}>+{s.ecartPct}%</div>
               </div>
@@ -763,8 +763,8 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
             {surEstimes.map((s, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: '#4caf820d', borderRadius: 8, marginBottom: 6, border: `1px solid #4caf8220` }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.categorie}</div>
-                  <div style={{ fontSize: 10, color: T.text2 }}>{s.nbTaches} tâches</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.categorie}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{s.nbTaches} tâches</div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#4caf82', flexShrink: 0, marginLeft: 8 }}>{s.ecartPct}%</div>
               </div>
@@ -772,7 +772,7 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
           </div>
         )}
         {sousEstimes.length === 0 && surEstimes.length === 0 && (
-          <div style={{ gridColumn: '1 / -1', fontSize: 12, color: T.text2, textAlign: 'center', padding: 20 }}>
+          <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: 20 }}>
             ✨ Tes estimations sont remarquablement justes — pas d'écart significatif détecté.
           </div>
         )}
@@ -872,8 +872,8 @@ const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) =
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.02 }}
       style={{
-        background: `linear-gradient(135deg, ${T.bg2}, ${T.accent}08)`,
-        border: `1px solid ${T.accent}25`,
+        background: `linear-gradient(135deg, var(--surface-1), var(--ember-soft))`,
+        border: `1px solid var(--ember-soft)`,
         borderRadius: 16,
         padding: isMobile ? '14px 16px' : '16px 22px',
         marginBottom: 14,
@@ -885,18 +885,18 @@ const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) =
         overflow: 'hidden',
       }}>
       {/* Halo accent décoratif */}
-      <div style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, ${T.accent}15, transparent 70%)`, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, var(--ember-soft), transparent 70%)`, pointerEvents: 'none' }} />
 
       <div style={{ fontSize: isMobile ? 26 : 32, flexShrink: 0, lineHeight: 1 }}>{vibe}</div>
 
       <div style={{ flex: 1, minWidth: isMobile ? '70%' : 0 }}>
-        <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 800, color: T.text, marginBottom: 4, letterSpacing: '-0.2px' }}>
-          Bilan {periodLabel} : <span style={{ color: T.accent }}>✓ {total} tâches</span>
+        <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4, letterSpacing: '-0.2px' }}>
+          Bilan {periodLabel} : <span style={{ color: 'var(--ember)' }}>✓ {total} tâches</span>
           {streak > 0 && <span style={{ color: '#e08a3c' }}> · 🔥 {streak}j</span>}
           {wow !== 0 && <span style={{ color: wow > 0 ? '#4caf82' : '#e05c5c' }}> · {wow > 0 ? '+' : ''}{wow}%</span>}
-          {velocity > 0 && <span style={{ color: T.text2, fontWeight: 600 }}> · {velocity}/j</span>}
+          {velocity > 0 && <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}> · {velocity}/j</span>}
         </div>
-        <div style={{ fontSize: 12.5, color: T.text2, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
           → {actionPhrase}
         </div>
       </div>
@@ -908,11 +908,11 @@ const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) =
         style={{
           padding: isMobile ? '8px 14px' : '10px 18px',
           borderRadius: 10,
-          background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`,
+          background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))',
           color: '#fff', border: 'none',
           fontSize: 12.5, fontWeight: 700,
           cursor: 'pointer', whiteSpace: 'nowrap',
-          boxShadow: `0 6px 16px ${T.accent}45`,
+          boxShadow: `0 6px 16px var(--ember-soft)`,
           flexShrink: 0,
           marginLeft: isMobile ? 'auto' : 0,
         }}>
@@ -935,66 +935,66 @@ const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, 
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 }}
       style={{
-        background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14,
+        background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14,
         padding: isMobile ? '12px 14px' : '14px 20px', marginBottom: 16,
         display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 20,
         flexWrap: isMobile ? 'wrap' : 'nowrap', position: 'relative', overflow: 'hidden',
       }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${T.accent}, #a855f7, #e08a3c)` }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, var(--ember), #a855f7, #e08a3c)` }} />
 
       {/* Niveau */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px ${T.accent}40` }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, var(--ember), #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px var(--ember-soft)` }}>
           <Crown size={16} color="#fff" strokeWidth={2.5} />
         </div>
         <div>
-          <div style={{ fontSize: 10, color: T.text2, fontWeight: 600, letterSpacing: 0.5 }}>NIVEAU {niveau}</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{niveauActuel.label}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: 0.5 }}>NIVEAU {niveau}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{niveauActuel.label}</div>
         </div>
       </div>
 
-      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
+      <div style={{ width: 1, height: 32, background: 'var(--border-subtle)', flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
 
       {/* XP bar */}
       <div style={{ flex: isMobile ? '1 1 100px' : 1, minWidth: 80 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-          <span style={{ fontSize: 10, color: T.text2 }}>Progression XP</span>
-          <span style={{ fontSize: 10, fontWeight: 700, color: T.accent }}>{points} pts</span>
+          <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Progression XP</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ember)' }}>{points} pts</span>
         </div>
-        <div style={{ height: 5, borderRadius: 99, background: T.border, overflow: 'hidden' }}>
+        <div style={{ height: 5, borderRadius: 99, background: 'var(--border-subtle)', overflow: 'hidden' }}>
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${pctNiveau}%` }}
             transition={{ duration: 0.9, delay: 0.2, ease: 'easeOut' }}
-            style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${T.accent}, #a855f7)` }}
+            style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, var(--ember), #a855f7)` }}
           />
         </div>
-        <div style={{ fontSize: 9, color: T.text2, marginTop: 3 }}>{pctNiveau}% vers niveau {niveau + 1}</div>
+        <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 3 }}>{pctNiveau}% vers niveau {niveau + 1}</div>
       </div>
 
-      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
+      <div style={{ width: 1, height: 32, background: 'var(--border-subtle)', flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
 
       {/* Streak */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <motion.div
           animate={streak >= 3 ? { scale: [1, 1.12, 1] } : {}}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
-          <Flame size={20} color={streak >= 3 ? '#e08a3c' : T.text2} strokeWidth={2} />
+          <Flame size={20} color={streak >= 3 ? '#e08a3c' : 'var(--text-secondary)'} strokeWidth={2} />
         </motion.div>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: streak >= 3 ? '#e08a3c' : T.text, lineHeight: 1 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: streak >= 3 ? '#e08a3c' : 'var(--text-primary)', lineHeight: 1 }}>
             {streak}<span style={{ fontSize: 10, fontWeight: 600 }}>j</span>
           </div>
-          <div style={{ fontSize: 10, color: T.text2 }}>streak</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>streak</div>
         </div>
       </div>
 
-      <div style={{ width: 1, height: 32, background: T.border, flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
+      <div style={{ width: 1, height: 32, background: 'var(--border-subtle)', flexShrink: 0, display: isMobile ? 'none' : 'block' }} />
 
       {/* Focus ring SVG */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         <svg width={38} height={38} viewBox="0 0 38 38">
-          <circle cx="19" cy="19" r="14" fill="none" stroke={T.border} strokeWidth="3.5" />
+          <circle cx="19" cy="19" r="14" fill="none" stroke={'var(--border-subtle)'} strokeWidth="3.5" />
           <motion.circle
             cx="19" cy="19" r="14" fill="none"
             stroke={focusScore > 75 ? '#4caf82' : focusScore > 40 ? '#e08a3c' : '#e05c5c'}
@@ -1012,8 +1012,8 @@ const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, 
           </text>
         </svg>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: T.text }}>Focus</div>
-          <div style={{ fontSize: 10, color: T.text2 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>Focus</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
             {focusScore > 75 ? '🎯 Excellent' : focusScore > 40 ? 'Correct' : '↑ À améliorer'}
           </div>
         </div>
@@ -1111,7 +1111,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
           </div>
           <div style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: alert.color, marginBottom: 2 }}>{alert.title}</div>
-            <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.5 }}>{alert.text}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{alert.text}</div>
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center', marginLeft: isMobile ? 'auto' : 0 }}>
             <motion.button
@@ -1134,7 +1134,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
               }}
               whileTap={{ scale: 0.85 }}
               title="Masquer pour aujourd'hui"
-              style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <X size={13} />
             </motion.button>
           </div>
@@ -1163,7 +1163,7 @@ const TrajectoryCard = memo(({ stats, T, loading, isMobile }) => {
     milestoneStr = ` Tu doubles ta période vers le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`
   }
 
-  const trendColor = isAccel ? '#4caf82' : isDecel ? '#e05c5c' : T.accent
+  const trendColor = isAccel ? '#4caf82' : isDecel ? '#e05c5c' : 'var(--ember)'
   const TrendIcon = isAccel ? TrendingUp : isDecel ? TrendingDown : Activity
   const headline = isAccel
     ? `Tu accélères de +${wow}%`
@@ -1187,7 +1187,7 @@ const TrajectoryCard = memo(({ stats, T, loading, isMobile }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 }}
       style={{
-        background: T.bg2, border: `1px solid ${trendColor}30`, borderRadius: 14,
+        background: 'var(--surface-1)', border: `1px solid ${trendColor}30`, borderRadius: 14,
         padding: '14px 18px', marginBottom: 20,
         display: 'flex', alignItems: 'center', gap: 14,
         position: 'relative', overflow: 'hidden',
@@ -1200,7 +1200,7 @@ const TrajectoryCard = memo(({ stats, T, loading, isMobile }) => {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: trendColor, marginBottom: 2 }}>{headline}</div>
-        <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.5 }}>{subline}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{subline}</div>
       </div>
 
       {/* Mini sparkline 7j */}
@@ -1308,9 +1308,9 @@ export default function Analytics() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: T.bg2 || '#1a1a2e',
-        titleColor: T.text || '#fff',
-        bodyColor: T.text2 || '#888',
+        backgroundColor: 'var(--surface-1)' || '#1a1a2e',
+        titleColor: 'var(--text-primary)' || '#fff',
+        bodyColor: 'var(--text-secondary)' || '#888',
         borderColor: 'transparent',
         borderWidth: 0,
         padding: 12,
@@ -1319,13 +1319,13 @@ export default function Analytics() {
     },
     scales: {
       x: {
-        ticks: { color: T.text2 || '#888', font: { size: 11 }, maxTicksLimit: jours <= 7 ? 7 : 10 },
+        ticks: { color: 'var(--text-secondary)' || '#888', font: { size: 11 }, maxTicksLimit: jours <= 7 ? 7 : 10 },
         grid: { display: false },
         border: { display: false, color: 'transparent' }
       },
       y: {
-        ticks: { color: T.text2 || '#888', font: { size: 11 }, stepSize: 1, callback: v => Number.isInteger(v) ? v : null },
-        grid: { color: T.border ? T.border + '10' : 'rgba(128,128,128,0.06)', drawBorder: false },
+        ticks: { color: 'var(--text-secondary)' || '#888', font: { size: 11 }, stepSize: 1, callback: v => Number.isInteger(v) ? v : null },
+        grid: { color: 'var(--border-subtle)' ? 'var(--border-subtle)' + '10' : 'rgba(128,128,128,0.06)', drawBorder: false },
         border: { display: false, color: 'transparent' },
         beginAtZero: true
       }
@@ -1334,8 +1334,8 @@ export default function Analytics() {
 
   // ── Palette pastel moderne (couleurs statiques, pas de fonctions) ──
   const PASTEL = {
-    main: T.accent || '#6c63ff',
-    ghost: (T.text2 || '#888') + '40',
+    main: 'var(--ember)' || '#6c63ff',
+    ghost: ('var(--text-secondary)' || '#888') + '40',
     mint: '#86d4a8',
     peach: '#ffb89e',
     rose: '#ff9eb5',
@@ -1398,7 +1398,7 @@ export default function Analytics() {
         }
       ]
     }
-  }, [stats, T.accent, T.text2, jours])
+  }, [stats, 'var(--ember)', 'var(--text-secondary)', jours])
 
   const cumulativeData = useMemo(() => {
     if (!stats) return null
@@ -1433,7 +1433,7 @@ export default function Analytics() {
         maxBarThickness: 36,
       }]
     }
-  }, [stats, T.accent])
+  }, [stats, 'var(--ember)'])
 
   const chronoData = useMemo(() => {
     if (!stats) return null
@@ -1468,7 +1468,7 @@ export default function Analytics() {
       datasets: [{
         data: [stats.priorites?.haute || 0, stats.priorites?.moyenne || 0, stats.priorites?.basse || 0],
         backgroundColor: [PASTEL.rose, PASTEL.peach, PASTEL.mint],
-        borderColor: [T.bg, T.bg, T.bg],
+        borderColor: ['var(--bg-base)', 'var(--bg-base)', 'var(--bg-base)'],
         borderWidth: 3,
         hoverOffset: 8,
         hoverBorderWidth: 0,
@@ -1484,7 +1484,7 @@ export default function Analytics() {
         display: true,
         position: 'top',
         labels: {
-          color: T.text2,
+          color: 'var(--text-secondary)',
           font: { size: 11 },
           boxWidth: 24,
           padding: 12,
@@ -1501,7 +1501,7 @@ export default function Analytics() {
     plugins: {
       legend: {
         position: 'bottom',
-        labels: { color: T.text2, font: { size: 11 }, padding: 14, boxWidth: 10, usePointStyle: true }
+        labels: { color: 'var(--text-secondary)', font: { size: 11 }, padding: 14, boxWidth: 10, usePointStyle: true }
       },
       tooltip: baseOptions.plugins.tooltip,
     }
@@ -1509,12 +1509,12 @@ export default function Analytics() {
 
   // ── RENDER ──────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 99px; }
       `}</style>
 
       {/* ── SIDEBAR (shared component) ── */}
@@ -1527,8 +1527,8 @@ export default function Analytics() {
         toggleSidebar={toggleSidebar}
         isMobile={isMobile}>
         {/* Analytics-specific: FILTRES section */}
-        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
-        <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
+        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
+        <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
         {[
           { val: 'toutes',   label: 'Toutes les tâches' },
           { val: 'haute',    label: 'Priorité haute' },
@@ -1536,10 +1536,10 @@ export default function Analytics() {
           { val: 'terminee', label: 'Terminées' },
         ].map(f => (
           <motion.button key={f.val}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 10, color: filtre === f.val ? T.accent : T.text2, background: filtre === f.val ? `${T.accent}15` : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: filtre === f.val ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 10, color: filtre === f.val ? 'var(--ember)' : 'var(--text-secondary)', background: filtre === f.val ? 'var(--ember-soft)' : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: filtre === f.val ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
             onClick={() => { setFiltre(f.val); if (isMobile) setSidebarOpen(false) }} whileHover={{ x: 2 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {f.val === 'bloquee' && <IconLock size={12} color={filtre === f.val ? T.accent : T.text2} />}
+              {f.val === 'bloquee' && <IconLock size={12} color={filtre === f.val ? 'var(--ember)' : 'var(--text-secondary)'} />}
               {f.label}
             </span>
             {filtre === f.val && <ChevronRight size={14} />}
@@ -1562,22 +1562,22 @@ export default function Analytics() {
             <motion.h1
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ fontSize: 'clamp(22px,5vw,28px)', fontWeight: 800, color: T.text, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
+              style={{ fontSize: 'clamp(22px,5vw,28px)', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px', lineHeight: 1.2 }}>
               Analytiques
             </motion.h1>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-              style={{ fontSize: 13, color: T.text2, marginTop: 4 }}>
+              style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
               Intelligence comportementale de votre productivité
             </motion.p>
           </div>
 
           {/* Période selector */}
-          <div style={{ display: 'flex', gap: 4, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: 4 }}>
+          <div style={{ display: 'flex', gap: 4, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 4 }}>
             {periodes.map(p => (
               <motion.button key={p.id}
-                style={{ padding: '6px 14px', borderRadius: 7, background: periode === p.id ? T.accent : 'transparent', color: periode === p.id ? '#fff' : T.text2, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '6px 14px', borderRadius: 7, background: periode === p.id ? 'var(--ember)' : 'transparent', color: periode === p.id ? '#fff' : 'var(--text-secondary)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 onClick={() => setPeriode(p.id)}
-                whileHover={periode !== p.id ? { color: T.accent } : {}}
+                whileHover={periode !== p.id ? { color: 'var(--ember)' } : {}}
                 whileTap={{ scale: 0.97 }}>
                 {p.label}
               </motion.button>
@@ -1604,13 +1604,13 @@ export default function Analytics() {
         {!loading && stats && <AlertBanner stats={stats} T={T} isMobile={isMobile} />}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 0 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 0 }}>
           {tabs.map(tab => {
             const Icon = tab.icon
             const active = activeTab === tab.id
             return (
               <motion.button key={tab.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'transparent', border: 'none', borderBottom: active ? `2px solid ${T.accent}` : '2px solid transparent', color: active ? T.accent : T.text2, cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, marginBottom: -1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'transparent', border: 'none', borderBottom: active ? '2px solid var(--ember)' : '2px solid transparent', color: active ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, marginBottom: -1 }}
                 onClick={() => setActiveTab(tab.id)}>
                 <Icon size={14} />
                 {!isMobile && tab.label}
@@ -1630,7 +1630,7 @@ export default function Analytics() {
 
               {/* KPI Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : 4}, 1fr)`, gap: 14, marginBottom: 24 }}>
-                <KPICard icon={Target}     label="Taux de complétion"    value={loading ? '—' : `${stats?.taux || 0}%`}           sub={`${data?.terminees || 0}/${data?.total || 0} tâches`} color={T.accent}  delta={stats?.wow}   loading={loading} />
+                <KPICard icon={Target}     label="Taux de complétion"    value={loading ? '—' : `${stats?.taux || 0}%`}           sub={`${data?.terminees || 0}/${data?.total || 0} tâches`} color="var(--ember)"  delta={stats?.wow}   loading={loading} />
                 <KPICard icon={Zap}        label="Vélocité"               value={loading ? '—' : `${stats?.velocity || 0}/j`}       sub="Tâches/jour actif"                                    color="#4caf82"   delta={undefined}    loading={loading} />
                 <KPICard icon={Award}      label="Score de focus"          value={loading ? '—' : `${stats?.focusScore || 0}/100`}  sub="Priorité haute vs vanité"                             color="#e08a3c"   delta={undefined}    loading={loading} />
                 <KPICard icon={Flame}      label="Série active"            value={loading ? '—' : `${stats?.streak || 0}j`}         sub={stats?.chronotype || '—'}                             color="#a855f7"   delta={undefined}    loading={loading} />
@@ -1644,7 +1644,7 @@ export default function Analytics() {
                   <span style={{ fontSize: 13, color: stats.wow > 0 ? '#4caf82' : '#e05c5c', fontWeight: 600 }}>
                     {stats.wow > 0 ? '+' : ''}{stats.wow}% vs période précédente
                   </span>
-                  <span style={{ fontSize: 12, color: T.text2 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                     — {stats.total} tâches cette période vs {stats.totalPrev} la précédente
                   </span>
                 </motion.div>
@@ -1688,7 +1688,7 @@ export default function Analytics() {
                         </div>
                         {stats && (
                           <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
-                            <div style={{ padding: '8px 18px', borderRadius: 99, background: T.accent + '15', border: `1px solid ${T.accent}30`, fontSize: 13, color: T.accent, fontWeight: 600 }}>
+                            <div style={{ padding: '8px 18px', borderRadius: 99, background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, fontSize: 13, color: 'var(--ember)', fontWeight: 600 }}>
                               Pic : {stats.peakHour}h — {stats.chronotype}
                             </div>
                           </div>
@@ -1706,7 +1706,7 @@ export default function Analytics() {
                         </div>
                         {stats && (
                           <div style={{ marginTop: 10, textAlign: 'center' }}>
-                            <div style={{ fontSize: 11, color: T.text2 }}>Score de focus</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Score de focus</div>
                             <div style={{ fontSize: 22, fontWeight: 800, color: stats.focusScore > 60 ? '#4caf82' : '#e08a3c' }}>
                               {stats.focusScore}/100
                             </div>
@@ -1757,27 +1757,27 @@ export default function Analytics() {
               <TaskDNACard calibration={calibration} T={T} isMobile={isMobile} />
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 24 }}>
-                <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px' }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: T.text2, letterSpacing: '1px', marginBottom: 14 }}>MÉTRIQUES AVANCÉES</p>
+                <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px' }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '1px', marginBottom: 14 }}>MÉTRIQUES AVANCÉES</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {[
                       { label: 'Vélocité', value: `${stats?.velocity || 0} tâches/jour actif`, color: '#4caf82' },
-                      { label: 'Score de focus', value: `${stats?.focusScore || 0}/100`, color: T.accent },
+                      { label: 'Score de focus', value: `${stats?.focusScore || 0}/100`, color: 'var(--ember)' },
                       { label: 'Meilleur jour', value: stats?.maxIdx >= 0 ? stats?.labels[stats.maxIdx] || '—' : '—', color: '#e08a3c' },
                       { label: 'Tâches basse priorité', value: `${stats?.lowRatio || 0}% du total`, color: stats?.lowRatio > 70 ? '#e05c5c' : '#4caf82' },
                       { label: 'Série en cours', value: `${stats?.streak || 0} jours`, color: '#a855f7' },
                       { label: 'Risque burnout', value: stats?.burnoutRisk ? 'Détecté' : 'Normal', color: stats?.burnoutRisk ? '#e05c5c' : '#4caf82' },
                     ].map((m, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
-                        <span style={{ fontSize: 13, color: T.text2 }}>{m.label}</span>
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{m.label}</span>
                         <span style={{ fontSize: 13, fontWeight: 700, color: m.color }}>{loading ? '—' : m.value}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px' }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: T.text2, letterSpacing: '1px', marginBottom: 14 }}>INDICATEUR BURNOUT</p>
+                <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px' }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '1px', marginBottom: 14 }}>INDICATEUR BURNOUT</p>
                   {loading ? <Skeleton height={160} radius={10} /> : (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -1788,15 +1788,15 @@ export default function Analytics() {
                           <div style={{ fontSize: 18, fontWeight: 800, color: stats?.burnoutRisk ? '#e05c5c' : '#4caf82' }}>
                             {stats?.burnoutRisk ? 'Risque détecté' : 'Niveau normal'}
                           </div>
-                          <div style={{ fontSize: 12, color: T.text2 }}>Basé sur vos {jours} derniers jours</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Basé sur vos {jours} derniers jours</div>
                         </div>
                       </div>
-                      <p style={{ fontSize: 13, color: T.text2, lineHeight: 1.6 }}>
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                         {stats?.burnoutRisk
                           ? 'Une forte intensité sur 3 jours consécutifs est suivie d\'une chute de productivité. Prenez des pauses intentionnelles.'
                           : 'Votre rythme de travail semble équilibré. Continuez à maintenir un effort régulier.'}
                       </p>
-                      <div style={{ marginTop: 16, height: 6, borderRadius: 99, background: T.border, overflow: 'hidden' }}>
+                      <div style={{ marginTop: 16, height: 6, borderRadius: 99, background: 'var(--border-subtle)', overflow: 'hidden' }}>
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: stats?.burnoutRisk ? '80%' : '30%' }}
@@ -1810,9 +1810,9 @@ export default function Analytics() {
               </div>
 
               {/* AI Insights */}
-              <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '22px 24px' }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4 }}>Insights générés par l'algorithme</p>
-                <p style={{ fontSize: 12, color: T.text2, marginBottom: 18 }}>Basés sur vos données réelles des {jours} derniers jours</p>
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '22px 24px' }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Insights générés par l'algorithme</p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18 }}>Basés sur vos données réelles des {jours} derniers jours</p>
                 {loading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {[1, 2, 3].map(i => <Skeleton key={i} height={56} radius={12} />)}
@@ -1824,7 +1824,7 @@ export default function Analytics() {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '32px 0', color: T.text2, fontSize: 13 }}>
+                  <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)', fontSize: 13 }}>
                     Pas assez de données pour générer des insights. Continuez à utiliser GetShift !
                   </div>
                 )}
@@ -1843,7 +1843,7 @@ export default function Analytics() {
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 14, marginTop: 16 }}>
                 {[
-                  { label: 'Total période', value: stats?.total || 0, icon: CheckSquare, color: T.accent },
+                  { label: 'Total période', value: stats?.total || 0, icon: CheckSquare, color: 'var(--ember)' },
                   { label: 'Meilleur jour', value: stats?.maxVal || 0, icon: Star,        color: '#e08a3c' },
                   { label: 'Jours actifs',  value: loading ? '—' : `${stats?.current?.filter(v => v > 0).length || 0}/${jours}`, icon: Activity, color: '#4caf82' },
                 ].map((m, i) => {
@@ -1851,13 +1851,13 @@ export default function Analytics() {
                   return (
                     <motion.div key={i}
                       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-                      style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
                       <div style={{ width: 40, height: 40, borderRadius: 11, background: m.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Icon size={18} color={m.color} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: T.text }}>{loading ? '—' : m.value}</div>
-                        <div style={{ fontSize: 12, color: T.text2 }}>{m.label}</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{loading ? '—' : m.value}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{m.label}</div>
                       </div>
                     </motion.div>
                   )
@@ -1876,29 +1876,29 @@ export default function Analytics() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)}
               style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050, backdropFilter: 'blur(3px)' }} />
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 1051, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
-              <div style={{ padding: '20px 24px 0', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 1051, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
+              <div style={{ padding: '20px 24px 0', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Settings size={18} color={T.accent} strokeWidth={1.8} />
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Settings size={18} color="var(--ember)" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Paramètres</h2>
-                      <p style={{ fontSize: 12, color: T.text2, margin: 0, marginTop: 2 }}>{userData.nom}</p>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h2>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{userData.nom}</p>
                     </div>
                   </div>
                   <motion.button onClick={() => setShowSettings(false)}
-                    style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}>
                     <X size={16} />
                   </motion.button>
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-                <p style={{ fontSize: 13, color: T.text2 }}>Paramètres généraux à venir...</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Paramètres généraux à venir...</p>
               </div>
-              <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+              <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                   onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
                   <LogOut size={16} strokeWidth={1.8} />Se déconnecter

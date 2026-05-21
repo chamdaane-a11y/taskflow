@@ -37,9 +37,9 @@ const KanbanColumn = memo(function KanbanColumn({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       style={{
-        background: T.bg2,
+        background: 'var(--surface-1)',
         borderRadius: 16,
-        border: `1px solid ${isDrop ? col.color : T.border}`,
+        border: `1px solid ${isDrop ? col.color : 'var(--border-subtle)'}`,
         padding: '16px',
         display: 'flex',
         flexDirection: 'column',
@@ -61,7 +61,7 @@ const KanbanColumn = memo(function KanbanColumn({
           background: col.color,
           boxShadow: `0 0 8px ${col.color}60`,
         }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: T.text, flex: 1 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>
           {col.label}
         </span>
         <div style={{
@@ -75,7 +75,7 @@ const KanbanColumn = memo(function KanbanColumn({
       </div>
 
       {/* Progress bar */}
-      <div style={{ height: 3, borderRadius: 99, background: `${T.border}60`, overflow: 'hidden', marginBottom: 4 }}>
+      <div style={{ height: 3, borderRadius: 99, background: 'var(--border-strong)', overflow: 'hidden', marginBottom: 4 }}>
         <motion.div
           style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${col.color}, ${col.color}80)` }}
           initial={{ width: 0 }}
@@ -113,8 +113,8 @@ const KanbanColumn = memo(function KanbanColumn({
             exit={{ opacity: 0, scale: 0.94 }}
             transition={{ delay: i * 0.03 }}
             style={{
-              background: T.bg3 || T.bg,
-              border: `1px solid ${T.border}`,
+              background: 'var(--surface-2)' || 'var(--bg-base)',
+              border: '1px solid var(--border-subtle)',
               borderRadius: 12,
               borderLeft: `3px solid ${pColor(task.priorite)}`,
               padding: '13px 14px',
@@ -129,12 +129,12 @@ const KanbanColumn = memo(function KanbanColumn({
           >
             {/* Grip */}
             <div style={{ position: 'absolute', top: 10, right: 10, opacity: 0.2 }}>
-              <GripVertical size={12} color={T.text} />
+              <GripVertical size={12} color="var(--text-primary)" />
             </div>
 
             {/* Title */}
             <p style={{
-              fontSize: 13, fontWeight: 500, color: T.text,
+              fontSize: 13, fontWeight: 500, color: 'var(--text-primary)',
               lineHeight: 1.45, marginBottom: 10,
               paddingRight: 18, wordBreak: 'break-word',
             }}>
@@ -153,14 +153,14 @@ const KanbanColumn = memo(function KanbanColumn({
               </span>
 
               {task.deadline && (
-                <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                   <Flag size={9} strokeWidth={2} />
                   {new Date(task.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                 </span>
               )}
 
               {task.temps_estime ? (
-                <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                   <Clock size={9} strokeWidth={2} />
                   {task.temps_estime < 60
                     ? `${task.temps_estime}min`
@@ -172,9 +172,9 @@ const KanbanColumn = memo(function KanbanColumn({
               ) : (
                 <motion.button
                   style={{
-                    fontSize: 10, color: T.accent,
-                    background: `${T.accent}10`,
-                    border: `1px solid ${T.accent}20`,
+                    fontSize: 10, color: 'var(--ember)',
+                    background: 'var(--ember-soft)',
+                    border: `1px solid var(--ember-soft)`,
                     padding: '2px 8px', borderRadius: 99,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
                   }}
@@ -189,8 +189,8 @@ const KanbanColumn = memo(function KanbanColumn({
               {/* Priority score badge */}
               {task._score && (
                 <span style={{
-                  fontSize: 9, color: T.accent, opacity: 0.6,
-                  background: `${T.accent}08`,
+                  fontSize: 9, color: 'var(--ember)', opacity: 0.6,
+                  background: 'var(--ember-soft)',
                   padding: '1px 5px', borderRadius: 99,
                 }}>
                   #{Math.round(task._score)}
@@ -223,9 +223,9 @@ const KanbanColumn = memo(function KanbanColumn({
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.96 }}
                     style={{
-                      fontSize: 10, color: T.text2,
-                      background: `${T.border}40`,
-                      border: `1px solid ${T.border}`,
+                      fontSize: 10, color: 'var(--text-secondary)',
+                      background: 'var(--border-default)',
+                      border: '1px solid var(--border-subtle)',
                       padding: '2px 8px', borderRadius: 99,
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
                     }}
@@ -243,8 +243,8 @@ const KanbanColumn = memo(function KanbanColumn({
       {tasks.length === 0 && !isDrop && (
         <div style={{
           textAlign: 'center', padding: '28px 16px',
-          color: T.text2, fontSize: 12, opacity: 0.3,
-          border: `1px dashed ${T.border}`, borderRadius: 10, lineHeight: 1.6,
+          color: 'var(--text-secondary)', fontSize: 12, opacity: 0.3,
+          border: '1px dashed var(--border-subtle)', borderRadius: 10, lineHeight: 1.6,
         }}>
           Aucune tâche<br />dans cette colonne
         </div>

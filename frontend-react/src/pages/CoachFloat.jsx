@@ -192,7 +192,7 @@ export const CoachFloat = memo(function CoachFloat({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: `0 8px 24px ${c1}55, 0 0 0 4px ${T.bg}`,
+              boxShadow: `0 8px 24px ${c1}55, 0 0 0 4px var(--bg-base)`,
               zIndex: 130,
             }}
             title={`${coach.label} — ${coach.tagline}`}
@@ -220,7 +220,7 @@ export const CoachFloat = memo(function CoachFloat({
                 width: 12, height: 12,
                 borderRadius: '50%',
                 background: '#ef4444',
-                border: `2px solid ${T.bg}`,
+                border: `2px solid var(--bg-base)`,
               }} />
             )}
           </motion.button>
@@ -242,8 +242,8 @@ export const CoachFloat = memo(function CoachFloat({
               width: isMobile ? `calc(100vw - ${rightOffset * 2}px)` : 360,
               maxWidth: 420,
               height: isMobile ? 'min(70vh, 480px)' : 480,
-              background: T.bg2,
-              border: `1px solid ${T.border}`,
+              background: 'var(--surface-1)',
+              border: '1px solid var(--border-subtle)',
               borderRadius: 18,
               display: 'flex',
               flexDirection: 'column',
@@ -256,7 +256,7 @@ export const CoachFloat = memo(function CoachFloat({
             <div style={{
               padding: '14px 16px',
               background: `linear-gradient(135deg, ${c1}25, ${c2}10)`,
-              borderBottom: `1px solid ${T.border}`,
+              borderBottom: '1px solid var(--border-subtle)',
               display: 'flex',
               alignItems: 'center',
               gap: 10,
@@ -272,10 +272,10 @@ export const CoachFloat = memo(function CoachFloat({
                 <Icon size={18} color="#fff" strokeWidth={2.4} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: T.text, letterSpacing: '-0.2px' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
                   {coach.label}
                 </div>
-                <div style={{ fontSize: 10, color: T.text2, fontWeight: 600 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>
                   Coach · {coach.tagline}
                 </div>
               </div>
@@ -295,12 +295,12 @@ export const CoachFloat = memo(function CoachFloat({
                         width: 26, height: 26,
                         borderRadius: 7,
                         background: active ? `linear-gradient(135deg, ${c.grad[0]}, ${c.grad[1]})` : 'transparent',
-                        border: active ? 'none' : `1px solid ${T.border}`,
+                        border: active ? 'none' : '1px solid var(--border-subtle)',
                         cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 0.18s',
                       }}>
-                      <I size={12} color={active ? '#fff' : T.text2} strokeWidth={2.2} />
+                      <I size={12} color={active ? '#fff' : 'var(--text-secondary)'} strokeWidth={2.2} />
                     </motion.button>
                   )
                 })}
@@ -314,7 +314,7 @@ export const CoachFloat = memo(function CoachFloat({
                   borderRadius: 8,
                   background: 'transparent',
                   border: 'none',
-                  color: T.text2,
+                  color: 'var(--text-secondary)',
                   cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
@@ -343,12 +343,12 @@ export const CoachFloat = memo(function CoachFloat({
                     padding: '9px 12px',
                     borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                     background: m.role === 'user'
-                      ? `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`
-                      : T.bg3 || T.bg,
-                    color: m.role === 'user' ? '#fff' : T.text,
+                      ? 'linear-gradient(135deg, var(--ember), var(--ember-hover))'
+                      : 'var(--surface-2)' || 'var(--bg-base)',
+                    color: m.role === 'user' ? '#fff' : 'var(--text-primary)',
                     fontSize: 12.5,
                     lineHeight: 1.45,
-                    border: m.role === 'user' ? 'none' : `1px solid ${T.border}`,
+                    border: m.role === 'user' ? 'none' : '1px solid var(--border-subtle)',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
                   }}>
@@ -360,15 +360,15 @@ export const CoachFloat = memo(function CoachFloat({
                   alignSelf: 'flex-start',
                   display: 'flex', gap: 4,
                   padding: '10px 14px',
-                  background: T.bg3 || T.bg,
-                  border: `1px solid ${T.border}`,
+                  background: 'var(--surface-2)' || 'var(--bg-base)',
+                  border: '1px solid var(--border-subtle)',
                   borderRadius: '14px 14px 14px 4px',
                 }}>
                   {[0, 1, 2].map(i => (
                     <motion.span key={i}
                       animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
                       transition={{ duration: 1, repeat: Infinity, delay: i * 0.15 }}
-                      style={{ width: 5, height: 5, borderRadius: '50%', background: T.text2 }}
+                      style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--text-secondary)' }}
                     />
                   ))}
                 </div>
@@ -378,10 +378,10 @@ export const CoachFloat = memo(function CoachFloat({
             {/* Input */}
             <div style={{
               padding: 10,
-              borderTop: `1px solid ${T.border}`,
+              borderTop: '1px solid var(--border-subtle)',
               display: 'flex',
               gap: 6,
-              background: T.bg2,
+              background: 'var(--surface-1)',
             }}>
               <input
                 value={input}
@@ -392,10 +392,10 @@ export const CoachFloat = memo(function CoachFloat({
                 style={{
                   flex: 1,
                   padding: '10px 12px',
-                  background: T.bg,
-                  border: `1px solid ${T.border}`,
+                  background: 'var(--bg-base)',
+                  border: '1px solid var(--border-subtle)',
                   borderRadius: 10,
-                  color: T.text,
+                  color: 'var(--text-primary)',
                   fontSize: 12.5,
                   outline: 'none',
                   fontFamily: 'inherit',
@@ -411,7 +411,7 @@ export const CoachFloat = memo(function CoachFloat({
                   borderRadius: 10,
                   background: input.trim() && !sending
                     ? `linear-gradient(135deg, ${c1}, ${c2})`
-                    : T.bg3,
+                    : 'var(--surface-2)',
                   border: 'none',
                   color: '#fff',
                   cursor: input.trim() && !sending ? 'pointer' : 'not-allowed',

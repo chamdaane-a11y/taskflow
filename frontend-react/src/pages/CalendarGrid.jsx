@@ -151,22 +151,22 @@ const CalendarGrid = memo(function CalendarGrid({
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        background: T.bg2,
-        border: `1px solid ${T.border}`,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: 14,
         padding: isMobile ? '10px 12px' : '8px 12px',
       }}>
         <motion.button
           style={{
             width: isMobile ? 44 : 32, height: isMobile ? 44 : 32,
-            borderRadius: 10, background: T.bg,
-            border: `1px solid ${T.border}`,
-            color: T.text2, cursor: 'pointer',
+            borderRadius: 10, background: 'var(--bg-base)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-secondary)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}
           onClick={() => onOffsetChange(-1)}
-          whileHover={{ borderColor: T.accent, color: T.accent }}
+          whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}
           whileTap={{ scale: 0.92 }}>
           <ChevronLeft size={isMobile ? 20 : 15} />
         </motion.button>
@@ -178,7 +178,7 @@ const CalendarGrid = memo(function CalendarGrid({
               <div style={{
                 fontSize: isMobile ? 15 : 13,
                 fontWeight: 800,
-                color: jours[0]?.isToday ? T.accent : T.text,
+                color: jours[0]?.isToday ? 'var(--ember)' : 'var(--text-primary)',
                 letterSpacing: '-0.3px',
                 textTransform: 'capitalize',
               }}>
@@ -186,7 +186,7 @@ const CalendarGrid = memo(function CalendarGrid({
               </div>
               <div style={{
                 fontSize: isMobile ? 12 : 10,
-                color: jours[0]?.isToday ? T.accent : T.text2,
+                color: jours[0]?.isToday ? 'var(--ember)' : 'var(--text-secondary)',
                 fontWeight: 600,
                 marginTop: 1,
                 opacity: jours[0]?.isToday ? 1 : 0.7,
@@ -198,7 +198,7 @@ const CalendarGrid = memo(function CalendarGrid({
           ) : (
             <div style={{
               fontSize: isMobile ? 13 : 12,
-              color: T.text,
+              color: 'var(--text-primary)',
               fontWeight: 700,
               letterSpacing: '-0.2px',
               textTransform: 'capitalize',
@@ -212,16 +212,16 @@ const CalendarGrid = memo(function CalendarGrid({
           style={{
             padding: isMobile ? '10px 12px' : '6px 12px',
             borderRadius: 8,
-            background: T.bg,
-            border: `1px solid ${T.border}`,
-            color: T.text2,
+            background: 'var(--bg-base)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-secondary)',
             cursor: 'pointer',
             fontSize: isMobile ? 12 : 11,
             fontWeight: 600,
             flexShrink: 0,
           }}
           onClick={() => onOffsetChange(0, true)}
-          whileHover={{ borderColor: T.accent, color: T.accent }}
+          whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}
           whileTap={{ scale: 0.92 }}>
           Auj.
         </motion.button>
@@ -229,14 +229,14 @@ const CalendarGrid = memo(function CalendarGrid({
         <motion.button
           style={{
             width: isMobile ? 44 : 32, height: isMobile ? 44 : 32,
-            borderRadius: 10, background: T.bg,
-            border: `1px solid ${T.border}`,
-            color: T.text2, cursor: 'pointer',
+            borderRadius: 10, background: 'var(--bg-base)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-secondary)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}
           onClick={() => onOffsetChange(1)}
-          whileHover={{ borderColor: T.accent, color: T.accent }}
+          whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}
           whileTap={{ scale: 0.92 }}>
           <ChevronRight size={isMobile ? 20 : 15} />
         </motion.button>
@@ -246,7 +246,7 @@ const CalendarGrid = memo(function CalendarGrid({
       {unscheduled.length > 0 && (
         <div>
           <p style={{
-            fontSize: 9, fontWeight: 700, color: T.text2,
+            fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)',
             letterSpacing: '1.5px', marginBottom: 6, opacity: 0.5,
           }}>
             NON PLANIFIÉES — GLISSER
@@ -273,12 +273,12 @@ const CalendarGrid = memo(function CalendarGrid({
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: isMobile ? '6px 8px' : '5px 11px',
-                  background: chipDrag?.id === task.id ? `${T.accent}20` : T.bg2,
-                  border: `1px solid ${chipDrag?.id === task.id ? T.accent : T.border}`,
+                  background: chipDrag?.id === task.id ? 'var(--ember-soft)' : 'var(--surface-1)',
+                  border: `1px solid ${chipDrag?.id === task.id ? 'var(--ember)' : 'var(--border-subtle)'}`,
                   borderRadius: 99,
                   fontSize: 11,
                   cursor: isMobile ? 'default' : 'grab',
-                  color: T.text,
+                  color: 'var(--text-primary)',
                   transition: 'all 0.15s',
                   flexShrink: 0,
                   userSelect: 'none',
@@ -292,7 +292,7 @@ const CalendarGrid = memo(function CalendarGrid({
                   {task.titre}
                 </span>
                 {task.temps_estime && (
-                  <span style={{ fontSize: 9, color: T.accent, background: `${T.accent}15`, padding: '1px 5px', borderRadius: 99, flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, color: 'var(--ember)', background: 'var(--ember-soft)', padding: '1px 5px', borderRadius: 99, flexShrink: 0 }}>
                     {task.temps_estime}m
                   </span>
                 )}
@@ -302,7 +302,7 @@ const CalendarGrid = memo(function CalendarGrid({
                     onTap={() => onQuickSchedule(task)}
                     style={{
                       width: 20, height: 20, borderRadius: '50%',
-                      background: T.accent,
+                      background: 'var(--ember)',
                       border: 'none', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0,
@@ -321,8 +321,8 @@ const CalendarGrid = memo(function CalendarGrid({
       <div style={{
         flex: 1,
         minHeight: 0,
-        background: T.bg2,
-        border: `1px solid ${T.border}`,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: 16,
         overflow: 'hidden',
         display: 'flex',
@@ -343,8 +343,8 @@ const CalendarGrid = memo(function CalendarGrid({
             display: 'grid',
             gridTemplateColumns: gridCols,
             minWidth: gridMinWidth,
-            borderBottom: `1px solid ${T.border}`,
-            background: T.bg2,
+            borderBottom: '1px solid var(--border-subtle)',
+            background: 'var(--surface-1)',
             flexShrink: 0,
             position: 'sticky',
             top: 0,
@@ -362,14 +362,14 @@ const CalendarGrid = memo(function CalendarGrid({
                 <div key={j.date} style={{
                   padding: isJourMode ? (isMobile ? '14px 12px' : '12px 8px') : '10px 6px',
                   textAlign: 'center',
-                  borderLeft: `1px solid ${T.border}`,
-                  background: j.isToday ? `${T.accent}08` : 'transparent',
+                  borderLeft: '1px solid var(--border-subtle)',
+                  background: j.isToday ? 'var(--ember-soft)' : 'transparent',
                   transition: 'background 0.2s',
                 }}>
                   {/* Day label */}
                   <div style={{
                     fontSize: isJourMode ? (isMobile ? 11 : 10) : 10,
-                    color: j.isToday ? T.accent : T.text2,
+                    color: j.isToday ? 'var(--ember)' : 'var(--text-secondary)',
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: 1,
@@ -384,15 +384,15 @@ const CalendarGrid = memo(function CalendarGrid({
                     height: isJourMode ? (isMobile ? 42 : 36) : 30,
                     borderRadius: '50%',
                     background: j.isToday
-                      ? `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`
-                      : T.bg,
-                    border: j.isToday ? 'none' : `1px solid ${T.border}`,
+                      ? 'linear-gradient(135deg, var(--ember), var(--ember-hover))'
+                      : 'var(--bg-base)',
+                    border: j.isToday ? 'none' : '1px solid var(--border-subtle)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto',
                     fontSize: isJourMode ? (isMobile ? 20 : 17) : 14,
                     fontWeight: 800,
-                    color: j.isToday ? '#fff' : T.text,
-                    boxShadow: j.isToday ? `0 4px 14px ${T.accent}45` : 'none',
+                    color: j.isToday ? '#fff' : 'var(--text-primary)',
+                    boxShadow: j.isToday ? `0 4px 14px var(--ember-soft)` : 'none',
                   }}>
                     {j.num}
                   </div>
@@ -401,7 +401,7 @@ const CalendarGrid = memo(function CalendarGrid({
                   {isJourMode && (
                     <div style={{
                       fontSize: isMobile ? 11 : 10,
-                      color: j.isToday ? T.accent : T.text2,
+                      color: j.isToday ? 'var(--ember)' : 'var(--text-secondary)',
                       fontWeight: 600,
                       marginTop: 4,
                       textTransform: 'capitalize',
@@ -417,7 +417,7 @@ const CalendarGrid = memo(function CalendarGrid({
                     style={{
                       marginTop: 6,
                       height: isJourMode ? 5 : 3,
-                      background: `${T.border}60`,
+                      background: 'var(--border-strong)',
                       borderRadius: 99,
                       overflow: 'hidden',
                       marginLeft: isJourMode ? 8 : 0,
@@ -433,7 +433,7 @@ const CalendarGrid = memo(function CalendarGrid({
                   {charge > 0 && (
                     <div style={{
                       fontSize: 8,
-                      color: overload ? '#ef4444' : T.text2,
+                      color: overload ? '#ef4444' : 'var(--text-secondary)',
                       marginTop: 3,
                       fontWeight: overload ? 700 : 500,
                       opacity: overload ? 1 : 0.65,
@@ -466,7 +466,7 @@ const CalendarGrid = memo(function CalendarGrid({
                     right: 6,
                     fontSize: 9,
                     fontWeight: 600,
-                    color: T.text2,
+                    color: 'var(--text-secondary)',
                     opacity: 0.6,
                     whiteSpace: 'nowrap',
                   }}>
@@ -487,11 +487,11 @@ const CalendarGrid = memo(function CalendarGrid({
                     style={{
                       position: 'relative',
                       height: COL_HEIGHT,
-                      borderLeft: `1px solid ${T.border}25`,
+                      borderLeft: `1px solid var(--border-default)`,
                       background: isDragTarget
-                        ? `${T.accent}06`
+                        ? 'var(--ember-soft)'
                         : jour.isToday
-                          ? `${T.accent}03`
+                          ? `var(--ember-soft)`
                           : 'transparent',
                       transition: 'background 0.1s',
                     }}
@@ -518,7 +518,7 @@ const CalendarGrid = memo(function CalendarGrid({
                         top: minsToPx(h * 60),
                         left: 0, right: 0,
                         height: 1,
-                        background: `${T.border}50`,
+                        background: `var(--border-default)`,
                         pointerEvents: 'none',
                       }} />
                     ))}
@@ -530,7 +530,7 @@ const CalendarGrid = memo(function CalendarGrid({
                         top: minsToPx(h * 60 + 30),
                         left: 0, right: 0,
                         height: 1,
-                        background: `${T.border}20`,
+                        background: 'var(--border-subtle)',
                         pointerEvents: 'none',
                       }} />
                     ))}
@@ -546,7 +546,7 @@ const CalendarGrid = memo(function CalendarGrid({
                           top: minsToPx(nowMins),
                           left: 0, right: 0,
                           height: 2,
-                          background: T.accent,
+                          background: 'var(--ember)',
                           zIndex: 25,
                           pointerEvents: 'none',
                         }}>
@@ -554,8 +554,8 @@ const CalendarGrid = memo(function CalendarGrid({
                             position: 'absolute', left: -4, top: '50%',
                             transform: 'translateY(-50%)',
                             width: 8, height: 8, borderRadius: '50%',
-                            background: T.accent,
-                            boxShadow: `0 0 6px ${T.accent}80`,
+                            background: 'var(--ember)',
+                            boxShadow: `0 0 6px var(--ember-soft)`,
                           }} />
                         </div>
                       )
@@ -568,13 +568,13 @@ const CalendarGrid = memo(function CalendarGrid({
                         top: minsToPx(dragOver.startMins),
                         left: 3, right: 3,
                         height: SNAP_MINS * PX_PER_MIN * 2,
-                        border: `2px dashed ${T.accent}70`,
+                        border: `2px dashed var(--ember-soft)`,
                         borderRadius: 8,
-                        background: `${T.accent}10`,
+                        background: 'var(--ember-soft)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         pointerEvents: 'none', zIndex: 5,
                       }}>
-                        <Plus size={14} color={T.accent} style={{ opacity: 0.7 }} />
+                        <Plus size={14} color="var(--ember)" style={{ opacity: 0.7 }} />
                       </div>
                     )}
 

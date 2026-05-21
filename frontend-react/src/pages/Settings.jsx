@@ -151,16 +151,16 @@ export default function Settings() {
           <SectionTitle>Profil & Niveau</SectionTitle>
 
           {/* Carte profil */}
-          <div style={{ background: `linear-gradient(135deg, ${T.accent}18, ${T.accent2 ? T.accent2 + '10' : T.accent + '08'})`, border: `1px solid ${T.accent}30`, borderRadius: 20, padding: '24px 28px', marginBottom: 20 }}>
+          <div style={{ background: `linear-gradient(135deg, var(--ember-soft), ${'var(--ember-hover)' ? 'var(--ember-soft)' : 'var(--ember)' + '08'})`, border: `1px solid var(--ember-soft)`, borderRadius: 20, padding: '24px 28px', marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 20 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 18, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: T.bg, flexShrink: 0 }}>
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'var(--bg-base)', flexShrink: 0 }}>
                 {user?.nom?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: T.text, margin: 0 }}>{user?.nom}</h2>
-                <p style={{ fontSize: 13, color: T.text2, margin: 0, marginTop: 3 }}>{user?.email}</p>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{user?.nom}</h2>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, marginTop: 3 }}>{user?.email}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                  <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 99, background: `${T.accent}20`, color: T.accent, fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 600 }}>
                     Niveau {niveau} — {niveauActuel.label}
                   </span>
                   {streak > 0 && (
@@ -174,16 +174,16 @@ export default function Settings() {
 
             {/* XP Bar */}
             <div style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T.text2, marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
                 <span>{points} pts</span>
                 <span>{niveauSuivant ? `${niveauSuivant.min - points} pts avant Niveau ${niveauSuivant.niveau}` : 'Niveau max atteint'}</span>
               </div>
-              <div style={{ height: 8, background: `${T.accent}18`, borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ height: 8, background: 'var(--ember-soft)', borderRadius: 99, overflow: 'hidden' }}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${pctNiveau}%` }}
                   transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                  style={{ height: '100%', background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: 99 }}
+                  style={{ height: '100%', background: `linear-gradient(90deg, var(--ember), var(--ember-hover))`, borderRadius: 99 }}
                 />
               </div>
             </div>
@@ -192,13 +192,13 @@ export default function Settings() {
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
             {[
-              { label: 'Points totaux', val: points, color: T.accent },
+              { label: 'Points totaux', val: points, color: 'var(--ember)' },
               { label: 'Badges obtenus', val: `${badgesObtenus.length}/${BADGES_CONFIG.length}`, color: '#e08a3c' },
               { label: 'Streak actuel', val: `${streak}j`, color: '#4caf82' },
             ].map(s => (
-              <div key={s.label} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '16px', textAlign: 'center' }}>
+              <div key={s.label} style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '16px', textAlign: 'center' }}>
                 <div style={{ fontSize: 24, fontWeight: 800, color: s.color, letterSpacing: '-0.5px' }}>{s.val}</div>
-                <div style={{ fontSize: 11, color: T.text2, marginTop: 4 }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -206,10 +206,10 @@ export default function Settings() {
           {/* Lien vers profil complet */}
           <motion.button
             onClick={() => navigate('/profile')}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '14px 18px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, color: T.text, cursor: 'pointer', fontSize: 14 }}
-            whileHover={{ borderColor: T.accent }}>
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '14px 18px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, color: 'var(--text-primary)', cursor: 'pointer', fontSize: 14 }}
+            whileHover={{ borderColor: 'var(--ember)' }}>
             <span style={{ fontWeight: 500 }}>Voir mon profil complet</span>
-            <ChevronRight size={16} color={T.text2} />
+            <ChevronRight size={16} color="var(--text-secondary)" />
           </motion.button>
         </motion.div>
       )
@@ -226,18 +226,18 @@ export default function Settings() {
 
           {/* Résumé global */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-            <div style={{ background: `linear-gradient(135deg, ${T.accent}12, ${T.accent2 ? T.accent2 + '08' : T.accent + '06'})`, border: `1px solid ${T.accent}25`, borderRadius: 16, padding: '18px' }}>
+            <div style={{ background: `linear-gradient(135deg, var(--ember-soft), ${'var(--ember-hover)' ? 'var(--ember-soft)' : 'var(--ember)' + '06'})`, border: `1px solid var(--ember-soft)`, borderRadius: 16, padding: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                <div style={{ fontSize: 36, fontWeight: 800, color: T.accent, letterSpacing: '-1px' }}>{badgesObtenus.length}</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: T.text2 }}>/ {BADGES_CONFIG.length}</div>
+                <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--ember)', letterSpacing: '-1px' }}>{badgesObtenus.length}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>/ {BADGES_CONFIG.length}</div>
               </div>
-              <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>badges débloqués</div>
-              <div style={{ height: 5, background: `${T.accent}15`, borderRadius: 99, overflow: 'hidden', marginTop: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>badges débloqués</div>
+              <div style={{ height: 5, background: 'var(--ember-soft)', borderRadius: 99, overflow: 'hidden', marginTop: 12 }}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${pctTotal}%` }}
                   transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-                  style={{ height: '100%', background: `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`, borderRadius: 99 }} />
+                  style={{ height: '100%', background: `linear-gradient(90deg, var(--ember), var(--ember-hover))`, borderRadius: 99 }} />
               </div>
             </div>
             <div style={{ background: 'linear-gradient(135deg, rgba(231,76,60,0.10), rgba(224,138,60,0.06))', border: '1px solid rgba(231,76,60,0.22)', borderRadius: 16, padding: '18px', position: 'relative', overflow: 'hidden' }}>
@@ -245,8 +245,8 @@ export default function Settings() {
                 <Flame size={24} color="#e74c3c" strokeWidth={2} fill="#e74c3c" fillOpacity={0.15} />
                 <div style={{ fontSize: 36, fontWeight: 800, color: '#e74c3c', letterSpacing: '-1px' }}>{streak}</div>
               </div>
-              <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>jour{streak > 1 ? 's' : ''} de streak</div>
-              <div style={{ fontSize: 10, color: T.text2, marginTop: 4, opacity: 0.7 }}>{streak === 0 ? 'lance ta première journée 🎯' : streak < 7 ? `${7 - streak}j avant Semaine parfaite` : streak < 30 ? `${30 - streak}j avant Mois de feu` : 'streak légendaire 🔥'}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>jour{streak > 1 ? 's' : ''} de streak</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4, opacity: 0.7 }}>{streak === 0 ? 'lance ta première journée 🎯' : streak < 7 ? `${7 - streak}j avant Semaine parfaite` : streak < 30 ? `${30 - streak}j avant Mois de feu` : 'streak légendaire 🔥'}</div>
             </div>
           </div>
 
@@ -265,12 +265,12 @@ export default function Settings() {
                 background: prochainTier.bg, border: `1px solid ${prochainTier.border}`, position: 'relative'
               }}>
                 <ProchainIcon size={20} color={prochainTier.color} strokeWidth={2} />
-                <Lock size={10} color={T.bg} strokeWidth={3} style={{ position: 'absolute', bottom: -3, right: -3, background: prochainTier.color, borderRadius: '50%', padding: 3 }} />
+                <Lock size={10} color={'var(--bg-base)'} strokeWidth={3} style={{ position: 'absolute', bottom: -3, right: -3, background: prochainTier.color, borderRadius: '50%', padding: 3 }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: prochainTier.color, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>Prochain badge · {prochainTier.label}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{prochainBadge.nom}</div>
-                <div style={{ fontSize: 11, color: T.text2, marginTop: 1 }}>{prochainBadge.description}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{prochainBadge.nom}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>{prochainBadge.description}</div>
               </div>
             </motion.div>
           )}
@@ -295,11 +295,11 @@ export default function Settings() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>{catMeta.label}</div>
-                      <div style={{ fontSize: 11, color: catMeta.color, fontWeight: 700 }}>{catUnlocked}<span style={{ color: T.text2, fontWeight: 500 }}>/{catBadges.length}</span></div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>{catMeta.label}</div>
+                      <div style={{ fontSize: 11, color: catMeta.color, fontWeight: 700 }}>{catUnlocked}<span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>/{catBadges.length}</span></div>
                     </div>
                     {catMeta.subtitle && (
-                      <div style={{ fontSize: 11, color: T.text2, marginBottom: 6, fontStyle: 'italic', opacity: 0.85 }}>{catMeta.subtitle}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, fontStyle: 'italic', opacity: 0.85 }}>{catMeta.subtitle}</div>
                     )}
                     <div style={{ height: 3, background: `${catMeta.color}12`, borderRadius: 99, overflow: 'hidden' }}>
                       <motion.div
@@ -326,9 +326,9 @@ export default function Settings() {
                         style={{
                           display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 14,
                           background: obtenu
-                            ? `linear-gradient(135deg, ${tier.bg}, ${T.bg2})`
-                            : T.bg2,
-                          border: obtenu ? `1px solid ${tier.border}` : `1.5px dashed ${T.border}`,
+                            ? `linear-gradient(135deg, ${tier.bg}, var(--surface-1))`
+                            : 'var(--surface-1)',
+                          border: obtenu ? `1px solid ${tier.border}` : '1.5px dashed var(--border-subtle)',
                           boxShadow: obtenu ? `0 0 18px ${tier.glow}` : 'none',
                           transition: 'box-shadow 0.25s ease',
                           position: 'relative',
@@ -347,19 +347,19 @@ export default function Settings() {
                         {/* Icon container */}
                         <div style={{
                           width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                          background: obtenu ? tier.bg : `${T.text2}10`,
-                          border: obtenu ? `1px solid ${tier.border}` : `1px solid ${T.border}`,
+                          background: obtenu ? tier.bg : `var(--text-secondary)10`,
+                          border: obtenu ? `1px solid ${tier.border}` : '1px solid var(--border-subtle)',
                           position: 'relative'
                         }}>
-                          {IconComponent && <IconComponent size={22} color={obtenu ? tier.color : T.text2} strokeWidth={2} style={{ opacity: obtenu ? 1 : 0.45 }} />}
+                          {IconComponent && <IconComponent size={22} color={obtenu ? tier.color : 'var(--text-secondary)'} strokeWidth={2} style={{ opacity: obtenu ? 1 : 0.45 }} />}
                           {!obtenu && (
                             <div style={{
                               position: 'absolute', bottom: -4, right: -4,
                               width: 18, height: 18, borderRadius: '50%',
-                              background: T.bg2, border: `1px solid ${T.border}`,
+                              background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
-                              <Lock size={9} color={T.text2} strokeWidth={2.5} />
+                              <Lock size={9} color="var(--text-secondary)" strokeWidth={2.5} />
                             </div>
                           )}
                         </div>
@@ -367,7 +367,7 @@ export default function Settings() {
                         {/* Content */}
                         <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                            <div style={{ fontSize: 13, fontWeight: obtenu ? 700 : 500, color: obtenu ? T.text : T.text2, letterSpacing: '-0.1px' }}>{b.nom}</div>
+                            <div style={{ fontSize: 13, fontWeight: obtenu ? 700 : 500, color: obtenu ? 'var(--text-primary)' : 'var(--text-secondary)', letterSpacing: '-0.1px' }}>{b.nom}</div>
                             {obtenu && (
                               <span style={{
                                 fontSize: 8, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase',
@@ -376,7 +376,7 @@ export default function Settings() {
                               }}>{tier.label}</span>
                             )}
                           </div>
-                          <div style={{ fontSize: 11, color: T.text2, opacity: obtenu ? 1 : 0.65, lineHeight: 1.4 }}>{b.description}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', opacity: obtenu ? 1 : 0.65, lineHeight: 1.4 }}>{b.description}</div>
                         </div>
 
                         {/* Status indicator */}
@@ -407,15 +407,15 @@ export default function Settings() {
       case 'theme': return (
         <motion.div key="theme" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <SectionTitle>Apparence</SectionTitle>
-          <p style={{ fontSize: 14, color: T.text2, marginBottom: 24, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
             Personnalise l'apparence de GetShift. Le thème est synchronisé sur tous tes appareils.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {Object.entries(themes).map(([key, t]) => (
               <motion.button key={key}
                 onClick={() => changerTheme(key)}
-                style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: theme === key ? `${T.accent}10` : T.bg2, border: `2px solid ${theme === key ? T.accent : T.border}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
-                whileHover={{ borderColor: T.accent }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: theme === key ? 'var(--ember-soft)' : 'var(--surface-1)', border: `2px solid ${theme === key ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
+                whileHover={{ borderColor: 'var(--ember)' }}>
                 {/* Preview */}
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: t.bg, border: '1px solid rgba(255,255,255,0.1)' }} />
@@ -424,11 +424,11 @@ export default function Settings() {
                   {t.accent2 && <div style={{ width: 28, height: 28, borderRadius: 8, background: t.accent2 }} />}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: theme === key ? 700 : 500, color: T.text }}>{t.name}</div>
+                  <div style={{ fontSize: 15, fontWeight: theme === key ? 700 : 500, color: 'var(--text-primary)' }}>{t.name}</div>
                 </div>
                 {theme === key && (
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Check size={14} color={T.bg} strokeWidth={2.5} />
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--ember)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Check size={14} color={'var(--bg-base)'} strokeWidth={2.5} />
                   </div>
                 )}
               </motion.button>
@@ -443,10 +443,10 @@ export default function Settings() {
           <SectionTitle>Intégrations</SectionTitle>
 
           {/* Toutes les intégrations OAuth — connect / disconnect centralisé */}
-          <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 20, padding: '20px', marginBottom: 16 }}>
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '20px', marginBottom: 16 }}>
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 4 }}>Connexions OAuth</div>
-              <p style={{ fontSize: 12, color: T.text2, margin: 0, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Connexions OAuth</div>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
                 Connecte tes outils pour que l'IA puisse lire tes emails, pages Notion, docs Drive et événements Calendar.
               </p>
             </div>
@@ -471,15 +471,15 @@ export default function Settings() {
               return (
                 <motion.div key={item.label}
                   onClick={() => toggleNotifPref(item.label)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, cursor: 'pointer' }}
-                  whileHover={{ background: T.bg3 }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, cursor: 'pointer' }}
+                  whileHover={{ background: 'var(--surface-2)' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: T.text }}>{item.label}</div>
-                    <div style={{ fontSize: 12, color: T.text2, marginTop: 3 }}>{item.desc}</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{item.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>{item.desc}</div>
                   </div>
                   <motion.div
-                    style={{ width: 44, height: 24, borderRadius: 99, background: active ? T.accent : T.bg3, border: `1px solid ${active ? T.accent : T.border}`, position: 'relative', flexShrink: 0 }}
-                    animate={{ borderColor: active ? T.accent : T.border }}
+                    style={{ width: 44, height: 24, borderRadius: 99, background: active ? 'var(--ember)' : 'var(--surface-2)', border: `1px solid ${active ? 'var(--ember)' : 'var(--border-subtle)'}`, position: 'relative', flexShrink: 0 }}
+                    animate={{ borderColor: active ? 'var(--ember)' : 'var(--border-subtle)' }}
                     transition={{ duration: 0.2 }}>
                     <motion.div
                       style={{ width: 18, height: 18, borderRadius: '50%', background: 'white', position: 'absolute', top: 2, left: active ? 22 : 2, boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}
@@ -490,7 +490,7 @@ export default function Settings() {
               )
             })}
           </div>
-          <p style={{ fontSize: 12, color: T.text2, marginTop: 16, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 16, lineHeight: 1.6 }}>
             Les préférences de notifications seront sauvegardées automatiquement.
           </p>
         </motion.div>
@@ -502,35 +502,35 @@ export default function Settings() {
           <SectionTitle>Compte & Sécurité</SectionTitle>
 
           {/* Infos compte */}
-          <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: T.text2, letterSpacing: 0.5, marginBottom: 16, textTransform: 'uppercase', fontSize: 11 }}>INFORMATIONS DU COMPTE</h3>
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, marginBottom: 16, textTransform: 'uppercase', fontSize: 11 }}>INFORMATIONS DU COMPTE</h3>
             {[
               { label: 'Nom', val: user?.nom },
               { label: 'Email', val: user?.email },
               { label: 'Plan', val: 'Gratuit' },
             ].map(item => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${T.border}` }}>
-                <span style={{ fontSize: 13, color: T.text2 }}>{item.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{item.val}</span>
+              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.val}</span>
               </div>
             ))}
           </div>
 
           {/* Upgrade */}
-          <div style={{ background: `linear-gradient(135deg, ${T.accent}15, ${T.accent2 ? T.accent2 + '08' : T.accent + '08'})`, border: `1px solid ${T.accent}30`, borderRadius: 20, padding: '24px', marginBottom: 16 }}>
+          <div style={{ background: `linear-gradient(135deg, var(--ember-soft), ${'var(--ember-hover)' ? 'var(--ember-soft)' : 'var(--ember)' + '08'})`, border: `1px solid var(--ember-soft)`, borderRadius: 20, padding: '24px', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <Star size={20} color={T.accent} />
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: 0 }}>Passer à Pro</h3>
+              <Star size={20} color="var(--ember)" />
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Passer à Pro</h3>
             </div>
-            <p style={{ fontSize: 13, color: T.text2, marginBottom: 16, lineHeight: 1.6 }}>Débloquez les requêtes IA illimitées, la collaboration avancée et les rapports détaillés.</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>Débloquez les requêtes IA illimitées, la collaboration avancée et les rapports détaillés.</p>
             <div style={{ display: 'flex', gap: 10 }}>
-              <div style={{ flex: 1, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: T.text }}>4,99€</div>
-                <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>/ mois · Pro</div>
+              <div style={{ flex: 1, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>4,99€</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>/ mois · Pro</div>
               </div>
-              <div style={{ flex: 1, background: `${T.accent}12`, border: `1px solid ${T.accent}30`, borderRadius: 12, padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: T.accent }}>19,99€</div>
-                <div style={{ fontSize: 11, color: T.accent, marginTop: 2 }}>/ mois · Entreprise</div>
+              <div style={{ flex: 1, background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 12, padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--ember)' }}>19,99€</div>
+                <div style={{ fontSize: 11, color: 'var(--ember)', marginTop: 2 }}>/ mois · Entreprise</div>
               </div>
             </div>
           </div>
@@ -547,10 +547,10 @@ export default function Settings() {
             ) : (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 style={{ background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 14, padding: '18px 20px' }}>
-                <p style={{ fontSize: 14, color: T.text, fontWeight: 500, marginBottom: 14 }}>Confirmer la déconnexion ?</p>
+                <p style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500, marginBottom: 14 }}>Confirmer la déconnexion ?</p>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <motion.button onClick={() => setShowLogoutConfirm(false)}
-                    style={{ flex: 1, padding: '10px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                    style={{ flex: 1, padding: '10px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                     whileTap={{ scale: 0.97 }}>Annuler</motion.button>
                   <motion.button onClick={() => { localStorage.removeItem('user'); navigate('/') }}
                     style={{ flex: 1, padding: '10px', background: '#e05c5c', border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
@@ -568,20 +568,20 @@ export default function Settings() {
 
   // ─── Helper composant titre section ──
   function SectionTitle({ children }) {
-    return <h2 style={{ fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 20, letterSpacing: '-0.3px' }}>{children}</h2>
+    return <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20, letterSpacing: '-0.3px' }}>{children}</h2>
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
 
       {/* Notification toast */}
       <AnimatePresence>
         {notification && (
           <motion.div
             initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, background: T.bg2, border: `1px solid ${notification.type === 'error' ? '#e05c5c50' : T.border}`, borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', maxWidth: 360 }}>
+            style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, background: 'var(--surface-1)', border: `1px solid ${notification.type === 'error' ? '#e05c5c50' : 'var(--border-subtle)'}`, borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', maxWidth: 360 }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: notification.type === 'error' ? '#e05c5c' : '#4caf82', flexShrink: 0 }} />
-            <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{notification.msg}</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{notification.msg}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -590,21 +590,21 @@ export default function Settings() {
 
         {/* ── SIDEBAR SETTINGS ── */}
         {!isMobile && (
-          <aside style={{ width: 260, background: T.bg2, borderRight: `1px solid ${T.border}`, padding: '24px 16px', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', flexShrink: 0 }}>
+          <aside style={{ width: 260, background: 'var(--surface-1)', borderRight: '1px solid var(--border-subtle)', padding: '24px 16px', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', flexShrink: 0 }}>
             {/* Back */}
             <motion.button
               onClick={() => navigate('/dashboard')}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 13, marginBottom: 28, borderRadius: 8 }}
-              whileHover={{ color: T.accent }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, marginBottom: 28, borderRadius: 8 }}
+              whileHover={{ color: 'var(--ember)' }}>
               <ArrowLeft size={16} /> Retour au Dashboard
             </motion.button>
 
             {/* Titre */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px', marginBottom: 24 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <SettingsIcon size={16} color={T.accent} strokeWidth={1.8} />
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <SettingsIcon size={16} color="var(--ember)" strokeWidth={1.8} />
               </div>
-              <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Paramètres</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Paramètres</span>
             </div>
 
             {/* Navigation sections */}
@@ -612,8 +612,8 @@ export default function Settings() {
               {SECTIONS.map(({ id, label, icon: Icon }) => (
                 <motion.button key={id}
                   onClick={() => setActiveSection(id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', borderRadius: 10, background: activeSection === id ? `${T.accent}15` : 'transparent', border: 'none', color: activeSection === id ? T.accent : T.text2, fontSize: 13, fontWeight: activeSection === id ? 600 : 400, cursor: 'pointer', textAlign: 'left', marginBottom: 2 }}
-                  whileHover={{ color: T.accent, x: 2 }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', borderRadius: 10, background: activeSection === id ? 'var(--ember-soft)' : 'transparent', border: 'none', color: activeSection === id ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 13, fontWeight: activeSection === id ? 600 : 400, cursor: 'pointer', textAlign: 'left', marginBottom: 2 }}
+                  whileHover={{ color: 'var(--ember)', x: 2 }}>
                   <Icon size={16} strokeWidth={activeSection === id ? 2.5 : 1.8} />
                   {label}
                   {activeSection === id && <ChevronRight size={14} style={{ marginLeft: 'auto' }} />}
@@ -622,7 +622,7 @@ export default function Settings() {
             </nav>
 
             {/* Version */}
-            <p style={{ fontSize: 11, color: T.text2, padding: '0 8px', opacity: 0.5 }}>GetShift v2.0 · Sprint 6</p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '0 8px', opacity: 0.5 }}>GetShift v2.0 · Sprint 6</p>
           </aside>
         )}
 
@@ -633,11 +633,11 @@ export default function Settings() {
           {isMobile && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
               <motion.button onClick={() => navigate('/dashboard')}
-                style={{ width: 36, height: 36, borderRadius: 10, background: T.bg2, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                whileHover={{ color: T.accent, borderColor: T.accent }}>
+                style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                whileHover={{ color: 'var(--ember)', borderColor: 'var(--ember)' }}>
                 <ArrowLeft size={16} />
               </motion.button>
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: T.text, margin: 0 }}>Paramètres</h1>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h1>
             </div>
           )}
 
@@ -647,7 +647,7 @@ export default function Settings() {
               {SECTIONS.map(({ id, label, icon: Icon }) => (
                 <motion.button key={id}
                   onClick={() => setActiveSection(id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: activeSection === id ? `${T.accent}15` : T.bg2, border: `1px solid ${activeSection === id ? T.accent : T.border}`, borderRadius: 99, color: activeSection === id ? T.accent : T.text2, fontSize: 12, fontWeight: activeSection === id ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: activeSection === id ? 'var(--ember-soft)' : 'var(--surface-1)', border: `1px solid ${activeSection === id ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 99, color: activeSection === id ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, fontWeight: activeSection === id ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                   whileTap={{ scale: 0.97 }}>
                   <Icon size={13} strokeWidth={1.8} />{label}
                 </motion.button>

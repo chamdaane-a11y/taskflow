@@ -60,7 +60,7 @@ const ProchainBadgeBanner = memo(function ProchainBadgeBanner({ d, T, isMobile }
       style={{
         display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 16,
         padding: isMobile ? '12px 14px' : '14px 18px',
-        background: `linear-gradient(90deg, ${tier.bg}, ${T.bg2} 80%)`,
+        background: `linear-gradient(90deg, ${tier.bg}, var(--surface-1) 80%)`,
         border: `1px solid ${tier.border}`,
         borderRadius: 16, marginBottom: 16,
         position: 'relative', overflow: 'hidden'
@@ -80,7 +80,7 @@ const ProchainBadgeBanner = memo(function ProchainBadgeBanner({ d, T, isMobile }
         position: 'relative', zIndex: 1
       }}>
         {Icon && <Icon size={isMobile ? 20 : 22} color={tier.color} strokeWidth={2} />}
-        <Lock size={9} color={T.bg} strokeWidth={3} style={{
+        <Lock size={9} color="var(--bg-base)" strokeWidth={3} style={{
           position: 'absolute', bottom: -3, right: -3,
           background: tier.color, borderRadius: '50%', padding: 3
         }} />
@@ -99,17 +99,17 @@ const ProchainBadgeBanner = memo(function ProchainBadgeBanner({ d, T, isMobile }
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-          <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>
+          <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
             {prochain.nom}
           </div>
           {prog && (
-            <div style={{ fontSize: 11, color: T.text2, fontWeight: 500 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>
               {prog[0]}/{prog[1]} · {getRestantLabel(prochain.id, prog[0], prog[1])}
             </div>
           )}
         </div>
         {!prog && (
-          <div style={{ fontSize: 11, color: T.text2, marginBottom: 4 }}>{prochain.description}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>{prochain.description}</div>
         )}
         {prog && (
           <div style={{ height: 4, background: `${tier.color}15`, borderRadius: 99, overflow: 'hidden' }}>
@@ -123,7 +123,7 @@ const ProchainBadgeBanner = memo(function ProchainBadgeBanner({ d, T, isMobile }
 
       {/* Flèche → Settings */}
       {!isMobile && (
-        <ArrowRight size={16} color={T.text2}
+        <ArrowRight size={16} color="var(--text-secondary)"
           style={{ flexShrink: 0, opacity: 0.6, position: 'relative', zIndex: 1 }} />
       )}
     </motion.div>

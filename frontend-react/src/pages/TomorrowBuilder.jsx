@@ -49,14 +49,14 @@ function ProgressBar({ value, color, height = 6 }) {
 // ---- Bloc générique source externe (Gmail/Notion/etc) avec extraction IA ----
 function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onExtract, onImport, scanLabel, onActiver }) {
   return (
-    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: `${color}26`, border: `1.5px solid ${color}4D`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <IconComp size={15} color={color} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 0.8 }}>{label}</div>
-          <div style={{ fontSize: 11, color: T.text2 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
             {connected
               ? (tasks.length > 0
                 ? `${tasks.length} tâche${tasks.length > 1 ? 's' : ''} détectée${tasks.length > 1 ? 's' : ''}`
@@ -86,14 +86,14 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
               {tasks.map((t, i) => {
                 const status = importingState[i]
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2 }}>{t.titre}</div>
-                      <div style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{t.titre}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ padding: '1px 6px', borderRadius: 4, background: t.priorite === 'haute' ? 'rgba(239,68,68,0.12)' : t.priorite === 'basse' ? 'rgba(100,116,139,0.12)' : 'rgba(234,179,8,0.12)', color: t.priorite === 'haute' ? '#ef4444' : t.priorite === 'basse' ? '#64748b' : '#eab308', fontWeight: 600 }}>{t.priorite || 'moyenne'}</span>
                         <span>{t.duree_min || 30} min</span>
                       </div>
-                      {(t.contexte_email || t.contexte) && <div style={{ fontSize: 9, color: T.text2, marginTop: 3, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>↳ {t.contexte_email || t.contexte}</div>}
+                      {(t.contexte_email || t.contexte) && <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 3, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>↳ {t.contexte_email || t.contexte}</div>}
                     </div>
                     <motion.button onClick={() => status !== 'done' && onImport(t, i)} disabled={status === 'done' || status === true}
                       whileTap={{ scale: 0.92 }}
@@ -126,17 +126,17 @@ function DureeApprentissageBloc({ user, T, isMobile }) {
 
   const total = stats.total || 0
   const precision = stats.precision_globale
-  const accent = precision == null ? T.text2 : precision >= 70 ? '#4caf82' : precision >= 50 ? '#e08a3c' : '#e05c5c'
+  const accent = precision == null ? 'var(--text-secondary)' : precision >= 70 ? '#4caf82' : precision >= 50 ? '#e08a3c' : '#e05c5c'
 
   return (
-    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: isMobile ? '12px 14px' : '14px 16px', marginTop: 10 }}>
+    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: isMobile ? '12px 14px' : '14px 16px', marginTop: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: stats.conseil || precision != null ? 10 : 0 }}>
         <div style={{ width: 30, height: 30, borderRadius: 9, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Brain size={14} color={accent} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8 }}>APPRENTISSAGE DURÉES</div>
-          <div style={{ fontSize: 12, color: T.text, fontWeight: 600 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>APPRENTISSAGE DURÉES</div>
+          <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
             {total === 0
               ? 'En attente de données…'
               : precision != null
@@ -148,7 +148,7 @@ function DureeApprentissageBloc({ user, T, isMobile }) {
           <motion.button
             onClick={() => setOpen(o => !o)}
             whileTap={{ scale: 0.9 }}
-            style={{ background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', padding: 4, display: 'flex' }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4, display: 'flex' }}
           >
             {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </motion.button>
@@ -156,13 +156,13 @@ function DureeApprentissageBloc({ user, T, isMobile }) {
       </div>
 
       {total === 0 ? (
-        <p style={{ fontSize: 10, color: T.text2, margin: '4px 0 0', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '4px 0 0', lineHeight: 1.5 }}>
           Marque le temps réel de tes tâches terminées pour calibrer tes estimations.
         </p>
       ) : (
         <>
           {stats.conseil && (
-            <p style={{ fontSize: 11, color: T.text, margin: 0, lineHeight: 1.5, padding: '8px 10px', background: `${accent}10`, borderRadius: 8, borderLeft: `2px solid ${accent}` }}>
+            <p style={{ fontSize: 11, color: 'var(--text-primary)', margin: 0, lineHeight: 1.5, padding: '8px 10px', background: `${accent}10`, borderRadius: 8, borderLeft: `2px solid ${accent}` }}>
               {stats.conseil}
             </p>
           )}
@@ -179,10 +179,10 @@ function DureeApprentissageBloc({ user, T, isMobile }) {
                   const ecartColor = c.ecart_pct > 15 ? '#e05c5c' : c.ecart_pct < -15 ? '#e08a3c' : '#4caf82'
                   const sign = c.ecart_pct > 0 ? '+' : ''
                   return (
-                    <div key={c.categorie} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none' }}>
+                    <div key={c.categorie} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
                       <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: T.text }}>{c.label}</div>
-                        <div style={{ fontSize: 10, color: T.text2 }}>{c.moyenne_reelle_min}min réel · {c.nb} ex.</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{c.label}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{c.moyenne_reelle_min}min réel · {c.nb} ex.</div>
                       </div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: ecartColor, padding: '2px 6px', borderRadius: 6, background: `${ecartColor}12` }}>
                         {sign}{c.ecart_pct}%
@@ -263,9 +263,9 @@ function PushMatinBloc({ user, T, isMobile }) {
   }
 
   const isActive = state === 'active'
-  const accent = isActive ? '#4caf82' : T.text2
-  const bg = isActive ? 'rgba(76,175,130,0.08)' : T.bg2
-  const border = isActive ? 'rgba(76,175,130,0.25)' : T.border
+  const accent = isActive ? '#4caf82' : 'var(--text-secondary)'
+  const bg = isActive ? 'rgba(76,175,130,0.08)' : 'var(--surface-1)'
+  const border = isActive ? 'rgba(76,175,130,0.25)' : 'var(--border-subtle)'
 
   return (
     <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 16, padding: isMobile ? '12px 14px' : '14px 16px', marginTop: 10, transition: 'all 0.25s' }}>
@@ -274,8 +274,8 @@ function PushMatinBloc({ user, T, isMobile }) {
           <Sun size={14} color={accent} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 0.8 }}>NOTIF MATIN 7H</div>
-          <div style={{ fontSize: 11, color: isActive ? '#4caf82' : state === 'error' ? '#e05c5c' : T.text2, fontWeight: 600 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>NOTIF MATIN 7H</div>
+          <div style={{ fontSize: 11, color: isActive ? '#4caf82' : state === 'error' ? '#e05c5c' : 'var(--text-secondary)', fontWeight: 600 }}>
             {state === 'loading' && '…'}
             {state === 'unsupported' && 'Non supporté'}
             {state === 'denied' && 'Autorisation refusée'}
@@ -288,7 +288,7 @@ function PushMatinBloc({ user, T, isMobile }) {
       </div>
 
       {state === 'denied' && (
-        <p style={{ fontSize: 10, color: T.text2, margin: 0, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
           Réactive dans les paramètres navigateur (cadenas → notifications → autoriser).
         </p>
       )}
@@ -298,7 +298,7 @@ function PushMatinBloc({ user, T, isMobile }) {
           onClick={activer} disabled={busy}
           whileHover={!busy ? { scale: 1.02 } : {}}
           whileTap={!busy ? { scale: 0.98 } : {}}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '8px 0', background: `${T.accent}15`, border: `1.5px solid ${T.accent}30`, borderRadius: 9, color: T.accent, fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '8px 0', background: 'var(--ember-soft)', border: `1.5px solid var(--ember-soft)`, borderRadius: 9, color: 'var(--ember)', fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}
         >
           {busy
             ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-flex' }}><RefreshCw size={12} /></motion.span> Activation…</>
@@ -309,11 +309,11 @@ function PushMatinBloc({ user, T, isMobile }) {
       {isActive && (
         <div style={{ display: 'flex', gap: 6 }}>
           <motion.button onClick={tester} disabled={busy} whileHover={!busy ? { scale: 1.02 } : {}} whileTap={!busy ? { scale: 0.98 } : {}}
-            style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
+            style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
             Tester
           </motion.button>
           <motion.button onClick={desactiver} disabled={busy} whileHover={!busy ? { scale: 1.02 } : {}} whileTap={!busy ? { scale: 0.98 } : {}}
-            style={{ flex: 1, padding: '7px 0', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
+            style={{ flex: 1, padding: '7px 0', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
             Désactiver
           </motion.button>
         </div>
@@ -334,12 +334,12 @@ function EnergyCourbeChart({ courbeData, T }) {
   )
   const pointBg = courbeData.courbe.map(p => {
     if (p.heure === now) return '#ffffff'
-    if (p.heure === picHeure) return T.accent
+    if (p.heure === picHeure) return 'var(--ember)'
     return 'transparent'
   })
   const pointBorder = courbeData.courbe.map(p => {
     if (p.heure === now) return '#e05c5c'
-    if (p.heure === picHeure) return T.accent
+    if (p.heure === picHeure) return 'var(--ember)'
     return 'rgba(255,255,255,0.15)'
   })
 
@@ -347,8 +347,8 @@ function EnergyCourbeChart({ courbeData, T }) {
     labels: heures,
     datasets: [{
       data: scores,
-      borderColor: T.accent,
-      backgroundColor: `${T.accent}1A`,
+      borderColor: 'var(--ember)',
+      backgroundColor: `var(--ember-soft)`,
       fill: true,
       tension: 0.45,
       borderWidth: 2,
@@ -385,26 +385,26 @@ function EnergyCourbeChart({ courbeData, T }) {
     scales: {
       x: {
         grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-        ticks: { color: T.text2, font: { size: 10 }, maxRotation: 0 }
+        ticks: { color: 'var(--text-secondary)', font: { size: 10 }, maxRotation: 0 }
       },
       y: {
         min: 0, max: 100,
         grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-        ticks: { color: T.text2, font: { size: 10 }, callback: v => `${v}%`, stepSize: 25 }
+        ticks: { color: 'var(--text-secondary)', font: { size: 10 }, callback: v => `${v}%`, stepSize: 25 }
       }
     }
   }
 
   return (
-    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
+    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Courbe d'énergie 24h</div>
-          <div style={{ fontSize: 11, color: T.text2, marginTop: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Courbe d'énergie 24h</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
             {courbeData.has_user_data ? 'Calibrée sur tes habitudes réelles (30j)' : 'Rythme circadien — complète des tâches pour personnaliser'}
           </div>
         </div>
-        <div style={{ padding: '4px 12px', borderRadius: 99, background: `${T.accent}22`, fontSize: 12, fontWeight: 700, color: T.accent, whiteSpace: 'nowrap' }}>
+        <div style={{ padding: '4px 12px', borderRadius: 99, background: 'var(--ember-soft)', fontSize: 12, fontWeight: 700, color: 'var(--ember)', whiteSpace: 'nowrap' }}>
           ⚡ Pic {picHeure}h
         </div>
       </div>
@@ -412,12 +412,12 @@ function EnergyCourbeChart({ courbeData, T }) {
         <Line data={chartData} options={options} />
       </div>
       <div style={{ display: 'flex', gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: T.text2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)' }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#e05c5c', border: '2px solid #fff' }} />
           Maintenant ({now}h)
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: T.text2 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.accent }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ember)' }} />
           Pic ({picHeure}h)
         </div>
       </div>
@@ -439,12 +439,12 @@ function EnergyGauge({ score, T }) {
         </div>
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1 }}>SCORE D'ÉNERGIE</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.5px' }}>{score}<span style={{ fontSize: 13, color: T.text2, fontWeight: 500 }}>/100</span></div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>{score}<span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>/100</span></div>
         </div>
         <div style={{ marginLeft: 'auto', padding: '4px 12px', borderRadius: 99, background: `${color}20`, color, fontSize: 12, fontWeight: 700 }}>{label}</div>
       </div>
       <ProgressBar value={score} color={color} height={8} />
-      <div style={{ fontSize: 11, color: T.text2, marginTop: 8 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>
         {score >= 70 ? '⚡ Tu es en pleine forme — parfait pour les tâches complexes !'
           : score >= 40 ? '🌤 Énergie correcte — alterne tâches légères et complexes'
           : '😴 Énergie basse — privilégie les quick wins aujourd\'hui'}
@@ -500,7 +500,7 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: '#6c63ff' }}>☕ Pause recommandée</div>
-          <div style={{ fontSize: 11, color: T.text2 }}>{item.heure_debut} → {item.heure_fin} · {item.duree_minutes} min</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{item.heure_debut} → {item.heure_fin} · {item.duree_minutes} min</div>
         </div>
         <div style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: 'rgba(108,99,255,0.1)', color: '#6c63ff', fontWeight: 600 }}>Repos</div>
       </motion.div>
@@ -518,7 +518,7 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 40, scale: 0.95 }}
       transition={{ delay: index * 0.05, layout: { duration: 0.2 } }}
-      style={{ background: T.bg2, border: `1.5px solid ${isEnCours ? '#4caf82' : T.border}`, borderRadius: 14, marginBottom: 8, transition: 'border-color 0.25s' }}>
+      style={{ background: 'var(--surface-1)', border: `1.5px solid ${isEnCours ? '#4caf82' : 'var(--border-subtle)'}`, borderRadius: 14, marginBottom: 8, transition: 'border-color 0.25s' }}>
       <div style={{ display: 'flex', borderRadius: 13, overflow: 'hidden' }}>
         {/* Barre priorité / en cours */}
         <div style={{ width: 4, background: barreColor, flexShrink: 0 }}>
@@ -537,17 +537,17 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
                   style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(76,175,130,0.2)', border: '2px solid #4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Play size={11} color="#4caf82" fill="#4caf82" />
                 </motion.div>
-              : <div style={{ width: 28, height: 28, borderRadius: '50%', background: `${T.accent}20`, border: `2px solid ${T.accent}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 800, color: T.accent }}>
+              : <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--ember-soft)', border: `2px solid var(--ember-soft)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 800, color: 'var(--ember)' }}>
                   {item.ordre}
                 </div>
             }
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4 }}>{item.titre}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{item.titre}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: isEnCours ? '#4caf82' : T.accent, fontWeight: 600 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: isEnCours ? '#4caf82' : 'var(--ember)', fontWeight: 600 }}>
                   <Clock size={11} />{item.heure_debut} → {item.heure_fin}
                 </span>
-                <span style={{ fontSize: 11, color: T.text2 }}>⏱ {item.duree_minutes} min</span>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>⏱ {item.duree_minutes} min</span>
                 <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${prioriteColor}18`, color: prioriteColor, fontWeight: 700 }}>{item.priorite}</span>
                 <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${energieColor}12`, color: energieColor, fontWeight: 600 }}>⚡ {item.energie_requise}</span>
               </div>
@@ -555,15 +555,15 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
             <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
               <div
                 {...dragListeners} {...dragAttributes}
-                style={{ color: T.text2, cursor: 'grab', padding: '4px 2px', touchAction: 'none', opacity: 0.5, display: 'flex', alignItems: 'center' }}
+                style={{ color: 'var(--text-secondary)', cursor: 'grab', padding: '4px 2px', touchAction: 'none', opacity: 0.5, display: 'flex', alignItems: 'center' }}
                 onMouseDown={e => e.currentTarget.style.cursor = 'grabbing'}
                 onMouseUp={e => e.currentTarget.style.cursor = 'grab'}>
                 <GripVertical size={15} />
               </div>
               <motion.button
-                style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4 }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4 }}
                 onClick={() => setExpanded(!expanded)}
-                whileHover={{ color: T.accent }}>
+                whileHover={{ color: 'var(--ember)' }}>
                 {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </motion.button>
             </div>
@@ -577,19 +577,19 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
-                style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
+                style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
                 {item.raison_placement && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <Info size={13} color={T.text2} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ fontSize: 12, color: T.text2, margin: 0, lineHeight: 1.5 }}>
-                      <strong style={{ color: T.text }}>Pourquoi maintenant :</strong> {item.raison_placement}
+                    <Info size={13} color="var(--text-secondary)" style={{ flexShrink: 0, marginTop: 1 }} />
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>Pourquoi maintenant :</strong> {item.raison_placement}
                     </p>
                   </div>
                 )}
                 {item.tips && (
-                  <div style={{ display: 'flex', gap: 8, padding: '8px 12px', background: `${T.accent}10`, borderRadius: 8, border: `1px solid ${T.accent}20` }}>
-                    <Sparkles size={13} color={T.accent} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ fontSize: 12, color: T.text, margin: 0, lineHeight: 1.5 }}>{item.tips}</p>
+                  <div style={{ display: 'flex', gap: 8, padding: '8px 12px', background: 'var(--ember-soft)', borderRadius: 8, border: `1px solid var(--ember-soft)` }}>
+                    <Sparkles size={13} color="var(--ember)" style={{ flexShrink: 0, marginTop: 1 }} />
+                    <p style={{ fontSize: 12, color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>{item.tips}</p>
                   </div>
                 )}
               </motion.div>
@@ -597,13 +597,13 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
           </AnimatePresence>
 
           {/* ACTIONS ROW */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
 
             {/* Lancer / Pause */}
             <motion.button
               onClick={onLancer}
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${isEnCours ? '#4caf82' : T.border}`, background: isEnCours ? 'rgba(76,175,130,0.12)' : T.bg3, color: isEnCours ? '#4caf82' : T.text2, fontSize: 11, fontWeight: isEnCours ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s' }}>
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${isEnCours ? '#4caf82' : 'var(--border-subtle)'}`, background: isEnCours ? 'rgba(76,175,130,0.12)' : 'var(--surface-2)', color: isEnCours ? '#4caf82' : 'var(--text-secondary)', fontSize: 11, fontWeight: isEnCours ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s' }}>
               {isEnCours ? <><Pause size={11} /> En cours</> : <><Play size={11} /> Lancer</>}
             </motion.button>
 
@@ -612,7 +612,7 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
               <motion.button
                 onClick={onToggleDecalerMenu}
                 whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${showDecalerMenu ? T.accent : T.border}`, background: showDecalerMenu ? `${T.accent}12` : T.bg3, color: showDecalerMenu ? T.accent : T.text2, fontSize: 11, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}>
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${showDecalerMenu ? 'var(--ember)' : 'var(--border-subtle)'}`, background: showDecalerMenu ? 'var(--ember-soft)' : 'var(--surface-2)', color: showDecalerMenu ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 11, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}>
                 <Clock size={11} /> Décaler
               </motion.button>
               <AnimatePresence>
@@ -622,12 +622,12 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -6, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    style={{ position: 'absolute', bottom: '110%', left: 0, right: 0, zIndex: 50, background: T.bg3, border: `1.5px solid ${T.border}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+                    style={{ position: 'absolute', bottom: '110%', left: 0, right: 0, zIndex: 50, background: 'var(--surface-2)', border: '1.5px solid var(--border-subtle)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
                     {[[30, '+30 min'], [60, '+1 h'], [120, '+2 h'], [180, '+3 h']].map(([min, label]) => (
                       <motion.button key={min}
                         onClick={() => onDecaler(min)}
-                        whileHover={{ background: `${T.accent}15`, color: T.accent }}
-                        style={{ display: 'block', width: '100%', padding: '9px 14px', border: 'none', background: 'transparent', color: T.text2, fontSize: 12, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s' }}>
+                        whileHover={{ background: 'var(--ember-soft)', color: 'var(--ember)' }}
+                        style={{ display: 'block', width: '100%', padding: '9px 14px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s' }}>
                         {label}
                       </motion.button>
                     ))}
@@ -641,7 +641,7 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
               onClick={onSkip}
               whileHover={{ scale: 1.03, borderColor: '#e05c5c', color: '#e05c5c' }}
               whileTap={{ scale: 0.97 }}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${T.border}`, background: T.bg3, color: T.text2, fontSize: 11, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}>
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: '1.5px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}>
               <X size={11} /> Skip
             </motion.button>
           </div>
@@ -675,14 +675,14 @@ function CalendarEventCard({ event, index, T }) {
               📅
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.titre}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.titre}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#1A73E8', fontWeight: 600 }}>
                   <Clock size={11} />
                   {event.all_day ? 'Toute la journée' : `${event.heure_debut} → ${event.heure_fin}`}
                 </span>
                 {event.location && (
-                  <span style={{ fontSize: 11, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>📍 {event.location}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>📍 {event.location}</span>
                 )}
               </div>
             </div>
@@ -706,8 +706,8 @@ function AlerteProcrastination({ alerte, T }) {
       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: `${color}10`, border: `1px solid ${color}25`, borderRadius: 10, marginBottom: 6 }}>
       <AlertTriangle size={14} color={color} style={{ flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alerte.titre}</div>
-        <div style={{ fontSize: 11, color: T.text2 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alerte.titre}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
           Inactif depuis {alerte.jours_sans_action}j
           {alerte.jours_avant_deadline >= 0 && ` · Deadline dans ${alerte.jours_avant_deadline}j`}
         </div>
@@ -722,24 +722,24 @@ function AlerteProcrastination({ alerte, T }) {
 // ---- Composant card check-in tâche ----
 function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOnly }) {
   const statut = reponse?.statut || null
-  const couleur = statut === 'fait' ? '#4caf82' : statut === 'partiel' ? '#e08a3c' : statut === 'pas_fait' ? '#e05c5c' : T.border
+  const couleur = statut === 'fait' ? '#4caf82' : statut === 'partiel' ? '#e08a3c' : statut === 'pas_fait' ? '#e05c5c' : 'var(--border-subtle)'
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      style={{ background: T.bg2, border: `1.5px solid ${statut ? couleur : T.border}`, borderRadius: 14, marginBottom: 10, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+      style={{ background: 'var(--surface-1)', border: `1.5px solid ${statut ? couleur : 'var(--border-subtle)'}`, borderRadius: 14, marginBottom: 10, overflow: 'hidden', transition: 'border-color 0.2s' }}>
       <div style={{ display: 'flex' }}>
-        <div style={{ width: 4, background: statut ? couleur : T.bg3, flexShrink: 0, borderRadius: '14px 0 0 14px', transition: 'background 0.3s' }} />
+        <div style={{ width: 4, background: statut ? couleur : 'var(--surface-2)', flexShrink: 0, borderRadius: '14px 0 0 14px', transition: 'background 0.3s' }} />
         <div style={{ flex: 1, padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 8, background: `${T.accent}20`, border: `1.5px solid ${T.accent}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 800, color: T.accent }}>
+            <div style={{ width: 26, height: 26, borderRadius: 8, background: 'var(--ember-soft)', border: `1.5px solid var(--ember-soft)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 800, color: 'var(--ember)' }}>
               {tache.ordre}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 3 }}>{tache.titre}</div>
-              <div style={{ fontSize: 11, color: T.text2, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>{tache.titre}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Clock size={10} />
                 {tache.heure_debut} → {tache.heure_fin} · {tache.duree_minutes} min prévu
               </div>
@@ -752,7 +752,7 @@ function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOn
                 <motion.button key={val}
                   onClick={() => onChange({ ...reponse, statut: statut === val ? null : val, duree_reelle: reponse?.duree_reelle ?? tache.duree_minutes })}
                   whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: isMobile ? '9px 4px' : '8px 0', borderRadius: 10, border: `1.5px solid ${statut === val ? color : T.border}`, background: statut === val ? `${color}18` : T.bg3, color: statut === val ? color : T.text2, fontWeight: statut === val ? 700 : 500, fontSize: isMobile ? 11 : 12, cursor: 'pointer', transition: 'all 0.15s' }}>
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: isMobile ? '9px 4px' : '8px 0', borderRadius: 10, border: `1.5px solid ${statut === val ? color : 'var(--border-subtle)'}`, background: statut === val ? `${color}18` : 'var(--surface-2)', color: statut === val ? color : 'var(--text-secondary)', fontWeight: statut === val ? 700 : 500, fontSize: isMobile ? 11 : 12, cursor: 'pointer', transition: 'all 0.15s' }}>
                   <span>{ico}</span>
                   <span>{label}</span>
                 </motion.button>
@@ -763,23 +763,23 @@ function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOn
           {readOnly && statut && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 99, background: `${couleur}15`, border: `1px solid ${couleur}30`, color: couleur, fontSize: 12, fontWeight: 700 }}>
               {statut === 'fait' ? '✅ Fait' : statut === 'partiel' ? '🔄 Partiel' : '❌ Pas fait'}
-              {reponse?.duree_reelle && statut !== 'pas_fait' && <span style={{ fontWeight: 400, color: T.text2 }}>· {reponse.duree_reelle} min</span>}
+              {reponse?.duree_reelle && statut !== 'pas_fait' && <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>· {reponse.duree_reelle} min</span>}
             </div>
           )}
 
           <AnimatePresence>
             {!readOnly && (statut === 'fait' || statut === 'partiel') && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
-                <div style={{ paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
+                <div style={{ paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 11, color: T.text2, fontWeight: 600 }}>⏱ Durée réelle</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{reponse?.duree_reelle ?? tache.duree_minutes} min</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>⏱ Durée réelle</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ember)' }}>{reponse?.duree_reelle ?? tache.duree_minutes} min</span>
                   </div>
                   <input type="range" min={5} max={240} step={5}
                     value={reponse?.duree_reelle ?? tache.duree_minutes}
                     onChange={e => onChange({ ...reponse, duree_reelle: parseInt(e.target.value) })}
-                    style={{ width: '100%', accentColor: T.accent }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.text2, marginTop: 3 }}>
+                    style={{ width: '100%', accentColor: 'var(--ember)' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>
                     <span>5 min</span><span>2h</span><span>4h</span>
                   </div>
                 </div>
@@ -803,8 +803,8 @@ function EnergySliderCheckin({ value, onChange, T }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1, marginBottom: 2 }}>ÉNERGIE RESSENTIE</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: T.text, letterSpacing: '-0.5px' }}>
-            {emoji} {value}<span style={{ fontSize: 13, color: T.text2, fontWeight: 400 }}>/100</span>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
+            {emoji} {value}<span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 400 }}>/100</span>
           </div>
         </div>
         <div style={{ padding: '6px 16px', borderRadius: 99, background: `${color}20`, color, fontSize: 13, fontWeight: 700 }}>{label}</div>
@@ -812,7 +812,7 @@ function EnergySliderCheckin({ value, onChange, T }) {
       <input type="range" min={0} max={100} step={5} value={value}
         onChange={e => onChange(parseInt(e.target.value))}
         style={{ width: '100%', accentColor: color, cursor: 'pointer' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.text2, marginTop: 5 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)', marginTop: 5 }}>
         <span>💀 À plat</span><span>😐 Moyen</span><span>⚡ En feu</span>
       </div>
     </div>
@@ -1248,32 +1248,32 @@ export default function TomorrowBuilder() {
       <motion.div
         animate={{ marginLeft: mainMargin }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
+        style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
 
       {/* HEADER */}
-      <div style={{ background: T.bg2, borderBottom: `1px solid ${T.border}`, padding: isMobile ? '14px 16px' : '16px 32px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 100 }}>
+      <div style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--border-subtle)', padding: isMobile ? '14px 16px' : '16px 32px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 100 }}>
         <motion.button
-          style={{ width: 36, height: 36, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => navigate('/dashboard')} whileHover={{ borderColor: T.accent, color: T.accent }}>
+          style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => navigate('/dashboard')} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
           <ArrowLeft size={16} />
         </motion.button>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Sparkles size={14} color={T.bg} />
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Sparkles size={14} color={'var(--bg-base)'} />
             </div>
-            <h1 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: T.text, margin: 0 }}>Tomorrow Builder</h1>
-            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${T.accent}20`, color: T.accent, fontWeight: 700 }}>IA</span>
+            <h1 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Tomorrow Builder</h1>
+            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 700 }}>IA</span>
           </div>
-          <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 2 }}>Planning IA pour {demainStr}</p>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>Planning IA pour {demainStr}</p>
         </div>
         {derniereGen && (
-          <div style={{ fontSize: 10, color: T.text2, textAlign: 'right', display: isMobile ? 'none' : 'block' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'right', display: isMobile ? 'none' : 'block' }}>
             Généré le {new Date(derniereGen).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
         <motion.button
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', background: loading ? T.bg3 : `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, border: 'none', borderRadius: 12, color: loading ? T.text2 : T.bg, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 13 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', background: loading ? 'var(--surface-2)' : `linear-gradient(135deg, var(--ember), var(--ember-hover))`, border: 'none', borderRadius: 12, color: loading ? 'var(--text-secondary)' : 'var(--bg-base)', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 13 }}
           onClick={genererPlanning} disabled={loading}
           whileHover={!loading ? { scale: 1.03 } : {}} whileTap={!loading ? { scale: 0.97 } : {}}>
           {loading
@@ -1299,18 +1299,18 @@ export default function TomorrowBuilder() {
         <AnimatePresence>
           {checkinTaches.length > 0 && !checkinFait && activeTab !== 'checkin' && (
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              style={{ background: `${T.accent}10`, border: `1.5px solid ${T.accent}30`, borderRadius: 14, padding: '13px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <CheckSquare size={18} color={T.accent} />
+              style={{ background: 'var(--ember-soft)', border: `1.5px solid var(--ember-soft)`, borderRadius: 14, padding: '13px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckSquare size={18} color="var(--ember)" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>Check-in du soir disponible ✅</div>
-                <div style={{ fontSize: 12, color: T.text2 }}>Tu avais planifié {checkinTaches.length} tâche{checkinTaches.length > 1 ? 's' : ''} pour aujourd'hui — retour d'expérience en 1 min.</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>Check-in du soir disponible ✅</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Tu avais planifié {checkinTaches.length} tâche{checkinTaches.length > 1 ? 's' : ''} pour aujourd'hui — retour d'expérience en 1 min.</div>
               </div>
               <motion.button
                 onClick={() => setActiveTab('checkin')}
                 whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                style={{ padding: '8px 16px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, border: 'none', borderRadius: 10, color: T.bg, fontWeight: 700, cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
+                style={{ padding: '8px 16px', background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, border: 'none', borderRadius: 10, color: 'var(--bg-base)', fontWeight: 700, cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
                 Commencer
               </motion.button>
             </motion.div>
@@ -1321,24 +1321,24 @@ export default function TomorrowBuilder() {
         {!planning && !loading && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ width: 80, height: 80, borderRadius: 24, background: `${T.accent}15`, border: `2px solid ${T.accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-              <Sparkles size={36} color={T.accent} />
+            <div style={{ width: 80, height: 80, borderRadius: 24, background: 'var(--ember-soft)', border: `2px solid var(--ember-soft)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <Sparkles size={36} color="var(--ember)" />
             </div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, marginBottom: 10 }}>Ton planning IA t'attend</h2>
-            <p style={{ fontSize: 14, color: T.text2, maxWidth: 400, margin: '0 auto 28px', lineHeight: 1.6 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>Ton planning IA t'attend</h2>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 400, margin: '0 auto 28px', lineHeight: 1.6 }}>
               L'IA analyse tes tâches, ta productivité et tes patterns pour construire le planning optimal pour demain.
             </p>
             <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 40 }}>
               {[['🎯','Ordre optimal','Tâches prioritaires au bon moment'],['⚡','Score d\'énergie','Adapté à ton niveau du jour'],['🧠','Conseils IA','Tips personnalisés pour chaque tâche'],['☕','Anti-burnout','Pauses intelligentes intégrées']].map(([ico, titre, desc]) => (
-                <div key={titre} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '16px', width: 160, textAlign: 'left' }}>
+                <div key={titre} style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '16px', width: 160, textAlign: 'left' }}>
                   <div style={{ fontSize: 24, marginBottom: 8 }}>{ico}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>{titre}</div>
-                  <div style={{ fontSize: 11, color: T.text2, lineHeight: 1.4 }}>{desc}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{titre}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{desc}</div>
                 </div>
               ))}
             </div>
             <motion.button
-              style={{ padding: '14px 36px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent2})`, border: 'none', borderRadius: 14, color: T.bg, fontWeight: 700, cursor: 'pointer', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 10 }}
+              style={{ padding: '14px 36px', background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, border: 'none', borderRadius: 14, color: 'var(--bg-base)', fontWeight: 700, cursor: 'pointer', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 10 }}
               onClick={genererPlanning} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Sparkles size={18} /> Générer mon planning pour demain
             </motion.button>
@@ -1349,14 +1349,14 @@ export default function TomorrowBuilder() {
         {loading && (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-              style={{ width: 60, height: 60, borderRadius: '50%', border: `3px solid ${T.border}`, borderTop: `3px solid ${T.accent}`, margin: '0 auto 24px' }} />
-            <h3 style={{ fontSize: 18, fontWeight: 600, color: T.text, marginBottom: 8 }}>L'IA analyse tes tâches...</h3>
-            <p style={{ fontSize: 13, color: T.text2 }}>Calcul du score d'énergie, détection des patterns, optimisation du planning</p>
+              style={{ width: 60, height: 60, borderRadius: '50%', border: '3px solid var(--border-subtle)', borderTop: '3px solid var(--ember)', margin: '0 auto 24px' }} />
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>L'IA analyse tes tâches...</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Calcul du score d'énergie, détection des patterns, optimisation du planning</p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 20, flexWrap: 'wrap' }}>
               {['Analyse des priorités', 'Détection heure productive', 'Optimisation planning', 'Calcul anti-burnout'].map((step, i) => (
                 <motion.div key={step}
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.4 }}
-                  style={{ fontSize: 11, padding: '4px 12px', borderRadius: 99, background: `${T.accent}15`, color: T.accent, border: `1px solid ${T.accent}30` }}>
+                  style={{ fontSize: 11, padding: '4px 12px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', border: `1px solid var(--ember-soft)` }}>
                   ✓ {step}
                 </motion.div>
               ))}
@@ -1378,7 +1378,7 @@ export default function TomorrowBuilder() {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#e05c5c', marginBottom: 2 }}>⚠️ Risque de surcharge détecté</div>
-                    <div style={{ fontSize: 12, color: T.text2 }}>{planning.message_alerte}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{planning.message_alerte}</div>
                   </div>
                 </motion.div>
               )}
@@ -1386,16 +1386,16 @@ export default function TomorrowBuilder() {
 
             {/* RÉSUMÉ GLOBAL */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              style={{ background: `linear-gradient(135deg, ${T.accent}12, ${T.accent2}08)`, border: `1px solid ${T.accent}25`, borderRadius: 16, padding: '20px 24px', marginBottom: 24 }}>
+              style={{ background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover)08)`, border: `1px solid var(--ember-soft)`, borderRadius: 16, padding: '20px 24px', marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Brain size={20} color={T.accent} />
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Brain size={20} color="var(--ember)" />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: 1, marginBottom: 4 }}>ANALYSE IA</div>
-                  <p style={{ fontSize: 14, color: T.text, margin: 0, lineHeight: 1.6 }}>{planning.resume_global}</p>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 1, marginBottom: 4 }}>ANALYSE IA</div>
+                  <p style={{ fontSize: 14, color: 'var(--text-primary)', margin: 0, lineHeight: 1.6 }}>{planning.resume_global}</p>
                   {planning.conseil_journee && (
-                    <p style={{ fontSize: 13, color: T.text2, margin: 0, marginTop: 8, fontStyle: 'italic' }}>💡 {planning.conseil_journee}</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, marginTop: 8, fontStyle: 'italic' }}>💡 {planning.conseil_journee}</p>
                   )}
                 </div>
               </div>
@@ -1404,7 +1404,7 @@ export default function TomorrowBuilder() {
             {/* STATS ROW */}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
               {[
-                { label: 'Tâches planifiées', val: tachesPlanning.length, icon: Target, color: T.accent },
+                { label: 'Tâches planifiées', val: tachesPlanning.length, icon: Target, color: 'var(--ember)' },
                 { label: 'Pauses intégrées', val: pausesPlanning.length, icon: Coffee, color: '#6c63ff' },
                 { label: 'Durée totale', val: `${Math.round((planning.duree_totale_planifiee || 0) / 60)}h${(planning.duree_totale_planifiee || 0) % 60}m`, icon: Clock, color: '#4caf82' },
                 { label: 'Score énergie', val: `${planning.score_energie}/100`, icon: Zap, color: planning.score_energie >= 70 ? '#4caf82' : planning.score_energie >= 40 ? '#e08a3c' : '#e05c5c' },
@@ -1412,10 +1412,10 @@ export default function TomorrowBuilder() {
                 const Icon = s.icon
                 return (
                   <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                    style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: '14px 16px' }}>
+                    style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                       <Icon size={15} color={s.color} />
-                      <span style={{ fontSize: 10, color: T.text2, fontWeight: 600 }}>{s.label}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>{s.label}</span>
                     </div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.5px' }}>{s.val}</div>
                   </motion.div>
@@ -1424,7 +1424,7 @@ export default function TomorrowBuilder() {
             </div>
 
             {/* TABS */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: T.bg2, padding: 6, borderRadius: 12, border: `1px solid ${T.border}`, width: 'fit-content', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: 'var(--surface-1)', padding: 6, borderRadius: 12, border: '1px solid var(--border-subtle)', width: 'fit-content', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
               {[
                 ['planning', 'Planning', Sparkles],
                 ['energie', 'Énergie', Zap],
@@ -1432,8 +1432,8 @@ export default function TomorrowBuilder() {
                 ...(checkinTaches.length > 0 ? [['checkin', `Check-in${checkinFait ? ' ✓' : ''}`, CheckSquare]] : [])
               ].map(([val, label, Icon]) => (
                 <motion.button key={val}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: activeTab === val ? T.accent : 'transparent', border: val === 'checkin' && !checkinFait ? `1px solid ${T.accent}40` : 'none', borderRadius: 8, color: activeTab === val ? T.bg : val === 'checkin' && !checkinFait ? T.accent : T.text2, fontSize: 13, fontWeight: activeTab === val ? 700 : val === 'checkin' && !checkinFait ? 600 : 400, cursor: 'pointer' }}
-                  onClick={() => setActiveTab(val)} whileHover={{ color: activeTab === val ? T.bg : T.accent }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: activeTab === val ? 'var(--ember)' : 'transparent', border: val === 'checkin' && !checkinFait ? `1px solid var(--ember-soft)` : 'none', borderRadius: 8, color: activeTab === val ? 'var(--bg-base)' : val === 'checkin' && !checkinFait ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 13, fontWeight: activeTab === val ? 700 : val === 'checkin' && !checkinFait ? 600 : 400, cursor: 'pointer' }}
+                  onClick={() => setActiveTab(val)} whileHover={{ color: activeTab === val ? 'var(--bg-base)' : 'var(--ember)' }}>
                   <Icon size={13} />{label}
                 </motion.button>
               ))}
@@ -1444,10 +1444,10 @@ export default function TomorrowBuilder() {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: 20 }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: 0 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                       Planning de {demainStr}
                     </h3>
-                    <span style={{ fontSize: 11, color: T.text2 }}>{planning.planning?.length} créneaux</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{planning.planning?.length} créneaux</span>
                   </div>
                   <DndContext
                     sensors={sensors}
@@ -1495,9 +1495,9 @@ export default function TomorrowBuilder() {
                   {planning.taches_reportees?.length > 0 && (
                     <div style={{ marginTop: 16 }}>
                       <motion.button
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, color: T.text2, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12, color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
                         onClick={() => setShowTachesReportees(!showTachesReportees)}
-                        whileHover={{ borderColor: T.accent }}>
+                        whileHover={{ borderColor: 'var(--ember)' }}>
                         <SkipForward size={14} />
                         <span>{planning.taches_reportees.length} tâche{planning.taches_reportees.length > 1 ? 's' : ''} reportée{planning.taches_reportees.length > 1 ? 's' : ''} à plus tard</span>
                         {showTachesReportees ? <ChevronUp size={14} style={{ marginLeft: 'auto' }} /> : <ChevronDown size={14} style={{ marginLeft: 'auto' }} />}
@@ -1505,12 +1505,12 @@ export default function TomorrowBuilder() {
                       <AnimatePresence>
                         {showTachesReportees && (
                           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                            style={{ background: T.bg2, border: `1px solid ${T.border}`, borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '8px 14px', overflow: 'hidden' }}>
+                            style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '8px 14px', overflow: 'hidden' }}>
                             {planning.taches_reportees.map((t, i) => (
-                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < planning.taches_reportees.length - 1 ? `1px solid ${T.border}` : 'none' }}>
-                                <SkipForward size={12} color={T.text2} style={{ flexShrink: 0 }} />
-                                <span style={{ flex: 1, fontSize: 12, color: T.text }}>{t.titre}</span>
-                                <span style={{ fontSize: 11, color: T.text2, fontStyle: 'italic' }}>{t.raison}</span>
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < planning.taches_reportees.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
+                                <SkipForward size={12} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+                                <span style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)' }}>{t.titre}</span>
+                                <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontStyle: 'italic' }}>{t.raison}</span>
                               </div>
                             ))}
                           </motion.div>
@@ -1525,17 +1525,17 @@ export default function TomorrowBuilder() {
                   <EnergyGauge score={energieCourbe?.score_global || planning.score_energie || 60} T={T} />
 
                   {/* Heure productive */}
-                  <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '16px 20px', marginTop: 12 }}>
+                  <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '16px 20px', marginTop: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {planning.heure_productive < 12 ? <Sun size={16} color={T.accent} /> : <Moon size={16} color={T.accent} />}
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {planning.heure_productive < 12 ? <Sun size={16} color="var(--ember)" /> : <Moon size={16} color="var(--ember)" />}
                       </div>
                       <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 0.8 }}>HEURE DE POINTE</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{planning.heure_productive}h00 <span style={{ fontSize: 12, color: T.text2, fontWeight: 400 }}>détectée</span></div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>HEURE DE POINTE</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>{planning.heure_productive}h00 <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 400 }}>détectée</span></div>
                       </div>
                     </div>
-                    <p style={{ fontSize: 11, color: T.text2, margin: 0, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
                       Tes tâches les plus complexes sont planifiées autour de cette heure.
                     </p>
                   </div>
@@ -1565,7 +1565,7 @@ export default function TomorrowBuilder() {
                       }}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 16px', background: `${T.accent}12`, border: `1.5px solid ${T.accent}30`, borderRadius: 14, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 12 }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 16px', background: 'var(--ember-soft)', border: `1.5px solid var(--ember-soft)`, borderRadius: 14, color: 'var(--ember)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 12 }}
                     >
                       <Download size={13} />
                       <span>Exporter iCal</span>
@@ -1574,14 +1574,14 @@ export default function TomorrowBuilder() {
 
                   {/* Google Calendar — visible seulement si connecté */}
                   {calendarConnected && (
-                    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+                    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: calendarEvents.length > 0 ? 10 : 0 }}>
                         <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <CalendarDays size={15} color="#1A73E8" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: '#1A73E8', letterSpacing: 0.8 }}>GOOGLE CALENDAR</div>
-                          <div style={{ fontSize: 11, color: T.text2 }}>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                             {calendarEvents.length === 0 ? 'Journée libre ✨' : `${calendarEvents.length} event${calendarEvents.length > 1 ? 's' : ''}`}
                           </div>
                         </div>
@@ -1590,14 +1590,14 @@ export default function TomorrowBuilder() {
                       {calendarEvents.length > 0 && (
                         <div>
                           {calendarEvents.slice(0, 5).map((ev, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none' }}>
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
                               <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#1A73E8', flexShrink: 0 }} />
                               <span style={{ fontSize: 11, color: '#1A73E8', fontWeight: 700, flexShrink: 0, minWidth: 38 }}>{ev.all_day ? '—' : ev.heure_debut}</span>
-                              <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ev.titre}</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ev.titre}</span>
                             </div>
                           ))}
                           {calendarEvents.length > 5 && (
-                            <p style={{ fontSize: 10, color: T.text2, margin: '6px 0 0', textAlign: 'center' }}>+ {calendarEvents.length - 5} autre{calendarEvents.length - 5 > 1 ? 's' : ''}</p>
+                            <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', textAlign: 'center' }}>+ {calendarEvents.length - 5} autre{calendarEvents.length - 5 > 1 ? 's' : ''}</p>
                           )}
                         </div>
                       )}
@@ -1630,28 +1630,28 @@ export default function TomorrowBuilder() {
 
                   {/* Google Drive — visible seulement si connecté */}
                   {driveConnected && driveDocs.length > 0 && (
-                    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+                    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                         <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(0,172,71,0.15)', border: '1.5px solid rgba(0,172,71,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Folder size={15} color="#00AC47" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: '#00AC47', letterSpacing: 0.8 }}>GOOGLE DRIVE</div>
-                          <div style={{ fontSize: 11, color: T.text2 }}>{driveDocs.length} doc{driveDocs.length > 1 ? 's' : ''} récent{driveDocs.length > 1 ? 's' : ''}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{driveDocs.length} doc{driveDocs.length > 1 ? 's' : ''} récent{driveDocs.length > 1 ? 's' : ''}</div>
                         </div>
                         <CheckCircle size={14} color="#00AC47" />
                       </div>
                       <div>
                         {driveDocs.slice(0, 5).map((d, i) => (
                           <a key={i} href={d.lien} target="_blank" rel="noopener noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none', textDecoration: 'none' }}>
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none', textDecoration: 'none' }}>
                             <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,172,71,0.12)', color: '#00AC47', fontWeight: 600, flexShrink: 0, textTransform: 'uppercase' }}>{d.type}</span>
-                            <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
-                            <ExternalLink size={11} color={T.text2} style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
+                            <ExternalLink size={11} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
                           </a>
                         ))}
                         {driveDocs.length > 5 && (
-                          <p style={{ fontSize: 10, color: T.text2, margin: '6px 0 0', textAlign: 'center' }}>+ {driveDocs.length - 5} autre{driveDocs.length - 5 > 1 ? 's' : ''}</p>
+                          <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', textAlign: 'center' }}>+ {driveDocs.length - 5} autre{driveDocs.length - 5 > 1 ? 's' : ''}</p>
                         )}
                       </div>
                     </div>
@@ -1662,7 +1662,7 @@ export default function TomorrowBuilder() {
                     <motion.button
                       onClick={() => navigate('/settings', { state: { section: 'integrations' } })}
                       whileHover={{ opacity: 1 }} initial={{ opacity: 0.5 }} animate={{ opacity: 0.5 }}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', marginTop: 14, padding: '7px 0', background: 'transparent', border: 'none', color: T.text2, fontSize: 11, cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', marginTop: 14, padding: '7px 0', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
                     >
                       <ExternalLink size={10} /> Connecter des intégrations
                     </motion.button>
@@ -1670,9 +1670,9 @@ export default function TomorrowBuilder() {
 
                   {/* Tip du jour */}
                   {planning.conseil_journee && (
-                    <div style={{ background: `${T.accent}08`, border: `1px solid ${T.accent}20`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: 0.8, marginBottom: 6 }}>💡 CONSEIL IA</div>
-                      <p style={{ fontSize: 12, color: T.text, margin: 0, lineHeight: 1.6 }}>{planning.conseil_journee}</p>
+                    <div style={{ background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.8, marginBottom: 6 }}>💡 CONSEIL IA</div>
+                      <p style={{ fontSize: 12, color: 'var(--text-primary)', margin: 0, lineHeight: 1.6 }}>{planning.conseil_journee}</p>
                     </div>
                   )}
                 </div>
@@ -1689,8 +1689,8 @@ export default function TomorrowBuilder() {
                 {energieCourbe && (
                   <EnergyGauge score={energieCourbe.score_global || planning.score_energie || 60} T={T} />
                 )}
-                <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, marginTop: 12 }}>
-                  <h4 style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🔥 Règles anti-burnout intégrées</h4>
+                <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: 16, marginTop: 12 }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>🔥 Règles anti-burnout intégrées</h4>
                   {[
                     'Maximum 6h de travail effectif planifié par jour',
                     'Pause de 15 min obligatoire après chaque 90 min de travail',
@@ -1698,9 +1698,9 @@ export default function TomorrowBuilder() {
                     'Maximum 3 tâches haute priorité par jour',
                     'Aucune tâche complexe planifiée en fin de journée si énergie < 40',
                   ].map((r, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: i < 4 ? `1px solid ${T.border}` : 'none' }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: i < 4 ? '1px solid var(--border-subtle)' : 'none' }}>
                       <CheckCircle size={13} color="#4caf82" style={{ flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: T.text }}>{r}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{r}</span>
                     </div>
                   ))}
                 </div>
@@ -1713,8 +1713,8 @@ export default function TomorrowBuilder() {
                 {procrastination.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                     <CheckCircle size={40} color="#4caf82" style={{ margin: '0 auto 16px' }} />
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 8 }}>Aucune procrastination détectée 🎉</h3>
-                    <p style={{ fontSize: 13, color: T.text2 }}>Tu gères tes tâches efficacement. Continue comme ça !</p>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Aucune procrastination détectée 🎉</h3>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Tu gères tes tâches efficacement. Continue comme ça !</p>
                   </div>
                 ) : (
                   <>
@@ -1723,17 +1723,17 @@ export default function TomorrowBuilder() {
                       <span style={{ fontSize: 13, color: '#e05c5c', fontWeight: 600 }}>{procrastination.length} tâche{procrastination.length > 1 ? 's' : ''} en procrastination détectée{procrastination.length > 1 ? 's' : ''}</span>
                     </div>
                     {procrastination.map((a, i) => <AlerteProcrastination key={i} alerte={a} T={T} />)}
-                    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, marginTop: 16 }}>
-                      <h4 style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 10 }}>💡 Conseils pour sortir de la procrastination</h4>
+                    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: 16, marginTop: 16 }}>
+                      <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>💡 Conseils pour sortir de la procrastination</h4>
                       {[
                         'Découpe la tâche en sous-tâches de 15 min maximum',
                         'Utilise la règle des 2 minutes : si ça prend moins de 2 min, fais-le maintenant',
                         'Place la tâche difficile en première position demain matin',
                         'Demande à l\'IA de décomposer la tâche pour toi',
                       ].map((c, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: i < 3 ? `1px solid ${T.border}` : 'none' }}>
-                          <span style={{ fontSize: 13, color: T.accent, flexShrink: 0 }}>→</span>
-                          <span style={{ fontSize: 12, color: T.text }}>{c}</span>
+                        <div key={i} style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: i < 3 ? '1px solid var(--border-subtle)' : 'none' }}>
+                          <span style={{ fontSize: 13, color: 'var(--ember)', flexShrink: 0 }}>→</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{c}</span>
                         </div>
                       ))}
                     </div>
@@ -1753,7 +1753,7 @@ export default function TomorrowBuilder() {
                       <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 0.5 }}
                         style={{ fontSize: 56, marginBottom: 16 }}>🎉</motion.div>
                       <h3 style={{ fontSize: 20, fontWeight: 800, color: '#4caf82', marginBottom: 8 }}>Check-in enregistré !</h3>
-                      <p style={{ fontSize: 13, color: T.text2, maxWidth: 340, margin: '0 auto' }}>L'IA utilisera ce retour pour améliorer le planning de demain.</p>
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 340, margin: '0 auto' }}>L'IA utilisera ce retour pour améliorer le planning de demain.</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1768,13 +1768,13 @@ export default function TomorrowBuilder() {
                         </div>
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 700, color: '#4caf82' }}>Check-in déjà fait aujourd'hui</div>
-                          <div style={{ fontSize: 11, color: T.text2 }}>Tu peux le refaire si quelque chose a changé</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Tu peux le refaire si quelque chose a changé</div>
                         </div>
                       </div>
                       <motion.button
                         onClick={() => { setCheckinFait(false); setCheckinReponses({}); setCheckinNote('') }}
                         whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         <RefreshCw size={13} /> Refaire
                       </motion.button>
                     </div>
@@ -1788,10 +1788,10 @@ export default function TomorrowBuilder() {
                 {!checkinFait && !checkinSuccess && (
                   <div>
                     <div style={{ marginBottom: 20 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: '0 0 4px' }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
                         📋 Comment s'est passée ta journée ?
                       </h3>
-                      <p style={{ fontSize: 12, color: T.text2, margin: 0 }}>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
                         {checkinTaches.length} tâche{checkinTaches.length > 1 ? 's' : ''} planifiée{checkinTaches.length > 1 ? 's' : ''} — dis à l'IA ce qui s'est vraiment passé.
                       </p>
                     </div>
@@ -1801,12 +1801,12 @@ export default function TomorrowBuilder() {
                       const repondues = Object.values(checkinReponses).filter(r => r?.statut).length
                       const pct = Math.round(repondues / checkinTaches.length * 100)
                       return (
-                        <div style={{ marginBottom: 20, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, padding: '12px 16px' }}>
+                        <div style={{ marginBottom: 20, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '12px 16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                            <span style={{ fontSize: 11, color: T.text2, fontWeight: 600 }}>PROGRESSION</span>
-                            <span style={{ fontSize: 11, color: T.accent, fontWeight: 700 }}>{repondues}/{checkinTaches.length} évaluées</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>PROGRESSION</span>
+                            <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 700 }}>{repondues}/{checkinTaches.length} évaluées</span>
                           </div>
-                          <ProgressBar value={pct} color={T.accent} height={6} />
+                          <ProgressBar value={pct} color="var(--ember)" height={6} />
                         </div>
                       )
                     })()}
@@ -1827,8 +1827,8 @@ export default function TomorrowBuilder() {
                     <div style={{ marginTop: 12 }}>
                       <motion.button
                         onClick={() => setShowNoteLibre(!showNoteLibre)}
-                        whileHover={{ color: T.accent }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, color: T.text2, fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
+                        whileHover={{ color: 'var(--ember)' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
                         <Pencil size={13} />
                         <span style={{ flex: 1, textAlign: 'left' }}>Ajouter une note (optionnel)</span>
                         {showNoteLibre ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -1841,9 +1841,9 @@ export default function TomorrowBuilder() {
                               onChange={e => setCheckinNote(e.target.value)}
                               placeholder="Ex: j'ai été interrompu 3 fois, la tâche X m'a pris bien plus que prévu..."
                               maxLength={200}
-                              style={{ width: '100%', marginTop: 6, padding: '12px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderTop: 'none', borderRadius: '0 0 12px 12px', color: T.text, fontSize: 13, lineHeight: 1.5, resize: 'none', outline: 'none', fontFamily: "var(--font-ui)", boxSizing: 'border-box', minHeight: 80 }}
+                              style={{ width: '100%', marginTop: 6, padding: '12px 14px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderTop: 'none', borderRadius: '0 0 12px 12px', color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.5, resize: 'none', outline: 'none', fontFamily: "var(--font-ui)", boxSizing: 'border-box', minHeight: 80 }}
                             />
-                            <div style={{ textAlign: 'right', fontSize: 10, color: T.text2, marginTop: 3 }}>{checkinNote.length}/200</div>
+                            <div style={{ textAlign: 'right', fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>{checkinNote.length}/200</div>
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -1859,10 +1859,10 @@ export default function TomorrowBuilder() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                         width: '100%', marginTop: 16, padding: '15px 0',
                         background: checkinLoading || Object.values(checkinReponses).filter(r => r?.statut).length === 0
-                          ? T.bg3
-                          : `linear-gradient(135deg, ${T.accent}, ${T.accent2})`,
+                          ? 'var(--surface-2)'
+                          : `linear-gradient(135deg, var(--ember), var(--ember-hover))`,
                         border: 'none', borderRadius: 14,
-                        color: checkinLoading || Object.values(checkinReponses).filter(r => r?.statut).length === 0 ? T.text2 : T.bg,
+                        color: checkinLoading || Object.values(checkinReponses).filter(r => r?.statut).length === 0 ? 'var(--text-secondary)' : 'var(--bg-base)',
                         fontWeight: 700, fontSize: 15, cursor: checkinLoading ? 'wait' : Object.values(checkinReponses).filter(r => r?.statut).length === 0 ? 'not-allowed' : 'pointer',
                         transition: 'all 0.2s'
                       }}>
@@ -1872,7 +1872,7 @@ export default function TomorrowBuilder() {
                       }
                     </motion.button>
                     {Object.values(checkinReponses).filter(r => r?.statut).length === 0 && (
-                      <p style={{ textAlign: 'center', fontSize: 11, color: T.text2, marginTop: 8 }}>Évalue au moins une tâche pour valider</p>
+                      <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>Évalue au moins une tâche pour valider</p>
                     )}
                   </div>
                 )}

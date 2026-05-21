@@ -88,8 +88,8 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       style={{
-        background: T.bg2,
-        border: `1px solid ${T.border}`,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: 16,
         marginBottom: 20,
         overflow: 'hidden',
@@ -118,10 +118,10 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
           <Calendar size={14} strokeWidth={2.2} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.2 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
             Agenda du jour
           </div>
-          <div style={{ fontSize: 11, color: T.text2, marginTop: 2, textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {titreDate} · <span style={{ fontWeight: 600 }}>{summary}</span>
           </div>
         </div>
@@ -138,7 +138,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
         <motion.div
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          style={{ display: 'flex', alignItems: 'center', flexShrink: 0, color: T.text2 }}
+          style={{ display: 'flex', alignItems: 'center', flexShrink: 0, color: 'var(--text-secondary)' }}
         >
           <ChevronDown size={16} />
         </motion.div>
@@ -158,10 +158,10 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
               {connected === false ? (
                 <div style={{
                   textAlign: 'center', padding: '14px 8px',
-                  background: T.bg, borderRadius: 10,
-                  border: `1px dashed ${T.border}`,
+                  background: 'var(--bg-base)', borderRadius: 10,
+                  border: '1px dashed var(--border-subtle)',
                 }}>
-                  <p style={{ fontSize: 12, color: T.text2, margin: 0, marginBottom: 10 }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginBottom: 10 }}>
                     Connecte Google Calendar pour voir ton agenda du jour ici.
                   </p>
                   <motion.button
@@ -186,9 +186,9 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
               ) : events.length === 0 ? (
                 <div style={{
                   padding: '12px 8px', textAlign: 'center',
-                  fontSize: 12, color: T.text2,
-                  background: T.bg, borderRadius: 10,
-                  border: `1px dashed ${T.border}`,
+                  fontSize: 12, color: 'var(--text-secondary)',
+                  background: 'var(--bg-base)', borderRadius: 10,
+                  border: '1px dashed var(--border-subtle)',
                 }}>
                   Aucun événement aujourd'hui — ta journée est libre 🎯
                 </div>
@@ -202,30 +202,30 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 12px',
-                        background: T.bg,
+                        background: 'var(--bg-base)',
                         borderRadius: 10,
-                        border: `1px solid ${T.border}`,
+                        border: '1px solid var(--border-subtle)',
                         borderLeft: `3px solid #4285F4`,
                         textDecoration: 'none',
                         color: 'inherit',
                         transition: 'background 0.15s',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = T.bg2}
-                      onMouseLeave={e => e.currentTarget.style.background = T.bg}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-1)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-base)'}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          fontSize: 12, fontWeight: 600, color: T.text,
+                          fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>
                           {ev.titre}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                          <span style={{ fontSize: 11, color: T.text2, fontVariantNumeric: 'tabular-nums' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
                             {ev.all_day ? 'Journée entière' : `${ev.heure_debut} – ${ev.heure_fin}`}
                           </span>
                           {ev.location && (
-                            <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3, opacity: 0.8 }}>
+                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3, opacity: 0.8 }}>
                               <MapPin size={9} />
                               <span style={{ maxWidth: 100, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {ev.location}
@@ -234,11 +234,11 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                           )}
                         </div>
                       </div>
-                      <ExternalLink size={12} color={T.text2} style={{ flexShrink: 0, opacity: 0.5 }} />
+                      <ExternalLink size={12} color="var(--text-secondary)" style={{ flexShrink: 0, opacity: 0.5 }} />
                     </a>
                   ))}
                   {events.length > 10 && (
-                    <div style={{ textAlign: 'center', fontSize: 10, color: T.text2, opacity: 0.6, padding: '4px 0' }}>
+                    <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)', opacity: 0.6, padding: '4px 0' }}>
                       +{events.length - 10} autre(s) événement(s)
                     </div>
                   )}

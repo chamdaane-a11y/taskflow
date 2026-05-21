@@ -102,8 +102,8 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
   return (
     <motion.div
       style={{
-        background: connecte ? `${couleur}0D` : T.bg3,
-        border: `1.5px solid ${connecte ? couleur + '40' : T.border}`,
+        background: connecte ? `${couleur}0D` : 'var(--surface-2)',
+        border: `1.5px solid ${connecte ? couleur + '40' : 'var(--border-subtle)'}`,
         borderRadius: 14,
         padding: isMobile ? '12px' : '13px 15px',
         position: 'relative', overflow: 'hidden',
@@ -119,7 +119,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
       <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
         <div style={{
           width: 40, height: 40, borderRadius: 10,
-          background: '#fff', border: `1px solid ${T.border}`,
+          background: '#fff', border: '1px solid var(--border-subtle)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0, position: 'relative',
         }}>
@@ -128,7 +128,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
             <div style={{
               position: 'absolute', bottom: -3, right: -3,
               width: 14, height: 14, borderRadius: '50%',
-              background: '#22c55e', border: `2px solid ${T.bg3}`,
+              background: '#22c55e', border: `2px solid var(--surface-2)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <CheckCircle2 size={8} color="white" strokeWidth={3} />
@@ -138,7 +138,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: isMobile ? 13 : 13.5, fontWeight: 600, color: T.text, letterSpacing: '-0.01em' }}>
+            <span style={{ fontSize: isMobile ? 13 : 13.5, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
               {nom}
             </span>
             {connecte && (
@@ -147,7 +147,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
               </span>
             )}
           </div>
-          <p style={{ fontSize: 11, color: T.text2, margin: '2px 0 0', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: '2px 0 0', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {description}
           </p>
         </div>
@@ -155,7 +155,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
         {!isMobile && (
           connecte ? (
             <motion.button onClick={() => onDisconnect(id)} disabled={isLoading}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0, background: 'transparent', border: `1.5px solid ${T.border}`, color: T.text2 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0, background: 'transparent', border: '1.5px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
               whileHover={!isLoading ? { borderColor: 'rgba(239,68,68,0.4)', color: '#ef4444', background: 'rgba(239,68,68,0.05)' } : {}}>
               {isLoading ? <Spinner /> : <Unlink size={12} strokeWidth={2} />}
               Déconnecter
@@ -176,7 +176,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
         <div style={{ marginTop: 10 }}>
           {connecte ? (
             <motion.button onClick={() => onDisconnect(id)} disabled={isLoading}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.6 : 1, width: '100%', background: 'transparent', border: `1.5px solid ${T.border}`, color: T.text2 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.6 : 1, width: '100%', background: 'transparent', border: '1.5px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
               whileHover={!isLoading ? { borderColor: 'rgba(239,68,68,0.4)', color: '#ef4444' } : {}}>
               {isLoading ? <Spinner /> : <Unlink size={12} strokeWidth={2} />}
               Déconnecter
@@ -256,26 +256,26 @@ export default function OutilsIntegrations({ T, userId }) {
           <motion.div key="t" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 13px', borderRadius: 10, marginBottom: 12, background: toast.type === 'error' ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', border: `1px solid ${toast.type === 'error' ? 'rgba(239,68,68,0.22)' : 'rgba(34,197,94,0.22)'}` }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: toast.type === 'error' ? '#ef4444' : '#22c55e' }} />
-            <span style={{ fontSize: 12, color: T.text, fontWeight: 500 }}>{toast.msg}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{toast.msg}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10 }}>
-        <p style={{ fontSize: 11.5, color: T.text2, margin: 0, lineHeight: 1.5, flex: 1 }}>
+        <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5, flex: 1 }}>
           Connecte tes outils pour synchroniser GetShift.
         </p>
-        <div style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 8, background: T.bg2, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Wifi size={11} color={nbConnectes > 0 ? '#22c55e' : T.text2} strokeWidth={2} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{nbConnectes}</span>
-          <span style={{ fontSize: 10, color: T.text2 }}>/ {INTEGRATIONS.length}</span>
+        <div style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 8, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Wifi size={11} color={nbConnectes > 0 ? '#22c55e' : 'var(--text-secondary)'} strokeWidth={2} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{nbConnectes}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>/ {INTEGRATIONS.length}</span>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
         {categories.map(cat => (
           <motion.button key={cat} onClick={() => setFiltre(cat)} whileTap={{ scale: 0.95 }}
-            style={{ padding: '4px 11px', borderRadius: 99, flexShrink: 0, fontSize: 11, fontWeight: filtre === cat ? 600 : 400, background: filtre === cat ? `${T.accent}18` : 'transparent', border: `1.5px solid ${filtre === cat ? T.accent : T.border}`, color: filtre === cat ? T.accent : T.text2, cursor: 'pointer' }}>
+            style={{ padding: '4px 11px', borderRadius: 99, flexShrink: 0, fontSize: 11, fontWeight: filtre === cat ? 600 : 400, background: filtre === cat ? 'var(--ember-soft)' : 'transparent', border: `1.5px solid ${filtre === cat ? 'var(--ember)' : 'var(--border-subtle)'}`, color: filtre === cat ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer' }}>
             {cat}
           </motion.button>
         ))}
@@ -289,7 +289,7 @@ export default function OutilsIntegrations({ T, userId }) {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}`, fontSize: 10.5, color: T.text2, lineHeight: 1.5 }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', fontSize: 10.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
         <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, marginTop: 1 }}>
           <path fillRule="evenodd" clipRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"/>
         </svg>

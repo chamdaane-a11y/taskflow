@@ -66,20 +66,20 @@ const Tableau = memo(function Tableau({ lignes, accent, T }) {
   const headers = lignes[0].split('|').map(h => h.trim()).filter(Boolean)
   const rows    = lignes.slice(2).map(l => l.split('|').map(c => c.trim()).filter(Boolean))
   return (
-    <div style={{ overflowX: 'auto', margin: '14px 0', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bg2 }}>
+    <div style={{ overflowX: 'auto', margin: '14px 0', borderRadius: 12, border: '1px solid var(--border-subtle)', background: 'var(--surface-1)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr>{headers.map((h, i) => (
-            <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: accent, fontSize: 11, letterSpacing: '0.5px', borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap', background: `${accent}10` }}>
+            <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: accent, fontSize: 11, letterSpacing: '0.5px', borderBottom: '1px solid var(--border-subtle)', whiteSpace: 'nowrap', background: `${accent}10` }}>
               {h.toUpperCase()}
             </th>
           ))}</tr>
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} onMouseEnter={e => e.currentTarget.style.background = T.bg3} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+            <tr key={i} onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               {row.map((cell, j) => (
-                <td key={j} style={{ padding: '9px 16px', color: T.text, borderBottom: `1px solid ${T.border}`, fontSize: 13, lineHeight: 1.5 }}>{cell}</td>
+                <td key={j} style={{ padding: '9px 16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-subtle)', fontSize: 13, lineHeight: 1.5 }}>{cell}</td>
               ))}
             </tr>
           ))}
@@ -97,9 +97,9 @@ const Markdown = memo(function Markdown({ content, accent, T }) {
     const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
     return parts.map((p, i) => {
       if (p.startsWith('**') && p.endsWith('**'))
-        return <strong key={i} style={{ fontWeight: 700, color: T.text }}>{p.slice(2,-2)}</strong>
+        return <strong key={i} style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.slice(2,-2)}</strong>
       if (p.startsWith('`') && p.endsWith('`'))
-        return <code key={i} style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 5, padding: '1px 7px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#4ade80' }}>{p.slice(1,-1)}</code>
+        return <code key={i} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 5, padding: '1px 7px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#4ade80' }}>{p.slice(1,-1)}</code>
       return p
     })
   }
@@ -114,8 +114,8 @@ const Markdown = memo(function Markdown({ content, accent, T }) {
       else {
         inCode = false
         els.push(
-          <div key={`c${i}`} style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, padding: '14px 18px', margin: '12px 0', overflowX: 'auto' }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 2, marginBottom: 10 }}>CODE</div>
+          <div key={`c${i}`} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '14px 18px', margin: '12px 0', overflowX: 'auto' }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 2, marginBottom: 10 }}>CODE</div>
             <pre style={{ margin: 0, fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 12, color: '#4ade80', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{codeLines.join('\n')}</pre>
           </div>
         )
@@ -134,14 +134,14 @@ const Markdown = memo(function Markdown({ content, accent, T }) {
       i++; continue
     }
 
-    if (line.startsWith('### '))      els.push(<p key={i} style={{ fontSize: 13, fontWeight: 700, color: T.text, margin: '14px 0 5px', letterSpacing: '-0.2px' }}>{inline(line.slice(4))}</p>)
-    else if (line.startsWith('## ')) els.push(<p key={i} style={{ fontSize: 15, fontWeight: 800, color: T.text, margin: '18px 0 7px', letterSpacing: '-0.4px' }}>{inline(line.slice(3))}</p>)
-    else if (line.startsWith('# '))  els.push(<p key={i} style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: '20px 0 10px', letterSpacing: '-0.5px' }}>{inline(line.slice(2))}</p>)
+    if (line.startsWith('### '))      els.push(<p key={i} style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', margin: '14px 0 5px', letterSpacing: '-0.2px' }}>{inline(line.slice(4))}</p>)
+    else if (line.startsWith('## ')) els.push(<p key={i} style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', margin: '18px 0 7px', letterSpacing: '-0.4px' }}>{inline(line.slice(3))}</p>)
+    else if (line.startsWith('# '))  els.push(<p key={i} style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', margin: '20px 0 10px', letterSpacing: '-0.5px' }}>{inline(line.slice(2))}</p>)
     else if (line.startsWith('- ') || line.startsWith('• '))
       els.push(
         <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 6 }}>
           <div style={{ width: 5, height: 5, borderRadius: '50%', background: accent, flexShrink: 0, marginTop: 8 }} />
-          <span style={{ fontSize: 14, color: T.text, lineHeight: 1.75 }}>{inline(line.slice(2))}</span>
+          <span style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.75 }}>{inline(line.slice(2))}</span>
         </div>
       )
     else {
@@ -150,12 +150,12 @@ const Markdown = memo(function Markdown({ content, accent, T }) {
         els.push(
           <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 7 }}>
             <div style={{ minWidth: 22, height: 22, borderRadius: 6, background: `${accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: accent, flexShrink: 0, marginTop: 1 }}>{num[1]}</div>
-            <span style={{ fontSize: 14, color: T.text, lineHeight: 1.75 }}>{inline(num[2])}</span>
+            <span style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.75 }}>{inline(num[2])}</span>
           </div>
         )
-      else if (line.match(/^-{3,}$/)) els.push(<div key={i} style={{ height: 1, background: T.border, margin: '14px 0' }} />)
+      else if (line.match(/^-{3,}$/)) els.push(<div key={i} style={{ height: 1, background: 'var(--border-subtle)', margin: '14px 0' }} />)
       else if (!line.trim())          els.push(<div key={i} style={{ height: 7 }} />)
-      else                            els.push(<p key={i} style={{ fontSize: 14, color: T.text, lineHeight: 1.78, margin: '2px 0' }}>{inline(line)}</p>)
+      else                            els.push(<p key={i} style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.78, margin: '2px 0' }}>{inline(line)}</p>)
     }
     i++
   }
@@ -167,19 +167,19 @@ const SourcesWeb = memo(function SourcesWeb({ results, T }) {
   const [open, setOpen] = useState(false)
   if (!results?.length) return null
   return (
-    <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+    <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
       <button onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
         <Globe size={11} color="#0ea5e9" />
         <span style={{ fontSize: 11, fontWeight: 700, color: '#0ea5e9', letterSpacing: '0.5px' }}>{results.length} SOURCE{results.length > 1 ? 'S' : ''} WEB</span>
-        <ChevronDown size={10} color={T.text2} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <ChevronDown size={10} color="var(--text-secondary)" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>
       <AnimatePresence>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginTop: 10 }}>
             {results.map((r, i) => (
-              <div key={i} style={{ padding: '9px 12px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 9, marginBottom: 6 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title || 'Source'}</div>
-                <div style={{ fontSize: 11, color: T.text2, lineHeight: 1.5 }}>{r.snippet?.substring(0, 140)}{r.snippet?.length > 140 ? '…' : ''}</div>
+              <div key={i} style={{ padding: '9px 12px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 9, marginBottom: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title || 'Source'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{r.snippet?.substring(0, 140)}{r.snippet?.length > 140 ? '…' : ''}</div>
                 {r.url && <a href={r.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: '#0ea5e9', marginTop: 4, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.url}</a>}
               </div>
             ))}
@@ -250,7 +250,7 @@ const CarteAction = memo(function CarteAction({ action, T }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: cfg.color, letterSpacing: '0.5px' }}>{cfg.label.toUpperCase()}</div>
-        {subtitle && <div style={{ fontSize: 12, color: T.text2, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
+        {subtitle && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
       </div>
     </motion.div>
   )
@@ -268,7 +268,7 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
 
   if (msg.role === 'user') return (
     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-      <div style={{ maxWidth: isMobile ? '86%' : '65%', padding: '13px 17px', borderRadius: '17px 17px 4px 17px', background: `linear-gradient(135deg, ${accent}30, ${accent}18)`, border: `1px solid ${accent}35`, fontSize: 14, color: T.text, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word', backdropFilter: 'blur(10px)' }}>
+      <div style={{ maxWidth: isMobile ? '86%' : '65%', padding: '13px 17px', borderRadius: '17px 17px 4px 17px', background: `linear-gradient(135deg, ${accent}30, ${accent}18)`, border: `1px solid ${accent}35`, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word', backdropFilter: 'blur(10px)' }}>
         {msg.content}
       </div>
     </div>
@@ -289,7 +289,7 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
           <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${bColor}, ${bColor}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 14px ${bColor}55` }}>
             <BubbleIcon size={13} color="#fff" strokeWidth={2.2} fill={bubbleCoach.id === 'motivateur' ? '#fff' : 'none'} />
           </div>
-          <span style={{ fontSize: 11.5, fontWeight: 700, color: T.text, letterSpacing: '-0.2px', fontFamily: "'Clash Display', sans-serif" }}>{bubbleCoach.nom}</span>
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.2px', fontFamily: "'Clash Display', sans-serif" }}>{bubbleCoach.nom}</span>
           <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: `${bColor}18`, color: bColor, letterSpacing: 0.4, textTransform: 'uppercase' }}>Coach</span>
           {meta && (
             <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
@@ -315,7 +315,7 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
         </div>
 
         {/* Bulle */}
-        <div style={{ padding: '18px 20px', borderRadius: '4px 18px 18px 18px', background: T.bg2, backdropFilter: 'blur(30px)', border: `1px solid ${T.border}` }}>
+        <div style={{ padding: '18px 20px', borderRadius: '4px 18px 18px 18px', background: 'var(--surface-1)', backdropFilter: 'blur(30px)', border: '1px solid var(--border-subtle)' }}>
           {msg.abrev_expandees && msg.message_expande && (
             <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: `${accent}10`, border: `1px solid ${accent}20`, borderRadius: 8, fontSize: 10, color: accent }}>
               <Zap size={9} />
@@ -354,7 +354,7 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
             : msg.action && <CarteAction action={msg.action} T={T} />}
           {msg.search_results && <SourcesWeb results={msg.search_results} T={T} />}
           {msg.role === 'ia' && !msg.streaming && msg.content && (
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
               {[
                 { label: copie === idx ? 'Copié !' : 'Copier', Icon: Copy,         action: () => onCopy(msg.content, idx),                         color: copie === idx ? accent : null },
                 { label: 'Créer tâche',                         Icon: Plus,         action: () => onCreerTache(msg.content.substring(0, 80)),       color: null },
@@ -362,16 +362,16 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
                 { label: 'Rechercher',                          Icon: Search,       action: () => { onForceSearch(); onEnvoyer(msg.content.substring(0, 60)) }, color: '#0ea5e9' },
               ].map(({ label, Icon, action, color }) => (
                 <motion.button key={label}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: color ? `${color}12` : 'transparent', border: `1px solid ${color ? color + "30" : T.border}`, borderRadius: 99, color: color || T.text2, fontSize: 11, cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: color ? `${color}12` : 'transparent', border: `1px solid ${color ? color + "30" : 'var(--border-subtle)'}`, borderRadius: 99, color: color || 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
                   onClick={action}
-                  whileHover={{ color: color || T.text, borderColor: color ? `${color}60` : T.border }}>
+                  whileHover={{ color: color || 'var(--text-primary)', borderColor: color ? `${color}60` : 'var(--border-subtle)' }}>
                   <Icon size={10} />{label}
                 </motion.button>
               ))}
               <motion.button
                 onClick={() => onPin(msg)}
                 title={isPinned ? 'Retirer des Insights' : 'Épingler dans Insights'}
-                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: isPinned ? `${accent}18` : 'transparent', border: `1px solid ${isPinned ? accent + '40' : T.border}`, borderRadius: 99, color: isPinned ? accent : T.text2, fontSize: 11, cursor: 'pointer' }}
+                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: isPinned ? `${accent}18` : 'transparent', border: `1px solid ${isPinned ? accent + '40' : 'var(--border-subtle)'}`, borderRadius: 99, color: isPinned ? accent : 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
                 whileHover={{ color: accent, borderColor: `${accent}50` }}>
                 <Bookmark size={10} fill={isPinned ? accent : 'none'} />
                 {isPinned ? 'Épinglé' : 'Insights'}
@@ -396,8 +396,8 @@ function detectWebSearch(text) {
 export default function IAChat() {
   const user    = useMemo(() => { try { return JSON.parse(localStorage.getItem('user')) } catch { return null } }, [])
   const { T }   = useTheme()
-  const accent  = T.accent  || '#6c63ff'
-  const accent2 = T.accent2 || '#a855f7'
+  const accent  = 'var(--ember)'  || '#6c63ff'
+  const accent2 = 'var(--ember-hover)' || '#a855f7'
 
   const [prompt,            setPrompt]            = useState('')
   const modele = 'llama-3.3-70b-versatile'
@@ -791,7 +791,7 @@ export default function IAChat() {
   // RENDER
   // ══════════════════════════════════════════════════════════════════
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)", position: 'relative', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", position: 'relative', overflow: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
@@ -821,7 +821,7 @@ export default function IAChat() {
         {/* IAChat-specific: SOUVENIRS button */}
         {memoryCount > 0 && (
           <>
-            <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
+            <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
             <motion.button
               onClick={ouvrirMemoryDrawer}
               whileHover={{ background: `${accent}22` }}
@@ -834,14 +834,14 @@ export default function IAChat() {
           </>
         )}
 
-        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
+        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
 
         {/* Insights — messages épinglés */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
           <Bookmark size={9} />INSIGHTS {pinnedMessages.length > 0 && <span style={{ background: `${accent}20`, color: accent, borderRadius: 99, padding: '1px 6px', fontSize: 8 }}>{pinnedMessages.length}</span>}
         </div>
         {pinnedMessages.length === 0 ? (
-          <div style={{ padding: '7px 10px', fontSize: 11, color: T.text2, fontStyle: 'italic', opacity: 0.6 }}>
+          <div style={{ padding: '7px 10px', fontSize: 11, color: 'var(--text-secondary)', fontStyle: 'italic', opacity: 0.6 }}>
             Épingle un message IA pour le retrouver ici.
           </div>
         ) : (
@@ -850,14 +850,14 @@ export default function IAChat() {
               <motion.div key={i}
                 style={{ padding: '7px 10px', borderRadius: 8, background: `${accent}08`, border: `1px solid ${accent}18`, marginBottom: 4, cursor: 'default' }}
                 whileHover={{ background: `${accent}12` }}>
-                <div style={{ fontSize: 10, color: T.text, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-primary)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
                   {p.content}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 5 }}>
-                  <span style={{ fontSize: 9, color: T.text2 }}>{new Date(p.timestamp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-secondary)' }}>{new Date(p.timestamp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
                   <motion.button
                     onClick={() => togglePin(p)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, display: 'flex', padding: 0 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', padding: 0 }}
                     whileHover={{ color: '#ef4444' }}>
                     <X size={10} />
                   </motion.button>
@@ -867,24 +867,24 @@ export default function IAChat() {
           </div>
         )}
 
-        <div style={{ height: 1, background: T.bg3, margin: '4px 0 16px' }} />
+        <div style={{ height: 1, background: 'var(--surface-2)', margin: '4px 0 16px' }} />
 
         {/* Tâches à lier */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>LIER UNE TÂCHE</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>LIER UNE TÂCHE</div>
         <div style={{ maxHeight: 130, overflowY: 'auto', marginBottom: 6 }}>
           {[{ id: null, titre: 'Aucune', priorite: '' }, ...tachesEnCours.slice(0, 8)].map(t => (
             <motion.button key={t.id || 'none'}
-              style={{ width: '100%', padding: '6px 10px', borderRadius: 8, background: tacheSelectionnee === t.id ? `${accent}18` : 'transparent', border: `1px solid ${tacheSelectionnee === t.id ? accent + '40' : 'transparent'}`, color: tacheSelectionnee === t.id ? T.text : T.text2, cursor: 'pointer', fontSize: 11, textAlign: 'left', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              style={{ width: '100%', padding: '6px 10px', borderRadius: 8, background: tacheSelectionnee === t.id ? `${accent}18` : 'transparent', border: `1px solid ${tacheSelectionnee === t.id ? accent + '40' : 'transparent'}`, color: tacheSelectionnee === t.id ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, textAlign: 'left', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               onClick={() => setTacheSelectionnee(t.id)}
-              whileHover={{ color: T.text }}>
+              whileHover={{ color: 'var(--text-primary)' }}>
               {tacheSelectionnee === t.id ? '● ' : '○ '}{t.titre}
             </motion.button>
           ))}
         </div>
 
         <div style={{ marginTop: 12 }}>
-          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 12, marginBottom: 2 }}
-            onClick={() => setShowHistorique(!showHistorique)} whileHover={{ color: T.text }}>
+          <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, marginBottom: 2 }}
+            onClick={() => setShowHistorique(!showHistorique)} whileHover={{ color: 'var(--text-primary)' }}>
             <History size={13} strokeWidth={1.8} />Historique ({historique.length})
           </motion.button>
         </div>
@@ -913,7 +913,7 @@ export default function IAChat() {
         )}
 
         {/* Header */}
-        <div style={{ padding: '12px clamp(16px,4vw,28px)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: T.bg2, backdropFilter: 'blur(30px)' }}>
+        <div style={{ padding: '12px clamp(16px,4vw,28px)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: 'var(--surface-1)', backdropFilter: 'blur(30px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: `${coach.color}14`, border: `1px solid ${coach.color}40`, borderRadius: 99 }}>
               <motion.div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} />
@@ -933,7 +933,7 @@ export default function IAChat() {
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', background: `${accent}12`, border: `1px solid ${accent}28`, borderRadius: 99 }}>
                 <Link size={10} color={accent} />
                 <span style={{ fontSize: 11, color: accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{taches.find(t => t.id === tacheSelectionnee)?.titre}</span>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, padding: 0, display: 'flex' }} onClick={() => setTacheSelectionnee(null)}><X size={10} /></button>
+                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 0, display: 'flex' }} onClick={() => setTacheSelectionnee(null)}><X size={10} /></button>
               </motion.div>
             )}
           </div>
@@ -946,7 +946,7 @@ export default function IAChat() {
               </motion.button>
             )}
             {messages.length > 0 && (
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, cursor: 'pointer', fontSize: 11 }}
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11 }}
                 onClick={effacer} whileHover={{ borderColor: '#ef4444', color: '#ef4444' }}>
                 <Trash2 size={11} />{!isMobile && 'Effacer'}
               </motion.button>
@@ -958,17 +958,17 @@ export default function IAChat() {
         <AnimatePresence>
           {showHistorique && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-              style={{ background: T.bg2, borderBottom: `1px solid ${T.border}`, padding: '14px clamp(16px,4vw,28px)', maxHeight: 200, overflowY: 'auto', flexShrink: 0, backdropFilter: 'blur(30px)' }}>
+              style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--border-subtle)', padding: '14px clamp(16px,4vw,28px)', maxHeight: 200, overflowY: 'auto', flexShrink: 0, backdropFilter: 'blur(30px)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>Historique</span>
-                <button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer' }} onClick={() => setShowHistorique(false)}><X size={13} /></button>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Historique</span>
+                <button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setShowHistorique(false)}><X size={13} /></button>
               </div>
               {historique.slice(0, 20).map(h => (
                 <motion.div key={h.id} className="glass" style={{ borderRadius: 9, padding: '8px 12px', marginBottom: 5, cursor: 'pointer' }}
                   whileHover={{ borderColor: `${accent}50` }}
                   onClick={() => { setPrompt(h.prompt); setShowHistorique(false) }}>
-                  <div style={{ fontSize: 10, color: T.text2, marginBottom: 2 }}>{new Date(h.created_at).toLocaleDateString('fr-FR')}</div>
-                  <div style={{ fontSize: 12, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.prompt?.substring(0, 80)}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>{new Date(h.created_at).toLocaleDateString('fr-FR')}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.prompt?.substring(0, 80)}</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -993,13 +993,13 @@ export default function IAChat() {
               </motion.div>
 
               {/* Salutation personnalisée par le coach */}
-              <h1 style={{ fontSize: 'clamp(22px,5vw,32px)', fontWeight: 800, color: T.text, letterSpacing: '-0.8px', marginBottom: 6, fontFamily: "'Clash Display', sans-serif", lineHeight: 1.2 }}>
+              <h1 style={{ fontSize: 'clamp(22px,5vw,32px)', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.8px', marginBottom: 6, fontFamily: "'Clash Display', sans-serif", lineHeight: 1.2 }}>
                 {coach.nom} — coach <span style={{ color: coach.color }}>{coach.tag.toLowerCase()}</span>
               </h1>
-              <p style={{ fontSize: 13, color: T.text2, marginBottom: 18, maxWidth: 440, lineHeight: 1.6, fontStyle: 'italic' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 18, maxWidth: 440, lineHeight: 1.6, fontStyle: 'italic' }}>
                 « {coach.accroche} »
               </p>
-              <p style={{ fontSize: 14, color: T.text, marginBottom: 14, maxWidth: 480, lineHeight: 1.65 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 14, maxWidth: 480, lineHeight: 1.65 }}>
                 Salut <strong>{user?.nom?.split(' ')[0]}</strong>. Je connais tes tâches, ton focus du jour, ton streak et tes patterns. On commence par quoi ?
               </p>
 
@@ -1013,9 +1013,9 @@ export default function IAChat() {
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '5px 11px',
                       background: c.id === coach.id ? `${c.color}18` : 'transparent',
-                      border: `1px solid ${c.id === coach.id ? c.color : T.border}`,
+                      border: `1px solid ${c.id === coach.id ? c.color : 'var(--border-subtle)'}`,
                       borderRadius: 99,
-                      color: c.id === coach.id ? c.color : T.text2,
+                      color: c.id === coach.id ? c.color : 'var(--text-secondary)',
                       fontSize: 11, fontWeight: c.id === coach.id ? 700 : 500,
                       cursor: 'pointer',
                     }}>
@@ -1050,14 +1050,14 @@ export default function IAChat() {
                   const Icon = typeof s.icon === 'string' ? (iconMap[s.icon] || Sparkles) : (s.icon || Sparkles)
                   return (
                     <motion.button key={i} className="glass"
-                      style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '15px 18px', borderRadius: 14, cursor: 'pointer', textAlign: 'left', background: T.bg2, border: `1px solid ${T.border}` }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '15px 18px', borderRadius: 14, cursor: 'pointer', textAlign: 'left', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}
                       onClick={() => envoyer(s.text)}
                       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.08 }}
                       whileHover={{ scale: 1.02, borderColor: `${s.color || coach.color}55` }} whileTap={{ scale: 0.98 }}>
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: s.grad || `linear-gradient(135deg, ${coach.color}, ${coach.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Icon size={16} color="#fff" strokeWidth={2} />
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: T.text, lineHeight: 1.45 }}>{s.text}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.45 }}>{s.text}</span>
                     </motion.button>
                   )
                 })}
@@ -1069,10 +1069,10 @@ export default function IAChat() {
                   {tachesEnCours.slice(0, 3).map(t => (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: t.priorite === 'haute' ? '#ef4444' : t.priorite === 'moyenne' ? '#f59e0b' : '#10b981', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
                     </div>
                   ))}
-                  {tachesEnCours.length > 3 && <div style={{ fontSize: 11, color: T.text2, marginTop: 4 }}>+{tachesEnCours.length - 3} autres</div>}
+                  {tachesEnCours.length > 3 && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>+{tachesEnCours.length - 3} autres</div>}
                 </motion.div>
               )}
             </motion.div>
@@ -1111,7 +1111,7 @@ export default function IAChat() {
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${coach.color}, ${coach.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 14px ${coach.color}55` }}>
                     <coach.Icon size={13} color="#fff" strokeWidth={2.2} fill={coach.id === 'motivateur' ? '#fff' : 'none'} />
                   </div>
-                  <div style={{ padding: '12px 18px', borderRadius: '4px 16px 16px 16px', background: T.bg2, border: `1px solid ${T.border}` }}>
+                  <div style={{ padding: '12px 18px', borderRadius: '4px 16px 16px 16px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                       {[0, 1, 2].map(i => (
                         <motion.div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: coach.color }}
@@ -1127,7 +1127,7 @@ export default function IAChat() {
         </div>
 
         {/* ── INPUT ─────────────────────────────────────────────────── */}
-        <div style={{ padding: '12px clamp(16px,4vw,28px) clamp(16px,4vw,22px)', borderTop: `1px solid ${T.border}`, background: T.bg2, backdropFilter: 'blur(30px)', flexShrink: 0 }}>
+        <div style={{ padding: '12px clamp(16px,4vw,28px) clamp(16px,4vw,22px)', borderTop: '1px solid var(--border-subtle)', background: 'var(--surface-1)', backdropFilter: 'blur(30px)', flexShrink: 0 }}>
           <AnimatePresence>
             {forceSearch && (
               <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -1149,7 +1149,7 @@ export default function IAChat() {
             </motion.div>
           )}
           {uploading && (
-            <div style={{ marginBottom: 9, padding: '8px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12, color: T.text2, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ marginBottom: 9, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}>
                 <Sparkles size={12} color={accent} />
               </motion.div>
@@ -1169,9 +1169,9 @@ export default function IAChat() {
               title="Joindre un fichier (PDF, Word, Excel, CSV, image, txt)"
               style={{
                 width: 50, height: 50,
-                background: attachment ? `${accent}18` : T.bg3,
-                border: `1px solid ${attachment ? accent : T.border}`,
-                color: attachment ? accent : T.text2,
+                background: attachment ? `${accent}18` : 'var(--surface-2)',
+                border: `1px solid ${attachment ? accent : 'var(--border-subtle)'}`,
+                color: attachment ? accent : 'var(--text-secondary)',
                 borderRadius: 14, cursor: uploading ? 'wait' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               }}>
@@ -1189,17 +1189,17 @@ export default function IAChat() {
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     style={{
                       position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, right: 0,
-                      background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12,
+                      background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12,
                       boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 6, zIndex: 50,
                       maxHeight: 320, overflowY: 'auto',
                     }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: T.text2, padding: '6px 10px 4px', letterSpacing: '1.5px' }}>COMMANDES RAPIDES</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', padding: '6px 10px 4px', letterSpacing: '1.5px' }}>COMMANDES RAPIDES</div>
                     {filtered.map((c, idx) => {
                       const active = idx === slashIndex
                       return (
                         <motion.button key={c.cmd}
                           onClick={() => applySlash(c)}
-                          whileHover={{ background: T.bg3 }}
+                          whileHover={{ background: 'var(--surface-2)' }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 10, width: '100%',
                             padding: '8px 10px', borderRadius: 9,
@@ -1211,13 +1211,13 @@ export default function IAChat() {
                             <c.Icon size={13} color={c.color} strokeWidth={2.2} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{c.cmd}</div>
-                            <div style={{ fontSize: 11, color: T.text2, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.desc}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{c.cmd}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.desc}</div>
                           </div>
                         </motion.button>
                       )
                     })}
-                    <div style={{ fontSize: 9.5, color: T.text2, padding: '6px 10px 2px', borderTop: `1px solid ${T.border}`, marginTop: 4, opacity: 0.7 }}>
+                    <div style={{ fontSize: 9.5, color: 'var(--text-secondary)', padding: '6px 10px 2px', borderTop: '1px solid var(--border-subtle)', marginTop: 4, opacity: 0.7 }}>
                       ↑↓ pour naviguer · Entrée ou Tab pour valider · Esc pour fermer
                     </div>
                   </motion.div>
@@ -1226,7 +1226,7 @@ export default function IAChat() {
 
               <textarea
                 ref={textareaRef}
-                style={{ width: '100%', padding: '13px 16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, color: T.text, fontSize: 14, outline: 'none', resize: 'none', minHeight: 50, maxHeight: 160, fontFamily: "var(--font-ui)", lineHeight: 1.55, backdropFilter: 'blur(20px)', transition: 'border-color 0.2s', caretColor: accent }}
+                style={{ width: '100%', padding: '13px 16px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 14, color: 'var(--text-primary)', fontSize: 14, outline: 'none', resize: 'none', minHeight: 50, maxHeight: 160, fontFamily: "var(--font-ui)", lineHeight: 1.55, backdropFilter: 'blur(20px)', transition: 'border-color 0.2s', caretColor: accent }}
                 placeholder={
                   forceSearch       ? 'Que veux-tu rechercher sur le web ?' :
                   tacheSelectionnee ? `Question sur "${taches.find(t => t.id === tacheSelectionnee)?.titre}" ?` :
@@ -1261,7 +1261,7 @@ export default function IAChat() {
                   if (file) { e.preventDefault(); handleFileUpload(file) }
                 }}
                 onFocus={e => e.target.style.borderColor = `${accent}60`}
-                onBlur={e => e.target.style.borderColor = T.border}
+                onBlur={e => e.target.style.borderColor = 'var(--border-subtle)'}
                 rows={1}
               />
             </div>
@@ -1276,7 +1276,7 @@ export default function IAChat() {
               }
             </motion.button>
           </div>
-          <p style={{ fontSize: 10, color: T.text2, marginTop: 8, letterSpacing: '0.3px' }}>
+          <p style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 8, letterSpacing: '0.3px' }}>
             Entrée pour envoyer · Shift+Entrée nouvelle ligne · Ctrl+V ou glisser un fichier pour l'analyser
           </p>
         </div>
@@ -1294,24 +1294,24 @@ export default function IAChat() {
               style={{
                 position: 'fixed', top: 0, right: 0, bottom: 0,
                 width: 'min(420px, 95vw)',
-                background: T.bg2,
-                borderLeft: `1px solid ${T.border}`,
+                background: 'var(--surface-1)',
+                borderLeft: '1px solid var(--border-subtle)',
                 zIndex: 1091, display: 'flex', flexDirection: 'column',
                 boxShadow: '-12px 0 40px rgba(0,0,0,0.3)',
               }}>
               {/* Header drawer */}
-              <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Database size={16} color={accent} strokeWidth={2.2} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: T.text, letterSpacing: '-0.2px' }}>Mémoire de l'IA</div>
-                    <div style={{ fontSize: 11, color: T.text2 }}>Ce que {coach.nom} sait de toi · {memoryItems.length} souvenirs</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>Mémoire de l'IA</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Ce que {coach.nom} sait de toi · {memoryItems.length} souvenirs</div>
                   </div>
                 </div>
                 <motion.button onClick={() => setShowMemoryDrawer(false)} whileTap={{ scale: 0.9 }}
-                  style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <X size={14} />
                 </motion.button>
               </div>
@@ -1319,14 +1319,14 @@ export default function IAChat() {
               {/* Body */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 20px' }}>
                 {memoryLoading && (
-                  <div style={{ textAlign: 'center', padding: 30, color: T.text2, fontSize: 12 }}>
+                  <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)', fontSize: 12 }}>
                     Chargement de tes souvenirs…
                   </div>
                 )}
                 {!memoryLoading && memoryItems.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: 40, color: T.text2 }}>
-                    <Brain size={36} color={T.border} strokeWidth={1.4} style={{ marginBottom: 14 }} />
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>Aucun souvenir pour l'instant</div>
+                  <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
+                    <Brain size={36} color="var(--border-subtle)" strokeWidth={1.4} style={{ marginBottom: 14 }} />
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun souvenir pour l'instant</div>
                     <div style={{ fontSize: 12, lineHeight: 1.6 }}>Au fil de tes conversations, {coach.nom} retient ce qui te concerne (préférences, projets, contraintes…).</div>
                   </div>
                 )}
@@ -1345,18 +1345,18 @@ export default function IAChat() {
                       {items.map(m => (
                         <motion.div key={m.id}
                           initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }}
-                          style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, padding: '10px 12px', marginBottom: 6, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                          style={{ background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 11, padding: '10px 12px', marginBottom: 6, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {m.cle && <div style={{ fontSize: 11, fontWeight: 700, color: T.text, marginBottom: 3 }}>{m.cle}</div>}
-                            <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.5 }}>{m.valeur}</div>
-                            <div style={{ fontSize: 9.5, color: T.text2, marginTop: 5, opacity: 0.6, display: 'flex', gap: 8 }}>
+                            {m.cle && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 3 }}>{m.cle}</div>}
+                            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{m.valeur}</div>
+                            <div style={{ fontSize: 9.5, color: 'var(--text-secondary)', marginTop: 5, opacity: 0.6, display: 'flex', gap: 8 }}>
                               <span>poids {m.poids}</span>
                               {m.created_at && <span>· {new Date(m.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
                             </div>
                           </div>
                           <motion.button onClick={() => oublierUnSouvenir(m.id)}
                             whileTap={{ scale: 0.88 }} title="Oublier ce souvenir"
-                            style={{ width: 26, height: 26, borderRadius: 7, background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            style={{ width: 26, height: 26, borderRadius: 7, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Trash2 size={13} />
                           </motion.button>
                         </motion.div>
@@ -1368,7 +1368,7 @@ export default function IAChat() {
 
               {/* Footer */}
               {memoryItems.length > 0 && (
-                <div style={{ padding: '12px 20px', borderTop: `1px solid ${T.border}` }}>
+                <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-subtle)' }}>
                   <motion.button onClick={oublierToutSouvenirs} whileTap={{ scale: 0.97 }}
                     style={{ width: '100%', padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <Trash2 size={13} /> Tout oublier
@@ -1392,14 +1392,14 @@ export default function IAChat() {
               style={{
                 position: 'fixed', left: 0, right: 0, bottom: 0,
                 maxHeight: '70dvh',
-                background: T.bg2,
-                borderTop: `1px solid ${T.border}`,
+                background: 'var(--surface-1)',
+                borderTop: '1px solid var(--border-subtle)',
                 borderRadius: '20px 20px 0 0',
                 zIndex: 1091, display: 'flex', flexDirection: 'column',
                 paddingBottom: 'env(safe-area-inset-bottom)',
               }}>
               <div style={{ padding: '8px 0 0', display: 'flex', justifyContent: 'center' }}>
-                <div style={{ width: 40, height: 4, borderRadius: 99, background: T.border }} />
+                <div style={{ width: 40, height: 4, borderRadius: 99, background: 'var(--border-subtle)' }} />
               </div>
               <div style={{ padding: '12px 18px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -1407,18 +1407,18 @@ export default function IAChat() {
                     <Layers size={15} color={accent} strokeWidth={2.2} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>Tes tâches actives</div>
-                    <div style={{ fontSize: 11, color: T.text2 }}>Tap → lier à la conversation</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>Tes tâches actives</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Tap → lier à la conversation</div>
                   </div>
                 </div>
                 <motion.button onClick={() => setShowTasksPanelMobile(false)} whileTap={{ scale: 0.9 }}
-                  style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <X size={14} />
                 </motion.button>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 14px' }}>
                 {tachesEnCours.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 30, color: T.text2, fontSize: 12 }}>Aucune tâche active</div>
+                  <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)', fontSize: 12 }}>Aucune tâche active</div>
                 ) : (
                   tachesEnCours.slice(0, 30).map(t => {
                     const pColor = t.priorite === 'haute' ? '#e05c5c' : t.priorite === 'moyenne' ? '#e08a3c' : '#4caf82'
@@ -1429,13 +1429,13 @@ export default function IAChat() {
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10, width: '100%',
                           padding: '10px 12px', marginBottom: 6,
-                          background: tacheSelectionnee === t.id ? `${accent}15` : T.bg3,
-                          border: `1px solid ${tacheSelectionnee === t.id ? accent : T.border}`,
+                          background: tacheSelectionnee === t.id ? `${accent}15` : 'var(--surface-2)',
+                          border: `1px solid ${tacheSelectionnee === t.id ? accent : 'var(--border-subtle)'}`,
                           borderRadius: 11, cursor: 'pointer', textAlign: 'left',
                         }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
-                        {t.deadline && <span style={{ fontSize: 10, color: T.text2 }}>{new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
+                        {t.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
                       </motion.button>
                     )
                   })

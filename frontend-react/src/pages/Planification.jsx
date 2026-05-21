@@ -603,12 +603,12 @@ export default function Planification() {
   const isCalView = vue === 'jour' || vue === 'calendrier'
 
   return (
-    <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
+    <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 99px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
           main { margin-left: 0 !important; padding: 0 !important; }
@@ -625,31 +625,31 @@ export default function Planification() {
         sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
         toggleSidebar={toggleSidebar} isMobile={isMobile}>
 
-        <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
+        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
 
         {/* IA Planner (contenu original de la sidebar de planification) */}
-        <div style={{ background: `linear-gradient(135deg, ${T.accent}12, ${T.accent2 || '#a855f7'}08)`, border: `1px solid ${T.accent}20`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
+        <div style={{ background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover))`, border: `1px solid var(--ember-soft)`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <Brain size={13} color={T.accent} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: 0.3 }}>PLANIFICATION IA</span>
+            <Brain size={13} color="var(--ember)" />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.3 }}>PLANIFICATION IA</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 11, color: T.text2 }}>Heures / jour</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: T.bg2, borderRadius: 8, padding: '4px 8px', border: `1px solid ${T.border}` }}>
-              <motion.button style={{ background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0 }} onClick={() => setHeuresDispo(h => Math.max(1, h - 1))} whileTap={{ scale: 0.8 }}>−</motion.button>
-              <span style={{ fontSize: 14, fontWeight: 800, color: T.accent, minWidth: 18, textAlign: 'center' }}>{heuresDispo}</span>
-              <motion.button style={{ background: 'transparent', border: 'none', color: T.text2, cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0 }} onClick={() => setHeuresDispo(h => Math.min(16, h + 1))} whileTap={{ scale: 0.8 }}>+</motion.button>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Heures / jour</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-1)', borderRadius: 8, padding: '4px 8px', border: '1px solid var(--border-subtle)' }}>
+              <motion.button style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0 }} onClick={() => setHeuresDispo(h => Math.max(1, h - 1))} whileTap={{ scale: 0.8 }}>−</motion.button>
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--ember)', minWidth: 18, textAlign: 'center' }}>{heuresDispo}</span>
+              <motion.button style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0 }} onClick={() => setHeuresDispo(h => Math.min(16, h + 1))} whileTap={{ scale: 0.8 }}>+</motion.button>
             </div>
           </div>
 
           {smartResult && smartResult.length > 0 && (
-            <div style={{ marginBottom: 10, padding: '8px 10px', background: `${T.accent}08`, border: `1px solid ${T.accent}20`, borderRadius: 8, fontSize: 11, color: T.text2 }}>
-              <span style={{ color: T.accent, fontWeight: 700 }}>{smartResult.length}</span> proposition{smartResult.length > 1 ? 's' : ''} en attente
+            <div style={{ marginBottom: 10, padding: '8px 10px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
+              <span style={{ color: 'var(--ember)', fontWeight: 700 }}>{smartResult.length}</span> proposition{smartResult.length > 1 ? 's' : ''} en attente
             </div>
           )}
 
           <motion.button
-            style={{ width: '100%', padding: '9px', background: loadingIA ? T.bg3 : T.accent, color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, cursor: loadingIA ? 'not-allowed' : 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: !loadingIA ? `0 4px 14px ${T.accent}40` : 'none', transition: 'all 0.2s' }}
+            style={{ width: '100%', padding: '9px', background: loadingIA ? 'var(--surface-2)' : 'var(--ember)', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, cursor: loadingIA ? 'not-allowed' : 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: !loadingIA ? `0 4px 14px var(--ember-soft)` : 'none', transition: 'all 0.2s' }}
             onClick={planifierAvecIA}
             whileHover={!loadingIA ? { scale: 1.02, y: -1 } : {}}
             whileTap={{ scale: 0.98 }}>
@@ -661,7 +661,7 @@ export default function Planification() {
             <motion.button
               style={{
                 width: '100%', padding: '9px', marginTop: 8,
-                background: autoplanLoading ? T.bg3 : 'linear-gradient(90deg, #1A73E8, #4285F4)',
+                background: autoplanLoading ? 'var(--surface-2)' : 'linear-gradient(90deg, #1A73E8, #4285F4)',
                 color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700,
                 cursor: autoplanLoading ? 'not-allowed' : 'pointer', fontSize: 12,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -680,21 +680,21 @@ export default function Planification() {
         {/* Conseil */}
         {conseil && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-            style={{ padding: '10px 12px', background: T.bg3 || T.bg, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 11, color: T.text2, marginBottom: 12, lineHeight: 1.65 }}>
-            <span style={{ color: T.accent, fontWeight: 600 }}>Conseil IA</span><br />{conseil}
+            style={{ padding: '10px 12px', background: 'var(--surface-2)' || 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 10, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.65 }}>
+            <span style={{ color: 'var(--ember)', fontWeight: 600 }}>Conseil IA</span><br />{conseil}
           </motion.div>
         )}
 
         {/* Top priorités */}
         {priorites.length > 0 && (
           <>
-            <div style={{ height: 1, background: T.border, margin: '4px 0 14px' }} />
-            <p style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 2, marginBottom: 8, padding: '0 6px', opacity: 0.6 }}>TOP PRIORITÉS</p>
+            <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0 14px' }} />
+            <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 2, marginBottom: 8, padding: '0 6px', opacity: 0.6 }}>TOP PRIORITÉS</p>
             {priorites.map((t, i) => (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 8px', borderRadius: 8, marginBottom: 3 }}>
-                <div style={{ width: 18, height: 18, borderRadius: 5, background: i < 2 ? pColor(t.priorite) : `${T.accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: i < 2 ? '#fff' : T.accent, flexShrink: 0 }}>{i + 1}</div>
-                <span style={{ fontSize: 11, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, lineHeight: 1.4 }}>{t.titre}</span>
-                {t._score && <span style={{ fontSize: 9, color: T.accent, opacity: 0.5 }}>#{Math.round(t._score)}</span>}
+                <div style={{ width: 18, height: 18, borderRadius: 5, background: i < 2 ? pColor(t.priorite) : 'var(--ember-ring)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: i < 2 ? '#fff' : 'var(--ember)', flexShrink: 0 }}>{i + 1}</div>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, lineHeight: 1.4 }}>{t.titre}</span>
+                {t._score && <span style={{ fontSize: 9, color: 'var(--ember)', opacity: 0.5 }}>#{Math.round(t._score)}</span>}
                 <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(t.priorite), flexShrink: 0 }} />
               </div>
             ))}
@@ -725,10 +725,10 @@ export default function Planification() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: 12, marginBottom: 14, flexDirection: isMobile ? 'column' : 'row' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
-                  <div style={{ width: 8, height: 28, borderRadius: 99, background: `linear-gradient(180deg, ${T.accent}, ${T.accent2 || T.accent})`, flexShrink: 0 }} />
-                  <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 900, letterSpacing: '-0.7px', margin: 0, background: `linear-gradient(135deg, ${T.text}, ${T.text2})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Planification</h1>
+                  <div style={{ width: 8, height: 28, borderRadius: 99, background: `linear-gradient(180deg, var(--ember), var(--ember-hover))`, flexShrink: 0 }} />
+                  <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 900, letterSpacing: '-0.7px', margin: 0, background: `linear-gradient(135deg, var(--text-primary), var(--text-secondary))`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Planification</h1>
                 </div>
-                <p style={{ color: T.text2, fontSize: 12, textTransform: 'capitalize', paddingLeft: 18, margin: 0 }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 12, textTransform: 'capitalize', paddingLeft: 18, margin: 0 }}>
                   {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </p>
               </div>
@@ -745,8 +745,8 @@ export default function Planification() {
           {/* View switcher — scrollable, always labeled */}
           <div style={{
             display: 'flex',
-            background: T.bg2,
-            border: `1px solid ${T.border}`,
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 12,
             padding: 4,
             gap: 3,
@@ -769,14 +769,14 @@ export default function Planification() {
                   padding: isMobile ? '7px 9px' : '8px 14px',
                   borderRadius: 8,
                   background: vue === id
-                    ? `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`
+                    ? 'linear-gradient(135deg, var(--ember), var(--ember-hover))'
                     : 'transparent',
-                  color: vue === id ? '#fff' : T.text2,
+                  color: vue === id ? '#fff' : 'var(--text-secondary)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: 12,
                   fontWeight: vue === id ? 700 : 500,
-                  boxShadow: vue === id ? `0 4px 12px ${T.accent}40` : 'none',
+                  boxShadow: vue === id ? `0 4px 12px var(--ember-soft)` : 'none',
                   transition: 'all 0.18s',
                   flexShrink: 0,
                   whiteSpace: 'nowrap',
@@ -819,8 +819,8 @@ export default function Planification() {
             return (
               <motion.div key={i}
                 style={{
-                  background: T.bg2,
-                  border: `1px solid ${T.border}`,
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border-subtle)',
                   borderRadius: isMobile ? 12 : 14,
                   padding: isMobile ? '10px 8px' : '14px 16px',
                   display: 'flex',
@@ -858,8 +858,8 @@ export default function Planification() {
                 )}
                 {isMobile && <Icon size={14} color={s.color} strokeWidth={2} />}
                 <div>
-                  <div style={{ fontSize: isMobile ? 20 : 26, fontWeight: 900, color: T.text, letterSpacing: '-0.6px', lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: isMobile ? 9 : 11, color: T.text2, marginTop: 2, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
+                  <div style={{ fontSize: isMobile ? 20 : 26, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.6px', lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: isMobile ? 9 : 11, color: 'var(--text-secondary)', marginTop: 2, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
                 </div>
               </motion.div>
             )
@@ -884,14 +884,14 @@ export default function Planification() {
         {/* ─── Bloc "Aujourd'hui" — masqué en vue calendrier (visible sur la grille) ─── */}
         {!isCalView && aujourdHui.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            style={{ background: `linear-gradient(135deg, ${T.accent}10, ${T.accent2 || '#a855f7'}08)`, border: `1px solid ${T.accent}25`, borderRadius: 14, padding: isMobile ? 14 : '16px 20px', marginBottom: 20 }}>
+            style={{ background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover))`, border: `1px solid var(--ember-soft)`, borderRadius: 14, padding: isMobile ? 14 : '16px 20px', marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Flame size={15} color={T.accent} strokeWidth={2.2} />
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Flame size={15} color="var(--ember)" strokeWidth={2.2} />
               </div>
               <div style={{ flex: 1 }}>
-                <h2 style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.2px' }}>Aujourd'hui</h2>
-                <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 1 }}>{aujourdHui.length} créneau{aujourdHui.length > 1 ? 'x' : ''} planifié{aujourdHui.length > 1 ? 's' : ''}</p>
+                <h2 style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.2px' }}>Aujourd'hui</h2>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 1 }}>{aujourdHui.length} créneau{aujourdHui.length > 1 ? 'x' : ''} planifié{aujourdHui.length > 1 ? 's' : ''}</p>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -900,30 +900,30 @@ export default function Planification() {
                 return (
                   <motion.div key={entry.id}
                     initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: T.bg2, borderRadius: 10, border: `1px solid ${enCours ? '#f59e0b40' : T.border}` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, fontFamily: 'var(--font-mono)', minWidth: 76, opacity: 0.9 }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: 'var(--surface-1)', borderRadius: 10, border: `1px solid ${enCours ? '#f59e0b40' : 'var(--border-subtle)'}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', minWidth: 76, opacity: 0.9 }}>
                       {entry.heure_debut?.slice(0,5) || minsToTime(entry.startMins).slice(0,5)} → {entry.heure_fin?.slice(0,5) || minsToTime(entry.endMins).slice(0,5)}
                     </div>
                     <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(entry.tache.priorite), flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 12.5, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.tache.titre}</span>
+                    <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.tache.titre}</span>
                     {enCours && <span style={{ fontSize: 9, color: '#f59e0b', background: '#f59e0b18', padding: '2px 7px', borderRadius: 99, fontWeight: 700, letterSpacing: 0.5 }}>EN COURS</span>}
                     {!enCours && (
                       <motion.button onClick={() => demarrerTache(entry.tache.id)} whileTap={{ scale: 0.92 }}
                         title="Commencer"
-                        style={{ width: 26, height: 26, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: T.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--ember)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Zap size={12} />
                       </motion.button>
                     )}
                     <motion.button onClick={() => terminerTache(entry.tache.id)} whileTap={{ scale: 0.92 }}
                       title="Marquer terminée"
-                      style={{ width: 26, height: 26, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <CheckSquare size={12} />
                     </motion.button>
                   </motion.div>
                 )
               })}
               {aujourdHui.length > 6 && (
-                <p style={{ fontSize: 11, color: T.text2, textAlign: 'center', marginTop: 4, opacity: 0.7 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', marginTop: 4, opacity: 0.7 }}>
                   + {aujourdHui.length - 6} autre{aujourdHui.length - 6 > 1 ? 's' : ''} créneau{aujourdHui.length - 6 > 1 ? 'x' : ''}
                 </p>
               )}
@@ -936,24 +936,24 @@ export default function Planification() {
           {!isCalView && smartResult && smartResult.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               style={{ overflow: 'hidden', marginBottom: 20 }}>
-              <div style={{ background: `linear-gradient(135deg, ${T.accent}12, #a855f708)`, border: `1px dashed ${T.accent}40`, borderRadius: 14, padding: isMobile ? 14 : '16px 20px' }}>
+              <div style={{ background: `linear-gradient(135deg, var(--ember-soft), #a855f708)`, border: `1px dashed var(--ember-soft)`, borderRadius: 14, padding: isMobile ? 14 : '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Brain size={15} color={T.accent} strokeWidth={2.2} />
+                    <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Brain size={15} color="var(--ember)" strokeWidth={2.2} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0 }}>L'IA te propose un planning</h2>
-                      <p style={{ fontSize: 11, color: T.text2, margin: 0, marginTop: 1 }}>Accepte ou refuse créneau par créneau — rien n'est appliqué sans ton accord.</p>
+                      <h2 style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>L'IA te propose un planning</h2>
+                      <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 1 }}>Accepte ou refuse créneau par créneau — rien n'est appliqué sans ton accord.</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <motion.button onClick={refuserToutesPropositions} whileTap={{ scale: 0.95 }}
-                      style={{ padding: '6px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text2, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      style={{ padding: '6px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                       Tout refuser
                     </motion.button>
                     <motion.button onClick={accepterToutesPropositions} whileTap={{ scale: 0.95 }}
-                      style={{ padding: '6px 12px', background: T.accent, border: 'none', borderRadius: 8, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', boxShadow: `0 3px 10px ${T.accent}35` }}>
+                      style={{ padding: '6px 12px', background: 'var(--ember)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', boxShadow: `0 3px 10px var(--ember-soft)` }}>
                       Tout accepter
                     </motion.button>
                   </div>
@@ -964,32 +964,32 @@ export default function Planification() {
                     return (
                       <motion.div key={`${p.task.id}-${p.date}-${p.startMins}-${i}`}
                         initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} transition={{ delay: i * 0.03 }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: T.bg2, borderRadius: 10, border: `1px solid ${T.border}` }}>
-                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: T.accent, fontFamily: 'var(--font-mono)', minWidth: isMobile ? 68 : 92, textTransform: 'capitalize' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: 'var(--surface-1)', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: 'var(--ember)', fontFamily: 'var(--font-mono)', minWidth: isMobile ? 68 : 92, textTransform: 'capitalize' }}>
                           {dateLabel}
                         </div>
-                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 600, color: T.text2, fontFamily: 'var(--font-mono)', minWidth: isMobile ? 58 : 78 }}>
+                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', minWidth: isMobile ? 58 : 78 }}>
                           {minsToTime(p.startMins).slice(0,5)} → {minsToTime(p.endMins).slice(0,5)}
                         </div>
                         <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(p.task.priorite), flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 12.5, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {p.task.titre}{p.totalParts > 1 ? ` (${p.part}/${p.totalParts})` : ''}
                         </span>
                         <motion.button onClick={() => refuserProposition(i)} whileTap={{ scale: 0.92 }}
                           title="Refuser"
-                          style={{ width: 26, height: 26, borderRadius: 7, background: T.bg3, border: `1px solid ${T.border}`, color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <X size={12} />
                         </motion.button>
                         <motion.button onClick={() => accepterProposition(p, i)} whileTap={{ scale: 0.92 }}
                           title="Accepter"
-                          style={{ width: 26, height: 26, borderRadius: 7, background: `${T.accent}20`, border: `1px solid ${T.accent}40`, color: T.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <CheckSquare size={12} />
                         </motion.button>
                       </motion.div>
                     )
                   })}
                   {smartResult.length > 8 && (
-                    <p style={{ fontSize: 11, color: T.text2, textAlign: 'center', marginTop: 4, opacity: 0.7 }}>
+                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', marginTop: 4, opacity: 0.7 }}>
                       + {smartResult.length - 8} autre{smartResult.length - 8 > 1 ? 's' : ''} proposition{smartResult.length - 8 > 1 ? 's' : ''}
                     </p>
                   )}
@@ -1022,16 +1022,16 @@ export default function Planification() {
                   { titre: "Aujourd'hui", items: aujourdhuiL, color: '#ef4444', emptyMsg: null },
                   { titre: 'Cette semaine', items: cetteSemaine, color: '#f59e0b', emptyMsg: null },
                   { titre: 'Plus tard', items: plusTard, color: '#6366f1', emptyMsg: null },
-                  { titre: 'Sans deadline', items: sansDeadline, color: T.text2, emptyMsg: null },
+                  { titre: 'Sans deadline', items: sansDeadline, color: 'var(--text-secondary)', emptyMsg: null },
                   { titre: 'Terminées récemment', items: termineesRecentes, color: '#10b981', emptyMsg: null, dim: true },
                 ].filter(s => s.items.length > 0)
 
                 if (open.length === 0 && termineesRecentes.length === 0) {
                   return (
-                    <div style={{ textAlign: 'center', padding: '60px 24px', background: T.bg2, borderRadius: 16, border: `1px solid ${T.border}` }}>
-                      <CheckSquare size={40} color={T.border} strokeWidth={1} style={{ margin: '0 auto 16px' }} />
-                      <p style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Aucune tâche pour le moment</p>
-                      <p style={{ fontSize: 12, color: T.text2 }}>Crée ta première tâche depuis le Dashboard</p>
+                    <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface-1)', borderRadius: 16, border: '1px solid var(--border-subtle)' }}>
+                      <CheckSquare size={40} color="var(--border-subtle)" strokeWidth={1} style={{ margin: '0 auto 16px' }} />
+                      <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune tâche pour le moment</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Crée ta première tâche depuis le Dashboard</p>
                     </div>
                   )
                 }
@@ -1040,33 +1040,33 @@ export default function Planification() {
                   <div key={sec.titre}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '0 4px' }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: sec.color }} />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text2, letterSpacing: 1.5, textTransform: 'uppercase' }}>{sec.titre}</span>
-                      <span style={{ fontSize: 10, color: T.text2, opacity: 0.6 }}>{sec.items.length}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.5, textTransform: 'uppercase' }}>{sec.titre}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: 0.6 }}>{sec.items.length}</span>
                     </div>
-                    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12, overflow: 'hidden' }}>
                       {sec.items.map((t, i) => (
                         <motion.div key={t.id}
                           initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '10px 12px' : '12px 16px', borderBottom: i < sec.items.length - 1 ? `1px solid ${T.border}` : 'none', opacity: sec.dim ? 0.55 : 1 }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '10px 12px' : '12px 16px', borderBottom: i < sec.items.length - 1 ? '1px solid var(--border-subtle)' : 'none', opacity: sec.dim ? 0.55 : 1 }}>
                           <motion.button onClick={() => t.terminee ? null : terminerTache(t.id)} whileTap={{ scale: 0.85 }}
                             disabled={t.terminee}
-                            style={{ width: 22, height: 22, borderRadius: 6, background: t.terminee ? '#10b981' : 'transparent', border: `1.5px solid ${t.terminee ? '#10b981' : T.border}`, cursor: t.terminee ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            style={{ width: 22, height: 22, borderRadius: 6, background: t.terminee ? '#10b981' : 'transparent', border: `1.5px solid ${t.terminee ? '#10b981' : 'var(--border-subtle)'}`, cursor: t.terminee ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {t.terminee && <Check size={12} color="#fff" strokeWidth={3} />}
                           </motion.button>
                           <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(t.priorite), flexShrink: 0 }} />
-                          <span style={{ flex: 1, fontSize: 13, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: t.terminee ? 'line-through' : 'none' }}>{t.titre}</span>
+                          <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: t.terminee ? 'line-through' : 'none' }}>{t.titre}</span>
                           {t.deadline && !t.terminee && (
-                            <span style={{ fontSize: 10, color: T.text2, background: T.bg3, padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
                               {new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                             </span>
                           )}
                           {t.temps_estime && !t.terminee && (
-                            <span style={{ fontSize: 10, color: T.accent, fontWeight: 600, whiteSpace: 'nowrap' }}>{t.temps_estime}m</span>
+                            <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 600, whiteSpace: 'nowrap' }}>{t.temps_estime}m</span>
                           )}
                           {!t.terminee && t.statut !== 'en_cours' && (
                             <motion.button onClick={() => demarrerTache(t.id)} whileTap={{ scale: 0.9 }}
                               title="Commencer"
-                              style={{ width: 24, height: 24, borderRadius: 6, background: T.bg3, border: `1px solid ${T.border}`, color: T.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--ember)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               <Zap size={11} />
                             </motion.button>
                           )}
@@ -1089,7 +1089,7 @@ export default function Planification() {
 
               {/* Mobile: onglets de colonnes */}
               {isMobile && (
-                <div style={{ display: 'flex', gap: 6, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, padding: 4, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 6, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 4, flexShrink: 0 }}>
                   {COLONNES.map(col => {
                     const count = getTachesByStatut(col.id).length
                     const active = kanbanActiveCol === col.id
@@ -1101,7 +1101,7 @@ export default function Planification() {
                           padding: '9px 8px',
                           borderRadius: 8,
                           background: active ? `linear-gradient(135deg, ${col.color}, ${col.color}cc)` : 'transparent',
-                          color: active ? '#fff' : T.text2,
+                          color: active ? '#fff' : 'var(--text-secondary)',
                           border: 'none', cursor: 'pointer',
                           fontSize: 11, fontWeight: active ? 700 : 500,
                           transition: 'all 0.18s',
@@ -1198,27 +1198,27 @@ export default function Planification() {
               style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
               {/* Navigation mois */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, padding: isMobile ? '10px 12px' : '8px 12px', flexShrink: 0 }}>
-                <motion.button style={{ width: isMobile ? 44 : 32, height: isMobile ? 44 : 32, borderRadius: 10, background: T.bg, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} onClick={() => setSemaineOffset(s => s - 1)} whileHover={{ borderColor: T.accent, color: T.accent }} whileTap={{ scale: 0.92 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: isMobile ? '10px 12px' : '8px 12px', flexShrink: 0 }}>
+                <motion.button style={{ width: isMobile ? 44 : 32, height: isMobile ? 44 : 32, borderRadius: 10, background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} onClick={() => setSemaineOffset(s => s - 1)} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }} whileTap={{ scale: 0.92 }}>
                   <ChevronLeft size={isMobile ? 20 : 15} />
                 </motion.button>
-                <div style={{ flex: 1, textAlign: 'center', fontSize: isMobile ? 15 : 13, fontWeight: 800, color: T.text, letterSpacing: '-0.3px', textTransform: 'capitalize' }}>
+                <div style={{ flex: 1, textAlign: 'center', fontSize: isMobile ? 15 : 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px', textTransform: 'capitalize' }}>
                   {monthLabel}
                 </div>
-                <motion.button style={{ padding: isMobile ? '10px 12px' : '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', fontSize: isMobile ? 12 : 11, fontWeight: 600, flexShrink: 0 }} onClick={() => setSemaineOffset(0)} whileHover={{ borderColor: T.accent, color: T.accent }} whileTap={{ scale: 0.92 }}>
+                <motion.button style={{ padding: isMobile ? '10px 12px' : '6px 12px', borderRadius: 8, background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: isMobile ? 12 : 11, fontWeight: 600, flexShrink: 0 }} onClick={() => setSemaineOffset(0)} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }} whileTap={{ scale: 0.92 }}>
                   Auj.
                 </motion.button>
-                <motion.button style={{ width: isMobile ? 44 : 32, height: isMobile ? 44 : 32, borderRadius: 10, background: T.bg, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} onClick={() => setSemaineOffset(s => s + 1)} whileHover={{ borderColor: T.accent, color: T.accent }} whileTap={{ scale: 0.92 }}>
+                <motion.button style={{ width: isMobile ? 44 : 32, height: isMobile ? 44 : 32, borderRadius: 10, background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} onClick={() => setSemaineOffset(s => s + 1)} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }} whileTap={{ scale: 0.92 }}>
                   <ChevronRight size={isMobile ? 20 : 15} />
                 </motion.button>
               </div>
 
               {/* Grille mois */}
-              <div style={{ flex: 1, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                 {/* Jours de la semaine */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: `1px solid ${T.border}`, flexShrink: 0, position: 'sticky', top: 0, background: T.bg2, zIndex: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, position: 'sticky', top: 0, background: 'var(--surface-1)', zIndex: 10 }}>
                   {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((d, i) => (
-                    <div key={d} style={{ padding: isMobile ? '8px 4px' : '10px 8px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: i >= 5 ? T.accent : T.text2, letterSpacing: 0.8, textTransform: 'uppercase' }}>{d}</div>
+                    <div key={d} style={{ padding: isMobile ? '8px 4px' : '10px 8px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: i >= 5 ? 'var(--ember)' : 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase' }}>{d}</div>
                   ))}
                 </div>
                 {/* Cellules */}
@@ -1229,20 +1229,20 @@ export default function Planification() {
                       <div key={day.date} style={{
                         minHeight: isMobile ? 60 : 80,
                         padding: isMobile ? '4px' : '6px',
-                        borderRight: `1px solid ${T.border}20`,
-                        borderBottom: `1px solid ${T.border}20`,
-                        background: day.isToday ? `${T.accent}08` : day.isWeekend && day.isCurrentMonth ? `${T.bg}` : 'transparent',
+                        borderRight: `1px solid var(--border-default)`,
+                        borderBottom: `1px solid var(--border-default)`,
+                        background: day.isToday ? 'var(--ember-soft)' : day.isWeekend && day.isCurrentMonth ? 'var(--bg-base)' : 'transparent',
                         opacity: day.isCurrentMonth ? 1 : 0.35,
                       }}>
                         <div style={{
                           width: day.isToday ? (isMobile ? 22 : 26) : 'auto',
                           height: day.isToday ? (isMobile ? 22 : 26) : 'auto',
                           borderRadius: '50%',
-                          background: day.isToday ? T.accent : 'transparent',
+                          background: day.isToday ? 'var(--ember)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: isMobile ? 11 : 12,
                           fontWeight: day.isToday ? 800 : day.isCurrentMonth ? 500 : 400,
-                          color: day.isToday ? '#fff' : T.text,
+                          color: day.isToday ? '#fff' : 'var(--text-primary)',
                           marginBottom: 3,
                           flexShrink: 0,
                         }}>
@@ -1257,7 +1257,7 @@ export default function Planification() {
                           )
                         })}
                         {dayPlan.length > (isMobile ? 1 : 3) && (
-                          <div style={{ fontSize: 8, color: T.accent, fontWeight: 600, paddingLeft: 2 }}>+{dayPlan.length - (isMobile ? 1 : 3)}</div>
+                          <div style={{ fontSize: 8, color: 'var(--ember)', fontWeight: 600, paddingLeft: 2 }}>+{dayPlan.length - (isMobile ? 1 : 3)}</div>
                         )}
                       </div>
                     )
@@ -1271,22 +1271,22 @@ export default function Planification() {
           {vue === 'gantt' && (
             <motion.div key="gantt" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, overflow: 'auto' }}>
               {tachesAvecDeadline.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 24px', background: T.bg2, borderRadius: 16, border: `1px solid ${T.border}` }}>
-                  <BarChart size={40} color={T.border} strokeWidth={1} style={{ margin: '0 auto 16px' }} />
-                  <p style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Aucune tâche avec deadline</p>
-                  <p style={{ fontSize: 12, color: T.text2 }}>Ajoutez des deadlines pour visualiser le Gantt</p>
+                <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface-1)', borderRadius: 16, border: '1px solid var(--border-subtle)' }}>
+                  <BarChart size={40} color="var(--border-subtle)" strokeWidth={1} style={{ margin: '0 auto 16px' }} />
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune tâche avec deadline</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Ajoutez des deadlines pour visualiser le Gantt</p>
                 </div>
               ) : (
-                <div style={{ background: T.bg2, borderRadius: 16, border: `1px solid ${T.border}`, overflow: 'auto' }}>
+                <div style={{ background: 'var(--surface-1)', borderRadius: 16, border: '1px solid var(--border-subtle)', overflow: 'auto' }}>
                   {/* Gantt header */}
-                  <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, position: 'sticky', top: 0, background: T.bg2, zIndex: 10 }}>
-                    <div style={{ width: GANTT_LABEL_W, flexShrink: 0, padding: isMobile ? '11px 10px' : '11px 16px', borderRight: `1px solid ${T.border}`, fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 2, opacity: 0.6, position: 'sticky', left: 0, background: T.bg2, zIndex: 11 }}>TÂCHE · SCORE</div>
+                  <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, background: 'var(--surface-1)', zIndex: 10 }}>
+                    <div style={{ width: GANTT_LABEL_W, flexShrink: 0, padding: isMobile ? '11px 10px' : '11px 16px', borderRight: '1px solid var(--border-subtle)', fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 2, opacity: 0.6, position: 'sticky', left: 0, background: 'var(--surface-1)', zIndex: 11 }}>TÂCHE · SCORE</div>
                     <div style={{ display: 'flex' }}>
                       {ganttDays.map((day, i) => (
-                        <div key={day.date} style={{ width: GANTT_DAY_W, flexShrink: 0, padding: '7px 0', textAlign: 'center', background: day.isToday ? `${T.accent}10` : day.isWeekend ? `${T.bg}80` : 'transparent', borderRight: `1px solid ${T.border}12` }}>
-                          <div style={{ fontSize: 8, color: T.text2, fontWeight: 600, opacity: 0.5 }}>{i === 0 || day.label === 1 ? day.mois.toUpperCase() : ''}</div>
-                          <div style={{ fontSize: 11, fontWeight: day.isToday ? 800 : 400, color: day.isToday ? T.accent : T.text2 }}>{day.label}</div>
-                          {day.isToday && <div style={{ width: 3, height: 3, borderRadius: '50%', background: T.accent, margin: '2px auto 0' }} />}
+                        <div key={day.date} style={{ width: GANTT_DAY_W, flexShrink: 0, padding: '7px 0', textAlign: 'center', background: day.isToday ? 'var(--ember-soft)' : day.isWeekend ? `var(--bg-base)80` : 'transparent', borderRight: `1px solid var(--border-default)` }}>
+                          <div style={{ fontSize: 8, color: 'var(--text-secondary)', fontWeight: 600, opacity: 0.5 }}>{i === 0 || day.label === 1 ? day.mois.toUpperCase() : ''}</div>
+                          <div style={{ fontSize: 11, fontWeight: day.isToday ? 800 : 400, color: day.isToday ? 'var(--ember)' : 'var(--text-secondary)' }}>{day.label}</div>
+                          {day.isToday && <div style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ember)', margin: '2px auto 0' }} />}
                         </div>
                       ))}
                     </div>
@@ -1296,17 +1296,17 @@ export default function Planification() {
                   {tachesAvecDeadline.map((task, i) => {
                     const barre = getBarreGantt(task)
                     return (
-                      <motion.div key={task.id} style={{ display: 'flex', borderBottom: `1px solid ${T.border}12`, minHeight: 46 }}
+                      <motion.div key={task.id} style={{ display: 'flex', borderBottom: `1px solid var(--border-default)`, minHeight: 46 }}
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}>
-                        <div style={{ width: GANTT_LABEL_W, flexShrink: 0, padding: isMobile ? '11px 10px' : '11px 16px', borderRight: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', left: 0, background: T.bg2, zIndex: 4 }}>
+                        <div style={{ width: GANTT_LABEL_W, flexShrink: 0, padding: isMobile ? '11px 10px' : '11px 16px', borderRight: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', left: 0, background: 'var(--surface-1)', zIndex: 4 }}>
                           <div style={{ width: 6, height: 6, borderRadius: '50%', background: pColor(task.priorite), flexShrink: 0, boxShadow: `0 0 6px ${pColor(task.priorite)}60` }} />
-                          <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{task.titre}</span>
-                          {task._score && <span style={{ fontSize: 9, color: T.accent, opacity: 0.5, flexShrink: 0 }}>#{Math.round(task._score)}</span>}
+                          <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{task.titre}</span>
+                          {task._score && <span style={{ fontSize: 9, color: 'var(--ember)', opacity: 0.5, flexShrink: 0 }}>#{Math.round(task._score)}</span>}
                         </div>
                         <div style={{ flex: 1, position: 'relative', display: 'flex' }}>
                           {ganttDays.map(day => (
-                            <div key={day.date} style={{ width: GANTT_DAY_W, flexShrink: 0, borderRight: `1px solid ${T.border}08`, background: day.isToday ? `${T.accent}05` : day.isWeekend ? `${T.bg}30` : 'transparent', position: 'relative' }}>
-                              {day.isToday && <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: `${T.accent}35`, transform: 'translateX(-50%)' }} />}
+                            <div key={day.date} style={{ width: GANTT_DAY_W, flexShrink: 0, borderRight: `1px solid var(--border-default)`, background: day.isToday ? `var(--ember-soft)` : day.isWeekend ? 'var(--bg-base)' : 'transparent', position: 'relative' }}>
+                              {day.isToday && <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: 'var(--ember-ring)', transform: 'translateX(-50%)' }} />}
                             </div>
                           ))}
                           {barre && (
@@ -1324,11 +1324,11 @@ export default function Planification() {
                   })}
 
                   {/* Legend */}
-                  <div style={{ padding: '10px 16px', display: 'flex', gap: 16, borderTop: `1px solid ${T.border}`, flexWrap: 'wrap' }}>
-                    {[['Haute', '#ef4444'], ['Moyenne', '#f59e0b'], ['Basse', '#10b981'], ["Aujourd'hui", T.accent]].map(([label, color]) => (
+                  <div style={{ padding: '10px 16px', display: 'flex', gap: 16, borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
+                    {[['Haute', '#ef4444'], ['Moyenne', '#f59e0b'], ['Basse', '#10b981'], ["Aujourd'hui", 'var(--ember)']].map(([label, color]) => (
                       <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <div style={{ width: label === "Aujourd'hui" ? 2 : 10, height: 10, borderRadius: label === "Aujourd'hui" ? 1 : 3, background: color }} />
-                        <span style={{ fontSize: 11, color: T.text2 }}>{label}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</span>
                       </div>
                     ))}
                   </div>
@@ -1351,7 +1351,7 @@ export default function Planification() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setAutoplanModal(false)}>
             <motion.div
-              style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 18, padding: 24, width: 'min(560px, 95%)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }}
+              style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 18, padding: 24, width: 'min(560px, 95%)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }}
               initial={{ scale: 0.88, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.88, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               onClick={e => e.stopPropagation()}>
@@ -1363,26 +1363,26 @@ export default function Planification() {
                     <Zap size={15} color="#fff" />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: 15, fontWeight: 800, color: T.text, margin: 0 }}>Planning IA — Calendar</h3>
-                    <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Planning IA — Calendar</h3>
+                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>
                       {autoplanSugs.length} suggestion{autoplanSugs.length !== 1 ? 's' : ''}
                       {autoplanMeta?.conflicts_avoided > 0 && ` · ${autoplanMeta.conflicts_avoided} conflit${autoplanMeta.conflicts_avoided > 1 ? 's' : ''} évité${autoplanMeta.conflicts_avoided > 1 ? 's' : ''}`}
                     </p>
                   </div>
                 </div>
-                <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
-                  onClick={() => setAutoplanModal(false)} whileHover={{ background: T.border }}>
+                <motion.button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
+                  onClick={() => setAutoplanModal(false)} whileHover={{ background: 'var(--border-subtle)' }}>
                   <X size={14} />
                 </motion.button>
               </div>
 
-              <p style={{ fontSize: 11, color: T.text2, marginBottom: 14, lineHeight: 1.6, flexShrink: 0 }}>
+              <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.6, flexShrink: 0 }}>
                 Accepte ou refuse créneau par créneau — rien n'est appliqué sans ton accord.
               </p>
 
               {/* Liste des suggestions */}
               {autoplanSugs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 16px', color: T.text2, fontSize: 13, opacity: 0.7 }}>
+                <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-secondary)', fontSize: 13, opacity: 0.7 }}>
                   Aucune suggestion — toutes les tâches sont déjà planifiées ou sans deadline.
                 </div>
               ) : (
@@ -1397,15 +1397,15 @@ export default function Planification() {
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10,
                           padding: '10px 12px', borderRadius: 10,
-                          background: sug.accepted ? `rgba(26,115,232,0.07)` : T.bg,
-                          border: `1px solid ${sug.accepted ? 'rgba(26,115,232,0.3)' : T.border}`,
+                          background: sug.accepted ? `rgba(26,115,232,0.07)` : 'var(--bg-base)',
+                          border: `1px solid ${sug.accepted ? 'rgba(26,115,232,0.3)' : 'var(--border-subtle)'}`,
                           cursor: 'pointer', transition: 'all 0.15s',
                           opacity: sug.accepted ? 1 : 0.45,
                         }}>
                         {/* Toggle check */}
                         <div style={{
                           width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                          border: `2px solid ${sug.accepted ? '#1A73E8' : T.border}`,
+                          border: `2px solid ${sug.accepted ? '#1A73E8' : 'var(--border-subtle)'}`,
                           background: sug.accepted ? '#1A73E8' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all 0.15s',
@@ -1419,18 +1419,18 @@ export default function Planification() {
                         </span>
 
                         {/* Heure */}
-                        <span style={{ fontSize: 10, fontWeight: 600, color: T.text2, minWidth: 88, fontFamily: 'var(--font-mono)' }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', minWidth: 88, fontFamily: 'var(--font-mono)' }}>
                           {sug.start_hhmm} → {sug.end_hhmm}
                         </span>
 
                         {/* Titre */}
-                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {sug.titre}
                         </span>
 
                         {/* Raison tooltip */}
                         {sug.reason && (
-                          <span title={sug.reason} style={{ fontSize: 9, color: T.text2, opacity: 0.6, flexShrink: 0 }}>
+                          <span title={sug.reason} style={{ fontSize: 9, color: 'var(--text-secondary)', opacity: 0.6, flexShrink: 0 }}>
                             ℹ
                           </span>
                         )}
@@ -1444,13 +1444,13 @@ export default function Planification() {
               <div style={{ display: 'flex', gap: 8, marginTop: 16, flexShrink: 0 }}>
                 <motion.button
                   onClick={() => setAutoplanSugs(cur => cur.map(s => ({ ...s, accepted: false })))}
-                  style={{ flex: 1, padding: '9px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '9px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   whileTap={{ scale: 0.97 }}>
                   Tout refuser
                 </motion.button>
                 <motion.button
                   onClick={() => setAutoplanSugs(cur => cur.map(s => ({ ...s, accepted: true })))}
-                  style={{ flex: 1, padding: '9px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '9px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   whileTap={{ scale: 0.97 }}>
                   Tout accepter
                 </motion.button>
@@ -1480,39 +1480,39 @@ export default function Planification() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setShowEstimer(null)}>
             <motion.div
-              style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 18, padding: 24, width: 'min(360px, 90%)', boxShadow: '0 24px 64px rgba(0,0,0,0.3)' }}
+              style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 18, padding: 24, width: 'min(360px, 90%)', boxShadow: '0 24px 64px rgba(0,0,0,0.3)' }}
               initial={{ scale: 0.88, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.88, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 8, background: `${T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Sparkles size={14} color={T.accent} />
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Sparkles size={14} color="var(--ember)" />
                   </div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text }}>Estimation IA</h3>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Estimation IA</h3>
                 </div>
-                <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }} onClick={() => setShowEstimer(null)} whileHover={{ background: T.border }}>
+                <motion.button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }} onClick={() => setShowEstimer(null)} whileHover={{ background: 'var(--border-subtle)' }}>
                   <X size={14} />
                 </motion.button>
               </div>
 
-              <p style={{ fontSize: 13, color: T.text2, marginBottom: 12, lineHeight: 1.65, background: T.bg3 || T.bg, padding: '10px 12px', borderRadius: 9, border: `1px solid ${T.border}` }}>
-                <strong style={{ color: T.text }}>"{showEstimer.titre}"</strong>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.65, background: 'var(--surface-2)' || 'var(--bg-base)', padding: '10px 12px', borderRadius: 9, border: '1px solid var(--border-subtle)' }}>
+                <strong style={{ color: 'var(--text-primary)' }}>"{showEstimer.titre}"</strong>
               </p>
 
               {showEstimer._score && (
                 <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11, color: T.accent, background: `${T.accent}10`, padding: '3px 10px', borderRadius: 99 }}>
+                  <span style={{ fontSize: 11, color: 'var(--ember)', background: 'var(--ember-soft)', padding: '3px 10px', borderRadius: 99 }}>
                     Score de priorité : {showEstimer._score.toFixed(1)}
                   </span>
-                  <span style={{ fontSize: 11, color: T.text2, background: T.bg, padding: '3px 10px', borderRadius: 99, border: `1px solid ${T.border}` }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-base)', padding: '3px 10px', borderRadius: 99, border: '1px solid var(--border-subtle)' }}>
                     Priorité {showEstimer.priorite}
                   </span>
                 </div>
               )}
 
               <motion.button
-                style={{ width: '100%', padding: 12, background: loadingEstime ? T.bg3 : T.accent, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: loadingEstime ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: !loadingEstime ? `0 4px 16px ${T.accent}40` : 'none' }}
+                style={{ width: '100%', padding: 12, background: loadingEstime ? 'var(--surface-2)' : 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: loadingEstime ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: !loadingEstime ? `0 4px 16px var(--ember-soft)` : 'none' }}
                 onClick={() => estimerTempsIA(showEstimer)}
                 whileHover={!loadingEstime ? { scale: 1.02 } : {}}
                 whileTap={{ scale: 0.98 }}>
@@ -1531,29 +1531,29 @@ export default function Planification() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)}
               style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050, backdropFilter: 'blur(3px)' }} />
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 1051, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
-              <div style={{ padding: '20px 24px 0', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 1051, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
+              <div style={{ padding: '20px 24px 0', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Settings size={18} color={T.accent} strokeWidth={1.8} />
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Settings size={18} color="var(--ember)" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Paramètres</h2>
-                      <p style={{ fontSize: 12, color: T.text2, margin: 0, marginTop: 2 }}>{userData.nom}</p>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h2>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{userData.nom}</p>
                     </div>
                   </div>
                   <motion.button onClick={() => setShowSettings(false)}
-                    style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}>
                     <X size={16} />
                   </motion.button>
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-                <p style={{ fontSize: 13, color: T.text2 }}>Paramètres généraux à venir...</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Paramètres généraux à venir...</p>
               </div>
-              <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+              <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                   onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
                   <LogOut size={16} strokeWidth={1.8} />Se déconnecter

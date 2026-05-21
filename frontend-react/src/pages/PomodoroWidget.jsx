@@ -128,8 +128,8 @@ export const PomodoroWidget = memo(function PomodoroWidget({
         position: 'fixed',
         bottom: bottomOffset,
         left: leftOffset,
-        background: T.bg2,
-        border: `1px solid ${isIdle ? T.border : `${accent}50`}`,
+        background: 'var(--surface-1)',
+        border: `1px solid ${isIdle ? 'var(--border-subtle)' : `${accent}50`}`,
         borderRadius: 14,
         padding: isMobile ? '10px 12px' : '11px 14px',
         display: 'flex',
@@ -150,11 +150,11 @@ export const PomodoroWidget = memo(function PomodoroWidget({
           width: isMobile ? 32 : 36, height: isMobile ? 32 : 36,
           borderRadius: 10,
           background: isIdle
-            ? `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`
+            ? 'linear-gradient(135deg, var(--ember), var(--ember-hover))'
             : `linear-gradient(135deg, ${accent}, ${accent}cc)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
-          boxShadow: `0 4px 12px ${isIdle ? T.accent : accent}40`,
+          boxShadow: `0 4px 12px ${isIdle ? 'var(--ember)' : accent}40`,
         }}>
         {isBreak ? <Coffee size={16} color="#fff" strokeWidth={2.4} /> : <TomatoIcon size={18} />}
       </motion.div>
@@ -163,10 +163,10 @@ export const PomodoroWidget = memo(function PomodoroWidget({
       <div style={{ flex: 1, minWidth: 0 }}>
         {isIdle ? (
           <>
-            <div style={{ fontSize: 11, fontWeight: 800, color: T.text, marginBottom: 1, letterSpacing: '-0.1px' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 1, letterSpacing: '-0.1px' }}>
               Pomodoro 25/5
             </div>
-            <div style={{ fontSize: 10, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {activeTitle ? `→ ${activeTitle}` : 'Tâche en cours détectée'}
             </div>
           </>
@@ -185,7 +185,7 @@ export const PomodoroWidget = memo(function PomodoroWidget({
                 {isPaused ? 'Pause' : isBreak ? 'Break' : 'Focus'}
               </span>
               {count > 0 && (
-                <span style={{ fontSize: 10, color: T.text2, fontWeight: 700 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700 }}>
                   🍅 ×{count}
                 </span>
               )}
@@ -193,7 +193,7 @@ export const PomodoroWidget = memo(function PomodoroWidget({
             <div style={{
               fontSize: isMobile ? 16 : 18,
               fontWeight: 900,
-              color: T.text,
+              color: 'var(--text-primary)',
               fontFamily: 'var(--font-mono)',
               letterSpacing: '-0.5px',
               lineHeight: 1,
@@ -203,7 +203,7 @@ export const PomodoroWidget = memo(function PomodoroWidget({
             </div>
             <div style={{
               height: 3,
-              background: `${T.border}`,
+              background: 'var(--border-subtle)',
               borderRadius: 99,
               overflow: 'hidden',
             }}>
@@ -236,8 +236,8 @@ export const PomodoroWidget = memo(function PomodoroWidget({
           <motion.button
             onClick={pause}
             whileTap={{ scale: 0.9 }}
-            style={btnStyle(T, T.text2, true)}>
-            <Pause size={12} color={T.text} strokeWidth={2.4} />
+            style={btnStyle(T, 'var(--text-secondary)', true)}>
+            <Pause size={12} color="var(--text-primary)" strokeWidth={2.4} />
           </motion.button>
         )}
         {isPaused && (
@@ -253,8 +253,8 @@ export const PomodoroWidget = memo(function PomodoroWidget({
             onClick={reset}
             whileTap={{ scale: 0.9 }}
             title="Reset"
-            style={btnStyle(T, T.text2, true)}>
-            <RotateCcw size={11} color={T.text} strokeWidth={2.4} />
+            style={btnStyle(T, 'var(--text-secondary)', true)}>
+            <RotateCcw size={11} color="var(--text-primary)" strokeWidth={2.4} />
           </motion.button>
         )}
         {isIdle && (
@@ -262,8 +262,8 @@ export const PomodoroWidget = memo(function PomodoroWidget({
             onClick={() => setHidden(true)}
             whileTap={{ scale: 0.9 }}
             title="Masquer"
-            style={btnStyle(T, T.text2, true)}>
-            <X size={11} color={T.text2} strokeWidth={2.4} />
+            style={btnStyle(T, 'var(--text-secondary)', true)}>
+            <X size={11} color="var(--text-secondary)" strokeWidth={2.4} />
           </motion.button>
         )}
       </div>
@@ -275,7 +275,7 @@ const btnStyle = (T, accent, ghost = false) => ({
   width: 28, height: 28,
   borderRadius: 7,
   background: ghost ? 'transparent' : `linear-gradient(135deg, ${accent}, ${accent}cc)`,
-  border: ghost ? `1px solid ${T.border}` : 'none',
+  border: ghost ? '1px solid var(--border-subtle)' : 'none',
   cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0,

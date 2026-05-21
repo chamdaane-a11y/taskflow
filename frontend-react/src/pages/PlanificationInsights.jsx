@@ -55,10 +55,10 @@ export const DailyScore = memo(function DailyScore({
   const pct = Math.round(today.pct)
 
   const ringColor =
-    pct === 0     ? T.text2 :
+    pct === 0     ? 'var(--text-secondary)' :
     pct > 110     ? '#ef4444' :
     pct >= 80     ? '#10b981' :
-    pct >= 40     ? T.accent :
+    pct >= 40     ? 'var(--ember)' :
                     '#f59e0b'
 
   const SIZE = isMobile ? 56 : 64
@@ -73,8 +73,8 @@ export const DailyScore = memo(function DailyScore({
       alignItems: 'center',
       gap: isMobile ? 10 : 14,
       padding: isMobile ? '8px 12px' : '10px 14px',
-      background: T.bg2,
-      border: `1px solid ${T.border}`,
+      background: 'var(--surface-1)',
+      border: '1px solid var(--border-subtle)',
       borderRadius: 14,
       flexShrink: 0,
     }}>
@@ -83,7 +83,7 @@ export const DailyScore = memo(function DailyScore({
         <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)' }}>
           <circle
             cx={SIZE/2} cy={SIZE/2} r={RADIUS}
-            stroke={`${T.border}`} strokeWidth={STROKE} fill="none"
+            stroke={'var(--border-subtle)'} strokeWidth={STROKE} fill="none"
           />
           <motion.circle
             cx={SIZE/2} cy={SIZE/2} r={RADIUS}
@@ -106,7 +106,7 @@ export const DailyScore = memo(function DailyScore({
           justifyContent: 'center',
           lineHeight: 1,
         }}>
-          <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 900, color: T.text, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
             {pct}%
           </div>
         </div>
@@ -114,20 +114,20 @@ export const DailyScore = memo(function DailyScore({
 
       {/* Texte */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, color: T.text2, letterSpacing: 1.4, textTransform: 'uppercase' }}>
+        <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-secondary)', letterSpacing: 1.4, textTransform: 'uppercase' }}>
           Aujourd'hui
         </div>
-        <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 800, color: T.text, letterSpacing: '-0.3px' }}>
-          {heures}h <span style={{ fontSize: 10, color: T.text2, fontWeight: 600 }}>/ {heuresDispo}h</span>
+        <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
+          {heures}h <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>/ {heuresDispo}h</span>
         </div>
         {/* Bandes 7 derniers jours */}
         <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 16, marginTop: 2 }}>
           {data.days.map((d, i) => {
             const h = Math.max(2, (d.pct / 100) * 16)
-            const color = d.pct === 0 ? `${T.border}` :
+            const color = d.pct === 0 ? 'var(--border-subtle)' :
                           d.pct > 110 ? '#ef4444' :
                           d.pct >= 80 ? '#10b981' :
-                          d.pct >= 40 ? T.accent : '#f59e0b'
+                          d.pct >= 40 ? 'var(--ember)' : '#f59e0b'
             return (
               <motion.div
                 key={d.date}
@@ -139,7 +139,7 @@ export const DailyScore = memo(function DailyScore({
                   width: 4,
                   background: color,
                   borderRadius: 1,
-                  border: d.isToday ? `1px solid ${T.text}` : 'none',
+                  border: d.isToday ? `1px solid var(--text-primary)` : 'none',
                   boxShadow: d.isToday ? `0 0 4px ${color}80` : 'none',
                 }}
               />
@@ -212,8 +212,8 @@ export const FocusBar = memo(function FocusBar({
   const isOverdue = nowMins > end
   const isUpcoming = nowMins < start
 
-  const statusColor = isOverdue ? '#ef4444' : isUpcoming ? T.text2 : T.accent
-  const statusBg    = isOverdue ? '#ef444415' : isUpcoming ? `${T.text2}10` : `${T.accent}15`
+  const statusColor = isOverdue ? '#ef4444' : isUpcoming ? 'var(--text-secondary)' : 'var(--ember)'
+  const statusBg    = isOverdue ? '#ef444415' : isUpcoming ? `var(--text-secondary)10` : 'var(--ember-soft)'
 
   const statusLabel = isOverdue
     ? `Dépassé de ${nowMins - end}min`
@@ -230,20 +230,20 @@ export const FocusBar = memo(function FocusBar({
       exit={{ opacity: 0, y: -8 }}
       transition={{ type: 'spring', damping: 24, stiffness: 280 }}
       style={{
-        background: `linear-gradient(135deg, ${T.accent}18, ${T.accent2 || T.accent}10)`,
-        border: `1px solid ${T.accent}40`,
+        background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover)10)`,
+        border: `1px solid var(--ember-soft)`,
         borderRadius: 14,
         padding: isMobile ? '10px 12px' : '12px 16px',
         marginBottom: isMobile ? 10 : 12,
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: `0 6px 24px ${T.accent}20`,
+        boxShadow: `0 6px 24px var(--ember-soft)`,
       }}>
 
       {/* Glow pulse on accent strip */}
       <div style={{
         position: 'absolute', top: 0, left: 0, bottom: 0, width: 3,
-        background: `linear-gradient(180deg, ${T.accent}, ${T.accent2 || T.accent})`,
+        background: `linear-gradient(180deg, var(--ember), var(--ember-hover))`,
       }} />
 
       <div style={{
@@ -259,10 +259,10 @@ export const FocusBar = memo(function FocusBar({
           style={{
             width: isMobile ? 36 : 42, height: isMobile ? 36 : 42,
             borderRadius: 11,
-            background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || T.accent})`,
+            background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
-            boxShadow: `0 4px 14px ${T.accent}50`,
+            boxShadow: `0 4px 14px var(--ember-soft)`,
           }}>
           <Flame size={isMobile ? 16 : 19} color="#fff" strokeWidth={2.4} />
         </motion.div>
@@ -290,7 +290,7 @@ export const FocusBar = memo(function FocusBar({
             </span>
             <span style={{
               fontSize: 10,
-              color: T.text2,
+              color: 'var(--text-secondary)',
               fontFamily: 'var(--font-mono)',
               fontWeight: 700,
               opacity: 0.7,
@@ -302,7 +302,7 @@ export const FocusBar = memo(function FocusBar({
           <div style={{
             fontSize: isMobile ? 13 : 14,
             fontWeight: 800,
-            color: T.text,
+            color: 'var(--text-primary)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -315,7 +315,7 @@ export const FocusBar = memo(function FocusBar({
           {/* Progress bar */}
           <div style={{
             height: 4,
-            background: `${T.border}90`,
+            background: `var(--border-default)`,
             borderRadius: 99,
             overflow: 'hidden',
           }}>
@@ -327,7 +327,7 @@ export const FocusBar = memo(function FocusBar({
                 height: '100%',
                 background: isOverdue
                   ? 'linear-gradient(90deg, #ef4444, #f59e0b)'
-                  : `linear-gradient(90deg, ${T.accent}, ${T.accent2 || T.accent})`,
+                  : `linear-gradient(90deg, var(--ember), var(--ember-hover))`,
                 borderRadius: 99,
               }}
             />
@@ -335,7 +335,7 @@ export const FocusBar = memo(function FocusBar({
 
           <div style={{
             fontSize: 10,
-            color: T.text2,
+            color: 'var(--text-secondary)',
             marginTop: 4,
             fontWeight: 600,
           }}>
@@ -437,7 +437,7 @@ export const InsightCard = memo(function InsightCard({
       return {
         type: 'empty',
         Icon: Sun,
-        color: T.accent,
+        color: 'var(--ember)',
         title: nowH < 12 ? 'Bonjour, prêt à structurer ta journée ?' : 'Tu n\'as rien planifié aujourd\'hui',
         msg: `${unplanned.length} tâche${unplanned.length > 1 ? 's' : ''} en attente. L'IA peut te proposer un planning intelligent.`,
         cta: 'Proposer un planning',
@@ -450,7 +450,7 @@ export const InsightCard = memo(function InsightCard({
       return {
         type: 'unplanned',
         Icon: Brain,
-        color: T.accent,
+        color: 'var(--ember)',
         title: `${unplanned.length} tâches non planifiées`,
         msg: `L'IA peut les répartir dans tes créneaux libres cette semaine.`,
         cta: 'Planifier',
@@ -481,7 +481,7 @@ export const InsightCard = memo(function InsightCard({
       return {
         type: 'tomorrow',
         Icon: Coffee,
-        color: T.accent,
+        color: 'var(--ember)',
         title: 'La journée s\'achève',
         msg: `Prépare demain avec un planning intelligent.`,
         cta: 'Planifier demain',
@@ -490,7 +490,7 @@ export const InsightCard = memo(function InsightCard({
     }
 
     return null
-  }, [taches, planification, heuresDispo, onPlanIA, T.accent])
+  }, [taches, planification, heuresDispo, onPlanIA, 'var(--ember)'])
 
   if (!insight || dismissed) return null
 
@@ -546,7 +546,7 @@ export const InsightCard = memo(function InsightCard({
             <div style={{
               fontSize: isMobile ? 12.5 : 13.5,
               fontWeight: 800,
-              color: T.text,
+              color: 'var(--text-primary)',
               letterSpacing: '-0.2px',
               marginBottom: 2,
               lineHeight: 1.3,
@@ -555,7 +555,7 @@ export const InsightCard = memo(function InsightCard({
             </div>
             <div style={{
               fontSize: isMobile ? 11 : 11.5,
-              color: T.text2,
+              color: 'var(--text-secondary)',
               lineHeight: 1.4,
             }}>
               {msg}
@@ -574,7 +574,7 @@ export const InsightCard = memo(function InsightCard({
                 alignItems: 'center',
                 gap: 5,
                 padding: isMobile ? '8px 11px' : '10px 14px',
-                background: loadingIA ? T.bg3 : `linear-gradient(135deg, ${color}, ${color}cc)`,
+                background: loadingIA ? 'var(--surface-2)' : `linear-gradient(135deg, ${color}, ${color}cc)`,
                 border: 'none',
                 borderRadius: 10,
                 color: '#fff',
@@ -601,7 +601,7 @@ export const InsightCard = memo(function InsightCard({
               borderRadius: 6,
               background: 'transparent',
               border: 'none',
-              color: T.text2,
+              color: 'var(--text-secondary)',
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               opacity: 0.5,

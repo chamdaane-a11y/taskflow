@@ -281,7 +281,7 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
             background: prochainTier.bg, border: `1px solid ${prochainTier.border}`, position: 'relative'
           }}>
             <ProchainIcon size={18} color={prochainTier.color} strokeWidth={2} />
-            <Lock size={8} color={isLight ? 'white' : T.bg} strokeWidth={3}
+            <Lock size={8} color={isLight ? 'white' : 'var(--bg-base)'} strokeWidth={3}
               style={{ position: 'absolute', bottom: -2, right: -2, background: prochainTier.color, borderRadius: '50%', padding: 2.5 }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>

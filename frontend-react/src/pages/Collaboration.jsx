@@ -78,15 +78,15 @@ function ModalePartage({ T, equipe, onFermer }) {
     <motion.div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }} onClick={onFermer} />
-      <motion.div style={{ background: T.bg2, borderRadius: 22, width: 'min(440px, 100%)', position: 'relative', border: `1px solid ${T.border}`, boxShadow: '0 40px 100px rgba(0,0,0,0.35)', overflow: 'hidden' }}
+      <motion.div style={{ background: 'var(--surface-1)', borderRadius: 22, width: 'min(440px, 100%)', position: 'relative', border: '1px solid var(--border-subtle)', boxShadow: '0 40px 100px rgba(0,0,0,0.35)', overflow: 'hidden' }}
         initial={{ y: 28, scale: 0.96 }} animate={{ y: 0, scale: 1 }} exit={{ y: 28, scale: 0.96 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}>
         <div style={{ padding: '22px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)", margin: 0 }}>Inviter dans l'équipe</h3>
-            <p style={{ fontSize: 12, color: T.text2, marginTop: 3 }}>{equipe.nom}</p>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)", margin: 0 }}>Inviter dans l'équipe</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>{equipe.nom}</p>
           </div>
-          <motion.button style={{ width: 32, height: 32, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          <motion.button style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
             <X size={14} />
           </motion.button>
@@ -94,7 +94,7 @@ function ModalePartage({ T, equipe, onFermer }) {
         <div style={{ display: 'flex', gap: 4, padding: '16px 24px 0' }}>
           {[{ id: 'lien', label: 'Lien' }, { id: 'qr', label: 'QR Code' }, { id: 'reseaux', label: 'Réseaux' }].map(o => (
             <motion.button key={o.id}
-              style={{ padding: '6px 14px', borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: onglet === o.id ? 700 : 500, background: onglet === o.id ? T.accent : T.bg3, color: onglet === o.id ? 'white' : T.text2, transition: 'all 0.2s' }}
+              style={{ padding: '6px 14px', borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: onglet === o.id ? 700 : 500, background: onglet === o.id ? 'var(--ember)' : 'var(--surface-2)', color: onglet === o.id ? 'white' : 'var(--text-secondary)', transition: 'all 0.2s' }}
               onClick={() => setOnglet(o.id)} whileTap={{ scale: 0.95 }}>
               {o.label}
             </motion.button>
@@ -104,46 +104,46 @@ function ModalePartage({ T, equipe, onFermer }) {
           <AnimatePresence mode="wait">
             {onglet === 'lien' && (
               <motion.div key="lien" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <p style={{ fontSize: 12, color: T.text2, marginBottom: 12, lineHeight: 1.65 }}>Partage ce lien. Toute personne qui clique peut rejoindre l'équipe directement.</p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, padding: '10px 14px' }}>
-                  <Link2 size={13} color={T.text2} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 11, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>{lien}</span>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.65 }}>Partage ce lien. Toute personne qui clique peut rejoindre l'équipe directement.</p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '10px 14px' }}>
+                  <Link2 size={13} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>{lien}</span>
                   <motion.button
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: copie ? '#4caf8220' : `${T.accent}20`, border: `1px solid ${copie ? '#4caf8240' : T.accent + '40'}`, borderRadius: 8, color: copie ? '#4caf82' : T.accent, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: copie ? '#4caf8220' : 'var(--ember-soft)', border: `1px solid ${copie ? '#4caf8240' : 'var(--ember-ring)'}`, borderRadius: 8, color: copie ? '#4caf82' : 'var(--ember)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                     onClick={copierLien} whileTap={{ scale: 0.95 }}>
                     {copie ? <Check size={12} /> : <Copy size={12} />}
                     {copie ? 'Copié' : 'Copier'}
                   </motion.button>
                 </div>
-                <div style={{ marginTop: 12, padding: '10px 14px', background: `${T.accent}08`, border: `1px solid ${T.accent}18`, borderRadius: 10, fontSize: 12, color: T.text2 }}>
-                  Code d'invitation : <strong style={{ color: T.accent, fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>{equipe.code_invitation}</strong>
+                <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  Code d'invitation : <strong style={{ color: 'var(--ember)', fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>{equipe.code_invitation}</strong>
                 </div>
               </motion.div>
             )}
             {onglet === 'qr' && (
               <motion.div key="qr" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                <p style={{ fontSize: 12, color: T.text2, textAlign: 'center', lineHeight: 1.65 }}>Scanne ce QR code pour rejoindre l'équipe instantanément.</p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.65 }}>Scanne ce QR code pour rejoindre l'équipe instantanément.</p>
                 <div style={{ padding: 14, background: 'white', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
                   <QRCode value={lien} size={160} />
                 </div>
-                <p style={{ fontSize: 11, color: T.text2, opacity: 0.65 }}>Compatible avec l'appareil photo de n'importe quel téléphone</p>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', opacity: 0.65 }}>Compatible avec l'appareil photo de n'importe quel téléphone</p>
               </motion.div>
             )}
             {onglet === 'reseaux' && (
               <motion.div key="reseaux" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <p style={{ fontSize: 12, color: T.text2, marginBottom: 14, lineHeight: 1.65 }}>Partage directement sur tes réseaux sociaux.</p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.65 }}>Partage directement sur tes réseaux sociaux.</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {reseaux.map(r => (
                     <motion.a key={r.nom}
                       href={r.url || undefined} target={r.url ? '_blank' : undefined} rel="noopener noreferrer"
                       onClick={!r.url ? (e) => { e.preventDefault(); copierLien() } : undefined}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 13, color: T.text, textDecoration: 'none', cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 13, color: 'var(--text-primary)', textDecoration: 'none', cursor: 'pointer' }}
                       whileHover={{ borderColor: r.couleur, background: r.couleur + '10' }} whileTap={{ scale: 0.97 }}>
                       <div style={{ color: r.couleur, width: 32, height: 32, borderRadius: 9, background: r.couleur + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{r.icon}</div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 600 }}>{r.nom}</div>
-                        {!r.url && <div style={{ fontSize: 10, color: T.text2 }}>Copie le lien</div>}
+                        {!r.url && <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Copie le lien</div>}
                       </div>
                     </motion.a>
                   ))}
@@ -188,10 +188,10 @@ function QuickAddInline({ T, col, onAdd }) {
         style={{
           width: '100%',
           padding: '9px 11px',
-          background: T.bg,
+          background: 'var(--bg-base)',
           border: `1.5px solid ${col.couleur}`,
           borderRadius: 8,
-          color: T.text,
+          color: 'var(--text-primary)',
           fontSize: 12.5,
           outline: 'none',
           marginBottom: 8,
@@ -210,9 +210,9 @@ function QuickAddInline({ T, col, onAdd }) {
         width: '100%',
         padding: '7px 11px',
         background: 'transparent',
-        border: `1px dashed ${T.border}`,
+        border: '1px dashed var(--border-subtle)',
         borderRadius: 8,
-        color: T.text2,
+        color: 'var(--text-secondary)',
         fontSize: 11,
         fontWeight: 600,
         cursor: 'pointer',
@@ -285,9 +285,9 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
     <div ref={setNodeRef} style={{ ...style, position: 'relative' }} {...attributes}>
       <motion.div layout
         style={{
-          background: isDone ? `${T.bg}88` : T.bg,
-          border: `1px solid ${isDone ? '#4caf8230' : T.border}`,
-          borderLeft: statusStripe ? `3px solid ${statusStripe}` : `1px solid ${isDone ? '#4caf8230' : T.border}`,
+          background: isDone ? `var(--bg-base)88` : 'var(--bg-base)',
+          border: `1px solid ${isDone ? '#4caf8230' : 'var(--border-subtle)'}`,
+          borderLeft: statusStripe ? `3px solid ${statusStripe}` : `1px solid ${isDone ? '#4caf8230' : 'var(--border-subtle)'}`,
           borderRadius: 12, padding: '12px 14px', marginBottom: 8,
           boxShadow: isDragOverlay ? '0 12px 40px rgba(0,0,0,0.28)' : 'none',
           opacity: isDone ? 0.72 : 1,
@@ -312,7 +312,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               </span>
             ))}
             {tache.labels.length > 3 && (
-              <span style={{ fontSize: 9.5, color: T.text2, fontWeight: 700, alignSelf: 'center' }}>
+              <span style={{ fontSize: 9.5, color: 'var(--text-secondary)', fontWeight: 700, alignSelf: 'center' }}>
                 +{tache.labels.length - 3}
               </span>
             )}
@@ -328,7 +328,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
             title={checkTitle}
             style={{
               width: 18, height: 18, borderRadius: '50%',
-              border: `1.8px solid ${(isDone || isEnValidation) ? checkColor : (checkHover ? '#4caf82' : T.border)}`,
+              border: `1.8px solid ${(isDone || isEnValidation) ? checkColor : (checkHover ? '#4caf82' : 'var(--border-subtle)')}`,
               background: isDone ? checkColor : isEnValidation ? `${checkColor}22` : (checkHover ? '#4caf8215' : 'transparent'),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0, marginTop: 1, cursor: 'pointer', padding: 0,
@@ -348,17 +348,17 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               </motion.div>
             )}
           </motion.button>
-          <div {...listeners} style={{ cursor: 'grab', flexShrink: 0, color: T.text2, paddingTop: 3 }} onClick={e => e.stopPropagation()}>
+          <div {...listeners} style={{ cursor: 'grab', flexShrink: 0, color: 'var(--text-secondary)', paddingTop: 3 }} onClick={e => e.stopPropagation()}>
             <GripVertical size={12} />
           </div>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITE_COLOR[tache.priorite], flexShrink: 0, marginTop: 5 }} />
           <p style={{
             fontSize: 13, fontWeight: 600, lineHeight: 1.4, flex: 1, margin: 0,
-            color: isDone ? T.text2 : T.text,
+            color: isDone ? 'var(--text-secondary)' : 'var(--text-primary)',
             textDecoration: isDone ? 'line-through' : 'none',
           }}>{tache.titre}</p>
-          <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 2, flexShrink: 0 }}
-            onClick={e => { e.stopPropagation(); onModifier(tache) }} whileHover={{ color: T.accent }}>
+          <motion.button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 2, flexShrink: 0 }}
+            onClick={e => { e.stopPropagation(); onModifier(tache) }} whileHover={{ color: 'var(--ember)' }}>
             <MoreHorizontal size={14} />
           </motion.button>
         </div>
@@ -432,11 +432,11 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               }
               style={{
                 width: 22, height: 22, borderRadius: 7,
-                background: assignee ? `${T.accent}22` : 'transparent',
-                border: assignee ? 'none' : `1px dashed ${T.border}`,
+                background: assignee ? 'var(--ember-soft)' : 'transparent',
+                border: assignee ? 'none' : '1px dashed var(--border-subtle)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 10, fontWeight: 700,
-                color: assignee ? T.accent : T.text2,
+                color: assignee ? 'var(--ember)' : 'var(--text-secondary)',
                 cursor: isAdmin ? 'pointer' : 'default',
                 flexShrink: 0,
                 opacity: isAdmin ? 1 : 0.85,
@@ -444,17 +444,17 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               {assignee ? assignee.nom.charAt(0).toUpperCase() : <Plus size={10} />}
             </motion.button>
             {tache.deadline && (
-              <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                 <Clock size={9} />{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
               </span>
             )}
             {/* Progrès sous-tâches */}
             {tache.nb_sous_taches > 0 && (
-              <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 4 }}
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}
                 title={`${tache.nb_sous_taches_done}/${tache.nb_sous_taches} sous-tâches`}>
                 <CheckSquare size={9} />
                 {tache.nb_sous_taches_done}/{tache.nb_sous_taches}
-                <span style={{ display: 'inline-block', width: 20, height: 3, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
+                <span style={{ display: 'inline-block', width: 20, height: 3, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
                   <span style={{ display: 'block', height: '100%', width: `${(tache.nb_sous_taches_done / tache.nb_sous_taches) * 100}%`, background: '#4caf82', borderRadius: 99 }} />
                 </span>
               </span>
@@ -462,7 +462,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {tache.nb_commentaires > 0 && (
-              <span style={{ fontSize: 10, color: T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                 <MessageCircle size={9} />{tache.nb_commentaires}
               </span>
             )}
@@ -504,8 +504,8 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               position: 'absolute',
               bottom: 'calc(100% - 4px)',
               left: 12,
-              background: T.bg2,
-              border: `1px solid ${T.border}`,
+              background: 'var(--surface-1)',
+              border: '1px solid var(--border-subtle)',
               borderRadius: 10,
               padding: 4,
               minWidth: 180,
@@ -514,12 +514,12 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               zIndex: 50,
               boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
             }}>
-            <p style={{ fontSize: 9, fontWeight: 800, color: T.text2, letterSpacing: 1.4, padding: '6px 10px 4px', margin: 0 }}>ASSIGNER À</p>
+            <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-secondary)', letterSpacing: 1.4, padding: '6px 10px 4px', margin: 0 }}>ASSIGNER À</p>
             <button
               onClick={() => { onAssign?.(tache.id, null); setAssignOpen(false) }}
               style={popItemStyle(T, tache.assignee_id === null)}>
-              <div style={{ width: 20, height: 20, borderRadius: 6, border: `1px dashed ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <X size={9} color={T.text2} />
+              <div style={{ width: 20, height: 20, borderRadius: 6, border: '1px dashed var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <X size={9} color="var(--text-secondary)" />
               </div>
               <span>Non assigné</span>
             </button>
@@ -528,7 +528,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
                 key={m.id}
                 onClick={() => { onAssign?.(tache.id, m.id); setAssignOpen(false) }}
                 style={popItemStyle(T, tache.assignee_id === m.id)}>
-                <div style={{ width: 20, height: 20, borderRadius: 6, background: `${T.accent}22`, color: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
+                <div style={{ width: 20, height: 20, borderRadius: 6, background: 'var(--ember-soft)', color: 'var(--ember)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
                   {m.nom.charAt(0).toUpperCase()}
                 </div>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nom}</span>
@@ -544,10 +544,10 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
 const popItemStyle = (T, active) => ({
   display: 'flex', alignItems: 'center', gap: 8,
   width: '100%', padding: '7px 10px',
-  background: active ? `${T.accent}15` : 'transparent',
+  background: active ? 'var(--ember-soft)' : 'transparent',
   border: 'none',
   borderRadius: 7,
-  color: T.text,
+  color: 'var(--text-primary)',
   fontSize: 12,
   cursor: 'pointer',
   textAlign: 'left',
@@ -613,19 +613,19 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
     <motion.div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)' }} onClick={onFermer} />
-      <motion.div style={{ background: T.bg2, borderRadius: 20, padding: '24px 26px', width: 'min(460px, 100%)', position: 'relative', border: `1px solid ${T.border}`, boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
+      <motion.div style={{ background: 'var(--surface-1)', borderRadius: 20, padding: '24px 26px', width: 'min(460px, 100%)', position: 'relative', border: '1px solid var(--border-subtle)', boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
         initial={{ y: 20, scale: 0.97 }} animate={{ y: 0, scale: 1 }}>
-        <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: T.text2, cursor: 'pointer' }} onClick={onFermer}><X size={16} /></button>
-        <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20, fontFamily: "var(--font-ui)" }}>{tache ? 'Modifier' : 'Nouvelle tâche'}</h3>
+        <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={onFermer}><X size={16} /></button>
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 20, fontFamily: "var(--font-ui)" }}>{tache ? 'Modifier' : 'Nouvelle tâche'}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13.5, outline: 'none', width: '100%' }}
+          <input style={{ padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13.5, outline: 'none', width: '100%' }}
             placeholder="Titre *" value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })} autoFocus />
-          <textarea style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 70, fontFamily: "var(--font-ui)", width: '100%' }}
+          <textarea style={{ padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 70, fontFamily: "var(--font-ui)", width: '100%' }}
             placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: T.text2, display: 'block', marginBottom: 5 }}>PRIORITÉ</label>
-              <select style={{ width: '100%', padding: '9px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 13, outline: 'none', cursor: 'pointer' }}
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>PRIORITÉ</label>
+              <select style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer' }}
                 value={form.priorite} onChange={e => setForm({ ...form, priorite: e.target.value })}>
                 <option value="haute">Haute</option>
                 <option value="moyenne">Moyenne</option>
@@ -633,8 +633,8 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: T.text2, display: 'block', marginBottom: 5 }}>STATUT</label>
-              <select style={{ width: '100%', padding: '9px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 13, outline: 'none', cursor: 'pointer' }}
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>STATUT</label>
+              <select style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer' }}
                 value={form.statut} onChange={e => setForm({ ...form, statut: e.target.value })}>
                 <option value="todo">À faire</option>
                 <option value="en_cours">En cours</option>
@@ -644,14 +644,14 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
             </div>
           </div>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: T.text2, display: 'block', marginBottom: 5 }}>
-              ASSIGNER À {!isAdmin && <span style={{ color: T.text2, fontWeight: 500, textTransform: 'none', marginLeft: 4 }}>· admin uniquement</span>}
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>
+              ASSIGNER À {!isAdmin && <span style={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'none', marginLeft: 4 }}>· admin uniquement</span>}
             </label>
             <select
               disabled={!isAdmin}
               style={{
-                width: '100%', padding: '9px 12px', background: T.bg3,
-                border: `1px solid ${T.border}`, borderRadius: 9, color: T.text,
+                width: '100%', padding: '9px 12px', background: 'var(--surface-2)',
+                border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)',
                 fontSize: 13, outline: 'none',
                 cursor: isAdmin ? 'pointer' : 'not-allowed',
                 opacity: isAdmin ? 1 : 0.55,
@@ -668,8 +668,8 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
             const labelIds = new Set(tacheLabels.map(l => l.id))
             return (
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: T.text2, display: 'block', marginBottom: 8 }}>
-                  LABELS {tacheLabels.length > 0 && <span style={{ color: T.text, marginLeft: 4 }}>· {tacheLabels.length}</span>}
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
+                  LABELS {tacheLabels.length > 0 && <span style={{ color: 'var(--text-primary)', marginLeft: 4 }}>· {tacheLabels.length}</span>}
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {labels.map(l => {
@@ -681,10 +681,10 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
                           padding: '5px 11px', borderRadius: 99,
-                          background: active ? `${l.couleur}28` : T.bg3,
-                          color: active ? l.couleur : T.text2,
+                          background: active ? `${l.couleur}28` : 'var(--surface-2)',
+                          color: active ? l.couleur : 'var(--text-secondary)',
                           fontSize: 11.5, fontWeight: 600,
-                          border: `1px solid ${active ? l.couleur + '60' : T.border}`,
+                          border: `1px solid ${active ? l.couleur + '60' : 'var(--border-subtle)'}`,
                           cursor: 'pointer',
                           transition: 'all 0.15s',
                         }}>
@@ -702,15 +702,15 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
           {tache?.id && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: T.text2 }}>
-                  SOUS-TÂCHES {stTotal > 0 && <span style={{ color: T.text, marginLeft: 4 }}>· {stDone}/{stTotal}</span>}
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  SOUS-TÂCHES {stTotal > 0 && <span style={{ color: 'var(--text-primary)', marginLeft: 4 }}>· {stDone}/{stTotal}</span>}
                 </label>
                 {stTotal > 0 && (
-                  <span style={{ fontSize: 10, color: stPct === 100 ? '#4caf82' : T.text2, fontWeight: 700 }}>{stPct}%</span>
+                  <span style={{ fontSize: 10, color: stPct === 100 ? '#4caf82' : 'var(--text-secondary)', fontWeight: 700 }}>{stPct}%</span>
                 )}
               </div>
               {stTotal > 0 && (
-                <div style={{ height: 4, background: T.bg3, borderRadius: 99, marginBottom: 8, overflow: 'hidden' }}>
+                <div style={{ height: 4, background: 'var(--surface-2)', borderRadius: 99, marginBottom: 8, overflow: 'hidden' }}>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${stPct}%` }} transition={{ duration: 0.5 }}
                     style={{ height: '100%', background: '#4caf82', borderRadius: 99 }} />
                 </div>
@@ -719,25 +719,25 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
                 {sousTaches.map(s => (
                   <motion.div key={s.id}
                     initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: T.bg3, borderRadius: 8 }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'var(--surface-2)', borderRadius: 8 }}>
                     <button
                       onClick={() => toggleST(s.id)}
                       style={{
                         width: 16, height: 16, borderRadius: '50%',
-                        border: `1.8px solid ${s.terminee ? '#4caf82' : T.border}`,
+                        border: `1.8px solid ${s.terminee ? '#4caf82' : 'var(--border-subtle)'}`,
                         background: s.terminee ? '#4caf82' : 'transparent',
                         cursor: 'pointer', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                       }}>
                       {s.terminee ? <Check size={10} color="#fff" strokeWidth={3.5} /> : null}
                     </button>
-                    <span style={{ flex: 1, fontSize: 12.5, color: s.terminee ? T.text2 : T.text, textDecoration: s.terminee ? 'line-through' : 'none', lineHeight: 1.4, wordBreak: 'break-word' }}>
+                    <span style={{ flex: 1, fontSize: 12.5, color: s.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: s.terminee ? 'line-through' : 'none', lineHeight: 1.4, wordBreak: 'break-word' }}>
                       {s.titre}
                     </span>
                     <button
                       onClick={() => supprimerST(s.id)}
                       title="Supprimer"
-                      style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 2, flexShrink: 0, opacity: 0.6 }}>
+                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 2, flexShrink: 0, opacity: 0.6 }}>
                       <X size={12} />
                     </button>
                   </motion.div>
@@ -750,7 +750,7 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
                   onKeyDown={e => { if (e.key === 'Enter' && !stLoading && nouvelleST.trim()) { e.preventDefault(); ajouterST() } }}
                   placeholder="Ajouter une sous-tâche…"
                   disabled={stLoading}
-                  style={{ flex: 1, padding: '8px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 12.5, outline: 'none' }}
+                  style={{ flex: 1, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 12.5, outline: 'none' }}
                 />
                 <motion.button
                   onClick={ajouterST}
@@ -758,9 +758,9 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
                   whileTap={{ scale: 0.95 }}
                   style={{
                     padding: '8px 12px',
-                    background: nouvelleST.trim() ? T.accent : T.bg3,
+                    background: nouvelleST.trim() ? 'var(--ember)' : 'var(--surface-2)',
                     border: 'none', borderRadius: 9,
-                    color: nouvelleST.trim() ? 'white' : T.text2,
+                    color: nouvelleST.trim() ? 'white' : 'var(--text-secondary)',
                     fontSize: 12.5, fontWeight: 600,
                     cursor: nouvelleST.trim() ? 'pointer' : 'not-allowed',
                     display: 'flex', alignItems: 'center', gap: 4,
@@ -772,8 +772,8 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
           )}
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-          <motion.button style={{ flex: 1, padding: '10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 13, cursor: 'pointer' }} onClick={onFermer}>Annuler</motion.button>
-          <motion.button style={{ flex: 2, padding: '10px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+          <motion.button style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }} onClick={onFermer}>Annuler</motion.button>
+          <motion.button style={{ flex: 2, padding: '10px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             onClick={() => { if (form.titre.trim()) onSauvegarder({ ...form, assignee_id: form.assignee_id || null }) }}
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             {tache ? 'Enregistrer' : 'Créer'}
@@ -791,7 +791,7 @@ function HighlightMentions({ texte, T }) {
     <span>
       {parts.map((p, i) =>
         p.startsWith('@') ? (
-          <span key={i} style={{ color: T.accent, fontWeight: 700, background: `${T.accent}18`, borderRadius: 4, padding: '0 3px' }}>{p}</span>
+          <span key={i} style={{ color: 'var(--ember)', fontWeight: 700, background: 'var(--ember-soft)', borderRadius: 4, padding: '0 3px' }}>{p}</span>
         ) : p
       )}
     </span>
@@ -938,30 +938,30 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
   const col = COLONNES.find(c => c.id === tache.statut)
 
   return (
-    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
-      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITE_COLOR[tache.priorite] }} />
               <span style={{ fontSize: 10, fontWeight: 700, color: col?.couleur, letterSpacing: 0.6 }}>{col?.label.toUpperCase()}</span>
             </div>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: 0, lineHeight: 1.3, fontFamily: "var(--font-ui)" }}>{tache.titre}</h3>
-            {tache.description && <p style={{ fontSize: 12, color: T.text2, marginTop: 6, lineHeight: 1.6 }}>{tache.description}</p>}
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3, fontFamily: "var(--font-ui)" }}>{tache.titre}</h3>
+            {tache.description && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.6 }}>{tache.description}</p>}
           </div>
-          <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
             <X size={13} />
           </motion.button>
         </div>
         {assignee && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '6px 10px', background: T.bg3, borderRadius: 8 }}>
-            <div style={{ width: 20, height: 20, borderRadius: 6, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '6px 10px', background: 'var(--surface-2)', borderRadius: 8 }}>
+            <div style={{ width: 20, height: 20, borderRadius: 6, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--ember)' }}>
               {assignee.nom.charAt(0).toUpperCase()}
             </div>
-            <span style={{ fontSize: 11.5, color: T.text2 }}>{assignee.nom}</span>
+            <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>{assignee.nom}</span>
           </div>
         )}
       </div>
@@ -970,18 +970,18 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
         style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {commentaires.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 48 }}>
-            <MessageCircle size={26} color={T.border} strokeWidth={1.2} style={{ margin: '0 auto 10px', display: 'block' }} />
-            <p style={{ fontSize: 12, color: T.text2 }}>Aucun commentaire. Tape @ pour mentionner quelqu'un.</p>
+            <MessageCircle size={26} color="var(--border-subtle)" strokeWidth={1.2} style={{ margin: '0 auto 10px', display: 'block' }} />
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Aucun commentaire. Tape @ pour mentionner quelqu'un.</p>
           </div>
         ) : commentaires.map(c => (
           <div key={c.id} style={{ display: 'flex', gap: 10, opacity: c._pending ? 0.55 : 1, transition: 'opacity 0.2s' }}>
-            <div style={{ width: 28, height: 28, borderRadius: 9, background: `${T.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: T.accent, flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 9, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--ember)', flexShrink: 0 }}>
               {c.nom?.charAt(0).toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{c.nom}</span>
-                <span style={{ fontSize: 10, color: c._failed ? '#e05c5c' : T.text2 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{c.nom}</span>
+                <span style={{ fontSize: 10, color: c._failed ? '#e05c5c' : 'var(--text-secondary)' }}>
                   {c._pending
                     ? 'envoi…'
                     : c._failed
@@ -990,12 +990,12 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
                 </span>
                 {c._failed && (
                   <button onClick={() => renvoyer(c)}
-                    style={{ fontSize: 10, color: T.accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                    style={{ fontSize: 10, color: 'var(--ember)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
                     réessayer
                   </button>
                 )}
               </div>
-              <div style={{ padding: '9px 12px', background: T.bg3, borderRadius: '4px 12px 12px 12px', fontSize: 13, color: T.text, lineHeight: 1.55 }}>
+              <div style={{ padding: '9px 12px', background: 'var(--surface-2)', borderRadius: '4px 12px 12px 12px', fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.55 }}>
                 <HighlightMentions texte={c.contenu} T={T} />
               </div>
             </div>
@@ -1004,35 +1004,35 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
         <div ref={endRef} />
       </div>
 
-      <div style={{ padding: '12px 16px 20px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+      <div style={{ padding: '12px 16px 20px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
         {/* Popup @mentions */}
         <AnimatePresence>
           {mentionsSuggerees.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, padding: '4px', marginBottom: 8, boxShadow: '0 -8px 24px rgba(0,0,0,0.2)' }}>
+              style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '4px', marginBottom: 8, boxShadow: '0 -8px 24px rgba(0,0,0,0.2)' }}>
               {mentionsSuggerees.map((m, i) => (
                 <motion.div key={m.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: i === mentionIdx ? `${T.accent}15` : 'transparent' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: i === mentionIdx ? 'var(--ember-soft)' : 'transparent' }}
                   onClick={() => insererMention(m)}
                   onMouseEnter={() => setMentionIdx(i)}>
-                  <div style={{ width: 22, height: 22, borderRadius: 7, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent, flexShrink: 0 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 7, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--ember)', flexShrink: 0 }}>
                     {m.nom.charAt(0).toUpperCase()}
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: i === mentionIdx ? T.accent : T.text }}>{m.nom}</span>
-                  {m.role === 'admin' && <Crown size={10} color={T.accent} style={{ marginLeft: 'auto' }} />}
+                  <span style={{ fontSize: 13, fontWeight: 500, color: i === mentionIdx ? 'var(--ember)' : 'var(--text-primary)' }}>{m.nom}</span>
+                  {m.role === 'admin' && <Crown size={10} color="var(--ember)" style={{ marginLeft: 'auto' }} />}
                 </motion.div>
               ))}
-              <div style={{ padding: '3px 10px 4px', fontSize: 10, color: T.text2 }}>↑↓ naviguer · Enter sélectionner · Esc annuler</div>
+              <div style={{ padding: '3px 10px 4px', fontSize: 10, color: 'var(--text-secondary)' }}>↑↓ naviguer · Enter sélectionner · Esc annuler</div>
             </motion.div>
           )}
         </AnimatePresence>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea ref={textareaRef}
-            style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "var(--font-ui)", lineHeight: 1.5 }}
+            style={{ flex: 1, padding: '10px 13px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 11, color: 'var(--text-primary)', fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "var(--font-ui)", lineHeight: 1.5 }}
             placeholder="Écrire un commentaire… (@ pour mentionner)" value={texte}
             onChange={handleTexteChange} onKeyDown={handleKeyDown} rows={1} />
-          <motion.button style={{ width: 40, height: 40, borderRadius: 11, background: texte.trim() ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg3, border: `1px solid ${texte.trim() ? 'transparent' : T.border}`, color: texte.trim() ? 'white' : T.text2, cursor: texte.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}
+          <motion.button style={{ width: 40, height: 40, borderRadius: 11, background: texte.trim() ? `linear-gradient(135deg, var(--ember), var(--ember-soft))` : 'var(--surface-2)', border: `1px solid ${texte.trim() ? 'transparent' : 'var(--border-subtle)'}`, color: texte.trim() ? 'white' : 'var(--text-secondary)', cursor: texte.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}
             onClick={envoyer} whileTap={texte.trim() ? { scale: 0.95 } : {}}>
             <Send size={15} />
           </motion.button>
@@ -1078,20 +1078,20 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
   }
 
   return (
-    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(360px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(360px, 100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
-      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Activity size={16} color={T.accent} />
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Activity size={16} color="var(--ember)" />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "var(--font-ui)" }}>Activité</h3>
-            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>30 dernières actions</p>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: "var(--font-ui)" }}>Activité</h3>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>30 dernières actions</p>
           </div>
         </div>
-        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
           <X size={13} />
         </motion.button>
@@ -1100,32 +1100,32 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', paddingTop: 60 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', border: `3px solid ${T.border}`, borderTopColor: T.accent, margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
-            <p style={{ fontSize: 12, color: T.text2 }}>Chargement…</p>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--border-subtle)', borderTopColor: 'var(--ember)', margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Chargement…</p>
           </div>
         ) : activites.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 60 }}>
-            <Activity size={28} color={T.border} strokeWidth={1.2} style={{ margin: '0 auto 12px', display: 'block' }} />
-            <p style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>Aucune activité</p>
-            <p style={{ fontSize: 12, color: T.text2, lineHeight: 1.6 }}>Les actions de l'équipe apparaîtront ici.</p>
+            <Activity size={28} color="var(--border-subtle)" strokeWidth={1.2} style={{ margin: '0 auto 12px', display: 'block' }} />
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Aucune activité</p>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>Les actions de l'équipe apparaîtront ici.</p>
           </div>
         ) : (
           <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 15, top: 0, bottom: 0, width: 1, background: T.border }} />
+            <div style={{ position: 'absolute', left: 15, top: 0, bottom: 0, width: 1, background: 'var(--border-subtle)' }} />
             {activites.map((a, i) => (
               <motion.div key={a.id}
                 initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.03 }}
                 style={{ display: 'flex', gap: 14, marginBottom: 18, paddingLeft: 4 }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%', background: T.bg3, border: `2px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0, zIndex: 1, marginTop: 2 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--surface-2)', border: '2px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0, zIndex: 1, marginTop: 2 }}>
                   {ACTION_ICON[a.action] || '🔹'}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, color: T.text, lineHeight: 1.45, margin: 0, marginBottom: 2 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.45, margin: 0, marginBottom: 2 }}>
                     <strong>{a.nom_user}</strong>{' '}{a.action}
-                    {a.cible && <span style={{ color: T.text2 }}> « {a.cible} »</span>}
+                    {a.cible && <span style={{ color: 'var(--text-secondary)' }}> « {a.cible} »</span>}
                   </p>
-                  <span style={{ fontSize: 10.5, color: T.text2 }}>{tempsRelatif(a.created_at)}</span>
+                  <span style={{ fontSize: 10.5, color: 'var(--text-secondary)' }}>{tempsRelatif(a.created_at)}</span>
                 </div>
               </motion.div>
             ))}
@@ -1175,21 +1175,21 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
   }
 
   return (
-    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
 
-      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Shield size={16} color={T.accent} />
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Shield size={16} color="var(--ember)" />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "var(--font-ui)" }}>{viewOnly ? 'Membres de l\'équipe' : 'Gérer l\'équipe'}</h3>
-            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{viewOnly ? `${membres.length} membre${membres.length > 1 ? 's' : ''}` : 'Paramètres admin'}</p>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: "var(--font-ui)" }}>{viewOnly ? 'Membres de l\'équipe' : 'Gérer l\'équipe'}</h3>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{viewOnly ? `${membres.length} membre${membres.length > 1 ? 's' : ''}` : 'Paramètres admin'}</p>
           </div>
         </div>
-        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
           <X size={13} />
         </motion.button>
@@ -1199,64 +1199,64 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
         {/* Renommer l'équipe — admin uniquement */}
         {!viewOnly && (
         <>
-        <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.3, marginBottom: 10 }}>NOM DE L'ÉQUIPE</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.3, marginBottom: 10 }}>NOM DE L'ÉQUIPE</p>
         {editingNom ? (
           <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-            <input style={{ flex: 1, padding: '9px 12px', background: T.bg3, border: `1px solid ${T.accent}50`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none' }}
+            <input style={{ flex: 1, padding: '9px 12px', background: 'var(--surface-2)', border: `1px solid var(--ember-soft)`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
               value={nomEdit} onChange={e => setNomEdit(e.target.value)} autoFocus
               onKeyDown={e => { if (e.key === 'Enter') renommer(); if (e.key === 'Escape') setEditingNom(false) }} />
-            <motion.button style={{ padding: '9px 14px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 10, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: loadingAction === 'nom' ? 0.7 : 1 }}
+            <motion.button style={{ padding: '9px 14px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 10, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: loadingAction === 'nom' ? 0.7 : 1 }}
               onClick={renommer} whileTap={{ scale: 0.97 }}>
               {loadingAction === 'nom' ? '…' : <Check size={14} />}
             </motion.button>
-            <motion.button style={{ padding: '9px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 12, cursor: 'pointer' }}
+            <motion.button style={{ padding: '9px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
               onClick={() => { setEditingNom(false); setNomEdit(equipe.nom) }}>
               <X size={14} />
             </motion.button>
           </div>
         ) : (
-          <motion.div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, marginBottom: 24, cursor: 'pointer' }}
-            onClick={() => setEditingNom(true)} whileHover={{ borderColor: T.accent }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{nomEdit}</span>
-            <Edit3 size={13} color={T.text2} />
+          <motion.div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, marginBottom: 24, cursor: 'pointer' }}
+            onClick={() => setEditingNom(true)} whileHover={{ borderColor: 'var(--ember)' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{nomEdit}</span>
+            <Edit3 size={13} color="var(--text-secondary)" />
           </motion.div>
         )}
         </>
         )}
 
         {/* Liste membres */}
-        <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.3, marginBottom: 10 }}>MEMBRES ({membres.length})</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.3, marginBottom: 10 }}>MEMBRES ({membres.length})</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {membres.map(m => {
             const isMe = m.id === user.id
             const isCreateur = m.id === equipe.createur_id
             return (
               <div key={m.id}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}90, ${T.accent2 || '#4caf82'}90)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'white', flexShrink: 0 }}>
                     {m.nom.charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {m.nom}{isMe ? ' (moi)' : ''}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                      <div style={{ fontSize: 10, color: m.role === 'admin' ? T.accent : T.text2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <div style={{ fontSize: 10, color: m.role === 'admin' ? 'var(--ember)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                         {m.role === 'admin' ? <><Crown size={9} /> Admin</> : 'Membre'}
                       </div>
-                      {isCreateur && <span style={{ fontSize: 9, background: `${T.accent}18`, color: T.accent, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>CRÉATEUR</span>}
+                      {isCreateur && <span style={{ fontSize: 9, background: 'var(--ember-soft)', color: 'var(--ember)', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>CRÉATEUR</span>}
                     </div>
                   </div>
                   {!viewOnly && !isMe && !isCreateur && (
                     <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
                       <motion.button title={m.role === 'admin' ? 'Rétrograder' : 'Promouvoir admin'}
-                        style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: loadingAction === 'role-' + m.id ? 0.5 : 1 }}
+                        style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: loadingAction === 'role-' + m.id ? 0.5 : 1 }}
                         onClick={() => changerRole(m.id, m.role === 'admin' ? 'membre' : 'admin')}
-                        whileHover={{ borderColor: T.accent, color: T.accent }}>
+                        whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                         {m.role === 'admin' ? <ShieldX size={12} /> : <ShieldCheck size={12} />}
                       </motion.button>
                       <motion.button title="Exclure"
-                        style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: loadingAction === 'kick-' + m.id ? 0.5 : 1 }}
+                        style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: loadingAction === 'kick-' + m.id ? 0.5 : 1 }}
                         onClick={() => setConfirmKick(m)}
                         whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
                         <UserMinus size={12} />
@@ -1277,7 +1277,7 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
                             onClick={() => exclure(m.id)} whileTap={{ scale: 0.97 }}>
                             Exclure
                           </motion.button>
-                          <motion.button style={{ padding: '5px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 7, color: T.text2, fontSize: 11, cursor: 'pointer' }}
+                          <motion.button style={{ padding: '5px 10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 7, color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
                             onClick={() => setConfirmKick(null)}>
                             Annuler
                           </motion.button>
@@ -1351,36 +1351,36 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
       transition={{ type: 'spring', damping: 30, stiffness: 280 }}
       style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100%)',
-        background: T.bg2, borderLeft: `1px solid ${T.border}`,
+        background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)',
         boxShadow: '-16px 0 48px rgba(0,0,0,0.25)', zIndex: 400,
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
       {/* Header */}
-      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Sparkles size={15} color="#fff" strokeWidth={2.3} />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)" }}>Labels</h3>
-            <p style={{ margin: 0, fontSize: 11, color: T.text2 }}>{labels.length} étiquette{labels.length !== 1 ? 's' : ''}</p>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>Labels</h3>
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>{labels.length} étiquette{labels.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
-        <button onClick={onFermer} style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+        <button onClick={onFermer} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
       </div>
 
       {/* Corps scrollable */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 18 }}>
 
         {/* Création */}
-        <div style={{ background: T.bg3, borderRadius: 12, padding: 14, marginBottom: 18, border: `1px solid ${T.border}` }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 8, margin: '0 0 8px' }}>NOUVEAU LABEL</p>
+        <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 14, marginBottom: 18, border: '1px solid var(--border-subtle)' }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.2, marginBottom: 8, margin: '0 0 8px' }}>NOUVEAU LABEL</p>
           <input
             value={nouveauNom}
             onChange={e => setNouveauNom(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !loading && nouveauNom.trim()) creer() }}
             placeholder="Nom du label (ex: Bug, Feature, Urgent…)"
-            style={{ width: '100%', padding: '9px 12px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 12.5, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '9px 12px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 12.5, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
           />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
             {LABEL_PALETTE.map(c => (
@@ -1389,9 +1389,9 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
                 onClick={() => setNouvelleCouleur(c)}
                 style={{
                   width: 24, height: 24, borderRadius: 7, background: c,
-                  border: nouvelleCouleur === c ? `2.5px solid ${T.text}` : 'none',
+                  border: nouvelleCouleur === c ? `2.5px solid var(--text-primary)` : 'none',
                   cursor: 'pointer', padding: 0,
-                  boxShadow: nouvelleCouleur === c ? `0 0 0 2px ${T.bg2}, 0 0 0 4px ${c}80` : 'none',
+                  boxShadow: nouvelleCouleur === c ? `0 0 0 2px var(--surface-1), 0 0 0 4px ${c}80` : 'none',
                   transition: 'all 0.15s',
                 }} />
             ))}
@@ -1399,7 +1399,7 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
           {/* Preview */}
           {nouveauNom.trim() && (
             <div style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: T.text2, letterSpacing: 1, marginRight: 8 }}>APERÇU :</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1, marginRight: 8 }}>APERÇU :</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 99, background: `${nouvelleCouleur}22`, color: nouvelleCouleur, fontSize: 11, fontWeight: 700, border: `1px solid ${nouvelleCouleur}50` }}>
                 {nouveauNom.trim()}
               </span>
@@ -1411,9 +1411,9 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
             whileTap={{ scale: 0.97 }}
             style={{
               width: '100%', padding: '8px 12px',
-              background: nouveauNom.trim() ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg,
+              background: nouveauNom.trim() ? `linear-gradient(135deg, var(--ember), var(--ember-soft))` : 'var(--bg-base)',
               border: 'none', borderRadius: 9,
-              color: nouveauNom.trim() ? '#fff' : T.text2,
+              color: nouveauNom.trim() ? '#fff' : 'var(--text-secondary)',
               fontSize: 12.5, fontWeight: 700,
               cursor: nouveauNom.trim() ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -1423,9 +1423,9 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
         </div>
 
         {/* Liste */}
-        <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 10 }}>TOUS LES LABELS</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.2, marginBottom: 10 }}>TOUS LES LABELS</p>
         {labels.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '24px 0', color: T.text2, fontSize: 12, fontStyle: 'italic' }}>
+          <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)', fontSize: 12, fontStyle: 'italic' }}>
             Aucun label pour l'instant.<br />Crée-en un pour catégoriser tes tâches.
           </div>
         ) : (
@@ -1434,7 +1434,7 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
               <motion.div
                 key={label.id}
                 initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: 10 }}>
+                style={{ background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 10 }}>
                 {editingId === label.id ? (
                   <div>
                     <input
@@ -1442,7 +1442,7 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
                       onChange={e => setEditNom(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') sauvegarderEdit(label.id); if (e.key === 'Escape') setEditingId(null) }}
                       autoFocus
-                      style={{ width: '100%', padding: '7px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 7, color: T.text, fontSize: 12.5, outline: 'none', marginBottom: 8, boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 7, color: 'var(--text-primary)', fontSize: 12.5, outline: 'none', marginBottom: 8, boxSizing: 'border-box' }}
                     />
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
                       {LABEL_PALETTE.map(c => (
@@ -1451,18 +1451,18 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
                           onClick={() => setEditCouleur(c)}
                           style={{
                             width: 20, height: 20, borderRadius: 6, background: c,
-                            border: editCouleur === c ? `2px solid ${T.text}` : 'none',
+                            border: editCouleur === c ? `2px solid var(--text-primary)` : 'none',
                             cursor: 'pointer', padding: 0,
                           }} />
                       ))}
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => setEditingId(null)}
-                        style={{ flex: 1, padding: '6px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 7, color: T.text2, fontSize: 11.5, cursor: 'pointer' }}>
+                        style={{ flex: 1, padding: '6px 10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 7, color: 'var(--text-secondary)', fontSize: 11.5, cursor: 'pointer' }}>
                         Annuler
                       </button>
                       <button onClick={() => sauvegarderEdit(label.id)}
-                        style={{ flex: 1, padding: '6px 10px', background: T.accent, border: 'none', borderRadius: 7, color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+                        style={{ flex: 1, padding: '6px 10px', background: 'var(--ember)', border: 'none', borderRadius: 7, color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
                         Enregistrer
                       </button>
                     </div>
@@ -1478,7 +1478,7 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label.nom}</span>
                     </span>
                     <button onClick={() => debuterEdit(label)} title="Modifier"
-                      style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', padding: 4 }}>
+                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4 }}>
                       <Edit3 size={13} />
                     </button>
                     <button onClick={() => supprimer(label.id)} title="Supprimer"
@@ -1502,10 +1502,10 @@ function MiniBar({ valeur, max, couleur, label, T }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: T.text2 }}>{label}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
         <span style={{ fontSize: 12, fontWeight: 700, color: couleur }}>{valeur}</span>
       </div>
-      <div style={{ height: 6, background: T.bg3, borderRadius: 99, overflow: 'hidden' }}>
+      <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
         <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }}
           style={{ height: '100%', background: couleur, borderRadius: 99 }} />
       </div>
@@ -1530,21 +1530,21 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
   const STATUT_LABEL = { todo: 'À faire', en_cours: 'En cours', termine: 'Terminé' }
 
   return (
-    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(400px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)', overflowY: 'auto' }}
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(400px, 100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)', overflowY: 'auto' }}
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
 
-      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: T.bg2, zIndex: 2 }}>
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--surface-1)', zIndex: 2 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <TrendingUp size={16} color={T.accent} />
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={16} color="var(--ember)" />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "var(--font-ui)" }}>Analytics équipe</h3>
-            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>Vélocité & contribution</p>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: "var(--font-ui)" }}>Analytics équipe</h3>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>Vélocité & contribution</p>
           </div>
         </div>
-        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
           <X size={13} />
         </motion.button>
@@ -1553,31 +1553,31 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', border: `3px solid ${T.border}`, borderTopColor: T.accent, margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--border-subtle)', borderTopColor: 'var(--ember)', margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
           </div>
         ) : !stats ? (
-          <p style={{ color: T.text2, fontSize: 13 }}>Erreur de chargement.</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Erreur de chargement.</p>
         ) : (
           <>
             {/* KPIs */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               {[
-                { label: 'Total', valeur: stats.total, couleur: T.accent },
+                { label: 'Total', valeur: stats.total, couleur: 'var(--ember)' },
                 { label: 'Terminées', valeur: stats.par_statut?.termine || 0, couleur: '#4caf82' },
-                { label: 'En retard', valeur: stats.en_retard?.length || 0, couleur: stats.en_retard?.length > 0 ? '#e05c5c' : T.text2 },
+                { label: 'En retard', valeur: stats.en_retard?.length || 0, couleur: stats.en_retard?.length > 0 ? '#e05c5c' : 'var(--text-secondary)' },
               ].map(k => (
-                <div key={k.label} style={{ padding: '12px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, textAlign: 'center' }}>
+                <div key={k.label} style={{ padding: '12px 10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 12, textAlign: 'center' }}>
                   <div style={{ fontSize: 22, fontWeight: 800, color: k.couleur, fontFamily: "var(--font-ui)" }}>{k.valeur}</div>
-                  <div style={{ fontSize: 10, color: T.text2, marginTop: 2 }}>{k.label}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{k.label}</div>
                 </div>
               ))}
             </div>
 
             {/* Taux completion anneau */}
-            <div style={{ padding: '16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ padding: '16px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ position: 'relative', width: 68, height: 68, flexShrink: 0 }}>
                 <svg width="68" height="68" viewBox="0 0 68 68">
-                  <circle cx="34" cy="34" r="28" fill="none" stroke={T.border} strokeWidth="7" />
+                  <circle cx="34" cy="34" r="28" fill="none" stroke={'var(--border-subtle)'} strokeWidth="7" />
                   <motion.circle cx="34" cy="34" r="28" fill="none" stroke="#4caf82" strokeWidth="7"
                     strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 28}`}
                     initial={{ strokeDashoffset: 2 * Math.PI * 28 }}
@@ -1588,14 +1588,14 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#4caf82' }}>{stats.taux_completion}%</div>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Taux de complétion</div>
-                <div style={{ fontSize: 11, color: T.text2, marginTop: 3 }}>{stats.par_statut?.termine || 0} tâches terminées sur {stats.total}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Taux de complétion</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>{stats.par_statut?.termine || 0} tâches terminées sur {stats.total}</div>
               </div>
             </div>
 
             {/* Répartition par statut */}
-            <div style={{ padding: '16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 12 }}>RÉPARTITION</p>
+            <div style={{ padding: '16px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 14 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.2, marginBottom: 12 }}>RÉPARTITION</p>
               {Object.entries(STATUT_LABEL).map(([statut, label]) => (
                 <MiniBar key={statut} T={T}
                   valeur={stats.par_statut?.[statut] || 0}
@@ -1607,16 +1607,16 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
 
             {/* Contribution par membre */}
             {stats.membres?.length > 0 && (
-              <div style={{ padding: '16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: T.text2, letterSpacing: 1.2, marginBottom: 12 }}>CHARGE PAR MEMBRE</p>
+              <div style={{ padding: '16px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 14 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.2, marginBottom: 12 }}>CHARGE PAR MEMBRE</p>
                 {stats.membres.map(m => (
                   <div key={m.id} style={{ marginBottom: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: 7, background: `${T.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.accent, flexShrink: 0 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 7, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--ember)', flexShrink: 0 }}>
                         {m.nom.charAt(0).toUpperCase()}
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: T.text, flex: 1 }}>{m.nom}</span>
-                      <span style={{ fontSize: 11, color: T.text2 }}>{m.total || 0} tâches</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{m.nom}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{m.total || 0} tâches</span>
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {[['todo', '#6c63ff'], ['en_cours', '#e08a3c'], ['termine', '#4caf82']].map(([s, c]) => {
@@ -1626,7 +1626,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                             style={{ height: 5, flex: v, background: c, borderRadius: 99, transition: 'all 0.5s' }} />
                         ) : null
                       })}
-                      {(m.total || 0) === 0 && <div style={{ height: 5, flex: 1, background: T.border, borderRadius: 99 }} />}
+                      {(m.total || 0) === 0 && <div style={{ height: 5, flex: 1, background: 'var(--border-subtle)', borderRadius: 99 }} />}
                     </div>
                   </div>
                 ))}
@@ -1644,8 +1644,8 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                   <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, padding: '8px 10px', background: 'rgba(224,92,92,0.04)', borderRadius: 8 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: PRIORITE_COLOR[t.priorite] || '#e05c5c', marginTop: 5, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</div>
-                      <div style={{ fontSize: 10, color: T.text2, marginTop: 2 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>
                         {t.assignee_nom || 'Non assigné'} · {t.deadline ? new Date(t.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : ''}
                       </div>
                     </div>
@@ -1699,22 +1699,22 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
   }
 
   return (
-    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px, 100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
+    <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px, 100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)' }}
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 32, stiffness: 340 }}>
 
       {/* Header */}
-      <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Brain size={18} color="white" />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "var(--font-ui)" }}>Coach IA</h3>
-            <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{equipe_nom}</p>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: "var(--font-ui)" }}>Coach IA</h3>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{equipe_nom}</p>
           </div>
         </div>
-        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={onFermer} whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
           <X size={13} />
         </motion.button>
@@ -1724,16 +1724,16 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {messages.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 24 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 18, background: `linear-gradient(135deg, ${T.accent}20, ${T.accent2 || '#a855f7'}20)`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <Brain size={26} color={T.accent} strokeWidth={1.5} />
+            <div style={{ width: 56, height: 56, borderRadius: 18, background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+              <Brain size={26} color="var(--ember)" strokeWidth={1.5} />
             </div>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: '0 0 4px', fontFamily: "var(--font-ui)" }}>Coach IA de l'équipe</h4>
-            <p style={{ fontSize: 12, color: T.text2, textAlign: 'center', lineHeight: 1.6, marginBottom: 20, maxWidth: 280 }}>Je connais toutes les tâches et membres de ton équipe. Demande-moi n'importe quoi.</p>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px', fontFamily: "var(--font-ui)" }}>Coach IA de l'équipe</h4>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.6, marginBottom: 20, maxWidth: 280 }}>Je connais toutes les tâches et membres de ton équipe. Demande-moi n'importe quoi.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
               {SUGGESTIONS_IA_EQUIPE.map((s, i) => (
                 <motion.button key={i}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 12.5, cursor: 'pointer', textAlign: 'left' }}
-                  onClick={() => envoyer(s.text)} whileHover={{ borderColor: T.accent, x: 2 }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12.5, cursor: 'pointer', textAlign: 'left' }}
+                  onClick={() => envoyer(s.text)} whileHover={{ borderColor: 'var(--ember)', x: 2 }}>
                   <span style={{ fontSize: 16 }}>{s.icon}</span>
                   <span>{s.text}</span>
                 </motion.button>
@@ -1745,14 +1745,14 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
         {messages.map((m, i) => (
           <div key={i} style={{ display: 'flex', gap: 10, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
             {m.role === 'assistant' && (
-              <div style={{ width: 28, height: 28, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 9, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Brain size={13} color="white" />
               </div>
             )}
             <div style={{
               maxWidth: '80%', padding: '10px 13px', borderRadius: m.role === 'user' ? '12px 4px 12px 12px' : '4px 12px 12px 12px',
-              background: m.role === 'user' ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg3,
-              color: m.role === 'user' ? 'white' : T.text,
+              background: m.role === 'user' ? `linear-gradient(135deg, var(--ember), var(--ember-soft))` : 'var(--surface-2)',
+              color: m.role === 'user' ? 'white' : 'var(--text-primary)',
               fontSize: 13, lineHeight: 1.55,
               whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
@@ -1763,12 +1763,12 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
 
         {loading && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-            <div style={{ width: 28, height: 28, borderRadius: 9, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#a855f7'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 9, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Brain size={13} color="white" />
             </div>
-            <div style={{ padding: '12px 16px', background: T.bg3, borderRadius: '4px 12px 12px 12px', display: 'flex', gap: 5 }}>
+            <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: '4px 12px 12px 12px', display: 'flex', gap: 5 }}>
               {[0, 1, 2].map(d => (
-                <motion.div key={d} style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent }}
+                <motion.div key={d} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ember)' }}
                   animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, delay: d * 0.15, repeat: Infinity }} />
               ))}
             </div>
@@ -1778,16 +1778,16 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
       </div>
 
       {/* Input */}
-      <div style={{ padding: '12px 16px 20px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+      <div style={{ padding: '12px 16px 20px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea ref={inputRef}
-            style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "var(--font-ui)", lineHeight: 1.5 }}
+            style={{ flex: 1, padding: '10px 13px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 11, color: 'var(--text-primary)', fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "var(--font-ui)", lineHeight: 1.5 }}
             placeholder="Demande au Coach IA d'équipe…" value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer() } }}
             rows={1} />
           <motion.button
-            style={{ width: 40, height: 40, borderRadius: 11, background: input.trim() && !loading ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg3, border: `1px solid ${input.trim() && !loading ? 'transparent' : T.border}`, color: input.trim() && !loading ? 'white' : T.text2, cursor: input.trim() && !loading ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}
+            style={{ width: 40, height: 40, borderRadius: 11, background: input.trim() && !loading ? `linear-gradient(135deg, var(--ember), var(--ember-soft))` : 'var(--surface-2)', border: `1px solid ${input.trim() && !loading ? 'transparent' : 'var(--border-subtle)'}`, color: input.trim() && !loading ? 'white' : 'var(--text-secondary)', cursor: input.trim() && !loading ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}
             onClick={() => envoyer()} whileTap={input.trim() && !loading ? { scale: 0.95 } : {}}>
             {loading ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={15} />}
           </motion.button>
@@ -2319,12 +2319,12 @@ export default function Collaboration() {
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)", overflow: 'hidden' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", overflow: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 99px; }
-        select option { background: ${T.bg2}; }
+        ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 99px; }
+        select option { background: var(--surface-1); }
       `}</style>
 
       {/* ── SIDEBAR (shared component) ── */}
@@ -2339,20 +2339,20 @@ export default function Collaboration() {
         {/* Collaboration-specific: MES ÉQUIPES section */}
         {equipes.length > 0 && (
           <>
-            <div style={{ height: 1, background: T.border, margin: '16px 0' }} />
-            <p style={{ fontSize: 10, fontWeight: 600, color: T.text2, letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>MES ÉQUIPES</p>
+            <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
+            <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>MES ÉQUIPES</p>
             {equipes.map(eq => (
               <motion.button key={eq.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 9, background: equipeActive?.id === eq.id ? `${T.accent}12` : 'transparent', border: `1px solid ${equipeActive?.id === eq.id ? T.accent + '30' : 'transparent'}`, cursor: 'pointer', textAlign: 'left', marginBottom: 2 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 9, background: equipeActive?.id === eq.id ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${equipeActive?.id === eq.id ? 'var(--ember-ring)' : 'transparent'}`, cursor: 'pointer', textAlign: 'left', marginBottom: 2 }}
                 onClick={() => { setEquipeActive(eq); if (isMobile) setSidebarOpen(false) }} whileHover={{ x: 2 }}>
-                <div style={{ width: 26, height: 26, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                <div style={{ width: 26, height: 26, borderRadius: 8, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white', flexShrink: 0 }}>
                   {eq.nom.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: equipeActive?.id === eq.id ? T.accent : T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{eq.nom}</div>
-                  <div style={{ fontSize: 10, color: T.text2 }}>{eq.nb_membres} membre{eq.nb_membres !== 1 ? 's' : ''}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: equipeActive?.id === eq.id ? 'var(--ember)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{eq.nom}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{eq.nb_membres} membre{eq.nb_membres !== 1 ? 's' : ''}</div>
                 </div>
-                {eq.role === 'admin' && <Crown size={10} color={T.accent} style={{ flexShrink: 0 }} />}
+                {eq.role === 'admin' && <Crown size={10} color="var(--ember)" style={{ flexShrink: 0 }} />}
               </motion.button>
             ))}
           </>
@@ -2367,15 +2367,15 @@ export default function Collaboration() {
         style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
         {/* HEADER */}
-        <div style={{ padding: '13px clamp(14px,3vw,24px)', paddingLeft: isMobile ? 62 : undefined, borderBottom: `1px solid ${T.border}`, background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>
+        <div style={{ padding: '13px clamp(14px,3vw,24px)', paddingLeft: isMobile ? 62 : undefined, borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>
           {equipeActive ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}, ${T.accent2 || '#4caf82'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0 }}>
                 {equipeActive.nom.charAt(0).toUpperCase()}
               </div>
               <div style={{ minWidth: 0 }}>
-                <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)", margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{equipeActive.nom}</h1>
-                <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{membres.length} membre{membres.length !== 1 ? 's' : ''} · {taches.length} tâche{taches.length !== 1 ? 's' : ''}</p>
+                <h1 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)", margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{equipeActive.nom}</h1>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{membres.length} membre{membres.length !== 1 ? 's' : ''} · {taches.length} tâche{taches.length !== 1 ? 's' : ''}</p>
               </div>
               {/* Avatar stack cliquable → ouvre le drawer membres */}
               <motion.button
@@ -2386,28 +2386,28 @@ export default function Collaboration() {
                 style={{
                   display: 'flex', alignItems: 'center',
                   marginLeft: 2, padding: '3px 8px 3px 4px',
-                  background: showGestion ? `${T.accent}15` : 'transparent',
-                  border: `1px solid ${showGestion ? T.accent + '40' : 'transparent'}`,
+                  background: showGestion ? 'var(--ember-soft)' : 'transparent',
+                  border: `1px solid ${showGestion ? 'var(--ember-ring)' : 'transparent'}`,
                   borderRadius: 999,
                   cursor: 'pointer',
                 }}>
                 {membres.slice(0, 5).map((m, i) => (
-                  <div key={m.id} title={m.nom} style={{ width: 26, height: 26, borderRadius: '50%', background: `linear-gradient(135deg, ${T.accent}bb, ${T.accent2 || '#4caf82'}bb)`, border: `2px solid ${T.bg2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
+                  <div key={m.id} title={m.nom} style={{ width: 26, height: 26, borderRadius: '50%', background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover))`, border: `2px solid var(--surface-1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
                     {m.nom.charAt(0).toUpperCase()}
                   </div>
                 ))}
-                {membres.length > 5 && <div style={{ width: 26, height: 26, borderRadius: '50%', background: T.bg3, border: `2px solid ${T.bg2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: T.text2, marginLeft: -8 }}>+{membres.length - 5}</div>}
-                <Users size={12} color={showGestion ? T.accent : T.text2} style={{ marginLeft: 6 }} />
+                {membres.length > 5 && <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-2)', border: `2px solid var(--surface-1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--text-secondary)', marginLeft: -8 }}>+{membres.length - 5}</div>}
+                <Users size={12} color={showGestion ? 'var(--ember)' : 'var(--text-secondary)'} style={{ marginLeft: 6 }} />
               </motion.button>
             </div>
           ) : (
-            <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)", margin: 0 }}>Collaboration</h1>
+            <h1 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)", margin: 0 }}>Collaboration</h1>
           )}
 
           {isMobile ? (
             /* Mobile — ••• overflow (le +Tâche est au niveau de chaque colonne du kanban) */
             <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showMoreMenu ? `${T.accent}18` : T.bg3, border: `1px solid ${showMoreMenu ? T.accent + '55' : T.border}`, borderRadius: 9, color: showMoreMenu ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showMoreMenu ? 'var(--ember-soft)' : 'var(--surface-2)', border: `1px solid ${showMoreMenu ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 9, color: showMoreMenu ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
                 onClick={() => setShowMoreMenu(p => !p)} whileTap={{ scale: 0.95 }}>
                 <MoreHorizontal size={14} />
               </motion.button>
@@ -2417,7 +2417,7 @@ export default function Collaboration() {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                       style={{ position: 'fixed', inset: 0, zIndex: 290 }} onClick={() => setShowMoreMenu(false)} />
                     <motion.div initial={{ opacity: 0, y: -8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                      style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 300, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, boxShadow: '0 16px 48px rgba(0,0,0,0.28)', minWidth: 200, padding: 6 }}>
+                      style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 300, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, boxShadow: '0 16px 48px rgba(0,0,0,0.28)', minWidth: 200, padding: 6 }}>
                       {equipeActive && [
                         { icon: Brain, label: 'Coach IA', active: showIAEquipe, onClick: () => { fermerTousDrawers(); setShowIAEquipe(p => !p); setShowMoreMenu(false) } },
                         { icon: TrendingUp, label: 'Stats', active: showAnalytiques, onClick: () => { fermerTousDrawers(); setShowAnalytiques(p => !p); setShowMoreMenu(false) } },
@@ -2427,21 +2427,21 @@ export default function Collaboration() {
                         { icon: Share2, label: 'Inviter', active: false, onClick: () => { setShowPartage(equipeActive); setShowMoreMenu(false) } },
                       ].map(({ icon: Icon, label, active, onClick }) => (
                         <motion.button key={label} onClick={onClick}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: active ? `${T.accent}12` : 'transparent', border: 'none', color: active ? T.accent : T.text, cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400 }}
-                          whileHover={{ background: `${T.accent}12` }}>
-                          <Icon size={15} color={active ? T.accent : T.text2} />
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: active ? 'var(--ember-soft)' : 'transparent', border: 'none', color: active ? 'var(--ember)' : 'var(--text-primary)', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400 }}
+                          whileHover={{ background: 'var(--ember-soft)' }}>
+                          <Icon size={15} color={active ? 'var(--ember)' : 'var(--text-secondary)'} />
                           {label}
                         </motion.button>
                       ))}
-                      <div style={{ height: 1, background: T.border, margin: '4px 0' }} />
+                      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
                       <motion.button onClick={() => { setShowRejoindre(true); setErreur(''); setShowMoreMenu(false) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: 'transparent', border: 'none', color: T.text, cursor: 'pointer', fontSize: 13 }}
-                        whileHover={{ background: `${T.accent}12` }}>
-                        <UserPlus size={15} color={T.text2} />Rejoindre
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: 13 }}
+                        whileHover={{ background: 'var(--ember-soft)' }}>
+                        <UserPlus size={15} color="var(--text-secondary)" />Rejoindre
                       </motion.button>
                       <motion.button onClick={() => { setShowCreer(true); setErreur(''); setShowMoreMenu(false) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: 'transparent', border: 'none', color: T.accent, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
-                        whileHover={{ background: `${T.accent}12` }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: 'transparent', border: 'none', color: 'var(--ember)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                        whileHover={{ background: 'var(--ember-soft)' }}>
                         <Plus size={15} />+ Équipe
                       </motion.button>
                     </motion.div>
@@ -2453,46 +2453,46 @@ export default function Collaboration() {
             /* Desktop — tous les boutons */
             <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
               {equipeActive && (
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showIAEquipe ? `linear-gradient(135deg, ${T.accent}30, ${T.accent2 || '#a855f7'}30)` : T.bg3, border: `1px solid ${showIAEquipe ? T.accent + '55' : T.border}`, borderRadius: 9, color: showIAEquipe ? T.accent : T.text2, fontSize: 12, fontWeight: showIAEquipe ? 700 : 400, cursor: 'pointer' }}
-                  onClick={() => { fermerTousDrawers(); setShowIAEquipe(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showIAEquipe ? `linear-gradient(135deg, var(--ember-soft), var(--ember-hover))` : 'var(--surface-2)', border: `1px solid ${showIAEquipe ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 9, color: showIAEquipe ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, fontWeight: showIAEquipe ? 700 : 400, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowIAEquipe(p => !p) }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                   <Brain size={13} /> Coach IA
                 </motion.button>
               )}
               {equipeActive && (
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showAnalytiques ? `${T.accent}18` : T.bg3, border: `1px solid ${showAnalytiques ? T.accent + '35' : T.border}`, borderRadius: 9, color: showAnalytiques ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                  onClick={() => { fermerTousDrawers(); setShowAnalytiques(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showAnalytiques ? 'var(--ember-soft)' : 'var(--surface-2)', border: `1px solid ${showAnalytiques ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, borderRadius: 9, color: showAnalytiques ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowAnalytiques(p => !p) }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                   <TrendingUp size={13} /> Stats
                 </motion.button>
               )}
               {equipeActive && (
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showLabelsDrawer ? `${T.accent}18` : T.bg3, border: `1px solid ${showLabelsDrawer ? T.accent + '35' : T.border}`, borderRadius: 9, color: showLabelsDrawer ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                  onClick={() => { fermerTousDrawers(); setShowLabelsDrawer(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
-                  <Sparkles size={13} /> Labels{labels.length > 0 && <span style={{ marginLeft: 2, fontSize: 10, padding: '1px 5px', borderRadius: 99, background: T.accent + '20', color: T.accent, fontWeight: 700 }}>{labels.length}</span>}
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showLabelsDrawer ? 'var(--ember-soft)' : 'var(--surface-2)', border: `1px solid ${showLabelsDrawer ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, borderRadius: 9, color: showLabelsDrawer ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowLabelsDrawer(p => !p) }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
+                  <Sparkles size={13} /> Labels{labels.length > 0 && <span style={{ marginLeft: 2, fontSize: 10, padding: '1px 5px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 700 }}>{labels.length}</span>}
                 </motion.button>
               )}
               {equipeActive && (
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showGestion ? `${T.accent}18` : T.bg3, border: `1px solid ${showGestion ? T.accent + '35' : T.border}`, borderRadius: 9, color: showGestion ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                  onClick={() => { fermerTousDrawers(); setShowGestion(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showGestion ? 'var(--ember-soft)' : 'var(--surface-2)', border: `1px solid ${showGestion ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, borderRadius: 9, color: showGestion ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowGestion(p => !p) }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                   <Users size={13} /> {isAdmin ? 'Gérer' : 'Membres'}
                 </motion.button>
               )}
               {equipeActive && (
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showActivite ? `${T.accent}18` : T.bg3, border: `1px solid ${showActivite ? T.accent + '35' : T.border}`, borderRadius: 9, color: showActivite ? T.accent : T.text2, fontSize: 12, cursor: 'pointer' }}
-                  onClick={() => { fermerTousDrawers(); setShowActivite(p => !p) }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: showActivite ? 'var(--ember-soft)' : 'var(--surface-2)', border: `1px solid ${showActivite ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, borderRadius: 9, color: showActivite ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => { fermerTousDrawers(); setShowActivite(p => !p) }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                   <Activity size={13} /> Activité
                 </motion.button>
               )}
               {equipeActive && (
-                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, cursor: 'pointer' }}
-                  onClick={() => setShowPartage(equipeActive)} whileHover={{ borderColor: T.accent, color: T.accent }}>
+                <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => setShowPartage(equipeActive)} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                   <Share2 size={13} /> Inviter
                 </motion.button>
               )}
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, cursor: 'pointer' }}
-                onClick={() => { setShowRejoindre(true); setErreur('') }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
+                onClick={() => { setShowRejoindre(true); setErreur('') }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                 <UserPlus size={13} /> Rejoindre
               </motion.button>
-              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 9, color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: `0 3px 10px ${T.accent}25` }}
+              <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 9, color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: `0 3px 10px var(--ember-soft)` }}
                 onClick={() => { setShowCreer(true); setErreur('') }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Plus size={13} /> Équipe
               </motion.button>
@@ -2503,20 +2503,20 @@ export default function Collaboration() {
         {/* CONTENU */}
         {!equipeActive ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: 40 }}>
-            <motion.div style={{ width: 68, height: 68, borderRadius: 20, background: `${T.accent}12`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            <motion.div style={{ width: 68, height: 68, borderRadius: 20, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               animate={{ y: [0, -6, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
-              <Users size={28} color={T.accent} strokeWidth={1.5} />
+              <Users size={28} color="var(--ember)" strokeWidth={1.5} />
             </motion.div>
             <div style={{ textAlign: 'center' }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)", marginBottom: 8 }}>Aucune équipe</h2>
-              <p style={{ fontSize: 13, color: T.text2, lineHeight: 1.7, maxWidth: 300 }}>Crée ta première équipe ou rejoins-en une avec un code d'invitation.</p>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)", marginBottom: 8 }}>Aucune équipe</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 300 }}>Crée ta première équipe ou rejoins-en une avec un code d'invitation.</p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <motion.button style={{ padding: '10px 18px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, cursor: 'pointer', fontWeight: 500 }}
-                onClick={() => { setShowRejoindre(true); setErreur('') }} whileHover={{ borderColor: T.accent, color: T.accent }}>
+              <motion.button style={{ padding: '10px 18px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}
+                onClick={() => { setShowRejoindre(true); setErreur('') }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                 Rejoindre une équipe
               </motion.button>
-              <motion.button style={{ padding: '10px 18px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 14px ${T.accent}28` }}
+              <motion.button style={{ padding: '10px 18px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 14px var(--ember-soft)` }}
                 onClick={() => { setShowCreer(true); setErreur('') }} whileHover={{ scale: 1.02 }}>
                 Créer une équipe
               </motion.button>
@@ -2528,12 +2528,12 @@ export default function Collaboration() {
             {/* Filtres rapides — pills */}
             <div style={{
               display: 'flex', gap: 6, padding: '10px clamp(14px,3vw,24px)',
-              borderBottom: `1px solid ${T.border}`, flexShrink: 0,
+              borderBottom: '1px solid var(--border-subtle)', flexShrink: 0,
               overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center',
             }} className="filtres-pills">
               <style>{`.filtres-pills::-webkit-scrollbar{display:none;}`}</style>
               {[
-                { id: 'toutes',     label: 'Toutes',      icon: null, color: T.accent },
+                { id: 'toutes',     label: 'Toutes',      icon: null, color: 'var(--ember)' },
                 { id: 'mes_taches', label: 'Mes tâches',  icon: User, color: '#6c63ff' },
                 { id: 'en_retard',  label: 'En retard',   icon: AlertTriangle, color: '#e05c5c' },
                 { id: 'haute',      label: 'Haute prio',  icon: Zap, color: '#e05c5c' },
@@ -2550,9 +2550,9 @@ export default function Collaboration() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: '6px 12px', borderRadius: 99,
-                      background: active ? `${f.color}18` : T.bg3,
-                      border: `1px solid ${active ? f.color + '50' : T.border}`,
-                      color: active ? f.color : T.text2,
+                      background: active ? `${f.color}18` : 'var(--surface-2)',
+                      border: `1px solid ${active ? f.color + '50' : 'var(--border-subtle)'}`,
+                      color: active ? f.color : 'var(--text-secondary)',
                       fontSize: 11.5, fontWeight: active ? 700 : 500,
                       cursor: 'pointer', flexShrink: 0,
                       transition: 'all 0.15s',
@@ -2562,7 +2562,7 @@ export default function Collaboration() {
                     {count > 0 && f.id !== 'toutes' && (
                       <span style={{
                         fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
-                        background: active ? f.color : T.bg2, color: active ? '#fff' : T.text2,
+                        background: active ? f.color : 'var(--surface-1)', color: active ? '#fff' : 'var(--text-secondary)',
                       }}>{count}</span>
                     )}
                   </motion.button>
@@ -2578,9 +2578,9 @@ export default function Collaboration() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: '6px 12px', borderRadius: 99,
-                      background: filtreLabelId ? `${(labels.find(l => l.id === filtreLabelId)?.couleur || T.accent)}18` : T.bg3,
-                      border: `1px solid ${filtreLabelId ? (labels.find(l => l.id === filtreLabelId)?.couleur || T.accent) + '50' : T.border}`,
-                      color: filtreLabelId ? (labels.find(l => l.id === filtreLabelId)?.couleur || T.accent) : T.text2,
+                      background: filtreLabelId ? `${(labels.find(l => l.id === filtreLabelId)?.couleur || 'var(--ember)')}18` : 'var(--surface-2)',
+                      border: `1px solid ${filtreLabelId ? (labels.find(l => l.id === filtreLabelId)?.couleur || 'var(--ember)') + '50' : 'var(--border-subtle)'}`,
+                      color: filtreLabelId ? (labels.find(l => l.id === filtreLabelId)?.couleur || 'var(--ember)') : 'var(--text-secondary)',
                       fontSize: 11.5, fontWeight: filtreLabelId ? 700 : 500,
                       cursor: 'pointer', transition: 'all 0.15s',
                     }}>
@@ -2604,17 +2604,17 @@ export default function Collaboration() {
                           transition={{ duration: 0.15 }}
                           style={{
                             position: 'absolute', top: 'calc(100% + 6px)', left: 0,
-                            background: T.bg2, border: `1px solid ${T.border}`,
+                            background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
                             borderRadius: 12, padding: 6, minWidth: 200, maxHeight: 280,
                             overflowY: 'auto', zIndex: 300,
                             boxShadow: '0 16px 48px rgba(0,0,0,0.28)',
                           }}>
-                          <p style={{ fontSize: 9, fontWeight: 800, color: T.text2, letterSpacing: 1.3, padding: '7px 10px 5px', margin: 0 }}>FILTRER PAR LABEL</p>
+                          <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-secondary)', letterSpacing: 1.3, padding: '7px 10px 5px', margin: 0 }}>FILTRER PAR LABEL</p>
                           {filtreLabelId && (
                             <button
                               onClick={() => { setFiltreLabelId(null); setShowLabelsPopover(false) }}
                               style={popItemStyle(T, false)}>
-                              <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px dashed ${T.border}`, flexShrink: 0 }} />
+                              <div style={{ width: 14, height: 14, borderRadius: 4, border: '1px dashed var(--border-subtle)', flexShrink: 0 }} />
                               <span>Effacer le filtre</span>
                             </button>
                           )}
@@ -2625,7 +2625,7 @@ export default function Collaboration() {
                               style={popItemStyle(T, filtreLabelId === l.id)}>
                               <div style={{ width: 12, height: 12, borderRadius: 4, background: l.couleur, flexShrink: 0 }} />
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{l.nom}</span>
-                              {filtreLabelId === l.id && <Check size={11} color={T.accent} strokeWidth={3} />}
+                              {filtreLabelId === l.id && <Check size={11} color="var(--ember)" strokeWidth={3} />}
                             </button>
                           ))}
                         </motion.div>
@@ -2637,11 +2637,11 @@ export default function Collaboration() {
             </div>
 
             {/* Barre stats */}
-            <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
               {COLONNES.map((col, i) => (
-                <div key={col.id} style={{ flex: 1, padding: '9px 18px', borderRight: i < COLONNES.length - 1 ? `1px solid ${T.border}` : 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div key={col.id} style={{ flex: 1, padding: '9px 18px', borderRight: i < COLONNES.length - 1 ? '1px solid var(--border-subtle)' : 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 7, height: 7, borderRadius: '50%', background: col.couleur }} />
-                  <span style={{ fontSize: 12, fontWeight: 500, color: T.text2 }}>{col.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{col.label}</span>
                   <span style={{ fontSize: 13, fontWeight: 800, color: col.couleur, marginLeft: 'auto' }}>{tachesCol(col.id).length}</span>
                 </div>
               ))}
@@ -2652,14 +2652,14 @@ export default function Collaboration() {
               onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
               <div style={{ flex: 1, display: isMobile ? 'flex' : 'grid', gridTemplateColumns: isMobile ? undefined : `repeat(${COLONNES.length}, 1fr)`, flexDirection: isMobile ? 'row' : undefined, overflowX: isMobile ? 'auto' : undefined, overflowY: isMobile ? 'hidden' : 'hidden', scrollSnapType: isMobile ? 'x mandatory' : undefined, WebkitOverflowScrolling: 'touch' }}>
                 {COLONNES.map((col, i) => (
-                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', borderRight: !isMobile && i < COLONNES.length - 1 ? `1px solid ${T.border}` : 'none', overflow: 'hidden', ...(isMobile ? { minWidth: '85vw', maxWidth: '85vw', scrollSnapAlign: 'start', flexShrink: 0, borderRight: i < COLONNES.length - 1 ? `1px solid ${T.border}` : 'none' } : {}) }}>
+                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', borderRight: !isMobile && i < COLONNES.length - 1 ? '1px solid var(--border-subtle)' : 'none', overflow: 'hidden', ...(isMobile ? { minWidth: '85vw', maxWidth: '85vw', scrollSnapAlign: 'start', flexShrink: 0, borderRight: i < COLONNES.length - 1 ? '1px solid var(--border-subtle)' : 'none' } : {}) }}>
                     <div style={{ padding: '13px 14px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.couleur }} />
-                        <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{col.label}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{col.label}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: col.bg, color: col.couleur }}>{loadingEquipe ? '·' : tachesCol(col.id).length}</span>
                       </div>
-                      <motion.button style={{ width: 24, height: 24, borderRadius: 7, background: 'transparent', border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      <motion.button style={{ width: 24, height: 24, borderRadius: 7, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={() => { setTacheAModifier(null); setShowModaleTache(true) }} whileHover={{ borderColor: col.couleur, color: col.couleur }}>
                         <Plus size={12} />
                       </motion.button>
@@ -2672,7 +2672,7 @@ export default function Collaboration() {
                           <motion.div key={`sk-${k}`}
                             animate={{ opacity: [0.4, 0.7, 0.4] }}
                             transition={{ duration: 1.4, repeat: Infinity, delay: k * 0.2 }}
-                            style={{ height: 64, marginBottom: 8, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}` }} />
+                            style={{ height: 64, marginBottom: 8, borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)' }} />
                         ))
                       ) : (
                         <>
@@ -2688,8 +2688,8 @@ export default function Collaboration() {
                             ))}
                           </AnimatePresence>
                           {tachesCol(col.id).length === 0 && (
-                            <div style={{ padding: '24px 0', textAlign: 'center', border: `2px dashed ${overCol === col.id ? col.couleur + '60' : T.border}`, borderRadius: 10, transition: 'border-color 0.2s' }}>
-                              <p style={{ fontSize: 11, color: overCol === col.id ? col.couleur : T.text2, opacity: 0.6 }}>
+                            <div style={{ padding: '24px 0', textAlign: 'center', border: `2px dashed ${overCol === col.id ? col.couleur + '60' : 'var(--border-subtle)'}`, borderRadius: 10, transition: 'border-color 0.2s' }}>
+                              <p style={{ fontSize: 11, color: overCol === col.id ? col.couleur : 'var(--text-secondary)', opacity: 0.6 }}>
                                 {overCol === col.id ? '↓ Déposer ici' : 'Vide'}
                               </p>
                             </div>
@@ -2763,20 +2763,20 @@ export default function Collaboration() {
           <motion.div key="creer" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)' }} onClick={() => setShowCreer(false)} />
-            <motion.div style={{ background: T.bg2, borderRadius: 20, padding: '24px 26px', width: 'min(400px,100%)', position: 'relative', border: `1px solid ${T.border}`, boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
+            <motion.div style={{ background: 'var(--surface-1)', borderRadius: 20, padding: '24px 26px', width: 'min(400px,100%)', position: 'relative', border: '1px solid var(--border-subtle)', boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
               initial={{ y: 20, scale: 0.97 }} animate={{ y: 0, scale: 1 }}>
-              <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: T.text2, cursor: 'pointer' }} onClick={() => setShowCreer(false)}><X size={16} /></button>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20, fontFamily: "var(--font-ui)" }}>Créer une équipe</h3>
+              <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setShowCreer(false)}><X size={16} /></button>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 20, fontFamily: "var(--font-ui)" }}>Créer une équipe</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <input style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${erreur ? '#e05c5c' : T.border}`, borderRadius: 10, color: T.text, fontSize: 13.5, outline: 'none', width: '100%' }}
+                <input style={{ padding: '10px 14px', background: 'var(--surface-2)', border: `1px solid ${erreur ? '#e05c5c' : 'var(--border-subtle)'}`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 13.5, outline: 'none', width: '100%' }}
                   placeholder="Nom de l'équipe *" value={nomEquipe} onChange={e => { setNomEquipe(e.target.value); setErreur('') }} autoFocus onKeyDown={e => e.key === 'Enter' && creerEquipe()} />
-                <input style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', width: '100%' }}
+                <input style={{ padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: '100%' }}
                   placeholder="Description (optionnelle)" value={descEquipe} onChange={e => setDescEquipe(e.target.value)} />
                 {erreur && <p style={{ fontSize: 12, color: '#e05c5c' }}>{erreur}</p>}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-                <motion.button style={{ flex: 1, padding: '10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 13, cursor: 'pointer' }} onClick={() => setShowCreer(false)}>Annuler</motion.button>
-                <motion.button style={{ flex: 2, padding: '10px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
+                <motion.button style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }} onClick={() => setShowCreer(false)}>Annuler</motion.button>
+                <motion.button style={{ flex: 2, padding: '10px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
                   onClick={creerEquipe} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   {loading ? 'Création…' : "Créer l'équipe"}
                 </motion.button>
@@ -2789,18 +2789,18 @@ export default function Collaboration() {
           <motion.div key="rejoindre" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)' }} onClick={() => setShowRejoindre(false)} />
-            <motion.div style={{ background: T.bg2, borderRadius: 20, padding: '24px 26px', width: 'min(400px,100%)', position: 'relative', border: `1px solid ${T.border}`, boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
+            <motion.div style={{ background: 'var(--surface-1)', borderRadius: 20, padding: '24px 26px', width: 'min(400px,100%)', position: 'relative', border: '1px solid var(--border-subtle)', boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
               initial={{ y: 20, scale: 0.97 }} animate={{ y: 0, scale: 1 }}>
-              <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: T.text2, cursor: 'pointer' }} onClick={() => setShowRejoindre(false)}><X size={16} /></button>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 6, fontFamily: "var(--font-ui)" }}>Rejoindre une équipe</h3>
-              <p style={{ fontSize: 12, color: T.text2, marginBottom: 18, lineHeight: 1.65 }}>Entre le code d'invitation partagé par le créateur.</p>
-              <input style={{ width: '100%', padding: '11px 14px', background: T.bg3, border: `1px solid ${erreur ? '#e05c5c' : T.border}`, borderRadius: 10, color: T.text, fontSize: 14, outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: 1.5 }}
+              <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setShowRejoindre(false)}><X size={16} /></button>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6, fontFamily: "var(--font-ui)" }}>Rejoindre une équipe</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18, lineHeight: 1.65 }}>Entre le code d'invitation partagé par le créateur.</p>
+              <input style={{ width: '100%', padding: '11px 14px', background: 'var(--surface-2)', border: `1px solid ${erreur ? '#e05c5c' : 'var(--border-subtle)'}`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 14, outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: 1.5 }}
                 placeholder="Code d'invitation" value={codeRejoint} onChange={e => { setCodeRejoint(e.target.value); setErreur('') }}
                 onKeyDown={e => e.key === 'Enter' && rejoindreEquipe()} autoFocus />
               {erreur && <p style={{ fontSize: 12, color: '#e05c5c', marginTop: 6 }}>{erreur}</p>}
               <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                <motion.button style={{ flex: 1, padding: '10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text2, fontSize: 13, cursor: 'pointer' }} onClick={() => setShowRejoindre(false)}>Annuler</motion.button>
-                <motion.button style={{ flex: 2, padding: '10px', background: `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
+                <motion.button style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }} onClick={() => setShowRejoindre(false)}>Annuler</motion.button>
+                <motion.button style={{ flex: 2, padding: '10px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
                   onClick={rejoindreEquipe} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   {loading ? 'Vérification…' : 'Rejoindre →'}
                 </motion.button>
@@ -2817,29 +2817,29 @@ export default function Collaboration() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)}
               style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050, backdropFilter: 'blur(3px)' }} />
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)', background: T.bg2, borderLeft: `1px solid ${T.border}`, zIndex: 1051, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
-              <div style={{ padding: '20px 24px 0', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+              style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 1051, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.25)' }}>
+              <div style={{ padding: '20px 24px 0', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${T.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Settings size={18} color={T.accent} strokeWidth={1.8} />
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Settings size={18} color="var(--ember)" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>Paramètres</h2>
-                      <p style={{ fontSize: 12, color: T.text2, margin: 0, marginTop: 2 }}>{userData.nom}</p>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h2>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{userData.nom}</p>
                     </div>
                   </div>
                   <motion.button onClick={() => setShowSettings(false)}
-                    style={{ width: 32, height: 32, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     whileHover={{ color: '#e05c5c', borderColor: '#e05c5c' }}>
                     <X size={16} />
                   </motion.button>
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-                <p style={{ fontSize: 13, color: T.text2 }}>Paramètres généraux à venir...</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Paramètres généraux à venir...</p>
               </div>
-              <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+              <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                   onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
                   <LogOut size={16} strokeWidth={1.8} />Se déconnecter
