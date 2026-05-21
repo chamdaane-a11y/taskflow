@@ -1572,26 +1572,22 @@ export default function TomorrowBuilder() {
                     </motion.button>
                   )}
 
-                  {/* Google Calendar */}
-                  <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: calendarConnected && calendarEvents.length > 0 ? 10 : 8 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <CalendarDays size={15} color="#1A73E8" />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#1A73E8', letterSpacing: 0.8 }}>GOOGLE CALENDAR</div>
-                        <div style={{ fontSize: 11, color: T.text2 }}>
-                          {calendarConnected
-                            ? (calendarEvents.length === 0
-                              ? 'Journée libre ✨'
-                              : `${calendarEvents.length} event${calendarEvents.length > 1 ? 's' : ''}`)
-                            : 'Non connecté'}
+                  {/* Google Calendar — visible seulement si connecté */}
+                  {calendarConnected && (
+                    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: calendarEvents.length > 0 ? 10 : 0 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <CalendarDays size={15} color="#1A73E8" />
                         </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#1A73E8', letterSpacing: 0.8 }}>GOOGLE CALENDAR</div>
+                          <div style={{ fontSize: 11, color: T.text2 }}>
+                            {calendarEvents.length === 0 ? 'Journée libre ✨' : `${calendarEvents.length} event${calendarEvents.length > 1 ? 's' : ''}`}
+                          </div>
+                        </div>
+                        <CheckCircle size={14} color="#1A73E8" />
                       </div>
-                      {calendarConnected && <CheckCircle size={14} color="#1A73E8" />}
-                    </div>
-                    {calendarConnected ? (
-                      calendarEvents.length > 0 && (
+                      {calendarEvents.length > 0 && (
                         <div>
                           {calendarEvents.slice(0, 5).map((ev, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none' }}>
@@ -1604,76 +1600,73 @@ export default function TomorrowBuilder() {
                             <p style={{ fontSize: 10, color: T.text2, margin: '6px 0 0', textAlign: 'center' }}>+ {calendarEvents.length - 5} autre{calendarEvents.length - 5 > 1 ? 's' : ''}</p>
                           )}
                         </div>
-                      )
-                    ) : (
-                      <motion.button
-                        onClick={() => navigate('/settings', { state: { section: 'integrations' } })}
-                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'transparent', border: '1.5px dashed rgba(26,115,232,0.4)', borderRadius: 10, color: '#1A73E8', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                        Activer dans Paramètres →
-                      </motion.button>
-                    )}
-                  </div>
-
-                  <SourceExterneBloc
-                    T={T} color="#EA4335" label="GMAIL" itemLabel="email" scanLabel="Scanner mes emails"
-                    IconComp={Mail} connected={gmailConnected}
-                    extracting={gmailExtracting} tasks={gmailTasks} nbItems={gmailNbEmails}
-                    importingState={gmailImporting}
-                    onActiver={() => navigate('/settings', { state: { section: 'integrations' } })}
-                    onExtract={extraireGmailTasks} onImport={importerGmailTask}
-                  />
-
-                  <SourceExterneBloc
-                    T={T} color="#0F172A" label="NOTION" itemLabel="page" scanLabel="Scanner mes pages"
-                    IconComp={FileText} connected={notionConnected}
-                    extracting={notionExtracting} tasks={notionTasks} nbItems={notionNbPages}
-                    importingState={notionImporting}
-                    onActiver={() => navigate('/settings', { state: { section: 'integrations' } })}
-                    onExtract={extraireNotionTasks} onImport={importerNotionTask}
-                  />
-
-                  {/* Google Drive — contexte docs récents */}
-                  <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(0,172,71,0.15)', border: '1.5px solid rgba(0,172,71,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Folder size={15} color="#00AC47" />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#00AC47', letterSpacing: 0.8 }}>GOOGLE DRIVE</div>
-                        <div style={{ fontSize: 11, color: T.text2 }}>
-                          {driveConnected
-                            ? (driveDocs.length > 0 ? `${driveDocs.length} doc${driveDocs.length > 1 ? 's' : ''} récent${driveDocs.length > 1 ? 's' : ''}` : 'Connecté')
-                            : 'Non connecté'}
-                        </div>
-                      </div>
-                      {driveConnected && <CheckCircle size={14} color="#00AC47" />}
+                      )}
                     </div>
-                    {!driveConnected ? (
-                      <motion.button
-                        onClick={() => navigate('/settings', { state: { section: 'integrations' } })}
-                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'transparent', border: '1.5px dashed rgba(0,172,71,0.4)', borderRadius: 10, color: '#00AC47', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                        Activer dans Paramètres →
-                      </motion.button>
-                    ) : (
-                      driveDocs.length > 0 && (
-                        <div>
-                          {driveDocs.slice(0, 5).map((d, i) => (
-                            <a key={i} href={d.lien} target="_blank" rel="noopener noreferrer"
-                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none', textDecoration: 'none' }}>
-                              <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,172,71,0.12)', color: '#00AC47', fontWeight: 600, flexShrink: 0, textTransform: 'uppercase' }}>{d.type}</span>
-                              <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
-                              <ExternalLink size={11} color={T.text2} style={{ flexShrink: 0 }} />
-                            </a>
-                          ))}
-                          {driveDocs.length > 5 && (
-                            <p style={{ fontSize: 10, color: T.text2, margin: '6px 0 0', textAlign: 'center' }}>+ {driveDocs.length - 5} autre{driveDocs.length - 5 > 1 ? 's' : ''}</p>
-                          )}
+                  )}
+
+                  {/* Gmail — visible seulement si connecté */}
+                  {gmailConnected && (
+                    <SourceExterneBloc
+                      T={T} color="#EA4335" label="GMAIL" itemLabel="email" scanLabel="Scanner mes emails"
+                      IconComp={Mail} connected={gmailConnected}
+                      extracting={gmailExtracting} tasks={gmailTasks} nbItems={gmailNbEmails}
+                      importingState={gmailImporting}
+                      onActiver={() => {}}
+                      onExtract={extraireGmailTasks} onImport={importerGmailTask}
+                    />
+                  )}
+
+                  {/* Notion — visible seulement si connecté */}
+                  {notionConnected && (
+                    <SourceExterneBloc
+                      T={T} color="#0F172A" label="NOTION" itemLabel="page" scanLabel="Scanner mes pages"
+                      IconComp={FileText} connected={notionConnected}
+                      extracting={notionExtracting} tasks={notionTasks} nbItems={notionNbPages}
+                      importingState={notionImporting}
+                      onActiver={() => {}}
+                      onExtract={extraireNotionTasks} onImport={importerNotionTask}
+                    />
+                  )}
+
+                  {/* Google Drive — visible seulement si connecté */}
+                  {driveConnected && driveDocs.length > 0 && (
+                    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(0,172,71,0.15)', border: '1.5px solid rgba(0,172,71,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Folder size={15} color="#00AC47" />
                         </div>
-                      )
-                    )}
-                  </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#00AC47', letterSpacing: 0.8 }}>GOOGLE DRIVE</div>
+                          <div style={{ fontSize: 11, color: T.text2 }}>{driveDocs.length} doc{driveDocs.length > 1 ? 's' : ''} récent{driveDocs.length > 1 ? 's' : ''}</div>
+                        </div>
+                        <CheckCircle size={14} color="#00AC47" />
+                      </div>
+                      <div>
+                        {driveDocs.slice(0, 5).map((d, i) => (
+                          <a key={i} href={d.lien} target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? `1px solid ${T.border}` : 'none', textDecoration: 'none' }}>
+                            <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,172,71,0.12)', color: '#00AC47', fontWeight: 600, flexShrink: 0, textTransform: 'uppercase' }}>{d.type}</span>
+                            <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
+                            <ExternalLink size={11} color={T.text2} style={{ flexShrink: 0 }} />
+                          </a>
+                        ))}
+                        {driveDocs.length > 5 && (
+                          <p style={{ fontSize: 10, color: T.text2, margin: '6px 0 0', textAlign: 'center' }}>+ {driveDocs.length - 5} autre{driveDocs.length - 5 > 1 ? 's' : ''}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CTA discret si au moins une intégration non connectée */}
+                  {(!calendarConnected || !gmailConnected || !notionConnected || !driveConnected) && (
+                    <motion.button
+                      onClick={() => navigate('/settings', { state: { section: 'integrations' } })}
+                      whileHover={{ opacity: 1 }} initial={{ opacity: 0.5 }} animate={{ opacity: 0.5 }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', marginTop: 14, padding: '7px 0', background: 'transparent', border: 'none', color: T.text2, fontSize: 11, cursor: 'pointer' }}
+                    >
+                      <ExternalLink size={10} /> Connecter des intégrations
+                    </motion.button>
+                  )}
 
                   {/* Tip du jour */}
                   {planning.conseil_journee && (
