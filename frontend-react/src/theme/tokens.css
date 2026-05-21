@@ -1,0 +1,261 @@
+/* ═══════════════════════════════════════════════════════════════════
+   GETSHIFT — DESIGN TOKENS
+   Direction artistique : "GRAPHITE & EMBER"
+   - Parchemin (light)  → clarté du papier japonais
+   - Graphite (dark)    → cockpit minéral pour deep work
+   Accent signature : Ember (cuivre brûlé) — VRIN, rare en SaaS productivité
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── PARCHEMIN (default light) ─────────────────────────────────── */
+:root,
+[data-theme="parchemin"],
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-base: #F4F1EB;
+  --bg-elevated: #FBFAF7;
+  --bg-overlay: rgba(255, 255, 255, 0.93);
+
+  /* Surfaces */
+  --surface-1: #FFFFFF;
+  --surface-2: #F8F6F1;
+  --surface-3: #EFECE5;
+
+  /* Ember accent */
+  --ember: #B8521C;
+  --ember-hover: #9A3F12;
+  --ember-active: #7E3210;
+  --ember-soft: rgba(184, 82, 28, 0.08);
+  --ember-ring: rgba(184, 82, 28, 0.25);
+  --ember-glow: 0 4px 24px -4px rgba(184, 82, 28, 0.25);
+
+  /* Borders */
+  --border-subtle: #E5E2DB;
+  --border-default: #D6D2C8;
+  --border-strong: #B8B3A8;
+
+  /* Text */
+  --text-primary: #1A1A1B;
+  --text-secondary: #5C5A57;
+  --text-tertiary: #8A8884;
+  --text-disabled: #BAB7B0;
+  --text-on-ember: #FBFAF7;
+
+  /* Semantic — ton minéral, pas pharma */
+  --success: #5E7A5D;
+  --success-soft: rgba(94, 122, 93, 0.08);
+  --warning: #A0682E;
+  --warning-soft: rgba(160, 104, 46, 0.08);
+  --danger: #A8331C;
+  --danger-soft: rgba(168, 51, 28, 0.08);
+  --info: #3A5470;
+  --info-soft: rgba(58, 84, 112, 0.08);
+
+  /* Shadows — feutrées, jamais grises */
+  --shadow-xs: 0 1px 2px rgba(26, 26, 27, 0.04);
+  --shadow-sm: 0 1px 2px rgba(26, 26, 27, 0.05), 0 2px 6px -2px rgba(26, 26, 27, 0.06);
+  --shadow-md: 0 4px 8px -2px rgba(26, 26, 27, 0.06), 0 12px 24px -6px rgba(26, 26, 27, 0.08);
+  --shadow-lg: 0 8px 16px -4px rgba(26, 26, 27, 0.08), 0 24px 48px -12px rgba(26, 26, 27, 0.12);
+  --shadow-ember: 0 4px 24px -4px rgba(184, 82, 28, 0.25);
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(26, 26, 27, 0.18);
+  --scrollbar-thumb-hover: rgba(26, 26, 27, 0.32);
+
+  /* Theme-color meta (status bar mobile) */
+  color-scheme: light;
+}
+
+/* ─── GRAPHITE (dark) ───────────────────────────────────────────── */
+[data-theme="graphite"],
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-base: #0E1011;
+  --bg-elevated: #15181A;
+  --bg-overlay: rgba(14, 16, 17, 0.95);
+
+  /* Surfaces */
+  --surface-1: #171A1C;
+  --surface-2: #1F2326;
+  --surface-3: #262B2F;
+
+  /* Ember — plus chaud/saturé sur dark pour ressortir */
+  --ember: #E07A3E;
+  --ember-hover: #F0884A;
+  --ember-active: #C66629;
+  --ember-soft: rgba(224, 122, 62, 0.10);
+  --ember-ring: rgba(224, 122, 62, 0.31);
+  --ember-glow: 0 0 32px rgba(224, 122, 62, 0.28);
+
+  /* Borders */
+  --border-subtle: #2B2F33;
+  --border-default: #383D42;
+  --border-strong: #4A5056;
+
+  /* Text — JAMAIS #FFF (agressif sur dark) */
+  --text-primary: #ECEAE5;
+  --text-secondary: #A8A39B;
+  --text-tertiary: #6E6A65;
+  --text-disabled: #4A4742;
+  --text-on-ember: #1A1A1B;
+
+  /* Semantic */
+  --success: #7A9778;
+  --success-soft: rgba(122, 151, 120, 0.10);
+  --warning: #C28748;
+  --warning-soft: rgba(194, 135, 72, 0.10);
+  --danger: #D14D33;
+  --danger-soft: rgba(209, 77, 51, 0.10);
+  --info: #6B89A6;
+  --info-soft: rgba(107, 137, 166, 0.10);
+
+  /* Shadows — pas d'ombre noire (invisible), highlights internes */
+  --shadow-xs: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-sm: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 16px 40px rgba(0, 0, 0, 0.6);
+  --shadow-ember: 0 0 32px rgba(224, 122, 62, 0.28);
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(236, 234, 229, 0.12);
+  --scrollbar-thumb-hover: rgba(236, 234, 229, 0.24);
+
+  color-scheme: dark;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TYPOGRAPHIE — combinaison signature
+   - Geist (Vercel, 2024) → UI / body / headings
+   - Geist Mono          → timers, IDs, metrics, tabular nums
+   - Instrument Serif    → moments éditoriaux (empty states, milestones)
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --font-display: 'Instrument Serif', 'Iowan Old Style', 'Apple Garamond', Georgia, serif;
+  --font-ui: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Fallback transition : DM Sans encore référencé par anciens composants */
+  --font-legacy: 'DM Sans', var(--font-ui);
+
+  /* ═══ MOTION — easing premium signature ═══ */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-linear-glide: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-precise: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Durations */
+  --dur-instant: 80ms;
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --dur-stately: 520ms;
+
+  /* ═══ SPACING (base 4) ═══ */
+  --space-0_5: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Page-level fluide */
+  --space-page-x: clamp(16px, 4vw, 32px);
+  --space-section-y: clamp(32px, 6vw, 64px);
+  --space-card-p: clamp(16px, 2vw, 24px);
+
+  /* ═══ RADIUS ═══ */
+  --radius-sm: 6px;
+  --radius-base: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ACCESSIBILITÉ — préférences système respectées
+   ═══════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme="parchemin"],
+  [data-theme="light"] {
+    --border-subtle: #B8B3A8;
+    --border-default: #8A8884;
+    --text-secondary: #1A1A1B;
+  }
+  [data-theme="graphite"],
+  [data-theme="dark"] {
+    --border-subtle: #4A5056;
+    --border-default: #6E6A65;
+    --text-secondary: #ECEAE5;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FOCUS RING EMBER — signature ; jamais l'outline navigateur par défaut
+   ═══════════════════════════════════════════════════════════════════ */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* Inputs et textareas : focus ring soft + bordure ember */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--ember);
+  box-shadow: 0 0 0 3px var(--ember-ring);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SAFE AREA iOS (notch + bottom bar)
+   ═══════════════════════════════════════════════════════════════════ */
+.safe-area-top    { padding-top: max(var(--space-4), env(safe-area-inset-top)); }
+.safe-area-bottom { padding-bottom: max(var(--space-4), env(safe-area-inset-bottom)); }
+.safe-area-x {
+  padding-left: max(var(--space-4), env(safe-area-inset-left));
+  padding-right: max(var(--space-4), env(safe-area-inset-right));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SELECTION TEXT — ember soft
+   ═══════════════════════════════════════════════════════════════════ */
+::selection {
+  background: var(--ember-soft);
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TAP HIGHLIGHT (mobile) — désactivé, on gère les états nous-mêmes
+   ═══════════════════════════════════════════════════════════════════ */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Buttons et liens : touch-action manipulation pour éviter double-tap zoom */
+button,
+a[role="button"],
+[role="button"] {
+  touch-action: manipulation;
+}

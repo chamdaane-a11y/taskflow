@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import axios from 'axios'
+import './theme/tokens.css'  // Design system "Graphite & Ember" — must load before index.css
 import './index.css'
 import App from './App.jsx'
 
