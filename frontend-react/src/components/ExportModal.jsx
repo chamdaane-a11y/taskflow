@@ -5,14 +5,10 @@ import { X, Download, FileText, Table, Sparkles, ChevronDown, Loader } from 'luc
 
 const API = 'https://taskflow-production-75c1.up.railway.app'
 
-// Thèmes couleurs pour le PDF (miroir de themes.js)
+// Thèmes couleurs pour le PDF (miroir de themes.js — Graphite / Parchemin)
 const THEME_COLORS = {
-  dark:    { bg: '#0f0f13', bg2: '#1a1a24', accent: '#6c63ff', text: '#f0f0f5', text2: '#888' },
-  light:   { bg: '#f8f9fc', bg2: '#ffffff', accent: '#6c63ff', text: '#1a1a2e', text2: '#64748b' },
-  ocean:   { bg: '#0a1628', bg2: '#0f2040', accent: '#0ea5e9', text: '#e0f2fe', text2: '#7ab8d4' },
-  forest:  { bg: '#0d1f0d', bg2: '#1a2e1a', accent: '#4caf82', text: '#e8f5e8', text2: '#7ab87a' },
-  sunset:  { bg: '#1a0a0a', bg2: '#2a1010', accent: '#e05c5c', text: '#ffeaea', text2: '#c47a7a' },
-  purple:  { bg: '#0f0a1e', bg2: '#1a1030', accent: '#a855f7', text: '#f0e8ff', text2: '#9b7ab8' },
+  dark:  { bg: '#0E1011', bg2: '#171A1C', accent: '#E07A3E', text: '#ECEAE5', text2: '#A8A39B' },
+  light: { bg: '#F4F1EB', bg2: '#FFFFFF', accent: '#B8521C', text: '#1A1A1B', text2: '#5C5A57' },
 }
 
 function genererCSV(taches) {

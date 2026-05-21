@@ -6,24 +6,25 @@ import { themes } from './themes'
  * pour que les CSS tokens (src/theme/tokens.css) soient cohérents avec
  * le thème JS consommé par les composants.
  *
- * Les clés `dark` → "graphite", `light` → "parchemin" sont mappées sur
- * les data-attributes correspondants pour activer la bonne palette CSS.
+ * Deux thèmes uniquement : "dark" (Graphite) et "light" (Parchemin).
  */
-const themeToDataAttr = (themeKey) => {
-  if (themeKey === 'dark') return 'graphite'
-  if (themeKey === 'light') return 'parchemin'
-  return themeKey  // ocean, forest, sunset → utiliseront les tokens par défaut (graphite fallback)
-}
+const themeToDataAttr = (themeKey) => (themeKey === 'light' ? 'parchemin' : 'graphite')
 
 export function useTheme() {
-  const [theme] = useState(() => localStorage.getItem('theme') || 'dark')
+  const [theme] = useState(() => {
+    const stored = localStorage.getItem('theme')
+    // Migration douce : tout ancien thème supprimé (ocean/forest/sunset) → graphite
+    if (stored === 'light' || stored === 'dark') return stored
+    if (stored && stored !== 'dark') {
+      try { localStorage.setItem('theme', 'dark') } catch { /* noop */ }
+    }
+    return 'dark'
+  })
 
   useEffect(() => {
     const root = document.documentElement
     root.setAttribute('data-theme', themeToDataAttr(theme))
-    // Sync color-scheme natif (dark/light) pour les controls navigateur
-    const isDarkVariant = ['dark', 'ocean', 'forest', 'sunset'].includes(theme)
-    root.style.colorScheme = isDarkVariant ? 'dark' : 'light'
+    root.style.colorScheme = theme === 'light' ? 'light' : 'dark'
   }, [theme])
 
   const T = themes[theme] || themes['dark']
