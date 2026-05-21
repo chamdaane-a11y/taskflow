@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import { themes } from '../themes'
@@ -30,14 +30,17 @@ const SECTIONS = [
 
 export default function Settings() {
   const navigate = useNavigate()
+  const location = useLocation()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const user = JSON.parse(localStorage.getItem('user'))
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark')
   const T = themes[theme]
 
+  const VALID_SECTIONS = ['profil', 'badges', 'theme', 'integrations', 'notifications', 'compte']
   const [activeSection, setActiveSection] = useState(() => {
-    const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
-    return ['profil', 'badges', 'theme', 'integrations', 'notifications', 'compte'].includes(hash) ? hash : 'profil'
+    const fromState = location.state?.section
+    if (fromState && VALID_SECTIONS.includes(fromState)) return fromState
+    return 'profil'
   })
   const [points, setPoints] = useState(0)
   const [niveau, setNiveau] = useState(1)

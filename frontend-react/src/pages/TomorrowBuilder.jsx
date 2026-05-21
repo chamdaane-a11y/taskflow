@@ -1607,7 +1607,7 @@ export default function TomorrowBuilder() {
                       )
                     ) : (
                       <motion.button
-                        onClick={() => navigate('/settings#integrations')}
+                        onClick={() => navigate('/settings', { state: { section: 'integrations' } })}
                         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'transparent', border: '1.5px dashed rgba(26,115,232,0.4)', borderRadius: 10, color: '#1A73E8', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                         Activer dans Paramètres →
@@ -1620,7 +1620,7 @@ export default function TomorrowBuilder() {
                     IconComp={Mail} connected={gmailConnected}
                     extracting={gmailExtracting} tasks={gmailTasks} nbItems={gmailNbEmails}
                     importingState={gmailImporting}
-                    onActiver={() => navigate('/settings#integrations')}
+                    onActiver={() => navigate('/settings', { state: { section: 'integrations' } })}
                     onExtract={extraireGmailTasks} onImport={importerGmailTask}
                   />
 
@@ -1629,7 +1629,7 @@ export default function TomorrowBuilder() {
                     IconComp={FileText} connected={notionConnected}
                     extracting={notionExtracting} tasks={notionTasks} nbItems={notionNbPages}
                     importingState={notionImporting}
-                    onActiver={() => navigate('/settings#integrations')}
+                    onActiver={() => navigate('/settings', { state: { section: 'integrations' } })}
                     onExtract={extraireNotionTasks} onImport={importerNotionTask}
                   />
 
@@ -1651,7 +1651,7 @@ export default function TomorrowBuilder() {
                     </div>
                     {!driveConnected ? (
                       <motion.button
-                        onClick={() => navigate('/settings#integrations')}
+                        onClick={() => navigate('/settings', { state: { section: 'integrations' } })}
                         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'transparent', border: '1.5px dashed rgba(0,172,71,0.4)', borderRadius: 10, color: '#00AC47', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                         Activer dans Paramètres →

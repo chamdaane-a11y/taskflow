@@ -216,7 +216,7 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
             </p>
           </div>
         </div>
-        <motion.button onClick={() => navigate('/settings#badges')} whileHover={{ x: 2 }}
+        <motion.button onClick={() => navigate('/settings', { state: { section: 'badges' } })} whileHover={{ x: 2 }}
           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 9, color: text2, fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
           Tous voir <ChevronRight size={13} />
         </motion.button>
