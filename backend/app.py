@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-sync-endpoints-v9'
+APP_BUILD_MARKER = '2026-05-21-gcal-autosync-v10'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -2818,6 +2818,9 @@ def ajouter_tache():
         except Exception as e:
             print(f"[Hook notif ajouter_tache] {e}")
         db.close()
+        # Auto-sync Google Calendar (async, no-op si désactivé ou pas connecté)
+        if data.get('deadline'):
+            _autosync_calendar_hook(user_id, tache_id, 'create_from_deadline')
         return jsonify({"message": "Tâche ajoutée !", "id": tache_id})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -2836,16 +2839,30 @@ def terminer_tache(id):
         curseur.execute("UPDATE taches SET terminee=TRUE, terminee_le=NOW() WHERE id=%s", (id,))
     else:
         curseur.execute("UPDATE taches SET terminee=FALSE, terminee_le=NULL WHERE id=%s", (id,))
-    db.commit(); db.close()
+    db.commit()
+    # Auto-sync : si on coche, supprimer l'event Google Calendar associé
+    if data.get('terminee'):
+        curseur.execute("SELECT user_id FROM taches WHERE id=%s", (id,))
+        row = curseur.fetchone()
+        if row:
+            _autosync_calendar_hook(row['user_id'], id, 'delete_event_if_synced')
+    db.close()
     return jsonify({"message": "Tâche mise à jour !"})
 
 @app.route('/taches/<int:id>', methods=['DELETE'])
 def supprimer_tache(id):
     db = connecter()
-    curseur = db.cursor()
+    curseur = db.cursor(dictionary=True)
+    # Capter user_id + event_id AVANT le DELETE (sinon la ligne n'existe plus pour le thread)
+    curseur.execute("SELECT user_id, google_event_id FROM taches WHERE id=%s", (id,))
+    row = curseur.fetchone()
     curseur.execute("DELETE FROM dependances WHERE tache_id=%s OR depend_de_id=%s", (id, id))
     curseur.execute("DELETE FROM taches WHERE id=%s", (id,))
     db.commit(); db.close()
+    # Auto-sync : si event Google attaché, le supprimer côté Google
+    if row and row.get('google_event_id'):
+        _autosync_calendar_hook(row['user_id'], id, 'delete_event',
+                                extra={'event_id': row['google_event_id']})
     return jsonify({"message": "Tâche supprimée !"})
 
 @app.route('/taches/<int:id>/statut', methods=['PATCH'])
@@ -2886,10 +2903,14 @@ def update_focus_tache(id):
             curseur.execute("SELECT focus_date FROM taches WHERE id = %s", (id,))
             focus_date = curseur.fetchone()['focus_date']
             db.close()
+            # Auto-sync : créer ou upgrader event en time block focus
+            _autosync_calendar_hook(user_id, id, 'create_or_update_focus')
             return jsonify({"message": "Focus mis à jour", "focus_date": str(focus_date) if focus_date else None})
         else:
             curseur.execute("UPDATE taches SET focus_date = NULL WHERE id = %s", (id,))
             db.commit(); db.close()
+            # Auto-sync : downgrade vers 'deadline' si possible, sinon supprimer l'event focus
+            _autosync_calendar_hook(user_id, id, 'remove_focus')
             return jsonify({"message": "Focus retiré", "focus_date": None})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -5092,6 +5113,94 @@ def _gcal_delete_event(user_id, event_id):
     except Exception as e:
         print(f"[GCal] Exception delete user_id={user_id} event={event_id}: {e}")
         return False
+
+
+def _autosync_calendar_hook(user_id, task_id, action, extra=None):
+    """Lance en thread daemon une synchro Google Calendar pour une tâche.
+    Actions :
+      'create_from_deadline'   → re-fetch task, créer event all-day si deadline + pas déjà sync
+      'create_or_update_focus' → focus_date posé → créer event time block ou upgrader existant
+      'remove_focus'           → focus retiré → downgrader event vers 'deadline' si possible, sinon delete
+      'delete_event_if_synced' → toggle complete : delete event si google_event_id présent
+      'delete_event'           → cas suppression de tâche : event_id passé dans extra={'event_id': '...'}
+                                 (la task peut déjà être supprimée en DB au moment où le thread tourne)
+
+    Pré-check global : skip si user.autosync_calendar=0 ou intégration google_calendar absente.
+    Exceptions silencieusement loggées : un échec sync ne doit jamais casser l'opération CRUD principale.
+    """
+    extra = extra or {}
+
+    def _job():
+        try:
+            # Cas dégénéré : delete_event passe directement event_id (task peut être supprimée)
+            if action == 'delete_event':
+                event_id = extra.get('event_id')
+                if event_id:
+                    _gcal_delete_event(user_id, event_id)
+                return
+
+            db = connecter()
+            c = db.cursor(dictionary=True)
+            c.execute("""
+                SELECT u.autosync_calendar,
+                       (SELECT config FROM integrations WHERE user_id=u.id AND type='google_calendar' LIMIT 1) AS gcal_config
+                FROM users u WHERE u.id=%s
+            """, (user_id,))
+            row = c.fetchone()
+            if not row or not row.get('autosync_calendar') or not row.get('gcal_config'):
+                db.close()
+                return
+
+            c.execute("SELECT * FROM taches WHERE id=%s", (task_id,))
+            task = c.fetchone()
+            if not task:
+                db.close()
+                return
+            existing_event_id = task.get('google_event_id')
+            existing_mode = task.get('gcal_sync_mode')
+
+            if action == 'create_from_deadline':
+                if task.get('deadline') and not existing_event_id:
+                    result = _gcal_create_event(user_id, task, 'deadline')
+                    if result:
+                        c.execute("UPDATE taches SET google_event_id=%s, gcal_sync_mode=%s WHERE id=%s",
+                                  (result['event_id'], 'deadline', task_id))
+                        db.commit()
+
+            elif action == 'create_or_update_focus':
+                if task.get('focus_date'):
+                    if existing_event_id:
+                        result = _gcal_update_event(user_id, existing_event_id, task, 'focus')
+                    else:
+                        result = _gcal_create_event(user_id, task, 'focus')
+                    if result:
+                        c.execute("UPDATE taches SET google_event_id=%s, gcal_sync_mode=%s WHERE id=%s",
+                                  (result['event_id'], 'focus', task_id))
+                        db.commit()
+
+            elif action == 'remove_focus':
+                if existing_event_id and existing_mode == 'focus':
+                    if task.get('deadline'):
+                        result = _gcal_update_event(user_id, existing_event_id, task, 'deadline')
+                        if result:
+                            c.execute("UPDATE taches SET gcal_sync_mode=%s WHERE id=%s", ('deadline', task_id))
+                            db.commit()
+                    else:
+                        _gcal_delete_event(user_id, existing_event_id)
+                        c.execute("UPDATE taches SET google_event_id=NULL, gcal_sync_mode=NULL WHERE id=%s", (task_id,))
+                        db.commit()
+
+            elif action == 'delete_event_if_synced':
+                if existing_event_id:
+                    _gcal_delete_event(user_id, existing_event_id)
+                    c.execute("UPDATE taches SET google_event_id=NULL, gcal_sync_mode=NULL WHERE id=%s", (task_id,))
+                    db.commit()
+
+            db.close()
+        except Exception as e:
+            print(f"[GCal autosync] {action} task_id={task_id} user_id={user_id}: {e}")
+
+    threading.Thread(target=_job, daemon=True).start()
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
