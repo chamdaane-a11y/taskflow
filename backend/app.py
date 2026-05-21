@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-debug-v12'
+APP_BUILD_MARKER = '2026-05-21-gcal-autoplan-v13'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -3170,6 +3170,144 @@ def planifier_semaine():
         return jsonify({"planification": plan['planification'], "conseil": plan.get('conseil', ''), "message": f"{len(plan['planification'])} taches planifiees !"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
+
+@app.route('/ia/planifier-semaine-calendar/<int:user_id>', methods=['POST'])
+def planifier_semaine_calendar(user_id):
+    """Planification IA enrichie avec le contexte Google Calendar.
+    Retourne des suggestions (ne persiste rien) — le frontend applique les acceptées.
+    Body optionnel : {heures_dispo: int}
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        heures_dispo = int(data.get('heures_dispo', 8))
+
+        db = connecter()
+        c = db.cursor(dictionary=True)
+        c.execute("""
+            SELECT id, titre, priorite, deadline, temps_estime, focus_date
+            FROM taches
+            WHERE user_id=%s AND terminee=FALSE
+            ORDER BY deadline ASC, priorite DESC
+        """, (user_id,))
+        taches = c.fetchall()
+        db.close()
+
+        if not taches:
+            return jsonify({"suggestions": [], "message": "Aucune tâche à planifier"})
+
+        today = datetime.now().date()
+        to_dt  = today + timedelta(days=7)
+
+        # Fetch Google Calendar events for the week
+        gcal_events = []
+        service = _gcal_service(user_id)
+        gcal_connected = service is not None
+        if service:
+            try:
+                result = service.events().list(
+                    calendarId='primary',
+                    timeMin=datetime.combine(today, datetime.min.time()).isoformat() + 'Z',
+                    timeMax=datetime.combine(to_dt, datetime.min.time()).isoformat() + 'Z',
+                    singleEvents=True, orderBy='startTime', maxResults=50,
+                ).execute()
+                for ev in result.get('items', []):
+                    start = ev.get('start', {})
+                    end   = ev.get('end', {})
+                    start_dt = start.get('dateTime') or start.get('date')
+                    end_dt   = end.get('dateTime') or end.get('date', '')
+                    if not start_dt:
+                        continue
+                    all_day = 'dateTime' not in start
+                    gcal_events.append({
+                        'titre':       ev.get('summary', '(Sans titre)'),
+                        'date':        start_dt[:10],
+                        'heure_debut': start_dt[11:16] if not all_day else '00:00',
+                        'heure_fin':   end_dt[11:16]   if not all_day and len(end_dt) >= 16 else '23:59',
+                        'all_day':     all_day,
+                    })
+            except Exception as e:
+                print(f"[IA AutoPlan] Erreur fetch gcal events: {e}")
+
+        today_str = today.strftime('%Y-%m-%d')
+        week_str  = to_dt.strftime('%Y-%m-%d')
+
+        taches_str = "\n".join([
+            f"- ID={t['id']} | {t['titre']} | prio={t['priorite']} | deadline={str(t['deadline'])[:10] if t['deadline'] else 'aucune'} | durée={t['temps_estime'] or 60}min"
+            for t in taches[:20]
+        ])
+
+        gcal_str = "\n".join([
+            f"- {ev['date']} {ev['heure_debut']}-{ev['heure_fin']} : {ev['titre']}"
+            for ev in gcal_events if not ev['all_day']
+        ]) or "Aucun créneau occupé"
+
+        prompt = f"""Tu es un coach productivité expert. Aujourd'hui : {today_str}. Planifie sur 7 jours ({today_str} → {week_str}).
+
+TÂCHES À PLANIFIER (max {heures_dispo}h/jour) :
+{taches_str}
+
+AGENDA GOOGLE CALENDAR DÉJÀ OCCUPÉ :
+{gcal_str}
+
+RÈGLES :
+1. Ne jamais proposer un créneau qui chevauche l'agenda Google Calendar
+2. Tâches haute priorité ou deadline proche → matinée (09:00-12:00)
+3. Tâches moyennes → après-midi (14:00-17:00)
+4. Max {heures_dispo}h de focus par jour, évite les week-ends si possible
+5. Respecte la durée estimée (durée en minutes)
+6. task_id doit être l'ID exact de la tâche (champ ID= ci-dessus)
+
+Réponds UNIQUEMENT en JSON valide, sans texte avant ni après :
+{{"suggestions": [{{"task_id": 1, "titre": "...", "day_iso": "YYYY-MM-DD", "start_hhmm": "HH:MM", "end_hhmm": "HH:MM", "reason": "..."}}]}}"""
+
+        completion = groq_client.chat.completions.create(
+            model='llama-3.3-70b-versatile',
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2000,
+            temperature=0.3,
+        )
+        raw = completion.choices[0].message.content.strip()
+        match = re.search(r'\{.*\}', raw, re.S)
+        if not match:
+            raise ValueError("Réponse IA invalide")
+        parsed = json.loads(match.group())
+        suggestions_raw = parsed.get('suggestions', [])
+
+        # Safety check : retirer toute suggestion qui chevauche un event Google Calendar
+        def hhmm_to_mins(t):
+            try:
+                h, m = str(t).split(':')
+                return int(h) * 60 + int(m)
+            except Exception:
+                return 0
+
+        def overlaps_gcal(sug, ev):
+            if ev['all_day'] or sug.get('day_iso') != ev['date']:
+                return False
+            s1 = hhmm_to_mins(sug.get('start_hhmm', '00:00'))
+            e1 = hhmm_to_mins(sug.get('end_hhmm',   '00:00'))
+            s2 = hhmm_to_mins(ev['heure_debut'])
+            e2 = hhmm_to_mins(ev['heure_fin'])
+            return s1 < e2 and e1 > s2
+
+        safe_suggestions = []
+        conflicts_avoided = 0
+        for sug in suggestions_raw:
+            if any(overlaps_gcal(sug, ev) for ev in gcal_events):
+                conflicts_avoided += 1
+            else:
+                safe_suggestions.append(sug)
+
+        return jsonify({
+            "suggestions":      safe_suggestions,
+            "conflicts_avoided": conflicts_avoided,
+            "total_tasks":       len(taches),
+            "gcal_connected":    gcal_connected,
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)[:300]}), 500
+
 
 # ============================================
 # SOUS-TACHES

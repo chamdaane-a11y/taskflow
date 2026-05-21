@@ -160,6 +160,59 @@ export default function Planification() {
   const [semaineOffset, setSemaineOffset] = useState(0)
   const [smartResult, setSmartResult] = useState(null)   // bin-packing preview
 
+  // ── Autoplan IA Calendar ───────────────────────────────────────────
+  const [autoplanModal, setAutoplanModal]   = useState(false)
+  const [autoplanSugs, setAutoplanSugs]     = useState([])   // [{...sug, accepted:bool}]
+  const [autoplanLoading, setAutoplanLoading] = useState(false)
+  const [autoplanMeta, setAutoplanMeta]     = useState(null) // {conflicts_avoided, gcal_connected}
+
+  const lancerAutoplan = useCallback(async () => {
+    setAutoplanLoading(true)
+    try {
+      const res = await axios.post(
+        `${API}/ia/planifier-semaine-calendar/${user.id}`,
+        { heures_dispo: heuresDispo },
+        { withCredentials: true }
+      )
+      const sugs = (res.data.suggestions || []).map(s => ({ ...s, accepted: true }))
+      setAutoplanSugs(sugs)
+      setAutoplanMeta({ conflicts_avoided: res.data.conflicts_avoided, gcal_connected: res.data.gcal_connected })
+      setAutoplanModal(true)
+    } catch (e) {
+      alert("Impossible de générer le planning. Réessaie.")
+    } finally {
+      setAutoplanLoading(false)
+    }
+  }, [heuresDispo, user?.id])
+
+  const appliquerAutoplan = useCallback(async () => {
+    const accepted = autoplanSugs.filter(s => s.accepted)
+    let applied = 0
+    for (const sug of accepted) {
+      try {
+        await axios.post(`${API}/planification`, {
+          user_id: user.id,
+          tache_id: sug.task_id,
+          date_planifiee: sug.day_iso,
+          heure_debut: sug.start_hhmm,
+          heure_fin: sug.end_hhmm,
+          charge_minutes: Math.max(0,
+            (parseInt(sug.end_hhmm?.split(':')[0] || 0) * 60 + parseInt(sug.end_hhmm?.split(':')[1] || 0))
+            - (parseInt(sug.start_hhmm?.split(':')[0] || 0) * 60 + parseInt(sug.start_hhmm?.split(':')[1] || 0))
+          ),
+          genere_par_ia: true,
+        }, { withCredentials: true })
+        applied++
+      } catch {}
+    }
+    setAutoplanModal(false)
+    setAutoplanSugs([])
+    if (applied > 0) {
+      chargerDonnees()
+      refreshGcal()
+    }
+  }, [autoplanSugs, user?.id, chargerDonnees, refreshGcal])
+
   // ── Kanban drag state ──────────────────────────────────────────────
   const [kanbanDrag, setKanbanDrag] = useState(null)
   const [kanbanDragOver, setKanbanDragOver] = useState(null)
@@ -603,6 +656,25 @@ export default function Planification() {
             <Sparkles size={12} />
             {loadingIA ? 'Analyse...' : 'Proposer un planning'}
           </motion.button>
+
+          {gcalConnected && (
+            <motion.button
+              style={{
+                width: '100%', padding: '9px', marginTop: 8,
+                background: autoplanLoading ? T.bg3 : 'linear-gradient(90deg, #1A73E8, #4285F4)',
+                color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700,
+                cursor: autoplanLoading ? 'not-allowed' : 'pointer', fontSize: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                boxShadow: !autoplanLoading ? '0 4px 14px rgba(26,115,232,0.35)' : 'none',
+                transition: 'all 0.2s',
+              }}
+              onClick={lancerAutoplan}
+              whileHover={!autoplanLoading ? { scale: 1.02, y: -1 } : {}}
+              whileTap={{ scale: 0.98 }}>
+              <Zap size={12} />
+              {autoplanLoading ? 'Analyse...' : 'Planifier avec Calendar'}
+            </motion.button>
+          )}
         </div>
 
         {/* Conseil */}
@@ -1270,6 +1342,135 @@ export default function Planification() {
         </div>
         {/* END CONTENT AREA */}
       </motion.main>
+
+      {/* ── MODAL AUTOPLAN CALENDAR ─────────────────────────────────── */}
+      <AnimatePresence>
+        {autoplanModal && (
+          <motion.div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16, backdropFilter: 'blur(6px)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setAutoplanModal(false)}>
+            <motion.div
+              style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 18, padding: 24, width: 'min(560px, 95%)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }}
+              initial={{ scale: 0.88, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.88, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              onClick={e => e.stopPropagation()}>
+
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #1A73E8, #4285F4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Zap size={15} color="#fff" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 15, fontWeight: 800, color: T.text, margin: 0 }}>Planning IA — Calendar</h3>
+                    <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>
+                      {autoplanSugs.length} suggestion{autoplanSugs.length !== 1 ? 's' : ''}
+                      {autoplanMeta?.conflicts_avoided > 0 && ` · ${autoplanMeta.conflicts_avoided} conflit${autoplanMeta.conflicts_avoided > 1 ? 's' : ''} évité${autoplanMeta.conflicts_avoided > 1 ? 's' : ''}`}
+                    </p>
+                  </div>
+                </div>
+                <motion.button style={{ background: 'none', border: 'none', color: T.text2, cursor: 'pointer', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
+                  onClick={() => setAutoplanModal(false)} whileHover={{ background: T.border }}>
+                  <X size={14} />
+                </motion.button>
+              </div>
+
+              <p style={{ fontSize: 11, color: T.text2, marginBottom: 14, lineHeight: 1.6, flexShrink: 0 }}>
+                Accepte ou refuse créneau par créneau — rien n'est appliqué sans ton accord.
+              </p>
+
+              {/* Liste des suggestions */}
+              {autoplanSugs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 16px', color: T.text2, fontSize: 13, opacity: 0.7 }}>
+                  Aucune suggestion — toutes les tâches sont déjà planifiées ou sans deadline.
+                </div>
+              ) : (
+                <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4 }}>
+                  {autoplanSugs.map((sug, i) => {
+                    const dayLabel = new Date(sug.day_iso).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.025 }}
+                        onClick={() => setAutoplanSugs(cur => cur.map((s, j) => j === i ? { ...s, accepted: !s.accepted } : s))}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '10px 12px', borderRadius: 10,
+                          background: sug.accepted ? `rgba(26,115,232,0.07)` : T.bg,
+                          border: `1px solid ${sug.accepted ? 'rgba(26,115,232,0.3)' : T.border}`,
+                          cursor: 'pointer', transition: 'all 0.15s',
+                          opacity: sug.accepted ? 1 : 0.45,
+                        }}>
+                        {/* Toggle check */}
+                        <div style={{
+                          width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                          border: `2px solid ${sug.accepted ? '#1A73E8' : T.border}`,
+                          background: sug.accepted ? '#1A73E8' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 0.15s',
+                        }}>
+                          {sug.accepted && <Check size={10} color="#fff" strokeWidth={3} />}
+                        </div>
+
+                        {/* Date */}
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#1A73E8', minWidth: 80, textTransform: 'capitalize', fontFamily: 'monospace' }}>
+                          {dayLabel}
+                        </span>
+
+                        {/* Heure */}
+                        <span style={{ fontSize: 10, fontWeight: 600, color: T.text2, minWidth: 88, fontFamily: 'monospace' }}>
+                          {sug.start_hhmm} → {sug.end_hhmm}
+                        </span>
+
+                        {/* Titre */}
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {sug.titre}
+                        </span>
+
+                        {/* Raison tooltip */}
+                        {sug.reason && (
+                          <span title={sug.reason} style={{ fontSize: 9, color: T.text2, opacity: 0.6, flexShrink: 0 }}>
+                            ℹ
+                          </span>
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 16, flexShrink: 0 }}>
+                <motion.button
+                  onClick={() => setAutoplanSugs(cur => cur.map(s => ({ ...s, accepted: false })))}
+                  style={{ flex: 1, padding: '9px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text2, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  whileTap={{ scale: 0.97 }}>
+                  Tout refuser
+                </motion.button>
+                <motion.button
+                  onClick={() => setAutoplanSugs(cur => cur.map(s => ({ ...s, accepted: true })))}
+                  style={{ flex: 1, padding: '9px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  whileTap={{ scale: 0.97 }}>
+                  Tout accepter
+                </motion.button>
+                <motion.button
+                  onClick={appliquerAutoplan}
+                  style={{
+                    flex: 2, padding: '9px',
+                    background: 'linear-gradient(90deg, #1A73E8, #4285F4)',
+                    color: '#fff', border: 'none', borderRadius: 9,
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(26,115,232,0.35)',
+                  }}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                  Appliquer {autoplanSugs.filter(s => s.accepted).length} suggestion{autoplanSugs.filter(s => s.accepted).length !== 1 ? 's' : ''}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── MODAL ESTIMATION ────────────────────────────────────────── */}
       <AnimatePresence>
