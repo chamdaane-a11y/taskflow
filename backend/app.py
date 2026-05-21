@@ -78,7 +78,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-oauth-relax-v7'
+APP_BUILD_MARKER = '2026-05-21-gcal-foundation-v8'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1194,6 +1194,20 @@ def run_migrations():
             # Backfill: les tâches déjà terminées sans timestamp → NOW (on n'a pas l'historique)
             curseur.execute("UPDATE taches SET terminee_le=NOW() WHERE terminee=TRUE AND terminee_le IS NULL")
             print("[Migrations] taches.terminee_le ✅ (+backfill)")
+
+        # Intégration Google Calendar bidirectionnelle (2026-05-21)
+        # google_event_id : id de l'event Google créé depuis la tâche (pour update/delete)
+        # gcal_sync_mode : 'deadline' (all-day), 'focus' (time block), 'manual' (custom)
+        if not col_exists(curseur, 'taches', 'google_event_id'):
+            curseur.execute("ALTER TABLE taches ADD COLUMN google_event_id VARCHAR(255) NULL")
+            print("[Migrations] taches.google_event_id ✅")
+        if not col_exists(curseur, 'taches', 'gcal_sync_mode'):
+            curseur.execute("ALTER TABLE taches ADD COLUMN gcal_sync_mode VARCHAR(20) NULL")
+            print("[Migrations] taches.gcal_sync_mode ✅")
+        # Toggle utilisateur pour activer/désactiver l'auto-sync vers Google Calendar
+        if not col_exists(curseur, 'users', 'autosync_calendar'):
+            curseur.execute("ALTER TABLE users ADD COLUMN autosync_calendar TINYINT(1) NOT NULL DEFAULT 1")
+            print("[Migrations] users.autosync_calendar ✅ (default ON)")
 
         # Correction du backfill destructif du 18 mai (commit b07d7ad).
         # Le UPDATE taches SET terminee_le=NOW() a écrasé toutes les complétions
@@ -4809,7 +4823,9 @@ def save_slack_integration():
 # GOOGLE CALENDAR — OAuth réel + events
 # ============================================
 
-GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+# Full read+write : permet de créer/modifier/supprimer des events depuis GetShift.
+# Note : Google ajoute auto userinfo.email + userinfo.profile, OAUTHLIB_RELAX_TOKEN_SCOPE=1 gère le mismatch.
+GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar']
 GCAL_REDIRECT_URI = "https://getshift-backend.onrender.com/auth/google/calendar/callback"
 
 def _gcal_cid():
