@@ -39,7 +39,7 @@ export function useDashboard() {
   const [points, setPoints] = useState(0)
   const [niveau, setNiveau] = useState(1)
   const [streak, setStreak] = useState(0)
-  const [theme,  setTheme]  = useState(() => localStorage.getItem('theme') || 'dark')
+  const [theme,  setTheme]  = useState(() => localStorage.getItem('theme') || 'light')
   const T = themes[theme]
 
   // ── Dashboard HUD stats + Coach daily message + DNA insights ────────
@@ -275,7 +275,7 @@ export function useDashboard() {
     if (local) {
       setPoints(local.points || 0)
       setNiveau(local.niveau || 1)
-      const lt = local.theme || 'dark'
+      const lt = local.theme || 'light'
       setTheme(lt)
       localStorage.setItem('theme', lt)
     }
@@ -283,7 +283,7 @@ export function useDashboard() {
       const res = await api.get(`/users/${user.id}`)
       setPoints(res.data.points || 0)
       setNiveau(res.data.niveau || 1)
-      const t = res.data.theme || 'dark'
+      const t = res.data.theme || 'light'
       setTheme(t)
       localStorage.setItem('theme', t)
       await sauvegarderProfilLocalement(res.data)

@@ -45,7 +45,7 @@ const QUICK_ITERATIONS = [
 export default function GoalReverse() {
   const navigate = useNavigate()
   const user = (() => { try { return JSON.parse(localStorage.getItem('user')) } catch { return null } })()
-  const themeKey = localStorage.getItem('theme') || 'dark'
+  const themeKey = localStorage.getItem('theme') || 'light'
   const T = themes[themeKey]
 
   const [objectif, setObjectif] = useState('')

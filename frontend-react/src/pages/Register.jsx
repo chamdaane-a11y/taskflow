@@ -54,7 +54,7 @@ function RegisterInner() {
           invite_code: pendingCode || undefined,
         }, { withCredentials: true })
         localStorage.setItem('user', JSON.stringify(res.data.user))
-        localStorage.setItem('theme', res.data.user.theme || 'dark')
+        localStorage.setItem('theme', res.data.user.theme || 'light')
         if (res.data.equipes_rejointes && res.data.equipes_rejointes.length > 0) {
           try { localStorage.removeItem('pending_invite_code') } catch {}
         }

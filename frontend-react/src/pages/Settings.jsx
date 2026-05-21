@@ -33,7 +33,7 @@ export default function Settings() {
   const location = useLocation()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const user = JSON.parse(localStorage.getItem('user'))
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark')
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
   const T = themes[theme]
 
   const VALID_SECTIONS = ['profil', 'badges', 'theme', 'integrations', 'notifications', 'compte']
@@ -82,7 +82,7 @@ export default function Settings() {
       const res = await axios.get(`${API}/users/${user.id}`)
       setPoints(res.data.points || 0)
       setNiveau(res.data.niveau || 1)
-      const t = res.data.theme || 'dark'
+      const t = res.data.theme || 'light'
       setTheme(t)
       localStorage.setItem('theme', t)
     } catch {}

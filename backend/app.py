@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-ia-agent-team-v17'
+APP_BUILD_MARKER = '2026-05-21-design-light-default-v1'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1227,6 +1227,21 @@ def run_migrations():
         """)
         print("[Migrations] gcal_watch_channels ✅")
 
+        # Refonte design 2026-05-21 — nouveau défaut thème = 'light' (Parchemin).
+        # Idempotent : on lit le DEFAULT actuel et on l'aligne sur 'light' si besoin.
+        try:
+            curseur.execute("""
+                SELECT COLUMN_DEFAULT FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'users' AND column_name = 'theme'
+            """)
+            row = curseur.fetchone()
+            current_default = row[0] if row else None
+            if current_default != 'light':
+                curseur.execute("ALTER TABLE users MODIFY COLUMN theme VARCHAR(32) NOT NULL DEFAULT 'light'")
+                print(f"[Migrations] users.theme DEFAULT 'light' ✅ (était : {current_default!r})")
+        except Exception as _e:
+            print(f"[Migrations] users.theme DEFAULT skip ({_e})")
+
         # Correction du backfill destructif du 18 mai (commit b07d7ad).
         # Le UPDATE taches SET terminee_le=NOW() a écrasé toutes les complétions
         # historiques au timestamp de la migration, ET a déclenché
@@ -1511,11 +1526,11 @@ def auth_google():
                 cursor.execute("UPDATE users SET google_id = %s, email_verifie = TRUE WHERE id = %s", (google_id, user['id']))
                 db.commit()
             user_id = user['id']; nom_final = user['nom']
-            niveau = user.get('niveau', 1); points = user.get('points', 0); theme = user.get('theme', 'dark')
+            niveau = user.get('niveau', 1); points = user.get('points', 0); theme = user.get('theme', 'light')
         else:
-            cursor.execute("INSERT INTO users (nom, email, password, google_id, email_verifie, points, niveau, theme) VALUES (%s, %s, %s, %s, TRUE, 0, 1, 'dark')", (nom, email, secrets.token_hex(32), google_id))
+            cursor.execute("INSERT INTO users (nom, email, password, google_id, email_verifie, points, niveau, theme) VALUES (%s, %s, %s, %s, TRUE, 0, 1, 'light')", (nom, email, secrets.token_hex(32), google_id))
             db.commit()
-            user_id = cursor.lastrowid; nom_final = nom; niveau = 1; points = 0; theme = 'dark'
+            user_id = cursor.lastrowid; nom_final = nom; niveau = 1; points = 0; theme = 'light'
 
         # Si invite_code fourni : consommer immédiatement (Google = email auto-vérifié)
         invite_code = (request.json.get('invite_code') or '').strip()
@@ -1647,7 +1662,7 @@ def login():
         _enregistrer_session(user['id'], access_token)
         response = make_response(jsonify({
             "message": "Connecté !",
-            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'dark')},
+            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'light')},
             "equipes_rejointes": equipes_rejointes,
         }))
         set_access_cookies(response, access_token)

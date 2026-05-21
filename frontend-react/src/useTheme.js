@@ -13,12 +13,12 @@ const themeToDataAttr = (themeKey) => (themeKey === 'light' ? 'parchemin' : 'gra
 export function useTheme() {
   const [theme] = useState(() => {
     const stored = localStorage.getItem('theme')
-    // Migration douce : tout ancien thème supprimé (ocean/forest/sunset) → graphite
     if (stored === 'light' || stored === 'dark') return stored
-    if (stored && stored !== 'dark') {
-      try { localStorage.setItem('theme', 'dark') } catch { /* noop */ }
+    // Migration douce : tout ancien thème supprimé (ocean/forest/sunset) → parchemin
+    if (stored && stored !== 'light') {
+      try { localStorage.setItem('theme', 'light') } catch { /* noop */ }
     }
-    return 'dark'
+    return 'light'
   })
 
   useEffect(() => {
@@ -27,6 +27,6 @@ export function useTheme() {
     root.style.colorScheme = theme === 'light' ? 'light' : 'dark'
   }, [theme])
 
-  const T = themes[theme] || themes['dark']
+  const T = themes[theme] || themes['light']
   return { theme, T }
 }

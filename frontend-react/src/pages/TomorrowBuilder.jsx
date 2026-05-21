@@ -824,7 +824,7 @@ export default function TomorrowBuilder() {
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const user = JSON.parse(localStorage.getItem('user'))
-  const theme = localStorage.getItem('theme') || 'dark'
+  const theme = localStorage.getItem('theme') || 'light'
   const T = themes[theme]
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {

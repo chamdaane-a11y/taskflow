@@ -310,7 +310,7 @@ export default function Help() {
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const [showSidebar, setShowSidebar] = useState(false)
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark')
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
   const [activeStep, setActiveStep] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
