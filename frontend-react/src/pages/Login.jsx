@@ -81,22 +81,22 @@ function LoginInner() {
       minHeight: '100vh',
       background: 'linear-gradient(180deg, #ffffff 0%, #F8F9FC 100%)',
       color: '#0f172a',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "var(--font-ui)",
       display: 'flex', flexDirection: 'column',
       position: 'relative', overflowX: 'hidden',
     }}>
       <style>{`
         * { box-sizing: border-box; }
         .gradient-text { background: linear-gradient(135deg, #6C63FF, #00C896); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .tf-input { width: 100%; padding: 13px 16px; background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+        .tf-input { width: 100%; padding: 13px 16px; background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 15px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
         .tf-input:focus { border-color: #6C63FF; box-shadow: 0 0 0 3px rgba(108,99,255,0.08); }
         .tf-input::placeholder { color: #94a3b8; }
         .tf-label { display: block; font-size: 13px; font-weight: 500; color: #64748b; margin-bottom: 7px; }
-        .tf-btn-main { width: 100%; padding: 14px; background: linear-gradient(135deg, #6C63FF, #00C896); color: white; border: none; border-radius: 11px; font-size: 15px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 24px rgba(108,99,255,0.22); transition: box-shadow 0.2s, transform 0.1s; }
+        .tf-btn-main { width: 100%; padding: 14px; background: linear-gradient(135deg, #6C63FF, #00C896); color: white; border: none; border-radius: 11px; font-size: 15px; font-weight: 700; font-family: var(--font-ui); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 24px rgba(108,99,255,0.22); transition: box-shadow 0.2s, transform 0.1s; }
         .tf-btn-main:hover { box-shadow: 0 12px 32px rgba(108,99,255,0.32); }
         .tf-btn-main:active { transform: scale(0.99); }
         .tf-btn-main:disabled { opacity: 0.6; cursor: not-allowed; }
-        .tf-btn-google { width: 100%; padding: 13px 16px; background: #0f172a; color: white; border: none; border-radius: 11px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 0.15s, transform 0.1s; box-shadow: 0 4px 14px rgba(15,23,42,0.15); }
+        .tf-btn-google { width: 100%; padding: 13px 16px; background: #0f172a; color: white; border: none; border-radius: 11px; font-size: 14px; font-weight: 500; font-family: var(--font-ui); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 0.15s, transform 0.1s; box-shadow: 0 4px 14px rgba(15,23,42,0.15); }
         .tf-btn-google:hover { background: #1e293b; }
         .tf-btn-google:active { transform: scale(0.99); }
         .tf-btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -122,9 +122,9 @@ function LoginInner() {
           <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(108,99,255,0.25)' }}>
             <Layers size={17} color="white" strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>GetShift</span>
+          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "var(--font-ui)", color: '#0f172a' }}>GetShift</span>
         </Link>
-        <Link to="/register" style={{ padding: '8px 20px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', borderRadius: 9, color: 'white', fontSize: 14, fontWeight: 600, textDecoration: 'none', boxShadow: '0 4px 14px rgba(108,99,255,0.2)', fontFamily: "'DM Sans', sans-serif" }}>
+        <Link to="/register" style={{ padding: '8px 20px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', borderRadius: 9, color: 'white', fontSize: 14, fontWeight: 600, textDecoration: 'none', boxShadow: '0 4px 14px rgba(108,99,255,0.2)', fontFamily: "var(--font-ui)" }}>
           S'inscrire gratuitement
         </Link>
       </motion.nav>
@@ -144,7 +144,7 @@ function LoginInner() {
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
-            style={{ fontSize: 'clamp(40px, 5vw, 66px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>
+            style={{ fontSize: 'clamp(40px, 5vw, 66px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, fontFamily: "var(--font-ui)", color: '#0f172a' }}>
             Organisez.{' '}
             <span className="gradient-text">Automatisez.</span>
             <br />Performez.
@@ -159,7 +159,7 @@ function LoginInner() {
             style={{ display: 'flex', gap: 40 }}>
             {[{ val: '10k+', label: 'Utilisateurs actifs' }, { val: '4.9/5', label: 'Satisfaction' }, { val: '100%', label: 'Gratuit' }].map((s, i) => (
               <div key={i}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{s.val}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px', fontFamily: "var(--font-ui)" }}>{s.val}</div>
                 <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>{s.label}</div>
               </div>
             ))}
@@ -172,7 +172,7 @@ function LoginInner() {
           style={{ width: 'min(480px, 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(48px, 6vw, 80px) clamp(24px, 5vw, 60px)', background: 'white', boxShadow: '-1px 0 0 rgba(0,0,0,0.04)' }}>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.6px', marginBottom: 6, fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.6px', marginBottom: 6, fontFamily: "var(--font-ui)" }}>
               Bon retour.
             </h2>
             <p style={{ fontSize: 14, color: '#64748b' }}>Connectez-vous à votre espace GetShift.</p>

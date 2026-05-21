@@ -404,7 +404,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
             <>
               <Plus size={14} strokeWidth={2.5} />
               Ajouter la tâche
-              <kbd style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: `${T.bg}30`, fontFamily: 'monospace' }}>↵</kbd>
+              <kbd style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: `${T.bg}30`, fontFamily: 'var(--font-mono)' }}>↵</kbd>
             </>
           )}
         </motion.button>
@@ -2412,7 +2412,7 @@ export default function Dashboard() {
   const pBg = (p) => p === 'haute' ? 'rgba(224,92,92,0.12)' : p === 'moyenne' ? 'rgba(224,138,60,0.12)' : 'rgba(76,175,130,0.12)'
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; }
@@ -3383,7 +3383,7 @@ export default function Dashboard() {
                   <input value={d.coachInput || ''} onChange={e => d.setCoachInput?.(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); d.envoyerMessageCoach?.(d.coachInput) } }}
                     placeholder={`Parle à ${coachStyleObj?.nom || 'ton coach'}...`}
-                    style={{ flex: 1, padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
+                    style={{ flex: 1, padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', fontFamily: "var(--font-ui)" }} />
                   <motion.button onClick={() => d.envoyerMessageCoach?.(d.coachInput)}
                     disabled={!d.coachInput?.trim() || d.coachLoading}
                     style={{ width: 40, height: 40, borderRadius: 10, background: d.coachInput?.trim() ? T.accent : T.bg3, border: `1px solid ${d.coachInput?.trim() ? T.accent : T.border}`, color: d.coachInput?.trim() ? T.bg : T.text2, cursor: d.coachInput?.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}

@@ -194,7 +194,7 @@ export default function CGU() {
   const sections = onglet === 'cgu' ? SECTIONS_CGU : SECTIONS_CONFIDENTIALITE
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F8F9FC', fontFamily: "'DM Sans', sans-serif", color: '#1a1a2e' }}>
+    <div style={{ minHeight: '100vh', background: '#F8F9FC', fontFamily: "var(--font-ui)", color: '#1a1a2e' }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
@@ -216,10 +216,10 @@ export default function CGU() {
           <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Layers size={16} color="white" strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>GetShift</span>
+          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "var(--font-ui)", color: '#0f172a' }}>GetShift</span>
         </div>
         <motion.button onClick={() => navigate('/')} whileHover={{ x: -3 }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: "var(--font-ui)" }}>
           <ArrowLeft size={16} /> Retour
         </motion.button>
       </nav>
@@ -231,7 +231,7 @@ export default function CGU() {
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'rgba(108,99,255,0.07)', border: '1px solid rgba(108,99,255,0.15)', borderRadius: 99, marginBottom: 20, fontSize: 12, color: '#6C63FF', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
               <Shield size={12} /> Documents légaux
             </div>
-            <h1 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 800, letterSpacing: '-2px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a', marginBottom: 12 }}>
+            <h1 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 800, letterSpacing: '-2px', fontFamily: "var(--font-ui)", color: '#0f172a', marginBottom: 12 }}>
               {onglet === 'cgu' ? "Conditions Générales d'Utilisation" : 'Politique de Confidentialité'}
             </h1>
             <p style={{ fontSize: 15, color: '#64748b', marginBottom: 32 }}>
@@ -263,7 +263,7 @@ export default function CGU() {
                 { id: 'confidentialite', label: 'Confidentialité', icon: <Lock size={14} /> },
               ].map(o => (
                 <motion.button key={o.id} onClick={() => setOnglet(o.id)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', background: onglet === o.id ? 'white' : 'transparent', border: 'none', borderRadius: 9, color: onglet === o.id ? '#0f172a' : '#64748b', fontSize: 14, fontWeight: onglet === o.id ? 600 : 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: onglet === o.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.2s' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', background: onglet === o.id ? 'white' : 'transparent', border: 'none', borderRadius: 9, color: onglet === o.id ? '#0f172a' : '#64748b', fontSize: 14, fontWeight: onglet === o.id ? 600 : 500, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: onglet === o.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.2s' }}>
                   {o.icon} {o.label}
                 </motion.button>
               ))}
@@ -329,7 +329,7 @@ export default function CGU() {
                 style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: 16, padding: 28, marginBottom: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                   <div style={{ width: 6, height: 24, borderRadius: 3, background: 'linear-gradient(180deg, #6C63FF, #00C896)', flexShrink: 0 }} />
-                  <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{s.titre}</h2>
+                  <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', fontFamily: "var(--font-ui)" }}>{s.titre}</h2>
                 </div>
                 <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.85, whiteSpace: 'pre-line' }}>
                   {s.contenu}

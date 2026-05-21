@@ -83,7 +83,7 @@ function ModalePartage({ T, equipe, onFermer }) {
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}>
         <div style={{ padding: '22px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0 }}>Inviter dans l'équipe</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)", margin: 0 }}>Inviter dans l'équipe</h3>
             <p style={{ fontSize: 12, color: T.text2, marginTop: 3 }}>{equipe.nom}</p>
           </div>
           <motion.button style={{ width: 32, height: 32, borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -107,7 +107,7 @@ function ModalePartage({ T, equipe, onFermer }) {
                 <p style={{ fontSize: 12, color: T.text2, marginBottom: 12, lineHeight: 1.65 }}>Partage ce lien. Toute personne qui clique peut rejoindre l'équipe directement.</p>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, padding: '10px 14px' }}>
                   <Link2 size={13} color={T.text2} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 11, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{lien}</span>
+                  <span style={{ flex: 1, fontSize: 11, color: T.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>{lien}</span>
                   <motion.button
                     style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: copie ? '#4caf8220' : `${T.accent}20`, border: `1px solid ${copie ? '#4caf8240' : T.accent + '40'}`, borderRadius: 8, color: copie ? '#4caf82' : T.accent, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                     onClick={copierLien} whileTap={{ scale: 0.95 }}>
@@ -116,7 +116,7 @@ function ModalePartage({ T, equipe, onFermer }) {
                   </motion.button>
                 </div>
                 <div style={{ marginTop: 12, padding: '10px 14px', background: `${T.accent}08`, border: `1px solid ${T.accent}18`, borderRadius: 10, fontSize: 12, color: T.text2 }}>
-                  Code d'invitation : <strong style={{ color: T.accent, fontFamily: 'monospace', letterSpacing: 1 }}>{equipe.code_invitation}</strong>
+                  Code d'invitation : <strong style={{ color: T.accent, fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>{equipe.code_invitation}</strong>
                 </div>
               </motion.div>
             )}
@@ -616,11 +616,11 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
       <motion.div style={{ background: T.bg2, borderRadius: 20, padding: '24px 26px', width: 'min(460px, 100%)', position: 'relative', border: `1px solid ${T.border}`, boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
         initial={{ y: 20, scale: 0.97 }} animate={{ y: 0, scale: 1 }}>
         <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: T.text2, cursor: 'pointer' }} onClick={onFermer}><X size={16} /></button>
-        <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{tache ? 'Modifier' : 'Nouvelle tâche'}</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20, fontFamily: "var(--font-ui)" }}>{tache ? 'Modifier' : 'Nouvelle tâche'}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <input style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13.5, outline: 'none', width: '100%' }}
             placeholder="Titre *" value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })} autoFocus />
-          <textarea style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 70, fontFamily: "'DM Sans', sans-serif", width: '100%' }}
+          <textarea style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 70, fontFamily: "var(--font-ui)", width: '100%' }}
             placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
@@ -948,7 +948,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITE_COLOR[tache.priorite] }} />
               <span style={{ fontSize: 10, fontWeight: 700, color: col?.couleur, letterSpacing: 0.6 }}>{col?.label.toUpperCase()}</span>
             </div>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: 0, lineHeight: 1.3, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{tache.titre}</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: 0, lineHeight: 1.3, fontFamily: "var(--font-ui)" }}>{tache.titre}</h3>
             {tache.description && <p style={{ fontSize: 12, color: T.text2, marginTop: 6, lineHeight: 1.6 }}>{tache.description}</p>}
           </div>
           <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
@@ -1029,7 +1029,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea ref={textareaRef}
-            style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
+            style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "var(--font-ui)", lineHeight: 1.5 }}
             placeholder="Écrire un commentaire… (@ pour mentionner)" value={texte}
             onChange={handleTexteChange} onKeyDown={handleKeyDown} rows={1} />
           <motion.button style={{ width: 40, height: 40, borderRadius: 11, background: texte.trim() ? `linear-gradient(135deg, ${T.accent}, ${T.accent}cc)` : T.bg3, border: `1px solid ${texte.trim() ? 'transparent' : T.border}`, color: texte.trim() ? 'white' : T.text2, cursor: texte.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}
@@ -1087,7 +1087,7 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
             <Activity size={16} color={T.accent} />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Activité</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "var(--font-ui)" }}>Activité</h3>
             <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>30 dernières actions</p>
           </div>
         </div>
@@ -1185,7 +1185,7 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
             <Shield size={16} color={T.accent} />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{viewOnly ? 'Membres de l\'équipe' : 'Gérer l\'équipe'}</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "var(--font-ui)" }}>{viewOnly ? 'Membres de l\'équipe' : 'Gérer l\'équipe'}</h3>
             <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{viewOnly ? `${membres.length} membre${membres.length > 1 ? 's' : ''}` : 'Paramètres admin'}</p>
           </div>
         </div>
@@ -1362,7 +1362,7 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
             <Sparkles size={15} color="#fff" strokeWidth={2.3} />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Labels</h3>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)" }}>Labels</h3>
             <p style={{ margin: 0, fontSize: 11, color: T.text2 }}>{labels.length} étiquette{labels.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
@@ -1540,7 +1540,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
             <TrendingUp size={16} color={T.accent} />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Analytics équipe</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "var(--font-ui)" }}>Analytics équipe</h3>
             <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>Vélocité & contribution</p>
           </div>
         </div>
@@ -1567,7 +1567,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                 { label: 'En retard', valeur: stats.en_retard?.length || 0, couleur: stats.en_retard?.length > 0 ? '#e05c5c' : T.text2 },
               ].map(k => (
                 <div key={k.label} style={{ padding: '12px 10px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 12, textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: k.couleur, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{k.valeur}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: k.couleur, fontFamily: "var(--font-ui)" }}>{k.valeur}</div>
                   <div style={{ fontSize: 10, color: T.text2, marginTop: 2 }}>{k.label}</div>
                 </div>
               ))}
@@ -1710,7 +1710,7 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
             <Brain size={18} color="white" />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Coach IA</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text, margin: 0, fontFamily: "var(--font-ui)" }}>Coach IA</h3>
             <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{equipe_nom}</p>
           </div>
         </div>
@@ -1727,7 +1727,7 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
             <div style={{ width: 56, height: 56, borderRadius: 18, background: `linear-gradient(135deg, ${T.accent}20, ${T.accent2 || '#a855f7'}20)`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
               <Brain size={26} color={T.accent} strokeWidth={1.5} />
             </div>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: '0 0 4px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>Coach IA de l'équipe</h4>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: '0 0 4px', fontFamily: "var(--font-ui)" }}>Coach IA de l'équipe</h4>
             <p style={{ fontSize: 12, color: T.text2, textAlign: 'center', lineHeight: 1.6, marginBottom: 20, maxWidth: 280 }}>Je connais toutes les tâches et membres de ton équipe. Demande-moi n'importe quoi.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
               {SUGGESTIONS_IA_EQUIPE.map((s, i) => (
@@ -1781,7 +1781,7 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
       <div style={{ padding: '12px 16px 20px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea ref={inputRef}
-            style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
+            style={{ flex: 1, padding: '10px 13px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 11, color: T.text, fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "var(--font-ui)", lineHeight: 1.5 }}
             placeholder="Demande au Coach IA d'équipe…" value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer() } }}
@@ -2319,7 +2319,7 @@ export default function Collaboration() {
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif", overflow: 'hidden' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)", overflow: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; }
@@ -2374,7 +2374,7 @@ export default function Collaboration() {
                 {equipeActive.nom.charAt(0).toUpperCase()}
               </div>
               <div style={{ minWidth: 0 }}>
-                <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{equipeActive.nom}</h1>
+                <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)", margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{equipeActive.nom}</h1>
                 <p style={{ fontSize: 11, color: T.text2, margin: 0 }}>{membres.length} membre{membres.length !== 1 ? 's' : ''} · {taches.length} tâche{taches.length !== 1 ? 's' : ''}</p>
               </div>
               {/* Avatar stack cliquable → ouvre le drawer membres */}
@@ -2401,7 +2401,7 @@ export default function Collaboration() {
               </motion.button>
             </div>
           ) : (
-            <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0 }}>Collaboration</h1>
+            <h1 style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)", margin: 0 }}>Collaboration</h1>
           )}
 
           {isMobile ? (
@@ -2508,7 +2508,7 @@ export default function Collaboration() {
               <Users size={28} color={T.accent} strokeWidth={1.5} />
             </motion.div>
             <div style={{ textAlign: 'center' }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: 8 }}>Aucune équipe</h2>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, fontFamily: "var(--font-ui)", marginBottom: 8 }}>Aucune équipe</h2>
               <p style={{ fontSize: 13, color: T.text2, lineHeight: 1.7, maxWidth: 300 }}>Crée ta première équipe ou rejoins-en une avec un code d'invitation.</p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -2766,7 +2766,7 @@ export default function Collaboration() {
             <motion.div style={{ background: T.bg2, borderRadius: 20, padding: '24px 26px', width: 'min(400px,100%)', position: 'relative', border: `1px solid ${T.border}`, boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
               initial={{ y: 20, scale: 0.97 }} animate={{ y: 0, scale: 1 }}>
               <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: T.text2, cursor: 'pointer' }} onClick={() => setShowCreer(false)}><X size={16} /></button>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Créer une équipe</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20, fontFamily: "var(--font-ui)" }}>Créer une équipe</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input style={{ padding: '10px 14px', background: T.bg3, border: `1px solid ${erreur ? '#e05c5c' : T.border}`, borderRadius: 10, color: T.text, fontSize: 13.5, outline: 'none', width: '100%' }}
                   placeholder="Nom de l'équipe *" value={nomEquipe} onChange={e => { setNomEquipe(e.target.value); setErreur('') }} autoFocus onKeyDown={e => e.key === 'Enter' && creerEquipe()} />
@@ -2792,9 +2792,9 @@ export default function Collaboration() {
             <motion.div style={{ background: T.bg2, borderRadius: 20, padding: '24px 26px', width: 'min(400px,100%)', position: 'relative', border: `1px solid ${T.border}`, boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
               initial={{ y: 20, scale: 0.97 }} animate={{ y: 0, scale: 1 }}>
               <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: T.text2, cursor: 'pointer' }} onClick={() => setShowRejoindre(false)}><X size={16} /></button>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 6, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Rejoindre une équipe</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 6, fontFamily: "var(--font-ui)" }}>Rejoindre une équipe</h3>
               <p style={{ fontSize: 12, color: T.text2, marginBottom: 18, lineHeight: 1.65 }}>Entre le code d'invitation partagé par le créateur.</p>
-              <input style={{ width: '100%', padding: '11px 14px', background: T.bg3, border: `1px solid ${erreur ? '#e05c5c' : T.border}`, borderRadius: 10, color: T.text, fontSize: 14, outline: 'none', fontFamily: 'monospace', letterSpacing: 1.5 }}
+              <input style={{ width: '100%', padding: '11px 14px', background: T.bg3, border: `1px solid ${erreur ? '#e05c5c' : T.border}`, borderRadius: 10, color: T.text, fontSize: 14, outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: 1.5 }}
                 placeholder="Code d'invitation" value={codeRejoint} onChange={e => { setCodeRejoint(e.target.value); setErreur('') }}
                 onKeyDown={e => e.key === 'Enter' && rejoindreEquipe()} autoFocus />
               {erreur && <p style={{ fontSize: 12, color: '#e05c5c', marginTop: 6 }}>{erreur}</p>}

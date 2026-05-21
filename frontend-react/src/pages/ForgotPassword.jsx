@@ -31,7 +31,7 @@ export default function ForgotPassword() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "var(--font-ui)",
       overflow: 'hidden',
       position: 'relative',
       padding: '20px'

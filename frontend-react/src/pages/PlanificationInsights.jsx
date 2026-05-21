@@ -291,7 +291,7 @@ export const FocusBar = memo(function FocusBar({
             <span style={{
               fontSize: 10,
               color: T.text2,
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               fontWeight: 700,
               opacity: 0.7,
             }}>

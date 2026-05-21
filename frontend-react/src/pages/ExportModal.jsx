@@ -64,21 +64,21 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
 <title>Rapport GetShift — ${nomUtilisateur}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: ${C.bg}; color: ${C.text}; min-height: 100vh; }
+  body { font-family: var(--font-ui); background: ${C.bg}; color: ${C.text}; min-height: 100vh; }
   .page { max-width: 860px; margin: 0 auto; padding: clamp(24px, 5vw, 56px) clamp(16px, 4vw, 48px); }
 
   /* HEADER */
   .header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 28px; border-bottom: 1px solid ${C.accent}30; margin-bottom: 36px; flex-wrap: wrap; gap: 16px; }
   .logo { display: flex; align-items: center; gap: 12px; }
   .logo-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, ${C.accent}, #4caf82); display: flex; align-items: center; justify-content: center; font-size: 22px; }
-  .logo-text { font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 800; color: ${C.text}; }
+  .logo-text { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: ${C.text}; }
   .header-right { text-align: right; }
   .header-right .name { font-size: 15px; font-weight: 600; color: ${C.text}; }
   .header-right .date { font-size: 12px; color: ${C.text2}; margin-top: 3px; }
 
   /* TITRE */
   .titre-section { margin-bottom: 36px; }
-  .titre-section h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: clamp(24px, 4vw, 36px); font-weight: 800; letter-spacing: -1px; color: ${C.text}; margin-bottom: 8px; }
+  .titre-section h1 { font-family: var(--font-ui); font-size: clamp(24px, 4vw, 36px); font-weight: 800; letter-spacing: -1px; color: ${C.text}; margin-bottom: 8px; }
   .titre-section h1 span { background: linear-gradient(135deg, ${C.accent}, #4caf82); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .titre-section p { font-size: 14px; color: ${C.text2}; }
 
@@ -86,7 +86,7 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 36px; }
   @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
   .stat-card { background: ${C.bg2}; border: 1px solid ${C.accent}20; border-radius: 14px; padding: 18px 16px; text-align: center; }
-  .stat-val { font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px; font-weight: 800; margin-bottom: 4px; }
+  .stat-val { font-family: var(--font-ui); font-size: 32px; font-weight: 800; margin-bottom: 4px; }
   .stat-label { font-size: 11px; color: ${C.text2}; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
 
   /* PROGRESS */
@@ -119,7 +119,7 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
   /* FOOTER */
   .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid ${C.accent}20; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
   .footer p { font-size: 12px; color: ${C.text2}; }
-  .footer-logo { font-family: 'Bricolage Grotesque', sans-serif; font-size: 14px; font-weight: 700; color: ${C.accent}; }
+  .footer-logo { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: ${C.accent}; }
 
   @media print {
     body { background: ${C.bg} !important; }

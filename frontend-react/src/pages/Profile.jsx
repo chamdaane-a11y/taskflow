@@ -152,7 +152,7 @@ function TimelineSection({ T, cardBg, cardBorder, isLight, text, text2, accent, 
           <Clock size={16} color={accent} strokeWidth={2.2} />
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: text, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Mon parcours</h3>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: text, fontFamily: "var(--font-ui)" }}>Mon parcours</h3>
           <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{events.length} événement{events.length > 1 ? 's' : ''} dans ton historique</p>
         </div>
       </div>
@@ -210,7 +210,7 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
             <Award size={18} color={accent} strokeWidth={2.2} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: text, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Mes badges</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: text, fontFamily: "var(--font-ui)" }}>Mes badges</h3>
             <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>
               <span style={{ color: accent, fontWeight: 700 }}>{nbObtenus}</span> / {total} débloqués · {pct}%
             </p>
@@ -557,10 +557,10 @@ export default function Profile() {
   const secuColor = secuPct >= 100 ? '#00C896' : secuPct >= 60 ? '#facc15' : '#ef4444'
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, fontFamily: "'DM Sans', sans-serif", color: text, position: 'relative', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: bg, fontFamily: "var(--font-ui)", color: text, position: 'relative', overflowX: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        .pf-input { width: 100%; padding: 13px 16px; border-radius: 10px; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+        .pf-input { width: 100%; padding: 13px 16px; border-radius: 10px; font-size: 15px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
         @media (max-width: 640px) {
           .pf-hero { flex-direction: column !important; text-align: center !important; align-items: center !important; }
           .pf-stats { justify-content: center !important; }
@@ -750,7 +750,7 @@ export default function Profile() {
                     pointerEvents: 'none', zIndex: 0
                   }} />
               )}
-              <div style={{ position: 'relative', zIndex: 1, width: 88, height: 88, borderRadius: 24, background: `linear-gradient(135deg, ${accent}, #00C896)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'white', boxShadow: `0 8px 32px ${niveauInfo.couleur}55`, fontFamily: "'Bricolage Grotesque', sans-serif", overflow: 'hidden' }}>
+              <div style={{ position: 'relative', zIndex: 1, width: 88, height: 88, borderRadius: 24, background: `linear-gradient(135deg, ${accent}, #00C896)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'white', boxShadow: `0 8px 32px ${niveauInfo.couleur}55`, fontFamily: "var(--font-ui)", overflow: 'hidden' }}>
                 {user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initiales}
               </div>
               <div style={{ position: 'absolute', bottom: -6, right: -6, width: 30, height: 30, borderRadius: 9, background: niveauInfo.gradient || niveauInfo.couleur, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${bg}`, boxShadow: `0 2px 12px ${niveauInfo.couleur}aa`, zIndex: 2 }}>
@@ -761,7 +761,7 @@ export default function Profile() {
             {/* Infos */}
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-                <h1 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, color: text, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{user.nom}</h1>
+                <h1 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, color: text, letterSpacing: '-0.5px', fontFamily: "var(--font-ui)" }}>{user.nom}</h1>
                 <span style={{
                   padding: '3px 12px',
                   background: niveauInfo.gradient || `${niveauInfo.couleur}22`,
@@ -810,7 +810,7 @@ export default function Profile() {
                   <s.Icon size={12} color={s.color} strokeWidth={2.2} />
                   <div style={{ fontSize: 10, color: text2, fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase' }}>{s.label}</div>
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: s.color, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif" }}>{s.val}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: s.color, letterSpacing: '-0.5px', fontFamily: "var(--font-ui)" }}>{s.val}</div>
               </motion.div>
             ))}
           </div>
@@ -838,7 +838,7 @@ export default function Profile() {
             { id: 'securite', label: 'Sécurité',   icon: <Lock size={14} /> },
           ].map(o => (
             <button key={o.id} onClick={() => setOnglet(o.id)}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 16px', background: onglet === o.id ? (isLight ? 'white' : 'rgba(255,255,255,0.08)') : 'transparent', border: `1px solid ${onglet === o.id ? cardBorder : 'transparent'}`, borderRadius: 10, color: onglet === o.id ? text : text2, fontSize: 13, fontWeight: onglet === o.id ? 600 : 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: onglet === o.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 16px', background: onglet === o.id ? (isLight ? 'white' : 'rgba(255,255,255,0.08)') : 'transparent', border: `1px solid ${onglet === o.id ? cardBorder : 'transparent'}`, borderRadius: 10, color: onglet === o.id ? text : text2, fontSize: 13, fontWeight: onglet === o.id ? 600 : 500, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: onglet === o.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
               {o.icon} {o.label}
             </button>
           ))}
@@ -896,7 +896,7 @@ export default function Profile() {
                 )}
               </div>
               <motion.button onClick={modifierNom} disabled={loading || nom === user.nom} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                style={{ padding: '13px 28px', background: nom !== user.nom ? `linear-gradient(135deg, ${accent}, #00C896)` : (isLight ? '#f1f5f9' : bg3), border: 'none', borderRadius: 11, color: nom !== user.nom ? 'white' : text2, fontWeight: 700, fontSize: 14, cursor: nom !== user.nom ? 'pointer' : 'not-allowed', fontFamily: "'DM Sans', sans-serif", boxShadow: nom !== user.nom ? `0 8px 24px ${accent}33` : 'none', transition: 'all 0.2s' }}>
+                style={{ padding: '13px 28px', background: nom !== user.nom ? `linear-gradient(135deg, ${accent}, #00C896)` : (isLight ? '#f1f5f9' : bg3), border: 'none', borderRadius: 11, color: nom !== user.nom ? 'white' : text2, fontWeight: 700, fontSize: 14, cursor: nom !== user.nom ? 'pointer' : 'not-allowed', fontFamily: "var(--font-ui)", boxShadow: nom !== user.nom ? `0 8px 24px ${accent}33` : 'none', transition: 'all 0.2s' }}>
                 {loading ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
               </motion.button>
             </motion.div>
@@ -1018,7 +1018,7 @@ export default function Profile() {
                   )}
 
                   <motion.button onClick={modifierPassword} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    style={{ padding: '13px 28px', background: 'linear-gradient(135deg, #C9A84C, #6C63FF)', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 8px 24px rgba(201,168,76,0.25)', transition: 'all 0.2s' }}>
+                    style={{ padding: '13px 28px', background: 'linear-gradient(135deg, #C9A84C, #6C63FF)', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: '0 8px 24px rgba(201,168,76,0.25)', transition: 'all 0.2s' }}>
                     {loading ? 'Modification...' : 'Modifier le mot de passe'}
                   </motion.button>
                 </>

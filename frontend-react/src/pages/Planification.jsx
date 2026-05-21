@@ -603,7 +603,7 @@ export default function Planification() {
   const isCalView = vue === 'jour' || vue === 'calendrier'
 
   return (
-    <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -901,7 +901,7 @@ export default function Planification() {
                   <motion.div key={entry.id}
                     initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: T.bg2, borderRadius: 10, border: `1px solid ${enCours ? '#f59e0b40' : T.border}` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, fontFamily: 'monospace', minWidth: 76, opacity: 0.9 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, fontFamily: 'var(--font-mono)', minWidth: 76, opacity: 0.9 }}>
                       {entry.heure_debut?.slice(0,5) || minsToTime(entry.startMins).slice(0,5)} → {entry.heure_fin?.slice(0,5) || minsToTime(entry.endMins).slice(0,5)}
                     </div>
                     <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(entry.tache.priorite), flexShrink: 0 }} />
@@ -965,10 +965,10 @@ export default function Planification() {
                       <motion.div key={`${p.task.id}-${p.date}-${p.startMins}-${i}`}
                         initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} transition={{ delay: i * 0.03 }}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '8px 10px' : '9px 12px', background: T.bg2, borderRadius: 10, border: `1px solid ${T.border}` }}>
-                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: T.accent, fontFamily: 'monospace', minWidth: isMobile ? 68 : 92, textTransform: 'capitalize' }}>
+                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: T.accent, fontFamily: 'var(--font-mono)', minWidth: isMobile ? 68 : 92, textTransform: 'capitalize' }}>
                           {dateLabel}
                         </div>
-                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 600, color: T.text2, fontFamily: 'monospace', minWidth: isMobile ? 58 : 78 }}>
+                        <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 600, color: T.text2, fontFamily: 'var(--font-mono)', minWidth: isMobile ? 58 : 78 }}>
                           {minsToTime(p.startMins).slice(0,5)} → {minsToTime(p.endMins).slice(0,5)}
                         </div>
                         <div style={{ width: 5, height: 5, borderRadius: '50%', background: pColor(p.task.priorite), flexShrink: 0 }} />
@@ -1414,12 +1414,12 @@ export default function Planification() {
                         </div>
 
                         {/* Date */}
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#1A73E8', minWidth: 80, textTransform: 'capitalize', fontFamily: 'monospace' }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#1A73E8', minWidth: 80, textTransform: 'capitalize', fontFamily: 'var(--font-mono)' }}>
                           {dayLabel}
                         </span>
 
                         {/* Heure */}
-                        <span style={{ fontSize: 10, fontWeight: 600, color: T.text2, minWidth: 88, fontFamily: 'monospace' }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: T.text2, minWidth: 88, fontFamily: 'var(--font-mono)' }}>
                           {sug.start_hhmm} → {sug.end_hhmm}
                         </span>
 

@@ -31,7 +31,7 @@ export default function Splash() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "var(--font-ui)",
       overflow: 'hidden',
       position: 'relative',
       color: '#0f172a',
@@ -90,7 +90,7 @@ export default function Splash() {
         {/* Nom */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          style={{ fontSize: 'clamp(48px, 10vw, 72px)', fontWeight: 800, letterSpacing: '-3px', lineHeight: 1, marginBottom: 10, fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a', textAlign: 'center' }}
+          style={{ fontSize: 'clamp(48px, 10vw, 72px)', fontWeight: 800, letterSpacing: '-3px', lineHeight: 1, marginBottom: 10, fontFamily: "var(--font-ui)", color: '#0f172a', textAlign: 'center' }}
         >
           Get<span className="gradient-text">Shift</span>
         </motion.h1>
@@ -150,7 +150,7 @@ export default function Splash() {
         onClick={() => navigate('/landing')}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
         whileHover={{ scale: 1.03 }}
-        style={{ position: 'absolute', bottom: 36, zIndex: 2, background: 'transparent', border: '1.5px solid #e2e8f0', borderRadius: 99, padding: '9px 22px', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+        style={{ position: 'absolute', bottom: 36, zIndex: 2, background: 'transparent', border: '1.5px solid #e2e8f0', borderRadius: 99, padding: '9px 22px', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: "var(--font-ui)", fontWeight: 500 }}
       >
         Voir la présentation
       </motion.button>

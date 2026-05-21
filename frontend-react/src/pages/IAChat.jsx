@@ -791,7 +791,7 @@ export default function IAChat() {
   // RENDER
   // ══════════════════════════════════════════════════════════════════
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif", position: 'relative', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)", position: 'relative', overflow: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
@@ -1226,7 +1226,7 @@ export default function IAChat() {
 
               <textarea
                 ref={textareaRef}
-                style={{ width: '100%', padding: '13px 16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, color: T.text, fontSize: 14, outline: 'none', resize: 'none', minHeight: 50, maxHeight: 160, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.55, backdropFilter: 'blur(20px)', transition: 'border-color 0.2s', caretColor: accent }}
+                style={{ width: '100%', padding: '13px 16px', background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 14, color: T.text, fontSize: 14, outline: 'none', resize: 'none', minHeight: 50, maxHeight: 160, fontFamily: "var(--font-ui)", lineHeight: 1.55, backdropFilter: 'blur(20px)', transition: 'border-color 0.2s', caretColor: accent }}
                 placeholder={
                   forceSearch       ? 'Que veux-tu rechercher sur le web ?' :
                   tacheSelectionnee ? `Question sur "${taches.find(t => t.id === tacheSelectionnee)?.titre}" ?` :

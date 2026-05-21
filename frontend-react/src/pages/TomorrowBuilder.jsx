@@ -1248,7 +1248,7 @@ export default function TomorrowBuilder() {
       <motion.div
         animate={{ marginLeft: mainMargin }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
+        style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
 
       {/* HEADER */}
       <div style={{ background: T.bg2, borderBottom: `1px solid ${T.border}`, padding: isMobile ? '14px 16px' : '16px 32px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 100 }}>
@@ -1841,7 +1841,7 @@ export default function TomorrowBuilder() {
                               onChange={e => setCheckinNote(e.target.value)}
                               placeholder="Ex: j'ai été interrompu 3 fois, la tâche X m'a pris bien plus que prévu..."
                               maxLength={200}
-                              style={{ width: '100%', marginTop: 6, padding: '12px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderTop: 'none', borderRadius: '0 0 12px 12px', color: T.text, fontSize: 13, lineHeight: 1.5, resize: 'none', outline: 'none', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box', minHeight: 80 }}
+                              style={{ width: '100%', marginTop: 6, padding: '12px 14px', background: T.bg2, border: `1px solid ${T.border}`, borderTop: 'none', borderRadius: '0 0 12px 12px', color: T.text, fontSize: 13, lineHeight: 1.5, resize: 'none', outline: 'none', fontFamily: "var(--font-ui)", boxSizing: 'border-box', minHeight: 80 }}
                             />
                             <div style={{ textAlign: 'right', fontSize: 10, color: T.text2, marginTop: 3 }}>{checkinNote.length}/200</div>
                           </motion.div>

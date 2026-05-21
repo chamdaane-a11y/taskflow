@@ -112,7 +112,7 @@ export default function Landing() {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F8F9FC', color: '#1a1a2e', fontFamily: "'DM Sans', sans-serif", overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: '#F8F9FC', color: '#1a1a2e', fontFamily: "var(--font-ui)", overflowX: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .gradient-text { background: linear-gradient(135deg, #6C63FF, #00C896); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
@@ -144,7 +144,7 @@ export default function Landing() {
           <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(108,99,255,0.25)' }}>
             <Layers size={17} color="white" strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>GetShift</span>
+          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "var(--font-ui)", color: '#0f172a' }}>GetShift</span>
         </div>
         <div className="nav-links" style={{ display: 'flex', gap: 36 }}>
           {[['#fonctionnalites', 'Fonctionnalités'], ['#tarifs', 'Tarifs'], ['#temoignages', 'Témoignages']].map(([href, label]) => (
@@ -154,11 +154,11 @@ export default function Landing() {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <motion.button onClick={() => navigate('/login')} whileHover={{ scale: 1.02 }}
-            style={{ padding: '8px 18px', background: 'transparent', border: '1.5px solid #e2e8f0', borderRadius: 9, color: '#475569', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+            style={{ padding: '8px 18px', background: 'transparent', border: '1.5px solid #e2e8f0', borderRadius: 9, color: '#475569', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: "var(--font-ui)" }}>
             Connexion
           </motion.button>
           <motion.button onClick={() => navigate('/register')} whileHover={{ scale: 1.02, boxShadow: '0 8px 25px rgba(108,99,255,0.3)' }}
-            style={{ padding: '8px 18px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', border: 'none', borderRadius: 9, color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 14px rgba(108,99,255,0.2)', whiteSpace: 'nowrap' }}>
+            style={{ padding: '8px 18px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', border: 'none', borderRadius: 9, color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: '0 4px 14px rgba(108,99,255,0.2)', whiteSpace: 'nowrap' }}>
             <span className="nav-btn-text">Essayer gratuitement</span>
           </motion.button>
         </div>
@@ -178,7 +178,7 @@ export default function Landing() {
         </motion.div>
 
         <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
-          style={{ fontSize: 'clamp(40px, 6.5vw, 76px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, maxWidth: 860, fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>
+          style={{ fontSize: 'clamp(40px, 6.5vw, 76px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, maxWidth: 860, fontFamily: "var(--font-ui)", color: '#0f172a' }}>
           Organisez.{' '}
           <span className="gradient-text">Automatisez.</span>
           <br />Performez.
@@ -192,11 +192,11 @@ export default function Landing() {
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
           style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 72 }}>
           <motion.button onClick={() => navigate('/register')} whileHover={{ scale: 1.03, boxShadow: '0 16px 40px rgba(108,99,255,0.3)' }} whileTap={{ scale: 0.97 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 30px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', border: 'none', borderRadius: 12, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 8px 24px rgba(108,99,255,0.22)' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 30px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', border: 'none', borderRadius: 12, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: '0 8px 24px rgba(108,99,255,0.22)' }}>
             Commencer gratuitement <ArrowRight size={17} />
           </motion.button>
           <motion.button onClick={() => navigate('/login')} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '15px 30px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 12, color: '#475569', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '15px 30px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 12, color: '#475569', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
             Se connecter
           </motion.button>
         </motion.div>
@@ -254,7 +254,7 @@ export default function Landing() {
         <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, maxWidth: 860, margin: '0 auto' }}>
           {STATS.map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 800, fontFamily: "'Bricolage Grotesque', sans-serif", background: 'linear-gradient(135deg, #6C63FF, #00C896)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 6 }}>{s.val}</div>
+              <div style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 800, fontFamily: "var(--font-ui)", background: 'linear-gradient(135deg, #6C63FF, #00C896)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 6 }}>{s.val}</div>
               <div style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>{s.label}</div>
             </motion.div>
           ))}
@@ -266,7 +266,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: 'center', marginBottom: 56 }}>
             <div style={{ display: 'inline-block', fontSize: 12, color: '#6C63FF', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14, background: 'rgba(108,99,255,0.07)', border: '1px solid rgba(108,99,255,0.13)', borderRadius: 99, padding: '5px 14px' }}>Fonctionnalités</div>
-            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', fontWeight: 800, letterSpacing: '-1.5px', fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: 14, color: '#0f172a' }}>
+            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', fontWeight: 800, letterSpacing: '-1.5px', fontFamily: "var(--font-ui)", marginBottom: 14, color: '#0f172a' }}>
               Tout ce dont vous avez besoin,{' '}<span className="gradient-text">rien de superflu</span>
             </h2>
             <p style={{ fontSize: 15, color: '#64748b', maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>Des outils puissants pensés pour booster votre productivité au quotidien.</p>
@@ -294,7 +294,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: 'center', marginBottom: 56 }}>
             <div style={{ display: 'inline-block', fontSize: 12, color: '#C9A84C', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14, background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 99, padding: '5px 14px' }}>Témoignages</div>
-            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 46px)', fontWeight: 800, letterSpacing: '-1.5px', fontFamily: "'Bricolage Grotesque', sans-serif", color: '#0f172a' }}>Ils font confiance à GetShift</h2>
+            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 46px)', fontWeight: 800, letterSpacing: '-1.5px', fontFamily: "var(--font-ui)", color: '#0f172a' }}>Ils font confiance à GetShift</h2>
           </motion.div>
           <div className="temoignages-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
             {TEMOIGNAGES.map((t, i) => (
@@ -322,7 +322,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: 'center', marginBottom: 56 }}>
             <div style={{ display: 'inline-block', fontSize: 12, color: '#00C896', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14, background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.18)', borderRadius: 99, padding: '5px 14px' }}>Tarifs</div>
-            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 46px)', fontWeight: 800, letterSpacing: '-1.5px', fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: 14, color: '#0f172a' }}>Simple et transparent</h2>
+            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 46px)', fontWeight: 800, letterSpacing: '-1.5px', fontFamily: "var(--font-ui)", marginBottom: 14, color: '#0f172a' }}>Simple et transparent</h2>
             <p style={{ fontSize: 15, color: '#64748b' }}>Commencez gratuitement. Évoluez selon vos besoins.</p>
           </motion.div>
           <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
@@ -335,7 +335,7 @@ export default function Landing() {
                 <div style={{ marginBottom: 22 }}>
                   <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10, color: plan.highlight ? 'white' : '#0f172a' }}>{plan.nom}</h3>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                    <span style={{ fontSize: 38, fontWeight: 800, fontFamily: "'Bricolage Grotesque', sans-serif", color: plan.highlight ? 'white' : plan.couleur }}>{plan.prix}</span>
+                    <span style={{ fontSize: 38, fontWeight: 800, fontFamily: "var(--font-ui)", color: plan.highlight ? 'white' : plan.couleur }}>{plan.prix}</span>
                     <span style={{ fontSize: 13, color: plan.highlight ? 'rgba(255,255,255,0.55)' : '#94a3b8' }}>/{plan.periode}</span>
                   </div>
                 </div>
@@ -348,7 +348,7 @@ export default function Landing() {
                   ))}
                 </div>
                 <motion.button onClick={() => navigate('/register')} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  style={{ width: '100%', padding: '12px 20px', background: plan.highlight ? 'rgba(255,255,255,0.15)' : `${plan.couleur}10`, border: plan.highlight ? '1.5px solid rgba(255,255,255,0.28)' : `1.5px solid ${plan.couleur}28`, borderRadius: 11, color: plan.highlight ? 'white' : plan.couleur, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  style={{ width: '100%', padding: '12px 20px', background: plan.highlight ? 'rgba(255,255,255,0.15)' : `${plan.couleur}10`, border: plan.highlight ? '1.5px solid rgba(255,255,255,0.28)' : `1.5px solid ${plan.couleur}28`, borderRadius: 11, color: plan.highlight ? 'white' : plan.couleur, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "var(--font-ui)" }}>
                   {plan.cta}
                 </motion.button>
               </motion.div>
@@ -363,14 +363,14 @@ export default function Landing() {
           <div style={{ width: 60, height: 60, borderRadius: 16, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: '0 16px 40px rgba(108,99,255,0.22)' }}>
             <Zap size={26} color="white" strokeWidth={2} />
           </div>
-          <h2 style={{ fontSize: 'clamp(30px, 5vw, 50px)', fontWeight: 800, letterSpacing: '-2px', fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: 18, color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(30px, 5vw, 50px)', fontWeight: 800, letterSpacing: '-2px', fontFamily: "var(--font-ui)", marginBottom: 18, color: '#0f172a' }}>
             Prêt à être{' '}<span className="gradient-text">plus productif ?</span>
           </h2>
           <p style={{ fontSize: 15, color: '#64748b', marginBottom: 36, lineHeight: 1.75, maxWidth: 460, margin: '0 auto 36px' }}>
             Rejoignez des milliers d'utilisateurs qui ont transformé leur façon de travailler. Gratuit et sans engagement.
           </p>
           <motion.button onClick={() => navigate('/register')} whileHover={{ scale: 1.03, boxShadow: '0 20px 50px rgba(108,99,255,0.3)' }} whileTap={{ scale: 0.97 }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '16px 36px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', border: 'none', borderRadius: 14, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 8px 24px rgba(108,99,255,0.2)' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '16px 36px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', border: 'none', borderRadius: 14, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: '0 8px 24px rgba(108,99,255,0.2)' }}>
             Créer mon compte gratuit <ArrowRight size={18} />
           </motion.button>
           <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 14 }}>Aucune carte bancaire requise · Gratuit pour toujours</p>

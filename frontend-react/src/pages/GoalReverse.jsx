@@ -195,7 +195,7 @@ export default function GoalReverse() {
   const niveauActif = NIVEAUX.find(n => n.id === niveau)
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
 
       {/* Notification */}
       <AnimatePresence>
@@ -324,7 +324,7 @@ export default function GoalReverse() {
               value={objectif}
               onChange={e => setObjectif(e.target.value)}
               placeholder="Ex: Lancer mon SaaS GetShift avec 100 utilisateurs payants..."
-              style={{ width: '100%', padding: '12px 16px', background: T.bg3, border: `1px solid ${erreur && !objectif.trim() ? '#e05c5c' : T.border}`, borderRadius: 12, color: T.text, fontSize: 14, outline: 'none', resize: 'none', minHeight: 80, boxSizing: 'border-box', lineHeight: 1.6, fontFamily: "'DM Sans', sans-serif" }}
+              style={{ width: '100%', padding: '12px 16px', background: T.bg3, border: `1px solid ${erreur && !objectif.trim() ? '#e05c5c' : T.border}`, borderRadius: 12, color: T.text, fontSize: 14, outline: 'none', resize: 'none', minHeight: 80, boxSizing: 'border-box', lineHeight: 1.6, fontFamily: "var(--font-ui)" }}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); decomposer() } }}
             />
           </div>
@@ -637,7 +637,7 @@ export default function GoalReverse() {
                         flex: 1, padding: '10px 14px', background: T.bg3,
                         border: `1px solid ${T.border}`, borderRadius: 10,
                         color: T.text, fontSize: 12.5, outline: 'none',
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: "var(--font-ui)",
                       }}
                     />
                     <motion.button

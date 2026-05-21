@@ -572,7 +572,7 @@ export default function Settings() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "var(--font-ui)" }}>
 
       {/* Notification toast */}
       <AnimatePresence>

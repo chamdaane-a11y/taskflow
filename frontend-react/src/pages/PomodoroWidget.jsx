@@ -194,7 +194,7 @@ export const PomodoroWidget = memo(function PomodoroWidget({
               fontSize: isMobile ? 16 : 18,
               fontWeight: 900,
               color: T.text,
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               letterSpacing: '-0.5px',
               lineHeight: 1,
               marginBottom: 4,
