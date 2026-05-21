@@ -443,6 +443,7 @@ export default function IAChat() {
   // Upload fichier
   const [attachment, setAttachment] = useState(null) // { filename, type, texte, longueur }
   const [uploading, setUploading] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef(null)
   // Tâches panel mobile
   const [showTasksPanelMobile, setShowTasksPanelMobile] = useState(false)
@@ -893,7 +894,23 @@ export default function IAChat() {
       <FloatingLogo T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
 
       {/* ── MAIN ────────────────────────────────────────────────────── */}
-      <main style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0), transition: 'margin-left 0.3s ease', flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', minWidth: 0, position: 'relative', zIndex: 1 }}>
+      <main
+        style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0), transition: 'margin-left 0.3s ease', flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', minWidth: 0, position: 'relative', zIndex: 1 }}
+        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; if (!isDragging) setIsDragging(true) }}
+        onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
+        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setIsDragging(false) }}
+        onDrop={e => {
+          e.preventDefault(); setIsDragging(false)
+          const file = e.dataTransfer.files?.[0]
+          if (file) handleFileUpload(file)
+        }}
+      >
+        {isDragging && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 100, background: `${accent}18`, border: `2px dashed ${accent}`, borderRadius: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, pointerEvents: 'none' }}>
+            <Paperclip size={36} color={accent} strokeWidth={1.5} />
+            <span style={{ fontSize: 16, fontWeight: 700, color: accent }}>Dépose le fichier ici</span>
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ padding: '12px clamp(16px,4vw,28px)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: T.bg2, backdropFilter: 'blur(30px)' }}>
@@ -1239,6 +1256,10 @@ export default function IAChat() {
                     e.preventDefault(); envoyer()
                   }
                 }}
+                onPaste={e => {
+                  const file = e.clipboardData?.files?.[0]
+                  if (file) { e.preventDefault(); handleFileUpload(file) }
+                }}
                 onFocus={e => e.target.style.borderColor = `${accent}60`}
                 onBlur={e => e.target.style.borderColor = T.border}
                 rows={1}
@@ -1256,7 +1277,7 @@ export default function IAChat() {
             </motion.button>
           </div>
           <p style={{ fontSize: 10, color: T.text2, marginTop: 8, letterSpacing: '0.3px' }}>
-            Entrée pour envoyer · Shift+Entrée nouvelle ligne · /web pour forcer la recherche
+            Entrée pour envoyer · Shift+Entrée nouvelle ligne · Ctrl+V ou glisser un fichier pour l'analyser
           </p>
         </div>
       </main>
