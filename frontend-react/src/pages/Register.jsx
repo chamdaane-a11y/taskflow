@@ -24,8 +24,6 @@ function RegisterInner() {
     if (form.password.length < 6) { setErreur('Le mot de passe doit faire au moins 6 caractères'); return }
     setLoading(true); setErreur('')
     try {
-      // Si l'user vient d'un scan QR : on passe le code au backend (stocké en pending_invitations).
-      // Comme ça même s'il change de navigateur entre register et email-verify, l'auto-join marche.
       const pendingCode = (() => { try { return localStorage.getItem('pending_invite_code') } catch { return null } })()
       await axios.post(`${API}/register`, {
         nom: form.nom, email: form.email, password: form.password,
@@ -71,29 +69,29 @@ function RegisterInner() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #ffffff 0%, #F8F9FC 100%)',
-      color: '#0f172a', fontFamily: "var(--font-ui)",
+      background: 'var(--bg-base)',
+      color: 'var(--text-primary)', fontFamily: 'var(--font-ui)',
       display: 'flex', flexDirection: 'column',
       position: 'relative', overflowX: 'hidden',
     }}>
       <style>{`
         * { box-sizing: border-box; }
-        .gradient-text { background: linear-gradient(135deg, #6C63FF, #00C896); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .tf-input { width: 100%; padding: 13px 16px; background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 15px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
-        .tf-input:focus { border-color: #6C63FF; box-shadow: 0 0 0 3px rgba(108,99,255,0.08); }
-        .tf-input::placeholder { color: #94a3b8; }
-        .tf-label { display: block; font-size: 13px; font-weight: 500; color: #64748b; margin-bottom: 7px; }
-        .tf-btn-main { width: 100%; padding: 14px; background: linear-gradient(135deg, #6C63FF, #00C896); color: white; border: none; border-radius: 11px; font-size: 15px; font-weight: 700; font-family: var(--font-ui); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 24px rgba(108,99,255,0.22); transition: box-shadow 0.2s, transform 0.1s; }
-        .tf-btn-main:hover { box-shadow: 0 12px 32px rgba(108,99,255,0.32); }
+        .ember-text { background: linear-gradient(135deg, var(--ember), var(--ember-hover)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .tf-input { width: 100%; padding: 13px 16px; background: var(--surface-1); border: 1.5px solid var(--border-default); border-radius: 10px; color: var(--text-primary); font-size: 15px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+        .tf-input:focus { border-color: var(--ember); box-shadow: 0 0 0 3px var(--ember-soft); }
+        .tf-input::placeholder { color: var(--text-tertiary); }
+        .tf-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; }
+        .tf-btn-main { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--ember), var(--ember-hover)); color: var(--text-on-ember); border: none; border-radius: 11px; font-size: 15px; font-weight: 700; font-family: var(--font-ui); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow-ember); transition: filter 0.15s, transform 0.1s; }
+        .tf-btn-main:hover { filter: brightness(1.08); }
         .tf-btn-main:active { transform: scale(0.99); }
         .tf-btn-main:disabled { opacity: 0.6; cursor: not-allowed; }
-        .tf-btn-google { width: 100%; padding: 13px 16px; background: #0f172a; color: white; border: none; border-radius: 11px; font-size: 14px; font-weight: 500; font-family: var(--font-ui); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 0.15s, transform 0.1s; box-shadow: 0 4px 14px rgba(15,23,42,0.15); }
-        .tf-btn-google:hover { background: #1e293b; }
+        .tf-btn-google { width: 100%; padding: 13px 16px; background: var(--text-primary); color: var(--bg-base); border: none; border-radius: 11px; font-size: 14px; font-weight: 500; font-family: var(--font-ui); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: filter 0.15s, transform 0.1s; box-shadow: var(--shadow-md); }
+        .tf-btn-google:hover { filter: brightness(1.12); }
         .tf-btn-google:active { transform: scale(0.99); }
         .tf-btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
         .tf-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
-        .tf-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
-        .tf-divider-text { font-size: 12px; color: #94a3b8; font-weight: 500; }
+        .tf-divider-line { flex: 1; height: 1px; background: var(--border-default); }
+        .tf-divider-text { font-size: 12px; color: var(--text-tertiary); font-weight: 500; }
         .reg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
         @media (max-width: 960px) {
           .reg-split-left { display: none !important; }
@@ -102,22 +100,22 @@ function RegisterInner() {
         }
       `}</style>
 
-      {/* Orbes fond */}
+      {/* Orbes fond — ember subtils */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
-        <div style={{ position: 'absolute', width: 700, height: 700, borderRadius: '50%', opacity: 0.04, background: 'radial-gradient(circle, #6C63FF, transparent)', top: '40%', left: '50%', transform: 'translate(-50%,-50%)' }} />
-        <div style={{ position: 'absolute', width: 350, height: 350, borderRadius: '50%', opacity: 0.04, background: 'radial-gradient(circle, #00C896, transparent)', bottom: '5%', right: '5%' }} />
+        <div style={{ position: 'absolute', width: 700, height: 700, borderRadius: '50%', opacity: 0.04, background: 'radial-gradient(circle, var(--ember), transparent)', top: '40%', left: '50%', transform: 'translate(-50%,-50%)' }} />
+        <div style={{ position: 'absolute', width: 350, height: 350, borderRadius: '50%', opacity: 0.03, background: 'radial-gradient(circle, var(--ember-hover), transparent)', bottom: '5%', right: '5%' }} />
       </div>
 
       {/* NAVBAR */}
       <motion.nav initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 64, padding: '0 clamp(20px, 5vw, 80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(248,249,252,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 64, padding: '0 clamp(20px, 5vw, 80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border-subtle)' }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(108,99,255,0.25)' }}>
-            <Layers size={17} color="white" strokeWidth={2.5} />
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-ember)' }}>
+            <Layers size={17} color="var(--text-on-ember)" strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "var(--font-ui)", color: '#0f172a' }}>GetShift</span>
+          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>GetShift</span>
         </Link>
-        <Link to="/" style={{ padding: '8px 20px', background: 'transparent', border: '1.5px solid #e2e8f0', borderRadius: 9, color: '#475569', fontSize: 14, fontWeight: 500, textDecoration: 'none', fontFamily: "var(--font-ui)" }}>
+        <Link to="/" style={{ padding: '8px 20px', background: 'transparent', border: '1.5px solid var(--border-default)', borderRadius: 9, color: 'var(--text-secondary)', fontSize: 14, fontWeight: 500, textDecoration: 'none', fontFamily: 'var(--font-ui)' }}>
           Se connecter
         </Link>
       </motion.nav>
@@ -128,27 +126,26 @@ function RegisterInner() {
         {/* GAUCHE */}
         <motion.div className="reg-split-left"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}
-          style={{ flex: '1 1 55%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(60px, 8vw, 100px) clamp(40px, 6vw, 100px)', borderRight: '1px solid rgba(0,0,0,0.05)' }}>
+          style={{ flex: '1 1 55%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(60px, 8vw, 100px) clamp(40px, 6vw, 100px)', borderRight: '1px solid var(--border-subtle)' }}>
 
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 18px', background: 'rgba(108,99,255,0.07)', border: '1px solid rgba(108,99,255,0.15)', borderRadius: 99, marginBottom: 28, fontSize: 13, color: '#6C63FF', fontWeight: 600, width: 'fit-content' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 18px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, marginBottom: 28, fontSize: 13, color: 'var(--ember)', fontWeight: 600, width: 'fit-content' }}>
             <Sparkles size={13} strokeWidth={2} />
             Gratuit · Sans carte bancaire
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
-            style={{ fontSize: 'clamp(40px, 5vw, 66px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, fontFamily: "var(--font-ui)", color: '#0f172a' }}>
+            style={{ fontSize: 'clamp(40px, 5vw, 66px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
             Organisez.{' '}
-            <span className="gradient-text">Automatisez.</span>
+            <span className="ember-text">Automatisez.</span>
             <br />Performez.
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
-            style={{ fontSize: 17, color: '#64748b', maxWidth: 460, lineHeight: 1.75, marginBottom: 44, fontWeight: 400 }}>
+            style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 460, lineHeight: 1.75, marginBottom: 44, fontWeight: 400 }}>
             Rejoignez des milliers d'utilisateurs qui organisent leur quotidien avec GetShift.
           </motion.p>
 
-          {/* Avantages */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
             {[
               { titre: 'IA intégrée', desc: 'Générez et priorisez vos tâches automatiquement' },
@@ -157,13 +154,13 @@ function RegisterInner() {
             ].map((f, i) => (
               <motion.div key={i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.55 + i * 0.1 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <div style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
-                    <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M1 4.5L4 7.5L10 1" stroke="var(--text-on-ember)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <span style={{ fontSize: 14, color: '#475569' }}>
-                  <strong style={{ color: '#0f172a', fontWeight: 600 }}>{f.titre}</strong> — {f.desc}
+                <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                  <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{f.titre}</strong> — {f.desc}
                 </span>
               </motion.div>
             ))}
@@ -173,34 +170,33 @@ function RegisterInner() {
         {/* DROITE — formulaire */}
         <motion.div className="reg-split-right"
           initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}
-          style={{ width: 'min(500px, 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(48px, 6vw, 72px) clamp(24px, 5vw, 60px)', background: 'white', boxShadow: '-1px 0 0 rgba(0,0,0,0.04)', overflowY: 'auto' }}>
+          style={{ width: 'min(500px, 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(48px, 6vw, 72px) clamp(24px, 5vw, 60px)', background: 'var(--surface-1)', boxShadow: '-1px 0 0 var(--border-subtle)', overflowY: 'auto' }}>
 
           <AnimatePresence mode="wait">
             {succes ? (
               <motion.div key="succes" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, rgba(108,99,255,0.1), rgba(0,200,150,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                   <svg width="24" height="20" viewBox="0 0 24 20" fill="none">
-                    <path d="M2 10L8.5 16.5L22 2" stroke="#6C63FF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 10L8.5 16.5L22 2" stroke="var(--ember)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <h3 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 8, fontFamily: "var(--font-ui)" }}>Compte créé !</h3>
-                <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 24 }}>
+                <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, fontFamily: 'var(--font-ui)' }}>Compte créé !</h3>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
                   Vérifie ta boîte mail pour activer ton compte.<br/>Pense à regarder les spams.
                 </p>
-                <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: 'linear-gradient(135deg, #6C63FF, #00C896)', color: 'white', borderRadius: 11, fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 8px 24px rgba(108,99,255,0.22)' }}>
+                <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', color: 'var(--text-on-ember)', borderRadius: 11, fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: 'var(--shadow-ember)' }}>
                   Se connecter <ArrowRight size={16}/>
                 </Link>
               </motion.div>
             ) : (
               <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div style={{ marginBottom: 28 }}>
-                  <h2 style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.6px', marginBottom: 6, fontFamily: "var(--font-ui)" }}>
+                  <h2 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.6px', marginBottom: 6, fontFamily: 'var(--font-ui)' }}>
                     Créer un compte.
                   </h2>
-                  <p style={{ fontSize: 14, color: '#64748b' }}>Gratuit pour toujours. Aucune carte requise.</p>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Gratuit pour toujours. Aucune carte requise.</p>
                 </div>
 
-                {/* Champs en grille 2 colonnes */}
                 <div className="reg-row">
                   <div>
                     <label className="tf-label">Nom complet</label>
@@ -226,25 +222,22 @@ function RegisterInner() {
                 <AnimatePresence>
                   {erreur && (
                     <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                      style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '11px 14px', fontSize: 13, color: '#DC2626', marginBottom: 14 }}>
+                      style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger)', borderRadius: 10, padding: '11px 14px', fontSize: 13, color: 'var(--danger)', marginBottom: 14 }}>
                       {erreur}
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* CTA principal */}
                 <button className="tf-btn-main" onClick={register} disabled={loading}>
                   {loading ? 'Création...' : <><span>Créer mon compte</span><ArrowRight size={16}/></>}
                 </button>
 
-                {/* Séparateur */}
                 <div className="tf-divider">
                   <div className="tf-divider-line" />
                   <span className="tf-divider-text">ou</span>
                   <div className="tf-divider-line" />
                 </div>
 
-                {/* Google NOIR — en dessous */}
                 <button className="tf-btn-google" onClick={() => googleLogin()} disabled={gLoading}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -255,14 +248,14 @@ function RegisterInner() {
                   {gLoading ? 'Connexion...' : 'Continuer avec Google'}
                 </button>
 
-                <p style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
                   En créant un compte, vous acceptez nos{' '}
-                  <Link to="/cgu" style={{ color: '#64748b', textDecoration: 'underline' }}>conditions d'utilisation</Link>
+                  <Link to="/cgu" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>conditions d'utilisation</Link>
                 </p>
 
-                <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 16 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 16 }}>
                   Déjà un compte ?{' '}
-                  <Link to="/" style={{ color: '#6C63FF', fontWeight: 600, textDecoration: 'none' }}>
+                  <Link to="/" style={{ color: 'var(--ember)', fontWeight: 600, textDecoration: 'none' }}>
                     Se connecter
                   </Link>
                 </p>

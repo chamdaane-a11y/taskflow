@@ -75,7 +75,7 @@ const INTEGRATIONS = [
 const ETAPES = [
   {
     id: 'bienvenue',
-    icon: Sparkles, iconColor: '#6c63ff',
+    icon: Sparkles, iconColor: '#B8521C',
     titre: 'Bienvenue sur GetShift ✦',
     description: 'L\'assistant IA qui connaît tes cours, tes deadlines et tes objectifs. On va connecter tes outils en 2 minutes.',
     cta: "C'est parti !",
@@ -241,11 +241,11 @@ function ProfilEtudiant({ profil, onChange }) {
         <div style={{ display: 'flex', gap: 8 }}>
           {rythmes.map(r => (
             <motion.button key={r.val}
-              style={{ flex: 1, padding: '10px 8px', borderRadius: 12, background: profil.rythme === r.val ? 'rgba(108,99,255,0.2)' : 'transparent', border: `1px solid ${profil.rythme === r.val ? '#6c63ff' : 'rgba(255,255,255,0.1)'}`, cursor: 'pointer', textAlign: 'center' }}
+              style={{ flex: 1, padding: '10px 8px', borderRadius: 12, background: profil.rythme === r.val ? 'rgba(184,82,28,0.2)' : 'transparent', border: `1px solid ${profil.rythme === r.val ? '#B8521C' : 'rgba(255,255,255,0.1)'}`, cursor: 'pointer', textAlign: 'center' }}
               onClick={() => onChange({ ...profil, rythme: r.val })}
               whileTap={{ scale: 0.97 }}>
               <div style={{ fontSize: 16, marginBottom: 2 }}>{r.label.split(' ')[0]}</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: profil.rythme === r.val ? '#6c63ff' : 'rgba(255,255,255,0.5)' }}>{r.label.slice(2)}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: profil.rythme === r.val ? '#B8521C' : 'rgba(255,255,255,0.5)' }}>{r.label.slice(2)}</div>
               <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{r.desc}</div>
             </motion.button>
           ))}
@@ -299,7 +299,7 @@ export default function Onboarding({ T, onTerminer, activerNotifications, userId
   useEffect(() => {
     if (etape.confettiStep) {
       import('canvas-confetti').then(({ default: c }) => {
-        c({ particleCount: 90, spread: 65, origin: { y: 0.5 }, colors: ['#6c63ff', '#4caf82', '#e08a3c', '#0ea5e9'] })
+        c({ particleCount: 90, spread: 65, origin: { y: 0.5 }, colors: ['#B8521C', '#9A3F12', '#E07A3E', '#F0884A'] })
       }).catch(() => {})
     }
   }, [etapeIdx])
