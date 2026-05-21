@@ -10,6 +10,7 @@ import {
   Sparkles, Zap, Globe, CheckCircle, Trash2,
   Search, AlertCircle, Check, Brain, ChevronDown, Database,
   Heart, Flame, BarChart, Target, Paperclip, Bookmark,
+  Users, Compass, UserPlus,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
@@ -211,6 +212,10 @@ const CarteAction = memo(function CarteAction({ action, T }) {
     obtenir_stats:      { color: '#0ea5e9', Icon: BarChart2,   label: 'Stats récupérées' },
     analyser_task_dna:  { color: '#a855f7', Icon: Brain,       label: 'Task DNA' },
     rechercher_web:     { color: '#0ea5e9', Icon: Globe,       label: 'Web temps réel' },
+    lister_membres_equipe:  { color: '#3b82f6', Icon: Users,    label: 'Membres équipe' },
+    creer_tache_equipe:     { color: '#10b981', Icon: UserPlus, label: 'Tâche équipe créée' },
+    assigner_tache_equipe:  { color: '#3b82f6', Icon: UserPlus, label: 'Tâche assignée' },
+    naviguer_vers:          { color: '#a855f7', Icon: Compass,  label: 'Navigation' },
   }
 
   const isToolFormat = !!action.tool
@@ -229,6 +234,10 @@ const CarteAction = memo(function CarteAction({ action, T }) {
     else if (action.tool === 'obtenir_stats') subtitle = `${action.terminees_total}/${action.total} tâches · ${action.points} pts · streak ${action.streak}j`
     else if (action.tool === 'analyser_task_dna') subtitle = `Score ${action.dna?.score_viabilite || '?'}/100`
     else if (action.tool === 'rechercher_web') subtitle = `${action.nb} sources sur "${action.requete}"`
+    else if (action.tool === 'lister_membres_equipe') subtitle = `${action.nb} membre${action.nb > 1 ? 's' : ''} dans l'équipe`
+    else if (action.tool === 'creer_tache_equipe') subtitle = `"${action.titre}"${action.assignee_nom ? ` → ${action.assignee_nom}` : ''}`
+    else if (action.tool === 'assigner_tache_equipe') subtitle = `"${action.titre}" → ${action.assignee_nom}`
+    else if (action.tool === 'naviguer_vers') subtitle = `Vers ${action.page}${action.section ? ` · ${action.section}` : ''}`
   } else {
     subtitle = action.titre ? `"${action.titre}"` : null
   }
@@ -591,7 +600,7 @@ export default function IAChat() {
 
     // Détection d'une intention "tool use" → endpoint non-stream (seul à avoir GETSHIFT_TOOLS)
     const lowerMsg = texte.toLowerCase()
-    const looksLikeAction = /\b(cr[eé][eé]|ajoute|nouvelle? tâche|nouvelle? tache|terminée?|terminer|fini[s]?|marque|planifie|planifier|tomorrow|supprime|supprimer|efface|modifie|modifier|change|mets? [àa] jour|renomme|liste|montre|affiche|donne.moi|quelles? sont|mes stats|mes points|mon streak|mon niveau|[eé]pingle|focus du jour|analyse|task dna|d[eé]place|repousse|deadline)\b/.test(lowerMsg)
+    const looksLikeAction = /\b(cr[eé][eé]|ajoute|nouvelle? tâche|nouvelle? tache|terminée?|terminer|fini[s]?|marque|planifie|planifier|tomorrow|supprime|supprimer|efface|modifie|modifier|change|mets? [àa] jour|renomme|liste|montre|affiche|donne.moi|quelles? sont|mes stats|mes points|mon streak|mon niveau|[eé]pingle|focus du jour|analyse|task dna|d[eé]place|repousse|deadline|assigne|assigner|coll[eè]gue|[eé]quipe|membre|va dans|ouvre|emm[èe]ne|montre[- ]moi (le|la|l[ae]s)|aller (à|sur|dans)|naviguer?)\b/.test(lowerMsg)
 
     if (looksLikeAction) {
       // Mode classique non-stream pour gérer les actions
@@ -609,7 +618,7 @@ export default function IAChat() {
         const toolsDone = (data.actions || []).filter(a => a.ok)
         const toolNames = toolsDone.map(a => a.tool)
         const taskMutatingTools = ['creer_tache', 'creer_taches_lot', 'terminer_tache', 'supprimer_tache', 'modifier_tache', 'epingler_focus_jour']
-        const celebrationTools  = ['creer_tache', 'creer_taches_lot', 'terminer_tache']
+        const celebrationTools  = ['creer_tache', 'creer_taches_lot', 'terminer_tache', 'creer_tache_equipe', 'assigner_tache_equipe']
         if (toolNames.some(t => celebrationTools.includes(t)) || data.action?.type === 'tache_creee' || data.action?.type === 'tache_terminee') {
           confetti({ particleCount: 70, spread: 55, origin: { y: 0.65 }, colors: [accent, '#10b981', accent2] })
         }
@@ -618,6 +627,16 @@ export default function IAChat() {
         }
         if (data.action?.type === 'redirect_tomorrow_builder')
           setTimeout(() => navigate('/planification'), 1800)
+
+        // Navigation déclenchée explicitement par l'IA via naviguer_vers
+        const navAction = toolsDone.find(a => a.tool === 'naviguer_vers')
+        if (navAction) {
+          const page = navAction.page
+          const section = navAction.section
+          const route = page === 'ia' ? '/ia' : `/${page}`
+          const state = section ? { section } : undefined
+          setTimeout(() => navigate(route, state ? { state } : undefined), 1000)
+        }
       } catch (err) {
         setMessages(p => [...p, { role: 'erreur', content: err.response?.data?.erreur || 'Erreur de connexion. Vérifie ta connexion et réessaie.' }])
       }

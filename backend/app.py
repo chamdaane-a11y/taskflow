@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-webhook-v16'
+APP_BUILD_MARKER = '2026-05-21-ia-agent-team-v17'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -8354,7 +8354,7 @@ Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours
 
 ━━━ RÈGLES ABSOLUES ━━━
 1. PERSONNALISATION TOTALE — Chaque réponse reflète le contexte de {user_row['nom']}. Zéro réponse générique.
-2. FORMAT RICHE — Markdown : ## sections, **gras**, listes, | tableaux |, `code`, ---
+2. FORMAT — Texte clair et direct. JAMAIS d'astérisques (*), JAMAIS de **gras**, JAMAIS de ## titres, JAMAIS de markdown. Listes avec tirets simples (-) ou numéros (1. 2. 3.) uniquement. Phrases qui se lisent à voix haute.
 3. ACTIONNABLE — Chaque réponse se termine par une action concrète faisable dans les 5 minutes
 4. PROACTIF — Si tu détectes procrastination, surcharge ou pattern négatif, tu le dis sans détour
 5. CONNECTÉ — Si tu vois un pattern dans le Focus du jour ou DNA, tu l'exploites pour conseiller
@@ -8363,6 +8363,9 @@ Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours
 8. LONGUEUR — Question simple = réponse percutante ; complexe = analyse complète mais sans bavardage
 9. PERSONA — Si tu joues un coach (Alex/Max/Nova), garde son ton dans CHAQUE phrase, pas seulement la première
 10. DATE — Tu connais toujours la date et l'heure actuelles (voir bloc DATE & HEURE ci-dessus). Ne jamais prétendre l'ignorer.
+11. AGENT — Tu n'expliques pas ce que tu vas faire avec des phrases comme "je vais créer la tâche". Tu APPELLES directement les outils disponibles (creer_tache, terminer_tache, lister_membres_equipe, creer_tache_equipe, assigner_tache_equipe, naviguer_vers, etc.) puis tu confirmes en une phrase le résultat.
+
+RAPPEL FORMAT : aucun astérisque, aucun caractère # en début de ligne. Si tu veux insister sur un mot, mets-le en MAJUSCULES, jamais entre étoiles.
 
 Prouve à chaque réponse que tu es le meilleur assistant de productivité qui existe."""
 
@@ -8529,6 +8532,70 @@ GETSHIFT_TOOLS = [
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "lister_membres_equipe",
+            "description": "Liste les membres d'une équipe avec leur id et nom. Si equipe_id non précisé et l'user n'a qu'une seule équipe, prend la sienne. À utiliser AVANT d'assigner une tâche à un collègue pour trouver son id.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "equipe_id": {"type": "integer", "description": "ID de l'équipe (optionnel si l'user n'a qu'une équipe)"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "creer_tache_equipe",
+            "description": "Crée une tâche dans une équipe partagée (page Collaboration), avec assignation optionnelle à un membre. Si equipe_id non précisé et l'user n'a qu'une seule équipe, prend la sienne.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "titre": {"type": "string", "description": "Titre court et actionnable"},
+                    "description": {"type": "string", "description": "Description détaillée (optionnel)"},
+                    "priorite": {"type": "string", "enum": ["haute", "moyenne", "basse"]},
+                    "deadline_iso": {"type": "string", "description": "Deadline ISO 8601 ou null"},
+                    "assignee_nom": {"type": "string", "description": "Nom du collègue à qui assigner (l'IA cherchera le user_id correspondant)"},
+                    "equipe_id": {"type": "integer", "description": "ID équipe (optionnel)"}
+                },
+                "required": ["titre"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "assigner_tache_equipe",
+            "description": "Assigne une tâche d'équipe existante à un membre. Recherche la tâche par mots-clés si pas d'id, et le membre par nom.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tache_id": {"type": "integer", "description": "ID tâche équipe (préférer si dispo)"},
+                    "recherche": {"type": "string", "description": "Mots-clés pour trouver la tâche si pas d'ID"},
+                    "assignee_nom": {"type": "string", "description": "Nom du collègue cible"},
+                    "equipe_id": {"type": "integer", "description": "ID équipe (optionnel)"}
+                },
+                "required": ["assignee_nom"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "naviguer_vers",
+            "description": "Ouvre une page de l'application. À utiliser quand l'utilisateur demande à aller quelque part ou quand une action requiert d'être sur une page précise. Valeurs : dashboard, planification, collaboration, analytics, tomorrow-builder, goal-reverse, profile, settings, ia.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "page": {"type": "string", "enum": ["dashboard", "planification", "collaboration", "analytics", "tomorrow-builder", "goal-reverse", "profile", "settings", "ia"]},
+                    "section": {"type": "string", "description": "Sous-section (ex: 'integrations' pour settings)"}
+                },
+                "required": ["page"]
+            }
+        }
+    },
 ]
 
 
@@ -8542,6 +8609,52 @@ def trouver_tache_par_recherche(curseur, user_id: int, recherche: str):
         mots_titre = set((t['titre'] or '').lower().split())
         if len(mots_recherche & mots_titre) >= 1:
             return t
+    return None
+
+
+def trouver_tache_equipe_par_recherche(curseur, equipe_id: int, recherche: str):
+    """Trouve la première tâche équipe active matchant les mots-clés."""
+    if not recherche or not equipe_id:
+        return None
+    mots = set(recherche.lower().split())
+    curseur.execute("SELECT id, titre, statut FROM taches_equipe WHERE equipe_id=%s AND statut!='termine' ORDER BY created_at DESC LIMIT 50", (equipe_id,))
+    for t in curseur.fetchall():
+        mots_titre = set((t['titre'] or '').lower().split())
+        if mots & mots_titre:
+            return t
+    return None
+
+
+def resoudre_equipe_user(curseur, user_id: int, equipe_id_arg=None):
+    """Retourne (equipe_id, role) pour l'utilisateur. Si equipe_id_arg fourni, vérifie membership.
+    Sinon, prend l'unique équipe de l'user. Retourne (None, None) si ambigu/aucune."""
+    if equipe_id_arg:
+        curseur.execute("SELECT role FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe_id_arg, user_id))
+        r = curseur.fetchone()
+        return (equipe_id_arg, r['role']) if r else (None, None)
+    curseur.execute("SELECT equipe_id, role FROM equipe_membres WHERE user_id=%s", (user_id,))
+    rows = curseur.fetchall()
+    if len(rows) == 1:
+        return (rows[0]['equipe_id'], rows[0]['role'])
+    return (None, None)
+
+
+def trouver_membre_par_nom(curseur, equipe_id: int, nom: str):
+    """Retourne le user_id d'un membre dont le nom contient 'nom' (case insensitive)."""
+    if not nom or not equipe_id:
+        return None
+    curseur.execute(
+        "SELECT u.id, u.nom FROM equipe_membres em JOIN users u ON em.user_id=u.id WHERE em.equipe_id=%s",
+        (equipe_id,)
+    )
+    nom_lower = nom.strip().lower()
+    candidats = curseur.fetchall()
+    for m in candidats:
+        if nom_lower == (m['nom'] or '').lower():
+            return m
+    for m in candidats:
+        if nom_lower in (m['nom'] or '').lower():
+            return m
     return None
 
 
@@ -8714,6 +8827,91 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
             if not requete: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Requête vide"}
             results_web = web_search_tavily(requete, max_results=5)
             result.update({"requete": requete, "results": results_web, "nb": len(results_web)})
+
+        elif nom_fonction == "lister_membres_equipe":
+            equipe_id, _ = resoudre_equipe_user(cur, user_id, arguments.get('equipe_id'))
+            if not equipe_id:
+                cur.execute("SELECT e.id, e.nom FROM equipe_membres em JOIN equipes e ON em.equipe_id=e.id WHERE em.user_id=%s", (user_id,))
+                equipes = cur.fetchall()
+                db.close()
+                return {"tool": nom_fonction, "ok": False, "erreur": "Aucune équipe ou plusieurs équipes — précise equipe_id", "equipes_disponibles": equipes}
+            cur.execute(
+                "SELECT u.id, u.nom, em.role FROM equipe_membres em JOIN users u ON em.user_id=u.id WHERE em.equipe_id=%s ORDER BY em.rejoint_le ASC",
+                (equipe_id,)
+            )
+            membres = cur.fetchall()
+            result.update({"equipe_id": equipe_id, "membres": membres, "nb": len(membres)})
+
+        elif nom_fonction == "creer_tache_equipe":
+            titre = (arguments.get('titre') or '').strip()
+            if not titre: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Titre vide"}
+            equipe_id, role = resoudre_equipe_user(cur, user_id, arguments.get('equipe_id'))
+            if not equipe_id:
+                db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Équipe introuvable ou ambiguë (l'user a plusieurs équipes — précise equipe_id)"}
+            assignee_id = None
+            assignee_nom_resolu = None
+            if arguments.get('assignee_nom'):
+                membre = trouver_membre_par_nom(cur, equipe_id, arguments['assignee_nom'])
+                if not membre:
+                    db.close(); return {"tool": nom_fonction, "ok": False, "erreur": f"Membre '{arguments['assignee_nom']}' introuvable dans l'équipe"}
+                assignee_id = membre['id']
+                assignee_nom_resolu = membre['nom']
+                if assignee_id != user_id and role != 'admin':
+                    db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Seul un admin peut assigner à un autre membre"}
+            priorite = arguments.get('priorite', 'moyenne')
+            description = arguments.get('description', '')
+            deadline = arguments.get('deadline_iso')
+            cur.execute(
+                "INSERT INTO taches_equipe (equipe_id, titre, description, priorite, assignee_id, createur_id, deadline, statut) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, 'todo')",
+                (equipe_id, titre, description, priorite, assignee_id, user_id, deadline)
+            )
+            new_id = cur.lastrowid
+            db.commit()
+            try:
+                cur.execute("SELECT nom FROM users WHERE id=%s", (user_id,))
+                nom_user = (cur.fetchone() or {}).get('nom', 'Quelqu\'un')
+                log_activite(equipe_id, user_id, nom_user, 'a créé la tâche', titre, new_id)
+            except Exception:
+                pass
+            result.update({"id": new_id, "equipe_id": equipe_id, "titre": titre, "assignee_id": assignee_id, "assignee_nom": assignee_nom_resolu, "page_concernee": "collaboration"})
+
+        elif nom_fonction == "assigner_tache_equipe":
+            equipe_id, role = resoudre_equipe_user(cur, user_id, arguments.get('equipe_id'))
+            if not equipe_id:
+                db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Équipe introuvable ou ambiguë"}
+            membre = trouver_membre_par_nom(cur, equipe_id, arguments.get('assignee_nom', ''))
+            if not membre:
+                db.close(); return {"tool": nom_fonction, "ok": False, "erreur": f"Membre '{arguments.get('assignee_nom')}' introuvable"}
+            if membre['id'] != user_id and role != 'admin':
+                db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Seul un admin peut assigner à un autre membre"}
+            tache_id = arguments.get('tache_id')
+            if not tache_id:
+                t = trouver_tache_equipe_par_recherche(cur, equipe_id, arguments.get('recherche', ''))
+                if not t: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche équipe introuvable"}
+                tache_id = t['id']; titre_t = t['titre']
+            else:
+                cur.execute("SELECT titre FROM taches_equipe WHERE id=%s AND equipe_id=%s", (tache_id, equipe_id))
+                r = cur.fetchone()
+                if not r: db.close(); return {"tool": nom_fonction, "ok": False, "erreur": "Tâche introuvable dans cette équipe"}
+                titre_t = r['titre']
+            cur.execute("UPDATE taches_equipe SET assignee_id=%s WHERE id=%s", (membre['id'], tache_id))
+            db.commit()
+            try:
+                cur.execute("SELECT nom FROM users WHERE id=%s", (user_id,))
+                nom_user = (cur.fetchone() or {}).get('nom', 'Quelqu\'un')
+                log_activite(equipe_id, user_id, nom_user, f'a assigné à {membre["nom"]} la tâche', titre_t, tache_id)
+            except Exception:
+                pass
+            result.update({"id": tache_id, "titre": titre_t, "assignee_id": membre['id'], "assignee_nom": membre['nom'], "page_concernee": "collaboration"})
+
+        elif nom_fonction == "naviguer_vers":
+            page = arguments.get('page', '').strip().lower()
+            section = arguments.get('section')
+            pages_valides = {"dashboard", "planification", "collaboration", "analytics", "tomorrow-builder", "goal-reverse", "profile", "settings", "ia"}
+            if page not in pages_valides:
+                db.close(); return {"tool": nom_fonction, "ok": False, "erreur": f"Page inconnue : {page}"}
+            result.update({"page": page, "section": section, "navigation": True})
 
         else:
             db.close()
