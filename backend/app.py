@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-autosync-v10'
+APP_BUILD_MARKER = '2026-05-21-gcal-debug-v11'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1317,6 +1317,84 @@ def debug_push_status():
         db.close()
     except Exception as e:
         info['db_error'] = str(e)
+    return jsonify(info), 200
+
+
+@app.route('/debug/gcal-status', methods=['GET'])
+def debug_gcal_status():
+    """Diagnose complet Google Calendar pour un user.
+    Usage:
+      ?user_id=X                    → state seul (intégration, autosync, scope effectif)
+      ?user_id=X&test_write=1       → tente un event test (puis le supprime) pour valider le scope write
+      ?user_id=X&task_id=T          → ajoute l'état détaillé de la tâche T
+      Combinable.
+    """
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({'error': 'user_id requis (?user_id=N)'}), 400
+    info = {'user_id': user_id}
+    try:
+        db = connecter()
+        c = db.cursor(dictionary=True)
+        c.execute("SELECT autosync_calendar FROM users WHERE id=%s", (user_id,))
+        u = c.fetchone()
+        info['autosync_calendar'] = u.get('autosync_calendar') if u else 'USER_NOT_FOUND'
+        c.execute("SELECT id, cree_le FROM integrations WHERE user_id=%s AND type='google_calendar'", (user_id,))
+        integ = c.fetchone()
+        info['integration_present'] = bool(integ)
+        if integ:
+            info['integration_created_at'] = str(integ['cree_le'])
+        task_id = request.args.get('task_id', type=int)
+        if task_id:
+            c.execute("SELECT id, titre, deadline, focus_date, terminee, google_event_id, gcal_sync_mode FROM taches WHERE id=%s", (task_id,))
+            t = c.fetchone()
+            info['task'] = {
+                'id': t['id'], 'titre': t['titre'],
+                'deadline': str(t['deadline']) if t['deadline'] else None,
+                'focus_date': str(t['focus_date']) if t['focus_date'] else None,
+                'terminee': bool(t['terminee']),
+                'google_event_id': t['google_event_id'],
+                'gcal_sync_mode': t['gcal_sync_mode'],
+            } if t else None
+        db.close()
+        creds = get_google_calendar_creds(user_id)
+        info['creds_ok'] = bool(creds)
+        if creds:
+            try:
+                service = build('calendar', 'v3', credentials=creds, cache_discovery=False)
+                service.calendarList().list(maxResults=1).execute()
+                info['read_works'] = True
+            except Exception as e:
+                info['read_works'] = False
+                info['read_error'] = str(e)[:250]
+            if request.args.get('test_write') == '1' and info.get('read_works'):
+                try:
+                    service = build('calendar', 'v3', credentials=creds, cache_discovery=False)
+                    now = datetime.now()
+                    test_body = {
+                        'summary': '[DEBUG] GetShift test write',
+                        'description': "Test scope OAuth — sera supprimé.",
+                        'start': {'dateTime': (now + timedelta(hours=1)).isoformat(), 'timeZone': 'Europe/Paris'},
+                        'end': {'dateTime': (now + timedelta(hours=2)).isoformat(), 'timeZone': 'Europe/Paris'},
+                    }
+                    ev = service.events().insert(calendarId='primary', body=test_body).execute()
+                    info['write_works'] = True
+                    info['test_event_id'] = ev.get('id')
+                    try:
+                        service.events().delete(calendarId='primary', eventId=ev['id']).execute()
+                        info['test_event_cleaned'] = True
+                    except Exception as e:
+                        info['test_event_cleaned'] = False
+                        info['cleanup_error'] = str(e)[:200]
+                except HttpError as e:
+                    info['write_works'] = False
+                    info['write_error_status'] = getattr(e.resp, 'status', None) if getattr(e, 'resp', None) else None
+                    info['write_error'] = str(e)[:300]
+                except Exception as e:
+                    info['write_works'] = False
+                    info['write_error'] = str(e)[:300]
+    except Exception as e:
+        info['fatal_error'] = str(e)[:300]
     return jsonify(info), 200
 
 
@@ -5132,11 +5210,13 @@ def _autosync_calendar_hook(user_id, task_id, action, extra=None):
 
     def _job():
         try:
+            print(f"[GCal autosync] START action={action} task_id={task_id} user_id={user_id}", flush=True)
             # Cas dégénéré : delete_event passe directement event_id (task peut être supprimée)
             if action == 'delete_event':
                 event_id = extra.get('event_id')
                 if event_id:
-                    _gcal_delete_event(user_id, event_id)
+                    ok = _gcal_delete_event(user_id, event_id)
+                    print(f"[GCal autosync] delete_event event={event_id} → {ok}", flush=True)
                 return
 
             db = connecter()
@@ -5148,6 +5228,7 @@ def _autosync_calendar_hook(user_id, task_id, action, extra=None):
             """, (user_id,))
             row = c.fetchone()
             if not row or not row.get('autosync_calendar') or not row.get('gcal_config'):
+                print(f"[GCal autosync] SKIP user_id={user_id} : autosync={row.get('autosync_calendar') if row else None} integ_present={bool(row and row.get('gcal_config'))}", flush=True)
                 db.close()
                 return
 
@@ -5162,10 +5243,13 @@ def _autosync_calendar_hook(user_id, task_id, action, extra=None):
             if action == 'create_from_deadline':
                 if task.get('deadline') and not existing_event_id:
                     result = _gcal_create_event(user_id, task, 'deadline')
+                    print(f"[GCal autosync] create_from_deadline task_id={task_id} → {result}", flush=True)
                     if result:
                         c.execute("UPDATE taches SET google_event_id=%s, gcal_sync_mode=%s WHERE id=%s",
                                   (result['event_id'], 'deadline', task_id))
                         db.commit()
+                else:
+                    print(f"[GCal autosync] create_from_deadline SKIP : deadline={task.get('deadline')} existing_id={existing_event_id}", flush=True)
 
             elif action == 'create_or_update_focus':
                 if task.get('focus_date'):
