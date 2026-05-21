@@ -79,7 +79,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-gcal-debug-v11'
+APP_BUILD_MARKER = '2026-05-21-gcal-debug-v12'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1339,11 +1339,8 @@ def debug_gcal_status():
         c.execute("SELECT autosync_calendar FROM users WHERE id=%s", (user_id,))
         u = c.fetchone()
         info['autosync_calendar'] = u.get('autosync_calendar') if u else 'USER_NOT_FOUND'
-        c.execute("SELECT id, cree_le FROM integrations WHERE user_id=%s AND type='google_calendar'", (user_id,))
-        integ = c.fetchone()
-        info['integration_present'] = bool(integ)
-        if integ:
-            info['integration_created_at'] = str(integ['cree_le'])
+        c.execute("SELECT COUNT(*) AS n FROM integrations WHERE user_id=%s AND type='google_calendar'", (user_id,))
+        info['integration_present'] = c.fetchone()['n'] > 0
         task_id = request.args.get('task_id', type=int)
         if task_id:
             c.execute("SELECT id, titre, deadline, focus_date, terminee, google_event_id, gcal_sync_mode FROM taches WHERE id=%s", (task_id,))
