@@ -394,7 +394,7 @@ export default function GoalReverse() {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 10, marginBottom: isMobile ? 18 : 24 }}>
                 {[
                   { label: 'Semaines', val: result.duree_semaines, icon: Calendar, color: 'var(--ember)' },
-                  { label: 'Jalons', val: result.jalons?.length, icon: Flag, color: '#6c63ff' },
+                  { label: 'Jalons', val: result.jalons?.length, icon: Flag, color: 'var(--ember)' },
                   { label: 'Tâches', val: totalTaches, icon: CheckCircle2, color: '#4caf82' },
                   { label: 'Faisabilité', val: `${result.score_faisabilite}%`, icon: Target, color: result.score_faisabilite >= 70 ? '#4caf82' : result.score_faisabilite >= 40 ? '#e08a3c' : '#e05c5c' },
                 ].map((s, i) => {

@@ -27,7 +27,7 @@ const MODELES = [
 ]
 
 const SUGGESTIONS = [
-  { icon: Brain,       text: "Analyse ma semaine et donne-moi un plan d'action",       grad: 'linear-gradient(135deg,#6c63ff,#a855f7)' },
+  { icon: Brain,       text: "Analyse ma semaine et donne-moi un plan d'action",       grad: 'linear-gradient(135deg,var(--ember),#a855f7)' },
   { icon: Globe,       text: 'Recherche les meilleures méthodes de productivité 2025', grad: 'linear-gradient(135deg,#0ea5e9,#06b6d4)' },
   { icon: Plus,        text: 'Crée une tâche : préparer la réunion de demain',         grad: 'linear-gradient(135deg,#10b981,#4caf82)' },
   { icon: Zap,         text: 'Je procrastine bcp, aide-moi à reprendre le focus',      grad: 'linear-gradient(135deg,#f59e0b,#ef4444)' },
@@ -55,7 +55,7 @@ const SLASH_COMMANDS = [
   { cmd: '/focus',  Icon: Target,       color: '#a855f7', desc: 'Choisis mes 3 priorités du jour parmi mes tâches',         prefix: 'Choisis mes 3 priorités du jour parmi mes tâches actives' },
   { cmd: '/plan',   Icon: Calendar,     color: '#f59e0b', desc: 'Construis mon planning de la semaine',                     prefix: 'Construis mon planning de la semaine' },
   { cmd: '/dna',    Icon: Brain,        color: '#0ea5e9', desc: 'Analyse mes patterns Task DNA et donne 3 conseils',        prefix: 'Analyse mes patterns Task DNA et donne 3 conseils actionnables' },
-  { cmd: '/find',   Icon: Search,       color: '#6c63ff', desc: 'Cherche dans mes tâches : préciser ce que tu cherches',    prefix: 'Cherche dans mes tâches : ' },
+  { cmd: '/find',   Icon: Search,       color: 'var(--ember)', desc: 'Cherche dans mes tâches : préciser ce que tu cherches',    prefix: 'Cherche dans mes tâches : ' },
   { cmd: '/web',    Icon: Globe,        color: '#0ea5e9', desc: 'Recherche sur le web temps réel',                          prefix: '' /* spécial : active forceSearch */, special: 'web' },
   { cmd: '/clear',  Icon: Trash2,       color: '#ef4444', desc: 'Efface la conversation actuelle',                          prefix: '', special: 'clear' },
 ]
@@ -208,7 +208,7 @@ const CarteAction = memo(function CarteAction({ action, T }) {
     supprimer_tache:    { color: '#ef4444', Icon: Trash2,      label: 'Supprimée' },
     modifier_tache:     { color: '#f59e0b', Icon: Sparkles,    label: 'Modifiée' },
     epingler_focus_jour:{ color: '#a855f7', Icon: Target,      label: 'Épinglée(s) au focus' },
-    lister_taches:      { color: '#6c63ff', Icon: Search,      label: 'Liste tâches' },
+    lister_taches:      { color: 'var(--ember)', Icon: Search,      label: 'Liste tâches' },
     obtenir_stats:      { color: '#0ea5e9', Icon: BarChart2,   label: 'Stats récupérées' },
     analyser_task_dna:  { color: '#a855f7', Icon: Brain,       label: 'Task DNA' },
     rechercher_web:     { color: '#0ea5e9', Icon: Globe,       label: 'Web temps réel' },
@@ -396,8 +396,8 @@ function detectWebSearch(text) {
 export default function IAChat() {
   const user    = useMemo(() => { try { return JSON.parse(localStorage.getItem('user')) } catch { return null } }, [])
   const { T }   = useTheme()
-  const accent  = 'var(--ember)'  || '#6c63ff'
-  const accent2 = 'var(--ember-hover)' || '#a855f7'
+  const accent  = 'var(--ember)'
+  const accent2 = 'var(--ember-hover)'
 
   const [prompt,            setPrompt]            = useState('')
   const modele = 'llama-3.3-70b-versatile'

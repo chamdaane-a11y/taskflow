@@ -224,7 +224,7 @@ function useStatistics(data, jours) {
     if (peakHour > 21)
       insights.push({ icon: Clock, color: '#a855f7', text: `Corrélation nocturne : vous travaillez après 21h. Les sessions tardives peuvent impacter votre productivité du lendemain.` })
     if (focusScore > 75)
-      insights.push({ icon: Star, color: '#6c63ff', text: `Score de focus élevé (${focusScore}/100) : vous priorisez efficacement les tâches à fort impact.` })
+      insights.push({ icon: Star, color: 'var(--ember)', text: `Score de focus élevé (${focusScore}/100) : vous priorisez efficacement les tâches à fort impact.` })
 
     return {
       labels, current, previous, movingAvg, cumulative,
@@ -1334,7 +1334,7 @@ export default function Analytics() {
 
   // ── Palette pastel moderne (couleurs statiques, pas de fonctions) ──
   const PASTEL = {
-    main: 'var(--ember)' || '#6c63ff',
+    main: 'var(--ember)',
     ghost: ('var(--text-secondary)' || '#888') + '40',
     mint: '#86d4a8',
     peach: '#ffb89e',

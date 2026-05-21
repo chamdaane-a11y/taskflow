@@ -1726,11 +1726,25 @@ def forgot_password():
         curseur.execute("UPDATE users SET reset_token=%s, reset_token_expiry=%s WHERE id=%s", (reset_token, expiry, user['id']))
         db.commit(); db.close()
         lien = f"https://chamdaane-a11y.github.io/taskflow/#/reset-password/{reset_token}"
-        html = f"""<div style="font-family:Arial;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
-            <h1 style="color:#6c63ff;">GetShift</h1><h2>Bonjour {user['nom']} !</h2>
-            <p>Cliquez ci-dessous pour réinitialiser votre mot de passe :</p>
-            <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">Réinitialiser mon mot de passe</a>
-            <p style="color:#888;font-size:12px;">Ce lien expire dans 1h.</p>
+        html = f"""<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#F5F0EB;padding:48px 40px;border-radius:16px;border:1px solid #E8DDD5;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;">
+              <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#B8521C,#C96830);display:inline-flex;align-items:center;justify-content:center;">
+                <span style="color:#fff;font-weight:900;font-size:16px;">G</span>
+              </div>
+              <span style="font-size:17px;font-weight:800;letter-spacing:-0.5px;color:#1A1410;">GetShift</span>
+            </div>
+            <h2 style="color:#1A1410;font-size:22px;font-weight:700;margin:0 0 8px 0;">Bonjour {user['nom']} !</h2>
+            <p style="color:#6B5E54;font-size:15px;line-height:1.6;margin:0 0 28px 0;">
+              Tu as demandé à réinitialiser ton mot de passe. Clique sur le bouton ci-dessous pour choisir un nouveau mot de passe.
+            </p>
+            <a href="{lien}" style="display:inline-block;background:linear-gradient(135deg,#B8521C,#C96830);color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px;">
+              Réinitialiser mon mot de passe →
+            </a>
+            <p style="color:#9C8C80;font-size:13px;margin:0;line-height:1.5;">
+              Ce lien expire dans <strong>1h</strong>. Si tu n'as pas demandé cette réinitialisation, ignore cet email.
+            </p>
+            <hr style="border:none;border-top:1px solid #E8DDD5;margin:28px 0 20px 0;">
+            <p style="color:#B8A89A;font-size:12px;margin:0;">GetShift · <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#B8521C;text-decoration:none;">Ouvrir l'app</a></p>
         </div>"""
         threading.Thread(target=envoyer_email, args=(email, "Réinitialisation mot de passe GetShift", html)).start()
         return jsonify({"message": "Si cet email existe, un lien a été envoyé."})

@@ -22,7 +22,7 @@ const steps = [
     num: 1,
     icon: '📝',
     title: 'Créer ton compte',
-    color: '#6c63ff',
+    color: 'var(--ember)',
     description: 'Commence par créer ton compte GetShift gratuitement.',
     details: [
       'Va sur la page d\'accueil et clique sur "Créer un compte"',
@@ -33,7 +33,7 @@ const steps = [
       <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, #6c63ff, #4caf82)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, var(--ember), #4caf82)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 18 }}>📝</span>
             </div>
             <div style={{ flex: 1 }}>
@@ -44,7 +44,7 @@ const steps = [
           {['Nom complet', 'Email', 'Mot de passe'].map((f, i) => (
             <div key={i} style={{ padding: '8px 12px', background: 'var(--surface-1)', borderRadius: 8, border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-secondary)' }}>{f}</div>
           ))}
-          <div style={{ padding: '9px', background: '#6c63ff', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'white' }}>Créer mon compte</div>
+          <div style={{ padding: '9px', background: 'var(--ember)', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'white' }}>Créer mon compte</div>
         </div>
       </div>
     )
@@ -97,7 +97,7 @@ const steps = [
       <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, #e08a3c, #6c63ff)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, #e08a3c, var(--ember))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Sparkles size={14} color="white" />
             </div>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Assistant IA</span>
@@ -160,7 +160,7 @@ const steps = [
     num: 5,
     icon: '📈',
     title: 'Suivre ta progression',
-    color: '#6c63ff',
+    color: 'var(--ember)',
     description: 'Consulte tes analytiques pour voir tes habitudes et performances.',
     details: [
       'Va dans "Analytiques" pour voir tes stats',
@@ -173,7 +173,7 @@ const steps = [
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {[
-              { label: 'Total', val: '24', color: '#6c63ff' },
+              { label: 'Total', val: '24', color: 'var(--ember)' },
               { label: 'Terminées', val: '18', color: '#4caf82' },
             ].map((s, i) => (
               <div key={i} style={{ flex: 1, padding: '10px', background: 'var(--surface-1)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
@@ -184,7 +184,7 @@ const steps = [
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60, padding: '0 4px' }}>
             {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-              <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 5 ? '#6c63ff' : `#6c63ff40`, borderRadius: 4 }} />
+              <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 5 ? 'var(--ember)' : `var(--ember)40`, borderRadius: 4 }} />
             ))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-secondary)' }}>
@@ -250,7 +250,7 @@ const steps = [
           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Membres :</div>
           {['Toi (propriétaire)', 'Alice (Actif)', 'Bob (En attente)'].map((m, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 24, height: 24, borderRadius: '50%', background: `linear-gradient(135deg, #4caf82, #6c63ff)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'white', fontWeight: 700 }}>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', background: `linear-gradient(135deg, #4caf82, var(--ember))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'white', fontWeight: 700 }}>
                 {m.charAt(0)}
               </div>
               <span style={{ fontSize: 11, color: 'var(--text-primary)' }}>{m}</span>
@@ -278,7 +278,7 @@ const steps = [
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { name: 'Sombre', bg: '#0f0f13', bg2: '#16161d', accent: '#c9a84c', text: '#f0f0f5' },
-            { name: 'Clair', bg: '#f5f5f0', bg2: '#ffffff', accent: '#6c63ff', text: '#1a1a2e' },
+            { name: 'Clair', bg: '#f5f5f0', bg2: '#ffffff', accent: 'var(--ember)', text: '#1a1a2e' },
             { name: 'Océan', bg: '#0a1628', bg2: '#0d2137', accent: '#00b4d8', text: '#e0f0ff' },
             { name: 'Forêt', bg: '#0a1a0f', bg2: '#0f2318', accent: '#4caf82', text: '#e0ffe8' },
             { name: 'Coucher de soleil', bg: '#1a0a0f', bg2: '#2d0f18', accent: '#ff6b6b', text: '#ffe8e8' },

@@ -22,7 +22,7 @@ import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../component
 const API = 'https://getshift-backend.onrender.com'
 
 const COLONNES = [
-  { id: 'todo',          label: 'À faire',     couleur: '#6c63ff', bg: '#6c63ff12' },
+  { id: 'todo',          label: 'À faire',     couleur: 'var(--ember)', bg: 'var(--ember-ring)' },
   { id: 'en_cours',      label: 'En cours',    couleur: '#e08a3c', bg: '#e08a3c12' },
   { id: 'en_validation', label: 'À valider',   couleur: '#f59e0b', bg: '#f59e0b14' },
   { id: 'termine',       label: 'Terminé',     couleur: '#4caf82', bg: '#4caf8212' },
@@ -40,7 +40,7 @@ function Toast({ toasts, removeToast }) {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 60, scale: 0.9 }}
             transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.bg || '#1a1a2e', border: `1px solid ${t.border || '#6c63ff44'}`, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.bg || '#1a1a2e', border: `1px solid ${t.border || 'var(--ember)44'}`, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', cursor: 'pointer' }}
             onClick={() => removeToast(t.id)}>
             <div style={{ fontSize: 15 }}>{t.icon || '🔔'}</div>
             <span style={{ fontSize: 12.5, color: t.color || '#e2e2ff', lineHeight: 1.4, flex: 1 }}>{t.message}</span>
@@ -1297,7 +1297,7 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
 
 // ===== LABEL_PALETTE — couleurs prédéfinies pour les labels =====
 const LABEL_PALETTE = [
-  '#6c63ff', '#3b82f6', '#06b6d4', '#22a06b',
+  'var(--ember)', '#3b82f6', '#06b6d4', '#22a06b',
   '#4caf82', '#f59e0b', '#e08a3c', '#e05c5c',
   '#ec4899', '#a855f7', '#64748b', '#374151',
 ]
@@ -1526,7 +1526,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
     charger()
   }, [equipe_id])
 
-  const STATUT_COLOR = { todo: '#6c63ff', en_cours: '#e08a3c', termine: '#4caf82' }
+  const STATUT_COLOR = { todo: 'var(--ember)', en_cours: '#e08a3c', termine: '#4caf82' }
   const STATUT_LABEL = { todo: 'À faire', en_cours: 'En cours', termine: 'Terminé' }
 
   return (
@@ -1619,7 +1619,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                       <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{m.total || 0} tâches</span>
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
-                      {[['todo', '#6c63ff'], ['en_cours', '#e08a3c'], ['termine', '#4caf82']].map(([s, c]) => {
+                      {[['todo', 'var(--ember)'], ['en_cours', '#e08a3c'], ['termine', '#4caf82']].map(([s, c]) => {
                         const v = m[s] || 0
                         return v > 0 ? (
                           <div key={s} title={`${STATUT_LABEL[s]}: ${v}`}
@@ -1996,7 +1996,7 @@ export default function Collaboration() {
             })
             if (changed) {
               const labels = { todo: 'À faire', en_cours: 'En cours', en_validation: 'À valider', termine: 'Terminé' }
-              addToast(`"${changed.titre}" → ${labels[changed.statut]}`, '🔄', '#6c63ff')
+              addToast(`"${changed.titre}" → ${labels[changed.statut]}`, '🔄', 'var(--ember)')
             }
           }
         }
@@ -2221,8 +2221,8 @@ export default function Collaboration() {
         terminer: ['Tâche terminée — bien joué', '✓', '#4caf82'],
         proposer: ['Proposée au créateur pour validation', '📥', '#f59e0b'],
         valider:  ['Tâche validée ✓', '✓', '#4caf82'],
-        annuler:  ['Proposition annulée', '↩', '#6c63ff'],
-        reopen:   ['Tâche ré-ouverte', '↻', '#6c63ff'],
+        annuler:  ['Proposition annulée', '↩', 'var(--ember)'],
+        reopen:   ['Tâche ré-ouverte', '↻', 'var(--ember)'],
       }[action]
       addToast(...toastMsg)
     } catch {
@@ -2240,7 +2240,7 @@ export default function Collaboration() {
         assignee_id: assigneeId, user_id: user.id, nom_user: user.nom,
       })
       const assignee = membresRef.current.find(m => m.id === assigneeId)
-      if (assignee) addToast(`Assignée à ${assignee.nom}`, '👤', '#6c63ff')
+      if (assignee) addToast(`Assignée à ${assignee.nom}`, '👤', 'var(--ember)')
       else addToast('Tâche désassignée', '👤', '#888')
     } catch {
       setTaches(prev)
@@ -2534,7 +2534,7 @@ export default function Collaboration() {
               <style>{`.filtres-pills::-webkit-scrollbar{display:none;}`}</style>
               {[
                 { id: 'toutes',     label: 'Toutes',      icon: null, color: 'var(--ember)' },
-                { id: 'mes_taches', label: 'Mes tâches',  icon: User, color: '#6c63ff' },
+                { id: 'mes_taches', label: 'Mes tâches',  icon: User, color: 'var(--ember)' },
                 { id: 'en_retard',  label: 'En retard',   icon: AlertTriangle, color: '#e05c5c' },
                 { id: 'haute',      label: 'Haute prio',  icon: Zap, color: '#e05c5c' },
                 { id: 'a_valider',  label: 'À valider',   icon: Clock, color: '#f59e0b' },

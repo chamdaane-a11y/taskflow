@@ -213,7 +213,7 @@ export default function CGU() {
       {/* NAVBAR */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 60, padding: '0 clamp(20px, 5vw, 80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(248,249,252,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6C63FF, #00C896)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Layers size={16} color="white" strokeWidth={2.5} />
           </div>
           <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: "var(--font-ui)", color: '#0f172a' }}>GetShift</span>
@@ -228,7 +228,7 @@ export default function CGU() {
       <div style={{ paddingTop: 60, background: 'linear-gradient(180deg, white 0%, #F8F9FC 100%)', borderBottom: '1px solid #f1f5f9' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(40px, 6vh, 72px) clamp(20px, 5vw, 60px) 0' }}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'rgba(108,99,255,0.07)', border: '1px solid rgba(108,99,255,0.15)', borderRadius: 99, marginBottom: 20, fontSize: 12, color: '#6C63FF', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, marginBottom: 20, fontSize: 12, color: 'var(--ember)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
               <Shield size={12} /> Documents légaux
             </div>
             <h1 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 800, letterSpacing: '-2px', fontFamily: "var(--font-ui)", color: '#0f172a', marginBottom: 12 }}>
@@ -247,7 +247,7 @@ export default function CGU() {
                 <div style={{ padding: '8px 12px 12px', borderTop: '1px solid #f1f5f9' }}>
                   {sections.map(s => (
                     <a key={s.id} href={`#${s.id}`} style={{ display: 'block', padding: '8px 8px', fontSize: 13, color: '#64748b', textDecoration: 'none', borderRadius: 6 }}
-                      onMouseEnter={e => e.currentTarget.style.color = '#6C63FF'}
+                      onMouseEnter={e => e.currentTarget.style.color = 'var(--ember)'}
                       onMouseLeave={e => e.currentTarget.style.color = '#64748b'}>
                       {s.titre}
                     </a>
@@ -282,21 +282,21 @@ export default function CGU() {
               <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12, padding: '0 8px' }}>Sommaire</p>
               {sections.map((s) => (
                 <a key={s.id} href={`#${s.id}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, color: sectionActive === s.id ? '#6C63FF' : '#64748b', background: sectionActive === s.id ? 'rgba(108,99,255,0.07)' : 'transparent', fontSize: 13, fontWeight: sectionActive === s.id ? 600 : 400, textDecoration: 'none', marginBottom: 2, transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#6C63FF'; e.currentTarget.style.background = 'rgba(108,99,255,0.05)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = sectionActive === s.id ? '#6C63FF' : '#64748b'; e.currentTarget.style.background = sectionActive === s.id ? 'rgba(108,99,255,0.07)' : 'transparent' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, color: sectionActive === s.id ? 'var(--ember)' : '#64748b', background: sectionActive === s.id ? 'var(--ember-soft)' : 'transparent', fontSize: 13, fontWeight: sectionActive === s.id ? 600 : 400, textDecoration: 'none', marginBottom: 2, transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--ember)'; e.currentTarget.style.background = 'var(--ember-soft)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = sectionActive === s.id ? 'var(--ember)' : '#64748b'; e.currentTarget.style.background = sectionActive === s.id ? 'var(--ember-soft)' : 'transparent' }}>
                   <ChevronRight size={12} />
                   <span style={{ lineHeight: 1.4 }}>{s.titre}</span>
                 </a>
               ))}
             </div>
-            <div style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(0,200,150,0.06))', border: '1px solid rgba(108,99,255,0.15)', borderRadius: 16, padding: 18, marginTop: 16 }}>
+            <div style={{ background: 'linear-gradient(135deg, var(--ember-soft), rgba(0,200,150,0.06))', border: '1px solid var(--ember-ring)', borderRadius: 16, padding: 18, marginTop: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <Mail size={14} color="#6C63FF" />
+                <Mail size={14} color="var(--ember)" />
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Une question ?</span>
               </div>
               <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.6, marginBottom: 10 }}>Contactez Hamdaane CHITOU directement.</p>
-              <a href="mailto:chamdaane@gmail.com" style={{ fontSize: 12, color: '#6C63FF', fontWeight: 600, textDecoration: 'none' }}>chamdaane@gmail.com</a>
+              <a href="mailto:chamdaane@gmail.com" style={{ fontSize: 12, color: 'var(--ember)', fontWeight: 600, textDecoration: 'none' }}>chamdaane@gmail.com</a>
             </div>
           </div>
 
@@ -304,8 +304,8 @@ export default function CGU() {
           <div>
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: 16, padding: 24, marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(108,99,255,0.1)', border: '1px solid rgba(108,99,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {onglet === 'cgu' ? <FileText size={18} color="#6C63FF" /> : <Shield size={18} color="#6C63FF" />}
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {onglet === 'cgu' ? <FileText size={18} color="var(--ember)" /> : <Shield size={18} color="var(--ember)" />}
               </div>
               <div>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
@@ -328,7 +328,7 @@ export default function CGU() {
                 transition={{ delay: i * 0.04 }}
                 style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: 16, padding: 28, marginBottom: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                  <div style={{ width: 6, height: 24, borderRadius: 3, background: 'linear-gradient(180deg, #6C63FF, #00C896)', flexShrink: 0 }} />
+                  <div style={{ width: 6, height: 24, borderRadius: 3, background: 'linear-gradient(180deg, var(--ember), var(--ember-hover))', flexShrink: 0 }} />
                   <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', fontFamily: "var(--font-ui)" }}>{s.titre}</h2>
                 </div>
                 <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.85, whiteSpace: 'pre-line' }}>
@@ -337,10 +337,10 @@ export default function CGU() {
               </motion.div>
             ))}
 
-            <div style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.06), rgba(0,200,150,0.04))', border: '1px solid rgba(108,99,255,0.12)', borderRadius: 16, padding: 24, marginTop: 8, textAlign: 'center' }}>
+            <div style={{ background: 'linear-gradient(135deg, var(--ember-soft), rgba(0,200,150,0.04))', border: '1px solid var(--ember-soft)', borderRadius: 16, padding: 24, marginTop: 8, textAlign: 'center' }}>
               <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>
                 © 2026 GetShift — Propriété de <strong style={{ color: '#0f172a' }}>Hamdaane CHITOU</strong>, Bénin.<br />
-                Tous droits réservés. Pour toute question : <a href="mailto:chamdaane@gmail.com" style={{ color: '#6C63FF', fontWeight: 600, textDecoration: 'none' }}>chamdaane@gmail.com</a>
+                Tous droits réservés. Pour toute question : <a href="mailto:chamdaane@gmail.com" style={{ color: 'var(--ember)', fontWeight: 600, textDecoration: 'none' }}>chamdaane@gmail.com</a>
               </p>
             </div>
           </div>

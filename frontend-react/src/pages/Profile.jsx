@@ -25,7 +25,7 @@ const NIVEAU_META = {
   3:  { Icon: CheckCircle2,  couleur: '#facc15' },                                       // Régulier
   4:  { Icon: Target,        couleur: '#f97316' },                                       // Discipliné
   5:  { Icon: Brain,         couleur: '#5fb4d6' },                                       // Stratège
-  6:  { Icon: Award,         couleur: '#6c63ff' },                                       // Expert
+  6:  { Icon: Award,         couleur: 'var(--ember)' },                                       // Expert
   7:  { Icon: Trophy,        couleur: '#a78bfa' },                                       // Maître
   8:  { Icon: Layers,        couleur: '#f5b942' },                                       // Architecte
   9:  { Icon: Sparkles,      couleur: '#ff7ab8' },                                       // Visionnaire
@@ -225,7 +225,7 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
       {/* Progress bar globale */}
       <div style={{ height: 5, background: `${accent}15`, borderRadius: 99, overflow: 'hidden', marginBottom: 20 }}>
         <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-          style={{ height: '100%', background: `linear-gradient(90deg, ${accent}, #00C896)`, borderRadius: 99 }} />
+          style={{ height: '100%', background: `linear-gradient(90deg, ${accent}, ${T?.accent2 || 'var(--ember-hover)'})`, borderRadius: 99 }} />
       </div>
 
       {/* Vitrine des badges débloqués (priorité légendaires) */}
@@ -515,22 +515,22 @@ export default function Profile() {
 
   const initiales = user?.nom?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'GS'
 
-  const bg         = T?.bg     || '#080810'
-  const bg2        = T?.bg2    || 'rgba(255,255,255,0.04)'
-  const bg3        = T?.bg3    || 'rgba(255,255,255,0.07)'
-  const text       = T?.text   || '#f0f0f5'
-  const text2      = T?.text2  || 'rgba(255,255,255,0.45)'
-  const border     = T?.border || 'rgba(255,255,255,0.09)'
-  const accent     = T?.accent || '#6C63FF'
-  const isLight    = bg === '#F8F9FC' || bg === '#ffffff' || bg === '#f8f9fc'
-  const cardBg     = isLight ? 'white' : bg2
-  const cardBorder = isLight ? '#e2e8f0' : border
-  const inputBg    = isLight ? '#f8f9fc' : 'rgba(0,0,0,0.2)'
-  const inputBorder = isLight ? '#e2e8f0' : border
+  const bg         = T?.bg     || 'var(--bg-base)'
+  const bg2        = T?.bg2    || 'var(--surface-1)'
+  const bg3        = T?.bg3    || 'var(--surface-2)'
+  const text       = T?.text   || 'var(--text-primary)'
+  const text2      = T?.text2  || 'var(--text-secondary)'
+  const border     = T?.border || 'var(--border-default)'
+  const accent     = T?.accent || 'var(--ember)'
+  const isLight    = theme === 'light'
+  const cardBg     = isLight ? 'var(--surface-card)' : bg2
+  const cardBorder = isLight ? 'var(--border-subtle)' : border
+  const inputBg    = isLight ? 'var(--surface-1)' : 'rgba(0,0,0,0.2)'
+  const inputBorder = isLight ? 'var(--border-default)' : border
 
   const forceLvl   = newPwd.length < 6 ? 1 : newPwd.length < 8 ? 2 : newPwd.length < 12 ? 3 : 4
   const forceLabel = ['', 'Trop court', 'Faible', 'Moyen', 'Fort'][forceLvl]
-  const forceColor = ['', '#ef4444', '#f97316', '#facc15', '#00C896'][forceLvl]
+  const forceColor = ['', '#ef4444', '#f97316', '#facc15', 'var(--success)'][forceLvl]
 
   if (!user) return null
 
@@ -554,7 +554,7 @@ export default function Profile() {
   const secuScore = secuItems.filter(c => !c.soon && c.ok).length
   const secuMax   = secuItems.filter(c => !c.soon).length
   const secuPct   = Math.round(secuScore / secuMax * 100)
-  const secuColor = secuPct >= 100 ? '#00C896' : secuPct >= 60 ? '#facc15' : '#ef4444'
+  const secuColor = secuPct >= 100 ? 'var(--success)' : secuPct >= 60 ? '#facc15' : '#ef4444'
 
   return (
     <div style={{ minHeight: '100vh', background: bg, fontFamily: "var(--font-ui)", color: text, position: 'relative', overflowX: 'hidden' }}>
@@ -571,7 +571,7 @@ export default function Profile() {
       {/* Orbes fond */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
         <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', filter: 'blur(140px)', opacity: isLight ? 0.05 : 0.08, background: `radial-gradient(circle, ${accent}, transparent)`, top: '-15%', left: '-10%' }} />
-        <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', filter: 'blur(120px)', opacity: isLight ? 0.04 : 0.06, background: 'radial-gradient(circle, #00C896, transparent)', bottom: '5%', right: '-5%' }} />
+        <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', filter: 'blur(120px)', opacity: isLight ? 0.04 : 0.06, background: 'radial-gradient(circle, var(--ember-hover), transparent)', bottom: '5%', right: '-5%' }} />
       </div>
 
       {/* Modal changement email */}
@@ -625,7 +625,7 @@ export default function Profile() {
                   Annuler
                 </button>
                 <motion.button onClick={demanderChangementEmail} disabled={loading || !newEmail || !emailModalPwd} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  style={{ padding: '11px 22px', background: `linear-gradient(135deg, ${accent}, #00C896)`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', opacity: (!newEmail || !emailModalPwd) ? 0.5 : 1 }}>
+                  style={{ padding: '11px 22px', background: `linear-gradient(135deg, ${accent}, ${T?.accent2 || 'var(--ember-hover)'})`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', opacity: (!newEmail || !emailModalPwd) ? 0.5 : 1 }}>
                   {loading ? 'Envoi...' : 'Envoyer le lien'}
                 </motion.button>
               </div>
@@ -705,8 +705,8 @@ export default function Profile() {
       <AnimatePresence>
         {message && (
           <motion.div initial={{ opacity: 0, y: -60, x: '-50%' }} animate={{ opacity: 1, y: 20, x: '-50%' }} exit={{ opacity: 0, y: -60, x: '-50%' }}
-            style={{ position: 'fixed', top: 0, left: '50%', zIndex: 1000, background: message.type === 'succes' ? (isLight ? '#f0fdf4' : 'rgba(0,200,150,0.12)') : (isLight ? '#fef2f2' : 'rgba(239,68,68,0.12)'), border: `1px solid ${message.type === 'succes' ? '#00C89660' : '#ef444460'}`, borderRadius: 12, padding: '12px 22px', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
-            {message.type === 'succes' ? <CheckCircle size={17} color="#00C896" /> : <AlertCircle size={17} color="#ef4444" />}
+            style={{ position: 'fixed', top: 0, left: '50%', zIndex: 1000, background: message.type === 'succes' ? 'var(--success-soft)' : 'var(--danger-soft)', border: `1px solid ${message.type === 'succes' ? 'var(--success)' : 'var(--danger)'}`, borderRadius: 12, padding: '12px 22px', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+            {message.type === 'succes' ? <CheckCircle size={17} color="var(--success)" /> : <AlertCircle size={17} color="#ef4444" />}
             <span style={{ fontSize: 14, fontWeight: 500, color: text }}>{message.texte}</span>
           </motion.div>
         )}
@@ -727,7 +727,7 @@ export default function Profile() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 24, padding: 'clamp(24px, 4vw, 40px)', marginBottom: 20, position: 'relative', overflow: 'hidden', boxShadow: isLight ? '0 4px 24px rgba(0,0,0,0.06)' : '0 4px 24px rgba(0,0,0,0.25)' }}>
 
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${accent}, #00C896)` }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${accent}, ${T?.accent2 || 'var(--ember-hover)'})` }} />
 
           {/* Halo de prestige derrière le hero pour les niveaux élevés (≥8) */}
           {(user.niveau || 1) >= 8 && (
@@ -750,7 +750,7 @@ export default function Profile() {
                     pointerEvents: 'none', zIndex: 0
                   }} />
               )}
-              <div style={{ position: 'relative', zIndex: 1, width: 88, height: 88, borderRadius: 24, background: `linear-gradient(135deg, ${accent}, #00C896)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'white', boxShadow: `0 8px 32px ${niveauInfo.couleur}55`, fontFamily: "var(--font-ui)", overflow: 'hidden' }}>
+              <div style={{ position: 'relative', zIndex: 1, width: 88, height: 88, borderRadius: 24, background: `linear-gradient(135deg, ${accent}, ${T?.accent2 || 'var(--ember-hover)'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'white', boxShadow: `0 8px 32px ${niveauInfo.couleur}55`, fontFamily: "var(--font-ui)", overflow: 'hidden' }}>
                 {user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initiales}
               </div>
               <div style={{ position: 'absolute', bottom: -6, right: -6, width: 30, height: 30, borderRadius: 9, background: niveauInfo.gradient || niveauInfo.couleur, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${bg}`, boxShadow: `0 2px 12px ${niveauInfo.couleur}aa`, zIndex: 2 }}>
@@ -794,7 +794,7 @@ export default function Profile() {
             {[
               { label: 'Points',  val: pointsActuels,                                         color: accent,                Icon: Zap },
               { label: 'Niveau',  val: user.niveau || 1,                                      color: niveauInfo.couleur,    Icon: NiveauIcon },
-              { label: 'Tâches',  val: user.taches_count || 0,                                color: '#00C896',             Icon: CheckCircle2 },
+              { label: 'Tâches',  val: user.taches_count || 0,                                color: 'var(--success)',             Icon: CheckCircle2 },
               { label: 'Streak',  val: `${user.streak || 0}j`,                                color: '#f97316',             Icon: Flame },
               { label: 'Badges',  val: `${badgesData.nb_obtenus}/${badgesData.nb_total}`,    color: '#a78bfa',             Icon: Award },
               {
@@ -805,7 +805,7 @@ export default function Profile() {
               },
             ].map((s, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.04 }}
-                style={{ background: isLight ? '#f8f9fc' : bg3, border: `1px solid ${cardBorder}`, borderRadius: 14, padding: '12px 14px' }}>
+                style={{ background: bg3, border: `1px solid ${cardBorder}`, borderRadius: 14, padding: '12px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <s.Icon size={12} color={s.color} strokeWidth={2.2} />
                   <div style={{ fontSize: 10, color: text2, fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase' }}>{s.label}</div>
@@ -896,7 +896,7 @@ export default function Profile() {
                 )}
               </div>
               <motion.button onClick={modifierNom} disabled={loading || nom === user.nom} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                style={{ padding: '13px 28px', background: nom !== user.nom ? `linear-gradient(135deg, ${accent}, #00C896)` : (isLight ? '#f1f5f9' : bg3), border: 'none', borderRadius: 11, color: nom !== user.nom ? 'white' : text2, fontWeight: 700, fontSize: 14, cursor: nom !== user.nom ? 'pointer' : 'not-allowed', fontFamily: "var(--font-ui)", boxShadow: nom !== user.nom ? `0 8px 24px ${accent}33` : 'none', transition: 'all 0.2s' }}>
+                style={{ padding: '13px 28px', background: nom !== user.nom ? `linear-gradient(135deg, ${accent}, var(--success))` : (isLight ? '#f1f5f9' : bg3), border: 'none', borderRadius: 11, color: nom !== user.nom ? 'white' : text2, fontWeight: 700, fontSize: 14, cursor: nom !== user.nom ? 'pointer' : 'not-allowed', fontFamily: "var(--font-ui)", boxShadow: nom !== user.nom ? `0 8px 24px ${accent}33` : 'none', transition: 'all 0.2s' }}>
                 {loading ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
               </motion.button>
             </motion.div>
@@ -926,13 +926,13 @@ export default function Profile() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
                   {secuItems.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: isLight ? '#f8f9fc' : bg3, border: `1px solid ${item.soon ? cardBorder : item.ok ? '#00C89630' : '#ef444420'}` }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: item.soon ? `${text2}10` : item.ok ? '#00C89618' : '#ef444418' }}>
-                        <item.Icon size={14} color={item.soon ? text2 : item.ok ? '#00C896' : '#ef4444'} />
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: bg3, border: `1px solid ${item.soon ? cardBorder : item.ok ? 'var(--success-soft)' : '#ef444420'}` }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: item.soon ? `${text2}10` : item.ok ? 'var(--success-soft)' : '#ef444418' }}>
+                        <item.Icon size={14} color={item.soon ? text2 : item.ok ? 'var(--success)' : '#ef4444'} />
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</div>
-                        <div style={{ fontSize: 10, color: item.soon ? text2 : item.ok ? '#00C896' : '#ef4444', marginTop: 1, fontWeight: 500 }}>{item.sub}</div>
+                        <div style={{ fontSize: 10, color: item.soon ? text2 : item.ok ? 'var(--success)' : '#ef4444', marginTop: 1, fontWeight: 500 }}>{item.sub}</div>
                       </div>
                     </div>
                   ))}
@@ -969,7 +969,7 @@ export default function Profile() {
                   ].map((f) => {
                     const isConfirm   = f.idx === 2
                     const borderColor = isConfirm && confirmBad ? '#ef4444'
-                      : isConfirm && confirmOk ? '#00C896'
+                      : isConfirm && confirmOk ? 'var(--success)'
                       : inputBorder
                     return (
                       <div key={f.idx} style={{ marginBottom: 16 }}>
@@ -984,7 +984,7 @@ export default function Profile() {
                           </button>
                         </div>
                         {isConfirm && confirmBad && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 5, fontWeight: 500 }}>Les mots de passe ne correspondent pas</p>}
-                        {isConfirm && confirmOk  && <p style={{ fontSize: 11, color: '#00C896', marginTop: 5, fontWeight: 500 }}>✓ Les mots de passe correspondent</p>}
+                        {isConfirm && confirmOk  && <p style={{ fontSize: 11, color: 'var(--success)', marginTop: 5, fontWeight: 500 }}>✓ Les mots de passe correspondent</p>}
                       </div>
                     )
                   })}
@@ -1007,8 +1007,8 @@ export default function Profile() {
                           { label: 'Caractère spécial',  ok: pwdChecks.special },
                         ].map((c, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                            <div style={{ width: 15, height: 15, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.ok ? '#00C89618' : (isLight ? '#f1f5f9' : 'rgba(255,255,255,0.05)'), border: `1.5px solid ${c.ok ? '#00C896' : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)')}`, transition: 'all 0.15s' }}>
-                              {c.ok && <span style={{ color: '#00C896', fontSize: 9, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                            <div style={{ width: 15, height: 15, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.ok ? 'var(--success-soft)' : (isLight ? '#f1f5f9' : 'rgba(255,255,255,0.05)'), border: `1.5px solid ${c.ok ? 'var(--success)' : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)')}`, transition: 'all 0.15s' }}>
+                              {c.ok && <span style={{ color: 'var(--success)', fontSize: 9, lineHeight: 1, fontWeight: 700 }}>✓</span>}
                             </div>
                             <span style={{ fontSize: 11, color: c.ok ? text : text2, fontWeight: c.ok ? 600 : 400, transition: 'color 0.15s' }}>{c.label}</span>
                           </div>
@@ -1018,7 +1018,7 @@ export default function Profile() {
                   )}
 
                   <motion.button onClick={modifierPassword} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    style={{ padding: '13px 28px', background: 'linear-gradient(135deg, #C9A84C, #6C63FF)', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: '0 8px 24px rgba(201,168,76,0.25)', transition: 'all 0.2s' }}>
+                    style={{ padding: '13px 28px', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: '0 8px 24px rgba(220,38,38,0.25)', transition: 'all 0.2s' }}>
                     {loading ? 'Modification...' : 'Modifier le mot de passe'}
                   </motion.button>
                 </>
@@ -1059,7 +1059,7 @@ export default function Profile() {
                     const DevIcon  = isPhone ? Smartphone : isTablet ? Tablet : Monitor
                     return (
                       <motion.div key={s.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: isLight ? '#f8f9fc' : bg3, border: `1px solid ${s.is_current ? `${accent}40` : cardBorder}`, borderRadius: 13 }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: bg3, border: `1px solid ${s.is_current ? 'var(--ember-ring)' : cardBorder}`, borderRadius: 13 }}>
                         <div style={{ width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: s.is_current ? `${accent}18` : `${text2}10` }}>
                           <DevIcon size={17} color={s.is_current ? accent : text2} />
                         </div>
@@ -1139,7 +1139,7 @@ export default function Profile() {
         {/* Footer */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
           style={{ marginTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px', borderTop: `1px solid ${cardBorder}` }}>
-          <div style={{ width: 22, height: 22, borderRadius: 6, background: `linear-gradient(135deg, ${accent}, #00C896)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, background: `linear-gradient(135deg, ${accent}, ${T?.accent2 || 'var(--ember-hover)'})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Layers size={11} color="white" strokeWidth={2.5} />
           </div>
           <span style={{ fontSize: 12, color: text2, fontWeight: 500 }}>GetShift · Votre productivité augmentée</span>

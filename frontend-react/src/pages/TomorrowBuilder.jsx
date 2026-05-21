@@ -494,15 +494,15 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: index * 0.06 }}
-        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: 'rgba(108,99,255,0.06)', border: '1px dashed rgba(108,99,255,0.2)', borderRadius: 12, marginBottom: 8 }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(108,99,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Coffee size={14} color="#6c63ff" />
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: 'var(--ember-soft)', border: '1px dashed var(--ember-ring)', borderRadius: 12, marginBottom: 8 }}>
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Coffee size={14} color="var(--ember)" />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#6c63ff' }}>☕ Pause recommandée</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ember)' }}>☕ Pause recommandée</div>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{item.heure_debut} → {item.heure_fin} · {item.duree_minutes} min</div>
         </div>
-        <div style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: 'rgba(108,99,255,0.1)', color: '#6c63ff', fontWeight: 600 }}>Repos</div>
+        <div style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 600 }}>Repos</div>
       </motion.div>
     )
   }
@@ -1405,7 +1405,7 @@ export default function TomorrowBuilder() {
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
               {[
                 { label: 'Tâches planifiées', val: tachesPlanning.length, icon: Target, color: 'var(--ember)' },
-                { label: 'Pauses intégrées', val: pausesPlanning.length, icon: Coffee, color: '#6c63ff' },
+                { label: 'Pauses intégrées', val: pausesPlanning.length, icon: Coffee, color: 'var(--ember)' },
                 { label: 'Durée totale', val: `${Math.round((planning.duree_totale_planifiee || 0) / 60)}h${(planning.duree_totale_planifiee || 0) % 60}m`, icon: Clock, color: '#4caf82' },
                 { label: 'Score énergie', val: `${planning.score_energie}/100`, icon: Zap, color: planning.score_energie >= 70 ? '#4caf82' : planning.score_energie >= 40 ? '#e08a3c' : '#e05c5c' },
               ].map((s, i) => {

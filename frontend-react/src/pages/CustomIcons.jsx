@@ -11,18 +11,18 @@ import {
 // ─── Mapping catégorie → { LucideIcon, bgColor, iconColor } ──────────────────
 
 const ICON_MAP = {
-  projet:          { LucideIcon: Layers,       bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  projet:          { LucideIcon: Layers,       bgColor: 'var(--ember)', iconColor: '#ffffff', borderColor: 'var(--ember)' },
   voyage:          { LucideIcon: PlaneTakeoff, bgColor: '#4caf82', iconColor: '#ffffff', borderColor: '#4caf82' },
   habitude:        { LucideIcon: RefreshCw,    bgColor: '#4caf82', iconColor: '#ffffff', borderColor: '#4caf82' },
-  etude:           { LucideIcon: BookOpen,     bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  etude:           { LucideIcon: BookOpen,     bgColor: 'var(--ember)', iconColor: '#ffffff', borderColor: 'var(--ember)' },
   matin:           { LucideIcon: Sun,          bgColor: '#e08a3c', iconColor: '#ffffff', borderColor: '#e08a3c' },
-  job:             { LucideIcon: Briefcase,    bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  job:             { LucideIcon: Briefcase,    bgColor: 'var(--ember)', iconColor: '#ffffff', borderColor: 'var(--ember)' },
   event:           { LucideIcon: CalendarDays, bgColor: '#e05c5c', iconColor: '#ffffff', borderColor: '#e05c5c' },
-  learn:           { LucideIcon: BookOpen,     bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  learn:           { LucideIcon: BookOpen,     bgColor: 'var(--ember)', iconColor: '#ffffff', borderColor: 'var(--ember)' },
   apprentissage:   { LucideIcon: Brain,        bgColor: '#a855f7', iconColor: '#ffffff', borderColor: '#a855f7' },
   focus:           { LucideIcon: Target,       bgColor: '#a855f7', iconColor: '#ffffff', borderColor: '#a855f7' },
   freelance:       { LucideIcon: Handshake,    bgColor: '#14b8a6', iconColor: '#ffffff', borderColor: '#14b8a6' },
-  travail:         { LucideIcon: Briefcase,    bgColor: '#6c63ff', iconColor: '#ffffff', borderColor: '#6c63ff' },
+  travail:         { LucideIcon: Briefcase,    bgColor: 'var(--ember)', iconColor: '#ffffff', borderColor: 'var(--ember)' },
   productivite:    { LucideIcon: TrendingUp,   bgColor: '#10b981', iconColor: '#ffffff', borderColor: '#10b981' },
   entrepreneuriat: { LucideIcon: Rocket,       bgColor: '#f59e0b', iconColor: '#ffffff', borderColor: '#f59e0b' },
   carriere:        { LucideIcon: Award,        bgColor: '#3b82f6', iconColor: '#ffffff', borderColor: '#3b82f6' },

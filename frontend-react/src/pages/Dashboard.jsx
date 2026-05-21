@@ -202,7 +202,7 @@ const SousTaches = memo(function SousTaches({ tache, T }) {
 const CoachIcon = ({ style, size = 16 }) => {
   if (style?.emoji === 'heart') return <Heart size={size} color="#e05c5c" fill="#e05c5c" />
   if (style?.emoji === 'flame') return <Flame size={size} color="#e08a3c" />
-  if (style?.emoji === 'chart') return <BarChart size={size} color="#6c63ff" />
+  if (style?.emoji === 'chart') return <BarChart size={size} color="var(--ember)" />
   return <Target size={size} color="white" />
 }
 
@@ -1463,7 +1463,7 @@ const GoalWidget = memo(function GoalWidget({ d, T, isMobile, navigate }) {
 
   if (!loaded || objectifs.length === 0) return null
 
-  const pColor = (pct) => pct >= 70 ? '#4caf82' : pct >= 30 ? '#e08a3c' : '#6c63ff'
+  const pColor = (pct) => pct >= 70 ? '#4caf82' : pct >= 30 ? '#e08a3c' : 'var(--ember)'
   const niveauColor = (n) => n === 'expert' ? '#e05c5c' : n === 'intermédiaire' ? '#e08a3c' : '#4caf82'
   const urgenceInfo = (j) => {
     if (j === null || j === undefined) return null
