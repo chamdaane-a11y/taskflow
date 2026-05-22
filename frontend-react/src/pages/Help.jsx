@@ -112,6 +112,22 @@ const FAQ = [
     q: 'Puis-je utiliser GetShift en équipe ?',
     a: 'Oui. Dans Collaboration, tu peux partager des tâches par email, voir l\'activité de tes collaborateurs, commenter en temps réel, et suivre les performances de l\'équipe via le drawer analytiques. Chaque membre conserve son propre Dashboard.',
   },
+  {
+    q: 'Que contient chaque onglet de Settings ?',
+    a: 'Settings est divisé en 6 sections. Profil & Niveau : ton nom, email, progression XP, niveau actuel. Badges : tous tes badges débloqués et en cours par pilier. Apparence : switch entre les thèmes Graphite (sombre) et Parchemin (clair). Intégrations : connexion Google Calendar, Gmail, Notion, Slack, Drive. Notifications : activer/désactiver rappels deadline, Tomorrow Builder, résumé hebdomadaire, bouton d\'installation PWA. Compte : informations, sécurité, déconnexion.',
+  },
+  {
+    q: 'Comment connecter Slack, Gmail, Notion ou Drive ?',
+    a: 'Va dans Settings > Intégrations. Chaque service a son bouton "Connecter" avec OAuth sécurisé. Slack : reçois les résumés de productivité et alertes dans ton workspace. Gmail : GetShift lit tes emails importants pour les transformer en tâches via l\'IA. Notion : importe et exporte des tâches depuis tes pages Notion. Drive : accède à tes fichiers depuis l\'IA pour du contexte supplémentaire.',
+  },
+  {
+    q: 'C\'est quoi le Streak Freeze ?',
+    a: 'Le Streak Freeze est un bouclier qui protège ton streak de jours consécutifs quand tu ne complètes pas de tâche un jour donné. Tu en gagnes automatiquement en atteignant certains niveaux. Il s\'active tout seul si tu rates un jour — ton streak est préservé comme si tu avais joué. Consulte tes Streak Freezes disponibles dans ton Profil.',
+  },
+  {
+    q: 'Comment fonctionne la page Profil ?',
+    a: 'Le Profil centralise ta progression : niveau actuel et XP (barre de progression vers le suivant), statistiques globales (tâches totales, streak record, badges obtenus), historique de productivité, et tes intégrations actives. C\'est ton tableau de bord personnel de gamification, distinct du Dashboard de tâches.',
+  },
 ]
 
 // ── GUIDE STEPS ───────────────────────────────────────────────────────
