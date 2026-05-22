@@ -27,10 +27,10 @@ const MODELES = [
 ]
 
 const SUGGESTIONS = [
-  { icon: Brain,       text: "Analyse ma semaine et donne-moi un plan d'action",       grad: 'linear-gradient(135deg,var(--ember),#a855f7)' },
-  { icon: Globe,       text: 'Recherche les meilleures méthodes de productivité 2025', grad: 'linear-gradient(135deg,#0ea5e9,#06b6d4)' },
-  { icon: Plus,        text: 'Crée une tâche : préparer la réunion de demain',         grad: 'linear-gradient(135deg,#10b981,#4caf82)' },
-  { icon: Zap,         text: 'Je procrastine bcp, aide-moi à reprendre le focus',      grad: 'linear-gradient(135deg,#f59e0b,#ef4444)' },
+  { icon: Brain,       text: "Analyse ma semaine et donne-moi un plan d'action",       grad: 'linear-gradient(135deg,var(--ember),var(--ember-hover))' },
+  { icon: Globe,       text: 'Recherche les meilleures méthodes de productivité 2025', grad: 'linear-gradient(135deg,var(--ember-hover),var(--ember))' },
+  { icon: Plus,        text: 'Crée une tâche : préparer la réunion de demain',         grad: 'linear-gradient(135deg,var(--ember),var(--ember-hover))' },
+  { icon: Zap,         text: 'Je procrastine bcp, aide-moi à reprendre le focus',      grad: 'linear-gradient(135deg,var(--ember-hover),var(--ember))' },
 ]
 
 const INTENTION_META = {

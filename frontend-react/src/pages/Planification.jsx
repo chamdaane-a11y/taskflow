@@ -87,6 +87,10 @@ export default function Planification() {
   // ── Core state ─────────────────────────────────────────────────────
   const [taches, setTaches] = useState([])
 
+  // Déclarés ici car useMemo gcalWeekRange en dépend (TDZ si déclarés après)
+  const [vue, setVue] = useState(() => isMobile ? 'jour' : 'kanban')
+  const [semaineOffset, setSemaineOffset] = useState(0)
+
   // ── Google Calendar status (pour activer le bouton sync sur les cartes Kanban) ──
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], [])
   const { connected: gcalConnected, refresh: refreshGcal } = useCalendarEvents(user?.id, todayStr)
@@ -153,11 +157,8 @@ export default function Planification() {
   const [heuresDispo, setHeuresDispo] = useState(8)
 
   // ── UI state ───────────────────────────────────────────────────────
-  // Sur mobile, la vue jour est par défaut (semaine illisible sur 7 colonnes)
-  const [vue, setVue] = useState(() => isMobile ? 'jour' : 'kanban')
   const [showEstimer, setShowEstimer] = useState(null)
   const [loadingEstime, setLoadingEstime] = useState(false)
-  const [semaineOffset, setSemaineOffset] = useState(0)
   const [smartResult, setSmartResult] = useState(null)   // bin-packing preview
 
   // ── Autoplan IA Calendar ───────────────────────────────────────────

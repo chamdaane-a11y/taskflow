@@ -1242,7 +1242,7 @@ export default function Analytics() {
   const isMobile = useMediaQuery('(max-width: 768px)')
   const isTablet = useMediaQuery('(max-width: 1100px)')
   const user = JSON.parse(localStorage.getItem('user'))
-  const { T } = useTheme()
+  const { T, theme } = useTheme()
 
   // Sidebar toggle persistant (clé globale partagée)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -1333,10 +1333,12 @@ export default function Analytics() {
     }
   }), [T, jours])
 
-  // ── Palette pastel moderne (couleurs statiques, pas de fonctions) ──
+  // ── Palette pastel — hex réels requis par Canvas API (pas de CSS vars) ──
+  const emberHex = theme === 'light' ? '#B8521C' : '#E07A3E'
+  const bgBaseHex = theme === 'light' ? '#F4F1EB' : '#0E1011'
   const PASTEL = {
-    main: 'var(--ember)',
-    ghost: ('var(--text-secondary)' || '#888') + '40',
+    main: emberHex,
+    ghost: theme === 'light' ? '#5C5A5740' : '#A8A39B40',
     mint: '#86d4a8',
     peach: '#ffb89e',
     rose: '#ff9eb5',
@@ -1399,7 +1401,7 @@ export default function Analytics() {
         }
       ]
     }
-  }, [stats, 'var(--ember)', 'var(--text-secondary)', jours])
+  }, [stats, theme, jours])
 
   const cumulativeData = useMemo(() => {
     if (!stats) return null
@@ -1434,7 +1436,7 @@ export default function Analytics() {
         maxBarThickness: 36,
       }]
     }
-  }, [stats, 'var(--ember)'])
+  }, [stats, theme])
 
   const chronoData = useMemo(() => {
     if (!stats) return null
@@ -1469,13 +1471,13 @@ export default function Analytics() {
       datasets: [{
         data: [stats.priorites?.haute || 0, stats.priorites?.moyenne || 0, stats.priorites?.basse || 0],
         backgroundColor: [PASTEL.rose, PASTEL.peach, PASTEL.mint],
-        borderColor: ['var(--bg-base)', 'var(--bg-base)', 'var(--bg-base)'],
+        borderColor: [bgBaseHex, bgBaseHex, bgBaseHex],
         borderWidth: 3,
         hoverOffset: 8,
         hoverBorderWidth: 0,
       }]
     }
-  }, [stats, T])
+  }, [stats, theme])
 
   const lineOptionsWithLegend = {
     ...baseOptions,
