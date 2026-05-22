@@ -27,6 +27,7 @@ export default function Settings() {
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTiny   = useMediaQuery('(max-width: 400px)')
   const user = JSON.parse(localStorage.getItem('user'))
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
   const T = themes[theme]
@@ -41,6 +42,13 @@ export default function Settings() {
   const [pwVisible, setPwVisible] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
+  const [emailForm, setEmailForm] = useState({ new_email: '', password: '' })
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [emailPending, setEmailPending] = useState(null)
+  const [isGoogleAccount, setIsGoogleAccount] = useState(false)
+  const [deleteForm, setDeleteForm] = useState({ confirmation: '', password: '' })
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [showDeleteZone, setShowDeleteZone] = useState(false)
   const [slackWebhook, setSlackWebhook] = useState('')
   const [slackSaving, setSlackSaving] = useState(false)
   const [slackSaved, setSlackSaved] = useState(false)
@@ -101,9 +109,12 @@ export default function Settings() {
         axios.get(`${API}/users/${user.id}/notif-prefs`),
       ])
       if (resUser.status === 'fulfilled') {
-        const t = resUser.value.data.theme || 'light'
+        const d = resUser.value.data
+        const t = d.theme || 'light'
         setTheme(t)
         applyTheme(t)
+        setIsGoogleAccount(!!d.google_id)
+        if (d.email_change_new) setEmailPending(d.email_change_new)
       }
       if (resNotif.status === 'fulfilled' && resNotif.value.data?.prefs) {
         const prefs = resNotif.value.data.prefs
@@ -182,6 +193,53 @@ export default function Settings() {
       afficherNotification('Export téléchargé')
     } catch { afficherNotification('Erreur lors de l\'export', 'error') }
     setExportLoading(false)
+  }
+
+  const changerEmail = async () => {
+    const { new_email, password } = emailForm
+    if (!new_email || !password) { afficherNotification('Email et mot de passe requis', 'error'); return }
+    setEmailLoading(true)
+    try {
+      await axios.post(`${API}/users/${user.id}/email-change/request`, { new_email, password })
+      afficherNotification('Email de confirmation envoyé')
+      setEmailPending(new_email)
+      setEmailForm({ new_email: '', password: '' })
+    } catch (e) {
+      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+    }
+    setEmailLoading(false)
+  }
+
+  const annulerChangementEmail = async () => {
+    try {
+      await axios.post(`${API}/users/${user.id}/email-change/cancel`)
+      setEmailPending(null)
+      afficherNotification('Changement d\'email annulé')
+    } catch { afficherNotification('Erreur', 'error') }
+  }
+
+  const supprimerCompte = async () => {
+    const { confirmation, password } = deleteForm
+    setDeleteLoading(true)
+    try {
+      await axios.delete(`${API}/users/${user.id}`, { data: { confirmation, password } })
+      localStorage.removeItem('user')
+      localStorage.removeItem('theme')
+      localStorage.removeItem('notif_prefs')
+      navigate('/')
+    } catch (e) {
+      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+    }
+    setDeleteLoading(false)
+  }
+
+  // ─── Style partagé champs texte ───────────────────────────
+  const INPUT_STYLE = {
+    width: '100%', padding: '10px 14px',
+    background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
+    borderRadius: 10, color: 'var(--text-primary)', fontSize: 13,
+    outline: 'none', boxSizing: 'border-box',
+    fontFamily: 'var(--font-ui)',
   }
 
   // ─── Rendu section active ─────────────────────────────────
@@ -324,7 +382,7 @@ export default function Settings() {
             })}
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 16, lineHeight: 1.6 }}>
-            Les préférences de notifications seront sauvegardées automatiquement.
+            Préférences synchronisées sur tous tes appareils.
           </p>
         </motion.div>
       )
@@ -364,7 +422,7 @@ export default function Settings() {
                     placeholder={f.placeholder}
                     value={pwForm[f.key]}
                     onChange={e => setPwForm(p => ({ ...p, [f.key]: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 40px 10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ ...INPUT_STYLE, paddingRight: f.key === 'ancien' ? 40 : 14 }}
                   />
                   {f.key === 'ancien' && (
                     <button onClick={() => setPwVisible(v => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 0, display: 'flex' }}>
@@ -383,11 +441,60 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* Changer d'email */}
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 16px', textTransform: 'uppercase' }}>CHANGER D'ADRESSE EMAIL</p>
+            {isGoogleAccount ? (
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                Ton compte est lié à Google. Modifie ton adresse email directement dans les paramètres Google.
+              </p>
+            ) : emailPending ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'var(--ember-soft)', borderRadius: 10, marginBottom: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ember)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>
+                    En attente de confirmation pour <strong>{emailPending}</strong>
+                  </span>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.5 }}>
+                  Un lien de confirmation a été envoyé. Vérifie ta boîte de réception (et les spams).
+                </p>
+                <motion.button onClick={annulerChangementEmail}
+                  style={{ fontSize: 13, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}
+                  whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
+                  Annuler la demande
+                </motion.button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input
+                  type="email"
+                  placeholder="Nouvelle adresse email"
+                  value={emailForm.new_email}
+                  onChange={e => setEmailForm(p => ({ ...p, new_email: e.target.value }))}
+                  style={INPUT_STYLE}
+                />
+                <input
+                  type="password"
+                  placeholder="Mot de passe actuel (confirmation)"
+                  value={emailForm.password}
+                  onChange={e => setEmailForm(p => ({ ...p, password: e.target.value }))}
+                  style={INPUT_STYLE}
+                />
+                <motion.button onClick={changerEmail} disabled={emailLoading}
+                  style={{ padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: emailLoading ? 'wait' : 'pointer', alignSelf: 'flex-start', opacity: emailLoading ? 0.7 : 1 }}
+                  whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.97 }}>
+                  {emailLoading ? 'Envoi…' : 'Envoyer le lien de confirmation'}
+                </motion.button>
+              </div>
+            )}
+          </div>
+
           {/* Export données */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 8px', textTransform: 'uppercase' }}>EXPORTER MES DONNÉES</p>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
-              Télécharge l'intégralité de tes données GetShift (tâches, objectifs, planning, badges, intégrations) au format JSON.
+              Télécharge toutes tes données GetShift (tâches, objectifs, planning, badges, intégrations) au format JSON.
             </p>
             <motion.button
               onClick={exporterDonnees}
@@ -423,6 +530,57 @@ export default function Settings() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Zone danger — suppression compte */}
+          <div style={{ marginTop: 32 }}>
+            {!showDeleteZone ? (
+              <motion.button
+                onClick={() => setShowDeleteZone(true)}
+                style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+                whileHover={{ color: '#e05c5c' }}>
+                Supprimer mon compte
+              </motion.button>
+            ) : (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                style={{ background: 'rgba(224,92,92,0.04)', border: '1px solid rgba(224,92,92,0.25)', borderRadius: 16, padding: '20px 24px' }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#e05c5c', margin: '0 0 4px', letterSpacing: 0.3, textTransform: 'uppercase', fontSize: 11 }}>ZONE DANGEREUSE</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
+                  Action irréversible. Toutes tes données seront supprimées définitivement.
+                  {!isGoogleAccount && ' Ton mot de passe est requis pour confirmer.'}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="text"
+                    placeholder="Tape SUPPRIMER pour confirmer"
+                    value={deleteForm.confirmation}
+                    onChange={e => setDeleteForm(p => ({ ...p, confirmation: e.target.value }))}
+                    style={{ ...INPUT_STYLE, borderColor: deleteForm.confirmation === 'SUPPRIMER' ? '#e05c5c' : undefined }}
+                  />
+                  {!isGoogleAccount && (
+                    <input
+                      type="password"
+                      placeholder="Mot de passe actuel"
+                      value={deleteForm.password}
+                      onChange={e => setDeleteForm(p => ({ ...p, password: e.target.value }))}
+                      style={INPUT_STYLE}
+                    />
+                  )}
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <motion.button onClick={() => { setShowDeleteZone(false); setDeleteForm({ confirmation: '', password: '' }) }}
+                      style={{ flex: 1, padding: '10px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                      whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                    <motion.button
+                      onClick={supprimerCompte}
+                      disabled={deleteLoading || deleteForm.confirmation !== 'SUPPRIMER'}
+                      style={{ flex: 1, padding: '10px', background: deleteForm.confirmation === 'SUPPRIMER' ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: deleteForm.confirmation === 'SUPPRIMER' ? 'white' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: deleteForm.confirmation === 'SUPPRIMER' ? 'pointer' : 'not-allowed', opacity: deleteLoading ? 0.7 : 1, transition: 'all 0.2s' }}
+                      whileTap={deleteForm.confirmation === 'SUPPRIMER' ? { scale: 0.97 } : {}}>
+                      {deleteLoading ? 'Suppression…' : 'Supprimer définitivement'}
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </motion.div>
       )
 
@@ -442,8 +600,17 @@ export default function Settings() {
       <AnimatePresence>
         {notification && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, background: 'var(--surface-1)', border: `1px solid ${notification.type === 'error' ? '#e05c5c50' : 'var(--border-subtle)'}`, borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', maxWidth: 360 }}>
+            initial={{ opacity: 0, y: isMobile ? 20 : -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: isMobile ? 20 : -20 }}
+            style={{
+              position: 'fixed', zIndex: 1000,
+              ...(isMobile
+                ? { bottom: BOTTOM_NAV_HEIGHT + 12, left: 16, right: 16 }
+                : { top: 20, right: 20, maxWidth: 360 }
+              ),
+              background: 'var(--surface-1)',
+              border: `1px solid ${notification.type === 'error' ? 'rgba(224,92,92,0.3)' : 'var(--border-subtle)'}`,
+              borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: notification.type === 'error' ? '#e05c5c' : '#4caf82', flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{notification.msg}</span>
           </motion.div>
@@ -486,7 +653,7 @@ export default function Settings() {
             </nav>
 
             {/* Version */}
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '0 8px', opacity: 0.5 }}>GetShift v2.0 · Sprint 6</p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '0 8px', opacity: 0.5 }}>GetShift v2.0 · TIER 1–3 ✓</p>
           </aside>
         )}
 
@@ -507,13 +674,14 @@ export default function Settings() {
 
           {/* Tabs mobile */}
           {isMobile && (
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 24, paddingBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 24, paddingBottom: 2, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {SECTIONS.map(({ id, label, icon: Icon }) => (
                 <motion.button key={id}
                   onClick={() => setActiveSection(id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: activeSection === id ? 'var(--ember-soft)' : 'var(--surface-1)', border: `1px solid ${activeSection === id ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 99, color: activeSection === id ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, fontWeight: activeSection === id ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: isTiny ? 0 : 6, padding: isTiny ? '8px 12px' : '7px 14px', background: activeSection === id ? 'var(--ember-soft)' : 'var(--surface-1)', border: `1px solid ${activeSection === id ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 99, color: activeSection === id ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, fontWeight: activeSection === id ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                   whileTap={{ scale: 0.97 }}>
-                  <Icon size={13} strokeWidth={1.8} />{label}
+                  <Icon size={14} strokeWidth={activeSection === id ? 2.5 : 1.8} />
+                  {!isTiny && label}
                 </motion.button>
               ))}
             </div>

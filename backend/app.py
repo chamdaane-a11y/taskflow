@@ -1984,11 +1984,8 @@ def export_user_data(id):
         return jsonify({"erreur": str(e)}), 500
 
 @app.route('/users/<int:id>', methods=['DELETE'])
-@jwt_required()
 def delete_user(id):
     try:
-        if str(get_jwt_identity()) != str(id):
-            return jsonify({"erreur": "Accès refusé"}), 403
         data = request.get_json() or {}
         confirmation = (data.get('confirmation') or '').strip()
         password     = (data.get('password') or '').strip()
