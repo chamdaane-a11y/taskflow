@@ -27,7 +27,19 @@ export const PomodoroWidget = memo(function PomodoroWidget({
     try { return parseInt(localStorage.getItem(todayKey()) || '0') } catch { return 0 }
   })
   const [hidden, setHidden] = useState(false)
-  const audioRef = useRef(null)
+  const audioRef  = useRef(null)
+  const wakeLock  = useRef(null)
+
+  // Screen Wake Lock — empêche l'écran de s'éteindre pendant un Pomodoro actif
+  useEffect(() => {
+    if (!('wakeLock' in navigator)) return
+    if (phase === 'work' || phase === 'break') {
+      navigator.wakeLock.request('screen').then(lock => { wakeLock.current = lock }).catch(() => {})
+    } else {
+      wakeLock.current?.release().then(() => { wakeLock.current = null }).catch(() => {})
+    }
+    return () => { wakeLock.current?.release().catch(() => {}) }
+  }, [phase])
 
   // Détecte tâche en cours pour proposer Pomodoro
   const activeTask = useMemo(() => {
