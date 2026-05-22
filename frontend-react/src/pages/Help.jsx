@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { themes } from '../themes'
+import { applyTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
@@ -351,7 +352,7 @@ export default function Help() {
           {Object.entries(themes).map(([key, t]) => (
             <motion.button key={key}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px', borderRadius: 8, background: theme === key ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${theme === key ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, color: theme === key ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontWeight: theme === key ? 600 : 400 }}
-              onClick={() => { setTheme(key); localStorage.setItem('theme', key) }} whileHover={{ x: 1 }}>
+              onClick={() => { setTheme(key); applyTheme(key) }} whileHover={{ x: 1 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.accent }} />
               {t.name}
             </motion.button>

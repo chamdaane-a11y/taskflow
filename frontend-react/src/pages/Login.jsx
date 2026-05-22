@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { applyTheme } from '../useTheme'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
@@ -25,7 +26,7 @@ function LoginInner() {
       const pendingCode = (() => { try { return localStorage.getItem('pending_invite_code') } catch { return null } })()
       const res = await axios.post(`${API}/login`, { email, password, invite_code: pendingCode || undefined }, { withCredentials: true })
       localStorage.setItem('user', JSON.stringify(res.data.user))
-      localStorage.setItem('theme', res.data.user.theme || 'light')
+      applyTheme(res.data.user.theme || 'light')
       if (res.data.equipes_rejointes && res.data.equipes_rejointes.length > 0) {
         try { localStorage.removeItem('pending_invite_code') } catch {}
       }
@@ -61,7 +62,7 @@ function LoginInner() {
           invite_code: pendingCode || undefined,
         }, { withCredentials: true })
         localStorage.setItem('user', JSON.stringify(res.data.user))
-        localStorage.setItem('theme', res.data.user.theme || 'light')
+        applyTheme(res.data.user.theme || 'light')
         if (res.data.equipes_rejointes && res.data.equipes_rejointes.length > 0) {
           try { localStorage.removeItem('pending_invite_code') } catch {}
         }
