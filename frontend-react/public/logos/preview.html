@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>GetShift Logo — 3 directions</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Geist', system-ui, sans-serif;
+    background: #0E1011;
+    color: #ECEAE5;
+    padding: 40px 24px;
+    line-height: 1.5;
+  }
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 48px;
+    font-weight: 400;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+  .lead {
+    color: #A8A39B;
+    font-size: 15px;
+    margin-bottom: 40px;
+    max-width: 600px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1200px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  .concept {
+    border: 1px solid #2B2F33;
+    border-radius: 16px;
+    background: #15181A;
+    overflow: hidden;
+  }
+  .concept-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #2B2F33;
+  }
+  .concept-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: #6E6A65;
+    margin-bottom: 4px;
+    font-family: 'Geist Mono', monospace;
+  }
+  .concept-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ECEAE5;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .concept-desc {
+    font-size: 13px;
+    color: #A8A39B;
+    line-height: 1.55;
+  }
+  .sizes {
+    padding: 28px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 16px;
+  }
+  .size-block {
+    text-align: center;
+  }
+  .size-block img {
+    display: block;
+    margin: 0 auto 8px;
+  }
+  .size-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6E6A65;
+    letter-spacing: 0.6px;
+    font-family: 'Geist Mono', monospace;
+  }
+  .compare-row {
+    display: flex;
+    padding: 0;
+    border-top: 1px solid #2B2F33;
+  }
+  .compare-row > div {
+    flex: 1;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .compare-row > div + div { border-left: 1px solid #2B2F33; }
+  .bg-light { background: #F4F1EB; }
+  .bg-dark  { background: #0E1011; }
+  .pros-cons {
+    padding: 16px 24px 22px;
+    border-top: 1px solid #2B2F33;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+  .pros-cons strong { color: #E07A3E; font-weight: 600; }
+  .pros { color: #A8A39B; margin-bottom: 4px; }
+  .cons { color: #6E6A65; }
+  footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #2B2F33;
+    font-size: 13px;
+    color: #6E6A65;
+    max-width: 1200px;
+  }
+  code {
+    background: #1F2326;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h1>GetShift — 3 directions</h1>
+<p class="lead">
+  Trois propositions distinctes, toutes en palette ember exclusive (zéro violet/néon).
+  Niveau de finition « Notion/Arc » — détaillé mais sobre. Compare à plusieurs tailles et sur les deux thèmes.
+</p>
+
+<div class="grid">
+
+  <!-- CONCEPT A -->
+  <div class="concept">
+    <div class="concept-header">
+      <div class="concept-name">CONCEPT A</div>
+      <div class="concept-title">Lettermark G</div>
+      <div class="concept-desc">
+        Un G majuscule où la branche horizontale interne est volontairement décalée,
+        suggérant le mouvement. Le plus reconnaissable comme initiale de la marque.
+      </div>
+    </div>
+    <div class="sizes">
+      <div class="size-block">
+        <img src="concept-a.svg" width="24" height="24">
+        <div class="size-label">24</div>
+      </div>
+      <div class="size-block">
+        <img src="concept-a.svg" width="48" height="48">
+        <div class="size-label">48</div>
+      </div>
+      <div class="size-block">
+        <img src="concept-a.svg" width="96" height="96">
+        <div class="size-label">96</div>
+      </div>
+    </div>
+    <div class="compare-row">
+      <div class="bg-light"><img src="concept-a.svg" width="64" height="64"></div>
+      <div class="bg-dark"><img src="concept-a.svg" width="64" height="64"></div>
+    </div>
+    <div class="pros-cons">
+      <div class="pros"><strong>+</strong> Initiale lisible · favicon parfait · le plus « marque » des trois</div>
+      <div class="cons"><strong>—</strong> Concept du « shift » subtil (uniquement dans la géométrie de la lettre)</div>
+    </div>
+  </div>
+
+  <!-- CONCEPT B -->
+  <div class="concept">
+    <div class="concept-header">
+      <div class="concept-name">CONCEPT B</div>
+      <div class="concept-title">Plaques décalées</div>
+      <div class="concept-desc">
+        Deux plaques rectangulaires superposées avec offset diagonal — métaphore littérale du
+        « shift » (déplacement, transition d'état). Abstrait mais signifiant.
+      </div>
+    </div>
+    <div class="sizes">
+      <div class="size-block">
+        <img src="concept-b.svg" width="24" height="24">
+        <div class="size-label">24</div>
+      </div>
+      <div class="size-block">
+        <img src="concept-b.svg" width="48" height="48">
+        <div class="size-label">48</div>
+      </div>
+      <div class="size-block">
+        <img src="concept-b.svg" width="96" height="96">
+        <div class="size-label">96</div>
+      </div>
+    </div>
+    <div class="compare-row">
+      <div class="bg-light"><img src="concept-b.svg" width="64" height="64"></div>
+      <div class="bg-dark"><img src="concept-b.svg" width="64" height="64"></div>
+    </div>
+    <div class="pros-cons">
+      <div class="pros"><strong>+</strong> Concept fort lié au nom · différenciant · marche en monochrome</div>
+      <div class="cons"><strong>—</strong> Moins immédiat en favicon 24px · pas d'initiale identifiable</div>
+    </div>
+  </div>
+
+  <!-- CONCEPT C -->
+  <div class="concept">
+    <div class="concept-header">
+      <div class="concept-name">CONCEPT C</div>
+      <div class="concept-title">Arc ascendant</div>
+      <div class="concept-desc">
+        Une trajectoire courbe vers le haut, terminée par un chevron — représente la
+        progression, l'élévation, le « shift up ». Le plus dynamique.
+      </div>
+    </div>
+    <div class="sizes">
+      <div class="size-block">
+        <img src="concept-c.svg" width="24" height="24">
+        <div class="size-label">24</div>
+      </div>
+      <div class="size-block">
+        <img src="concept-c.svg" width="48" height="48">
+        <div class="size-label">48</div>
+      </div>
+      <div class="size-block">
+        <img src="concept-c.svg" width="96" height="96">
+        <div class="size-label">96</div>
+      </div>
+    </div>
+    <div class="compare-row">
+      <div class="bg-light"><img src="concept-c.svg" width="64" height="64"></div>
+      <div class="bg-dark"><img src="concept-c.svg" width="64" height="64"></div>
+    </div>
+    <div class="pros-cons">
+      <div class="pros"><strong>+</strong> Dynamique · communique la promesse produit (progression)</div>
+      <div class="cons"><strong>—</strong> Le plus risqué de « rester à la mode » dans 5 ans · favicon plus dense</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Pour valider ton choix : ouvre ce fichier dans ton navigateur via
+  <code>https://chamdaane-a11y.github.io/taskflow/logos/preview.html</code>
+  une fois déployé, ou en local après <code>npm run dev</code> à
+  <code>/taskflow/logos/preview.html</code>.
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="c-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E07A3E"/>
+      <stop offset="100%" stop-color="#9A3F12"/>
+    </linearGradient>
+    <linearGradient id="c-hl" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.20"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#c-bg)"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#c-hl)"/>
+
+  <!-- Arc ascendant : trajectoire de progression -->
+  <path d="M 14 46 Q 24 38 32 32 T 50 18"
+        stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none" stroke-opacity="0.95"/>
+
+  <!-- Chevron au sommet — direction du shift -->
+  <path d="M 42 16 L 50 18 L 48 26"
+        stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Point de départ — état initial -->
+  <circle cx="14" cy="46" r="3.5" fill="#FFFFFF"/>
+</svg>
