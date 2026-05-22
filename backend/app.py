@@ -36,6 +36,9 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from cryptography.fernet import Fernet
+import pyotp
+import qrcode
+import io
 
 print("[BOOT] Imports done", flush=True)
 load_dotenv()
@@ -79,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-21-design-light-default-v1'
+APP_BUILD_MARKER = '2026-05-22-settings-tier4-v1'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1290,6 +1293,14 @@ def run_migrations():
         )""")
         print("[Migrations] sous_taches_equipe ✅")
 
+        # 2FA TOTP (2026-05-22)
+        if not col_exists(curseur, 'users', 'totp_secret'):
+            curseur.execute("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64) NULL")
+            print("[Migrations] users.totp_secret ✅")
+        if not col_exists(curseur, 'users', 'totp_enabled'):
+            curseur.execute("ALTER TABLE users ADD COLUMN totp_enabled TINYINT(1) NOT NULL DEFAULT 0")
+            print("[Migrations] users.totp_enabled ✅")
+
         # Pending invitations — flow invitation QR/lien sans localStorage côté ami
         curseur.execute("""CREATE TABLE IF NOT EXISTS pending_invitations (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1642,13 +1653,22 @@ def login():
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("SELECT id, nom, email, email_verifie, theme FROM users WHERE email = %s AND password = %s", (email, password_hash))
+        curseur.execute("SELECT id, nom, email, email_verifie, theme, totp_enabled FROM users WHERE email = %s AND password = %s", (email, password_hash))
         user = curseur.fetchone()
         curseur.close(); db.close()
         if not user:
             return jsonify({"erreur": "Email ou mot de passe incorrect !"}), 401
         if not user.get('email_verifie'):
             return jsonify({"erreur": "Veuillez vérifier votre email avant de vous connecter !", "non_verifie": True}), 403
+
+        # 2FA : si activé → retourner un token temporaire, pas le JWT de session
+        if user.get('totp_enabled'):
+            temp_token = create_access_token(
+                identity=str(user['id']),
+                expires_delta=timedelta(minutes=5),
+                additional_claims={'type': 'totp_pending', 'uid': user['id']}
+            )
+            return jsonify({"requires_2fa": True, "temp_token": temp_token, "user_id": user['id']}), 200
 
         # Si invite_code fourni OU si pending existe pour cet email → auto-attach
         equipes_rejointes = []
@@ -2152,6 +2172,143 @@ def update_notif_prefs(id):
         cur.execute("UPDATE users SET notif_prefs=%s WHERE id=%s", (json.dumps(prefs, ensure_ascii=False), id))
         db.commit(); db.close()
         return jsonify({"message": "Préférences sauvegardées"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+# ── 2FA TOTP ──────────────────────────────────────────────────────────────────
+
+def _make_qr_base64(uri):
+    """Génère un QR code PNG en base64 à partir d'un URI otpauth://."""
+    qr = qrcode.QRCode(version=1, box_size=8, border=2,
+                       error_correction=qrcode.constants.ERROR_CORRECT_L)
+    qr.add_data(uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='black', back_color='white')
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    return base64.b64encode(buf.getvalue()).decode()
+
+@app.route('/users/<int:id>/2fa/status', methods=['GET'])
+def get_2fa_status(id):
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT totp_enabled FROM users WHERE id=%s", (id,))
+        row = cur.fetchone(); db.close()
+        if not row:
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        return jsonify({"enabled": bool(row.get('totp_enabled'))})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/2fa/setup', methods=['POST'])
+def setup_2fa(id):
+    """Génère un secret TOTP et retourne l'URI + QR code. Ne l'active pas encore."""
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT email FROM users WHERE id=%s", (id,))
+        row = cur.fetchone()
+        if not row:
+            db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        secret = pyotp.random_base32()
+        totp = pyotp.TOTP(secret)
+        uri = totp.provisioning_uri(name=row['email'], issuer_name='GetShift')
+        cur2 = db.cursor()
+        cur2.execute("UPDATE users SET totp_secret=%s, totp_enabled=0 WHERE id=%s", (secret, id))
+        db.commit(); db.close()
+        qr_b64 = _make_qr_base64(uri)
+        return jsonify({"secret": secret, "uri": uri, "qr": qr_b64})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/2fa/verify', methods=['POST'])
+def verify_2fa(id):
+    """Vérifie le code TOTP et active la 2FA si correct."""
+    try:
+        data = request.get_json()
+        code = str(data.get('code', '')).strip()
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT totp_secret FROM users WHERE id=%s", (id,))
+        row = cur.fetchone()
+        if not row or not row.get('totp_secret'):
+            db.close(); return jsonify({"erreur": "Lance d'abord /2fa/setup"}), 400
+        totp = pyotp.TOTP(row['totp_secret'])
+        if not totp.verify(code, valid_window=1):
+            db.close(); return jsonify({"erreur": "Code invalide"}), 400
+        cur2 = db.cursor()
+        cur2.execute("UPDATE users SET totp_enabled=1 WHERE id=%s", (id,))
+        db.commit(); db.close()
+        return jsonify({"message": "2FA activée"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/2fa/disable', methods=['POST'])
+def disable_2fa(id):
+    """Désactive la 2FA en vérifiant un code TOTP valide."""
+    try:
+        data = request.get_json()
+        code = str(data.get('code', '')).strip()
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT totp_secret, totp_enabled FROM users WHERE id=%s", (id,))
+        row = cur.fetchone()
+        if not row or not row.get('totp_enabled'):
+            db.close(); return jsonify({"erreur": "La 2FA n'est pas activée"}), 400
+        totp = pyotp.TOTP(row['totp_secret'])
+        if not totp.verify(code, valid_window=1):
+            db.close(); return jsonify({"erreur": "Code invalide"}), 400
+        cur2 = db.cursor()
+        cur2.execute("UPDATE users SET totp_enabled=0, totp_secret=NULL WHERE id=%s", (id,))
+        db.commit(); db.close()
+        return jsonify({"message": "2FA désactivée"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/login/totp', methods=['POST'])
+@limiter.limit("10 per minute")
+def login_totp():
+    """Étape 2 de la connexion : vérifie le code TOTP + émet le JWT de session."""
+    try:
+        data = request.get_json()
+        temp_token = data.get('temp_token', '')
+        code = str(data.get('code', '')).strip()
+        if not temp_token or not code:
+            return jsonify({"erreur": "Token et code requis"}), 400
+        try:
+            token_data = decode_token(temp_token)
+        except Exception:
+            return jsonify({"erreur": "Token invalide ou expiré"}), 401
+        if token_data.get('type') != 'totp_pending':
+            return jsonify({"erreur": "Token invalide"}), 401
+        user_id = token_data.get('sub') or token_data.get('uid')
+        if not user_id:
+            return jsonify({"erreur": "Token invalide"}), 401
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT id, nom, email, theme, totp_secret, totp_enabled FROM users WHERE id=%s", (user_id,))
+        user = cur.fetchone(); cur.close(); db.close()
+        if not user or not user.get('totp_secret'):
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        totp = pyotp.TOTP(user['totp_secret'])
+        if not totp.verify(code, valid_window=1):
+            return jsonify({"erreur": "Code invalide"}), 400
+        # Code OK → finaliser la session
+        invite_code = (data.get('invite_code') or '').strip()
+        equipes_rejointes = []
+        try:
+            db2 = connecter(); cur2 = db2.cursor(dictionary=True)
+            if invite_code:
+                _stocker_invitation_pending(cur2, db2, user['email'], invite_code)
+            equipes_rejointes = consommer_invitations_pending(cur2, db2, user['id'], user['email'])
+            cur2.close(); db2.close()
+        except Exception as e:
+            print(f"[login/totp] invitations erreur: {e}")
+        access_token = create_access_token(identity=str(user['id']))
+        _enregistrer_session(user['id'], access_token)
+        response = make_response(jsonify({
+            "message": "Connecté !",
+            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'light')},
+            "equipes_rejointes": equipes_rejointes,
+        }))
+        set_access_cookies(response, access_token)
+        return response
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 

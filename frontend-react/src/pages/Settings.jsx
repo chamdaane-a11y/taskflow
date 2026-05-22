@@ -7,7 +7,8 @@ import { applyTheme } from '../useTheme'
 import {
   ArrowLeft, Palette, ExternalLink, LogOut,
   Bell, Shield, ChevronRight, Check, Eye, EyeOff, Download,
-  Settings as SettingsIcon,
+  Settings as SettingsIcon, Monitor, Smartphone, Globe, Trash2,
+  Lock, Unlock, QrCode, RefreshCw, Laptop,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
@@ -49,6 +50,19 @@ export default function Settings() {
   const [deleteForm, setDeleteForm] = useState({ confirmation: '', password: '' })
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [showDeleteZone, setShowDeleteZone] = useState(false)
+
+  // ── Sessions ──────────────────────────────────────────────────────
+  const [sessions, setSessions] = useState([])
+  const [sessionsLoading, setSessionsLoading] = useState(false)
+  const [deletingSession, setDeletingSession] = useState(null)
+
+  // ── 2FA TOTP ──────────────────────────────────────────────────────
+  const [twoFaEnabled, setTwoFaEnabled] = useState(false)
+  const [twoFaStep, setTwoFaStep] = useState(null) // null | 'setup' | 'verify' | 'disable'
+  const [twoFaSecret, setTwoFaSecret] = useState('')
+  const [twoFaQr, setTwoFaQr] = useState('')
+  const [twoFaCode, setTwoFaCode] = useState('')
+  const [twoFaLoading, setTwoFaLoading] = useState(false)
   const [slackWebhook, setSlackWebhook] = useState('')
   const [slackSaving, setSlackSaving] = useState(false)
   const [slackSaved, setSlackSaved] = useState(false)
@@ -102,11 +116,18 @@ export default function Settings() {
     chargerSlack()
   }, [])
 
+  useEffect(() => {
+    if (activeSection === 'compte' && sessions.length === 0 && !sessionsLoading) {
+      chargerSessions()
+    }
+  }, [activeSection])
+
   const chargerProfil = async () => {
     try {
-      const [resUser, resNotif] = await Promise.allSettled([
+      const [resUser, resNotif, res2fa] = await Promise.allSettled([
         axios.get(`${API}/users/${user.id}`),
         axios.get(`${API}/users/${user.id}/notif-prefs`),
+        axios.get(`${API}/users/${user.id}/2fa/status`),
       ])
       if (resUser.status === 'fulfilled') {
         const d = resUser.value.data
@@ -121,7 +142,79 @@ export default function Settings() {
         setNotifPrefs(prefs)
         localStorage.setItem('notif_prefs', JSON.stringify(prefs))
       }
+      if (res2fa.status === 'fulfilled') {
+        setTwoFaEnabled(res2fa.value.data?.enabled || false)
+      }
     } catch {}
+  }
+
+  const chargerSessions = async () => {
+    setSessionsLoading(true)
+    try {
+      const res = await axios.get(`${API}/users/${user.id}/sessions`, { withCredentials: true })
+      setSessions(res.data.sessions || [])
+    } catch {}
+    setSessionsLoading(false)
+  }
+
+  const revoquerSession = async (sessionId) => {
+    setDeletingSession(sessionId)
+    try {
+      await axios.delete(`${API}/users/${user.id}/sessions/${sessionId}`, { withCredentials: true })
+      setSessions(prev => prev.filter(s => s.id !== sessionId))
+      afficherNotification('Session révoquée')
+    } catch { afficherNotification('Erreur', 'error') }
+    setDeletingSession(null)
+  }
+
+  const revoquerAutresSessions = async () => {
+    try {
+      await axios.delete(`${API}/users/${user.id}/sessions/others`, { withCredentials: true })
+      setSessions(prev => prev.filter(s => s.is_current))
+      afficherNotification('Autres sessions révoquées')
+    } catch { afficherNotification('Erreur', 'error') }
+  }
+
+  const demarrer2faSetup = async () => {
+    setTwoFaLoading(true)
+    try {
+      const res = await axios.post(`${API}/users/${user.id}/2fa/setup`)
+      setTwoFaSecret(res.data.secret)
+      setTwoFaQr(res.data.qr)
+      setTwoFaStep('verify')
+      setTwoFaCode('')
+    } catch { afficherNotification('Erreur lors de la configuration 2FA', 'error') }
+    setTwoFaLoading(false)
+  }
+
+  const verifier2fa = async () => {
+    if (twoFaCode.length !== 6) { afficherNotification('Code à 6 chiffres requis', 'error'); return }
+    setTwoFaLoading(true)
+    try {
+      await axios.post(`${API}/users/${user.id}/2fa/verify`, { code: twoFaCode })
+      setTwoFaEnabled(true)
+      setTwoFaStep(null)
+      setTwoFaCode('')
+      afficherNotification('2FA activée — ton compte est maintenant protégé')
+    } catch (e) {
+      afficherNotification(e.response?.data?.erreur || 'Code invalide', 'error')
+    }
+    setTwoFaLoading(false)
+  }
+
+  const desactiver2fa = async () => {
+    if (twoFaCode.length !== 6) { afficherNotification('Code à 6 chiffres requis', 'error'); return }
+    setTwoFaLoading(true)
+    try {
+      await axios.post(`${API}/users/${user.id}/2fa/disable`, { code: twoFaCode })
+      setTwoFaEnabled(false)
+      setTwoFaStep(null)
+      setTwoFaCode('')
+      afficherNotification('2FA désactivée')
+    } catch (e) {
+      afficherNotification(e.response?.data?.erreur || 'Code invalide', 'error')
+    }
+    setTwoFaLoading(false)
   }
 
   const chargerSlack = async () => {
@@ -254,12 +347,36 @@ export default function Settings() {
             Personnalise l'apparence de GetShift. Le thème est synchronisé sur tous tes appareils.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+            {/* Auto (Système) */}
+            <motion.button
+              onClick={() => changerTheme('auto')}
+              style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: theme === 'auto' ? 'var(--ember-soft)' : 'var(--surface-1)', border: `2px solid ${theme === 'auto' ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
+              whileHover={{ borderColor: 'var(--ember)' }}>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #0E1011 50%, #F4F1EB 50%)', border: '1px solid var(--border-subtle)' }} />
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #171A1C 50%, #FFFFFF 50%)' }} />
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #E07A3E 50%, #B8521C 50%)' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 15, fontWeight: theme === 'auto' ? 700 : 500, color: 'var(--text-primary)' }}>Auto (Système)</span>
+                  <Monitor size={13} color="var(--text-secondary)" />
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Suit le thème clair/sombre de ton appareil</div>
+              </div>
+              {theme === 'auto' && (
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--ember)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Check size={14} color={'var(--bg-base)'} strokeWidth={2.5} />
+                </div>
+              )}
+            </motion.button>
+
             {Object.entries(themes).map(([key, t]) => (
               <motion.button key={key}
                 onClick={() => changerTheme(key)}
                 style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: theme === key ? 'var(--ember-soft)' : 'var(--surface-1)', border: `2px solid ${theme === key ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
                 whileHover={{ borderColor: 'var(--ember)' }}>
-                {/* Preview */}
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: t.bg, border: '1px solid rgba(255,255,255,0.1)' }} />
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: t.bg2 }} />
@@ -490,6 +607,172 @@ export default function Settings() {
             )}
           </div>
 
+          {/* 2FA TOTP */}
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>DOUBLE AUTHENTIFICATION (2FA)</p>
+              {twoFaEnabled && (
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf82', background: 'rgba(76,175,130,0.12)', border: '1px solid rgba(76,175,130,0.3)', borderRadius: 99, padding: '3px 10px' }}>ACTIVÉE</span>
+              )}
+            </div>
+
+            {twoFaStep === null && !twoFaEnabled && (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
+                  Protège ton compte avec une application d'authentification (Google Authenticator, Authy, 1Password…).
+                </p>
+                <motion.button
+                  onClick={demarrer2faSetup} disabled={twoFaLoading}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: twoFaLoading ? 'wait' : 'pointer', opacity: twoFaLoading ? 0.7 : 1 }}
+                  whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.97 }}>
+                  <Lock size={14} />
+                  {twoFaLoading ? 'Génération…' : 'Activer la 2FA'}
+                </motion.button>
+              </>
+            )}
+
+            {twoFaStep === null && twoFaEnabled && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(76,175,130,0.08)', borderRadius: 10, marginBottom: 14 }}>
+                  <Lock size={14} color="#4caf82" />
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Ton compte est protégé par la double authentification.</span>
+                </div>
+                <motion.button
+                  onClick={() => { setTwoFaStep('disable'); setTwoFaCode('') }}
+                  style={{ fontSize: 13, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}
+                  whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
+                  Désactiver la 2FA
+                </motion.button>
+              </>
+            )}
+
+            {twoFaStep === 'verify' && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
+                  Scanne ce QR code avec ton application d'authentification, puis entre le code affiché.
+                </p>
+                {twoFaQr && (
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 20, alignItems: isMobile ? 'flex-start' : 'flex-start', marginBottom: 16 }}>
+                    <img src={`data:image/png;base64,${twoFaQr}`} alt="QR Code 2FA"
+                      style={{ width: 160, height: 160, borderRadius: 12, border: '1px solid var(--border-subtle)', background: 'white', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 8px' }}>Ou entre la clé manuellement :</p>
+                      <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '8px 12px', letterSpacing: '0.1em', wordBreak: 'break-all' }}>
+                        {twoFaSecret}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="text" inputMode="numeric" pattern="[0-9]*"
+                    placeholder="Code à 6 chiffres"
+                    value={twoFaCode}
+                    onChange={e => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onKeyDown={e => e.key === 'Enter' && verifier2fa()}
+                    style={{ ...INPUT_STYLE, letterSpacing: '0.15em', fontSize: 18, textAlign: 'center' }}
+                  />
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <motion.button onClick={() => { setTwoFaStep(null); setTwoFaCode('') }}
+                      style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                      whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                    <motion.button onClick={verifier2fa} disabled={twoFaLoading || twoFaCode.length !== 6}
+                      style={{ flex: 1, padding: '10px', background: twoFaCode.length === 6 ? 'var(--ember)' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaCode.length === 6 ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaCode.length === 6 ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
+                      whileTap={twoFaCode.length === 6 ? { scale: 0.97 } : {}}>
+                      {twoFaLoading ? 'Vérification…' : 'Activer'}
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {twoFaStep === 'disable' && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
+                  Entre le code de ton application d'authentification pour désactiver la 2FA.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="text" inputMode="numeric" pattern="[0-9]*"
+                    placeholder="Code à 6 chiffres"
+                    value={twoFaCode}
+                    onChange={e => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onKeyDown={e => e.key === 'Enter' && desactiver2fa()}
+                    style={{ ...INPUT_STYLE, letterSpacing: '0.15em', fontSize: 18, textAlign: 'center' }}
+                  />
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <motion.button onClick={() => { setTwoFaStep(null); setTwoFaCode('') }}
+                      style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                      whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                    <motion.button onClick={desactiver2fa} disabled={twoFaLoading || twoFaCode.length !== 6}
+                      style={{ flex: 1, padding: '10px', background: twoFaCode.length === 6 ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaCode.length === 6 ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaCode.length === 6 ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
+                      whileTap={twoFaCode.length === 6 ? { scale: 0.97 } : {}}>
+                      {twoFaLoading ? 'Désactivation…' : 'Désactiver'}
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Sessions actives */}
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>SESSIONS ACTIVES</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {sessions.filter(s => !s.is_current).length > 0 && (
+                  <motion.button onClick={revoquerAutresSessions}
+                    style={{ fontSize: 12, color: '#e05c5c', background: 'rgba(224,92,92,0.07)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
+                    Révoquer les autres
+                  </motion.button>
+                )}
+                <motion.button onClick={chargerSessions}
+                  style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  whileHover={{ color: 'var(--ember)' }}>
+                  <RefreshCw size={13} />
+                </motion.button>
+              </div>
+            </div>
+            {sessionsLoading ? (
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', padding: '16px 0' }}>Chargement…</div>
+            ) : sessions.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Aucune session enregistrée</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {sessions.map(s => {
+                  const isHere = s.is_current
+                  const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
+                  return (
+                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: isHere ? 'rgba(76,175,130,0.06)' : 'var(--surface-2)', border: `1px solid ${isHere ? 'rgba(76,175,130,0.2)' : 'var(--border-subtle)'}`, borderRadius: 12 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: isHere ? 'rgba(76,175,130,0.15)' : 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Laptop size={14} color={isHere ? '#4caf82' : 'var(--text-secondary)'} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.device || '—'}</span>
+                          {isHere && <span style={{ fontSize: 10, fontWeight: 700, color: '#4caf82', background: 'rgba(76,175,130,0.15)', borderRadius: 99, padding: '2px 8px', flexShrink: 0 }}>CETTE SESSION</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                          {s.ip} · {lastSeen}
+                        </div>
+                      </div>
+                      {!isHere && (
+                        <motion.button
+                          onClick={() => revoquerSession(s.id)}
+                          disabled={deletingSession === s.id}
+                          style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', flexShrink: 0, opacity: deletingSession === s.id ? 0.5 : 1 }}
+                          whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
+                          <Trash2 size={13} />
+                        </motion.button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Export données */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 8px', textTransform: 'uppercase' }}>EXPORTER MES DONNÉES</p>
@@ -653,7 +936,7 @@ export default function Settings() {
             </nav>
 
             {/* Version */}
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '0 8px', opacity: 0.5 }}>GetShift v2.0 · TIER 1–3 ✓</p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '0 8px', opacity: 0.5 }}>GetShift v2.0 · TIER 1–4 ✓</p>
           </aside>
         )}
 
