@@ -1,464 +1,1266 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { applyTheme } from '../useTheme'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
+import GetShiftMark from '../components/GetShiftMark'
+import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
-import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
-import { themes } from '../themes'
 import {
-  Search, ChevronDown, ChevronRight, ArrowRight,
-  LayoutDashboard, Brain, Calendar, BarChart2, Sunrise,
-  Target, Users, Zap, Bell, Smartphone, Wifi, Trophy,
-  Clock, CalendarDays, Sparkles, CheckSquare, Star,
-  ExternalLink, MessageCircle, Flag
+  Search, ArrowUpRight, Menu as MenuIcon, X,
+  Rocket, CheckSquare, Calendar, Timer, Bot, Sunrise,
+  BarChart2, Award, Plug, Settings as SettingsIcon, Command,
+  HelpCircle, BookOpen, Sparkles, Bell, Mail,
+  ChevronDown, Check, AlertTriangle, Info,
 } from 'lucide-react'
 
-// ── FEATURES ──────────────────────────────────────────────────────────
-const FEATURES = [
+/* ═══════════════════════════════════════════════════════════════════
+   STRUCTURE DOCUMENTAIRE
+   ═══════════════════════════════════════════════════════════════════ */
+
+const SECTIONS = [
   {
-    icon: LayoutDashboard, label: 'Dashboard',
-    desc: 'Centre de commande : tâches, KPIs, focus du jour, assistant IA embarqué.',
-    route: '/dashboard', color: 'var(--ember)',
+    id: 'demarrage', label: 'Démarrage', Icon: Rocket,
+    sub: [
+      { id: 'qu-est-ce-que-getshift', label: 'Qu\'est-ce que GetShift' },
+      { id: 'premiers-pas',            label: 'Premiers pas' },
+      { id: 'installer-pwa',           label: 'Installer comme app (PWA)' },
+    ],
   },
   {
-    icon: Brain, label: 'Assistant IA',
-    desc: 'Agent IA avec outils : crée des tâches, recherche le web, navigue dans l\'app, analyse ta semaine.',
-    route: '/ia', color: '#8b5cf6',
+    id: 'taches', label: 'Tâches', Icon: CheckSquare,
+    sub: [
+      { id: 'creer-tache',     label: 'Créer une tâche' },
+      { id: 'priorites-points',label: 'Priorités · deadlines · points' },
+      { id: 'kanban',          label: 'Vue Kanban' },
+      { id: 'mode-focus',      label: 'Mode focus' },
+    ],
   },
   {
-    icon: Calendar, label: 'Planification',
-    desc: 'Kanban + calendrier drag & drop. Time blocking, autoplan IA, overlay Google Calendar.',
-    route: '/planification', color: '#0ea5e9',
+    id: 'planification', label: 'Planification', Icon: Calendar,
+    sub: [
+      { id: 'calendrier',     label: 'Vue calendrier' },
+      { id: 'time-blocks',    label: 'Time blocks' },
+      { id: 'conflits',       label: 'Conflits Calendar' },
+      { id: 'planif-auto',    label: 'Planification IA auto' },
+    ],
   },
   {
-    icon: BarChart2, label: 'Analytiques',
-    desc: 'Graphiques de productivité, streak, répartition par priorité, heatmap hebdomadaire.',
-    route: '/analytics', color: '#10b981',
+    id: 'pomodoro', label: 'Pomodoro', Icon: Timer,
+    sub: [
+      { id: 'pomodoro-sessions', label: 'Sessions de travail' },
+      { id: 'wake-lock',         label: 'Wake Lock écran' },
+    ],
   },
   {
-    icon: Sunrise, label: 'Tomorrow Builder',
-    desc: 'L\'IA génère ton planning du lendemain chaque soir à 19h, basé sur tes tâches et agenda.',
-    route: '/tomorrow', color: '#f59e0b',
+    id: 'ia', label: 'Assistant IA', Icon: Bot,
+    sub: [
+      { id: 'ia-comment',  label: 'Comment lui parler' },
+      { id: 'ia-outils',   label: 'Outils disponibles' },
+      { id: 'ia-prompts',  label: 'Exemples de prompts' },
+    ],
   },
   {
-    icon: Target, label: 'Goal Reverse',
-    desc: 'Décris un objectif ambitieux → l\'IA le décompose en tâches actionnables avec jalons.',
-    route: '/goal', color: '#ef4444',
+    id: 'builders', label: 'Builders IA', Icon: Sunrise,
+    sub: [
+      { id: 'tomorrow-builder', label: 'Tomorrow Builder' },
+      { id: 'goal-reverse',     label: 'Goal Reverse' },
+    ],
   },
   {
-    icon: Users, label: 'Collaboration',
-    desc: 'Partage des tâches, invitations par email, commentaires, tableau partagé en temps réel.',
-    route: '/collaboration', color: '#6366f1',
+    id: 'analytics', label: 'Analytics', Icon: BarChart2,
+    sub: [
+      { id: 'metriques',  label: 'Métriques clés' },
+      { id: 'score-prod', label: 'Score de productivité' },
+    ],
   },
   {
-    icon: CalendarDays, label: 'Google Calendar',
-    desc: 'Sync bidirectionnelle : deadlines → all-day events, focus → time blocks, overlay dans Planification.',
-    route: '/settings', color: '#34a853',
+    id: 'progression', label: 'Progression', Icon: Award,
+    sub: [
+      { id: 'niveaux',   label: 'Niveaux · 10 paliers' },
+      { id: 'badges',    label: 'Badges · 4 piliers' },
+      { id: 'streaks',   label: 'Streaks & Streak Freeze' },
+    ],
   },
   {
-    icon: Trophy, label: 'Gamification',
-    desc: 'XP, 10 niveaux, 4 piliers de badges, Streak Freeze. Chaque tâche terminée compte.',
-    route: '/profile', color: '#f59e0b',
+    id: 'integrations', label: 'Intégrations', Icon: Plug,
+    sub: [
+      { id: 'integ-calendar', label: 'Google Calendar' },
+      { id: 'integ-drive',    label: 'Google Drive' },
+      { id: 'integ-gmail',    label: 'Gmail' },
+      { id: 'integ-notion',   label: 'Notion' },
+      { id: 'integ-slack',    label: 'Slack' },
+    ],
   },
   {
-    icon: Clock, label: 'Pomodoro',
-    desc: 'Timer 25/5 flottant, déclenché automatiquement sur la tâche en cours. Wake Lock actif.',
-    route: '/planification', color: '#ef4444',
+    id: 'reglages', label: 'Réglages', Icon: SettingsIcon,
+    sub: [
+      { id: 'themes',     label: 'Thèmes · Parchemin / Graphite' },
+      { id: 'notifs',     label: 'Notifications push' },
+      { id: 'exports',    label: 'Exports de données' },
+      { id: 'securite',   label: 'Sécurité & 2FA' },
+    ],
+  },
+  {
+    id: 'raccourcis', label: 'Raccourcis', Icon: Command,
+    sub: [
+      { id: 'shortcuts-app', label: 'Raccourcis app' },
+    ],
+  },
+  {
+    id: 'faq', label: 'FAQ', Icon: HelpCircle,
+    sub: [
+      { id: 'faq-list', label: 'Questions fréquentes' },
+    ],
   },
 ]
 
-// ── FAQ ───────────────────────────────────────────────────────────────
-const FAQ = [
-  {
-    q: 'Comment installer GetShift sur mon téléphone ?',
-    a: 'Sur Android (Chrome) : bannière d\'installation automatique, ou Settings > Notifications > "Installer l\'application". Sur iOS (Safari) : bouton Partager → "Sur l\'écran d\'accueil" → Ajouter. Une fois installée, l\'app fonctionne en plein écran sans barre de navigation.',
-  },
-  {
-    q: 'Comment connecter Google Calendar ?',
-    a: 'Va dans Settings > Intégrations > Google Calendar, clique "Connecter". Accepte les permissions read+write. La sync s\'active immédiatement : les deadlines créent des events all-day, les focus créent des time blocks. Tu peux aussi synchroniser manuellement chaque tâche depuis le Kanban.',
-  },
-  {
-    q: 'La sync Google Calendar va-t-elle modifier mes événements existants ?',
-    a: 'Non. GetShift ne touche jamais tes événements existants. Il crée uniquement de nouveaux events pour tes tâches GetShift, et les affiche en overlay grisé dans la vue Planification. Tu peux supprimer la sync d\'une tâche à tout moment.',
-  },
-  {
-    q: 'Quelle est la différence entre Planification et Tomorrow Builder ?',
-    a: 'Planification = ton espace de travail manuel. Tu glisses tes tâches sur un calendrier drag & drop, tu crées des time blocks. Tomorrow Builder = planification automatique : chaque soir à 19h, l\'IA analyse tes tâches, ton agenda Calendar et génère un plan optimisé pour le lendemain.',
-  },
-  {
-    q: 'Comment fonctionne l\'IA ? Quelles données utilise-t-elle ?',
-    a: 'L\'assistant utilise Groq (llama-3.3-70b) avec accès à tes tâches, ton agenda, tes stats de productivité et la recherche web (Serper). Il ne partage jamais tes données avec des tiers. Les conversations ne sont pas stockées de façon permanente.',
-  },
-  {
-    q: 'L\'app fonctionne-t-elle hors connexion ?',
-    a: 'Oui. GetShift est une PWA avec cache offline. Tu peux consulter et créer des tâches sans connexion — elles sont stockées localement et synchronisées automatiquement au retour du réseau. Les fonctionnalités IA nécessitent une connexion.',
-  },
-  {
-    q: 'Pourquoi mes notifications push ne fonctionnent pas ?',
-    a: 'Sur iOS : les push ne fonctionnent que si l\'app est installée sur l\'écran d\'accueil (iOS 16.4+). Sur Android : assure-toi que les notifications sont autorisées dans les paramètres du navigateur. Dans tous les cas, les notifications email (GetShift → Gmail) fonctionnent sans installation.',
-  },
-  {
-    q: 'Comment débloquer des badges ?',
-    a: 'Les badges sont organisés en 4 piliers : Productivité (tâches terminées), Consistance (streaks), Collaborateur (partage), Explorateur (fonctionnalités utilisées). Consulte tes badges dans Settings > Badges ou dans ton Profil pour voir ta progression.',
-  },
-  {
-    q: 'Comment fonctionne le score de priorité intelligent ?',
-    a: 'Chaque tâche reçoit un score calculé à partir de : priorité déclarée (haute/moyenne/basse), délai avant deadline, temps estimé, et si elle est bloquée. Le Dashboard affiche tes tâches triées par ce score pour toujours voir les plus urgentes en premier.',
-  },
-  {
-    q: 'Puis-je utiliser GetShift en équipe ?',
-    a: 'Oui. Dans Collaboration, tu peux partager des tâches par email, voir l\'activité de tes collaborateurs, commenter en temps réel, et suivre les performances de l\'équipe via le drawer analytiques. Chaque membre conserve son propre Dashboard.',
-  },
-  {
-    q: 'Que contient chaque onglet de Settings ?',
-    a: 'Settings est divisé en 6 sections. Profil & Niveau : ton nom, email, progression XP, niveau actuel. Badges : tous tes badges débloqués et en cours par pilier. Apparence : switch entre les thèmes Graphite (sombre) et Parchemin (clair). Intégrations : connexion Google Calendar, Gmail, Notion, Slack, Drive. Notifications : activer/désactiver rappels deadline, Tomorrow Builder, résumé hebdomadaire, bouton d\'installation PWA. Compte : informations, sécurité, déconnexion.',
-  },
-  {
-    q: 'Comment connecter Slack, Gmail, Notion ou Drive ?',
-    a: 'Va dans Settings > Intégrations. Chaque service a son bouton "Connecter" avec OAuth sécurisé. Slack : reçois les résumés de productivité et alertes dans ton workspace. Gmail : GetShift lit tes emails importants pour les transformer en tâches via l\'IA. Notion : importe et exporte des tâches depuis tes pages Notion. Drive : accède à tes fichiers depuis l\'IA pour du contexte supplémentaire.',
-  },
-  {
-    q: 'C\'est quoi le Streak Freeze ?',
-    a: 'Le Streak Freeze est un bouclier qui protège ton streak de jours consécutifs quand tu ne complètes pas de tâche un jour donné. Tu en gagnes automatiquement en atteignant certains niveaux. Il s\'active tout seul si tu rates un jour — ton streak est préservé comme si tu avais joué. Consulte tes Streak Freezes disponibles dans ton Profil.',
-  },
-  {
-    q: 'Comment fonctionne la page Profil ?',
-    a: 'Le Profil centralise ta progression : niveau actuel et XP (barre de progression vers le suivant), statistiques globales (tâches totales, streak record, badges obtenus), historique de productivité, et tes intégrations actives. C\'est ton tableau de bord personnel de gamification, distinct du Dashboard de tâches.',
-  },
+const SEARCH_INDEX = SECTIONS.flatMap(s =>
+  s.sub.map(sub => ({
+    sectionId: s.id, subId: sub.id, label: sub.label, parent: s.label,
+    terms: `${s.label} ${sub.label}`.toLowerCase(),
+  }))
+)
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOCKUPS — démonstrations visuelles inline
+   ═══════════════════════════════════════════════════════════════════ */
+
+function DemoFrame({ children, caption, height }) {
+  return (
+    <div style={{
+      marginTop: 20, marginBottom: 12,
+      borderRadius: 'var(--radius-md)',
+      border: '1px solid var(--border-subtle)',
+      background: 'var(--surface-1)',
+      overflow: 'hidden',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '8px 14px',
+        borderBottom: '1px solid var(--border-subtle)',
+        background: 'var(--surface-2)',
+      }}>
+        <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#E07A3E' }} />
+        <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#7A9778' }} />
+        <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#C28748' }} />
+        <span style={{
+          marginLeft: 12, fontSize: 11, color: 'var(--text-tertiary)',
+          fontFamily: 'var(--font-mono)', letterSpacing: 0.4,
+        }}>{caption}</span>
+      </div>
+      <div style={{ padding: 18, height, overflow: 'hidden' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function MockTask({ done, prio, title, deadline, points }) {
+  const prioColor = prio === 'haute' ? 'var(--danger)' : prio === 'moyenne' ? 'var(--warning)' : 'var(--info)'
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '11px 14px',
+      borderRadius: 10,
+      border: '1px solid var(--border-subtle)',
+      background: 'var(--surface-2)',
+    }}>
+      <div style={{
+        width: 18, height: 18, borderRadius: 5,
+        border: `1.5px solid ${done ? 'var(--ember)' : 'var(--border-default)'}`,
+        background: done ? 'var(--ember)' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        {done && <Check size={11} color="#fff" strokeWidth={3} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)',
+          textDecoration: done ? 'line-through' : 'none',
+          opacity: done ? 0.5 : 1,
+        }}>{title}</div>
+        <div style={{
+          display: 'flex', gap: 12, marginTop: 4,
+          fontSize: 11, color: 'var(--text-tertiary)',
+        }}>
+          <span style={{ color: prioColor, fontWeight: 600 }}>● {prio}</span>
+          {deadline && <span>📅 {deadline}</span>}
+          {points && <span style={{ color: 'var(--ember)' }}>+{points}pts</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MockChatBubble({ role, text }) {
+  const isUser = role === 'user'
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: isUser ? 'flex-end' : 'flex-start',
+      marginBottom: 8,
+    }}>
+      <div style={{
+        maxWidth: '80%',
+        padding: '9px 13px',
+        borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+        background: isUser ? 'var(--ember-soft)' : 'var(--surface-2)',
+        border: `1px solid ${isUser ? 'var(--ember-ring)' : 'var(--border-subtle)'}`,
+        fontSize: 12.5, lineHeight: 1.55,
+        color: 'var(--text-primary)',
+        whiteSpace: 'pre-line',
+      }}>{text}</div>
+    </div>
+  )
+}
+
+function MockTimeBlock({ start, end, title, color = 'var(--ember)' }) {
+  return (
+    <div style={{
+      padding: '8px 10px',
+      borderRadius: 6,
+      background: `${color}22`,
+      borderLeft: `3px solid ${color}`,
+      fontSize: 11.5,
+    }}>
+      <div style={{
+        fontFamily: 'var(--font-mono)', fontSize: 10,
+        color: 'var(--text-tertiary)', marginBottom: 3,
+      }}>{start} – {end}</div>
+      <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{title}</div>
+    </div>
+  )
+}
+
+function MockKPI({ label, value, sub, accent }) {
+  return (
+    <div style={{
+      flex: 1, padding: '14px 16px',
+      borderRadius: 10,
+      border: '1px solid var(--border-subtle)',
+      background: 'var(--surface-2)',
+    }}>
+      <div style={{
+        fontSize: 10.5, fontWeight: 700, letterSpacing: 1,
+        color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)',
+        marginBottom: 8, textTransform: 'uppercase',
+      }}>{label}</div>
+      <div style={{
+        fontSize: 24, fontWeight: 700,
+        color: accent || 'var(--text-primary)',
+        fontFamily: 'var(--font-ui)', letterSpacing: '-0.02em',
+        lineHeight: 1,
+      }}>{value}</div>
+      {sub && (
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 5 }}>{sub}</div>
+      )}
+    </div>
+  )
+}
+
+function MockBadge({ pillar, level, name, color }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '12px 14px',
+      borderRadius: 10,
+      border: '1px solid var(--border-subtle)',
+      background: 'var(--surface-2)',
+    }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+        background: `${color}1a`, border: `1.5px solid ${color}55`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18,
+      }}>{pillar}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{name}</span>
+          <span style={{
+            fontSize: 10, fontWeight: 700,
+            padding: '1px 6px', borderRadius: 4,
+            background: `${color}22`, color,
+            fontFamily: 'var(--font-mono)',
+          }}>NIV. {level}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MockNotif({ title, body, when }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 12,
+      padding: '12px 14px',
+      borderRadius: 10,
+      border: '1px solid var(--border-default)',
+      background: 'var(--surface-1)',
+      boxShadow: 'var(--shadow-sm)',
+    }}>
+      <GetShiftMark size={28} showAccent={false} />
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</span>
+          <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>{when}</span>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.45 }}>{body}</div>
+      </div>
+    </div>
+  )
+}
+
+function Callout({ kind = 'info', children }) {
+  const config = {
+    info:    { color: 'var(--info)',    bg: 'var(--info-soft)',    Icon: Info },
+    tip:     { color: 'var(--ember)',   bg: 'var(--ember-soft)',   Icon: Sparkles },
+    warning: { color: 'var(--warning)', bg: 'var(--warning-soft)', Icon: AlertTriangle },
+  }[kind]
+  return (
+    <div style={{
+      display: 'flex', gap: 11,
+      padding: '12px 14px',
+      borderRadius: 10,
+      background: config.bg,
+      border: `1px solid ${config.color}33`,
+      marginTop: 14, marginBottom: 14,
+    }}>
+      <config.Icon size={15} color={config.color} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+      <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function Code({ children }) {
+  return (
+    <code style={{
+      padding: '2px 6px',
+      borderRadius: 4,
+      background: 'var(--surface-3)',
+      color: 'var(--ember)',
+      fontFamily: 'var(--font-mono)',
+      fontSize: '0.9em',
+    }}>{children}</code>
+  )
+}
+
+function CodeBlock({ children }) {
+  return (
+    <pre style={{
+      marginTop: 12, marginBottom: 12,
+      padding: '12px 14px',
+      borderRadius: 8,
+      background: 'var(--surface-3)',
+      border: '1px solid var(--border-subtle)',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 12.5,
+      color: 'var(--text-secondary)',
+      lineHeight: 1.55,
+      overflow: 'auto',
+      whiteSpace: 'pre-wrap',
+    }}>{children}</pre>
+  )
+}
+
+function P({ children }) {
+  return (
+    <p style={{
+      fontSize: 14.5, lineHeight: 1.7,
+      color: 'var(--text-secondary)', margin: '0 0 12px 0',
+      fontFamily: 'var(--font-ui)',
+    }}>{children}</p>
+  )
+}
+
+function H3({ id, children }) {
+  return (
+    <h3 id={id} style={{
+      fontSize: 18, fontWeight: 600,
+      color: 'var(--text-primary)',
+      fontFamily: 'var(--font-ui)',
+      letterSpacing: '-0.015em',
+      margin: '28px 0 6px 0',
+      scrollMarginTop: 100,
+    }}>{children}</h3>
+  )
+}
+
+function SectionLead({ children }) {
+  return (
+    <p style={{
+      fontSize: 16, lineHeight: 1.55,
+      color: 'var(--text-secondary)', margin: '0 0 8px 0',
+      maxWidth: 680,
+    }}>{children}</p>
+  )
+}
+
+function CTAButton({ to, children, navigate }) {
+  return (
+    <button onClick={() => navigate(to)}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 7,
+        marginTop: 4,
+        padding: '8px 14px',
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 8,
+        color: 'var(--text-primary)',
+        fontSize: 13, fontWeight: 500, cursor: 'pointer',
+        fontFamily: 'var(--font-ui)',
+        transition: 'all 150ms var(--ease-out-quart)',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ember)'; e.currentTarget.style.color = 'var(--ember)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+    >
+      {children} <ArrowUpRight size={13} strokeWidth={2} />
+    </button>
+  )
+}
+
+function Kbd({ children }) {
+  return (
+    <kbd style={{
+      display: 'inline-block',
+      padding: '1px 6px',
+      minWidth: 18,
+      textAlign: 'center',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 11,
+      fontWeight: 600,
+      color: 'var(--text-primary)',
+      background: 'var(--surface-2)',
+      border: '1px solid var(--border-default)',
+      borderBottomWidth: 2,
+      borderRadius: 4,
+    }}>{children}</kbd>
+  )
+}
+
+function DocSection({ id, Icon, eyebrow, title, lead }) {
+  return (
+    <section id={id} style={{
+      marginTop: 64, paddingTop: 24,
+      borderTop: '1px solid var(--border-subtle)',
+      scrollMarginTop: 100,
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        marginBottom: 14,
+      }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 8,
+          background: 'var(--ember-soft)',
+          border: '1px solid var(--ember-ring)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon size={15} color="var(--ember)" strokeWidth={2} />
+        </div>
+        <span style={{
+          fontSize: 11, fontWeight: 600, letterSpacing: 1.2,
+          color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)',
+          textTransform: 'uppercase',
+        }}>{eyebrow}</span>
+      </div>
+      <h1 style={{
+        fontSize: 'clamp(28px, 4vw, 42px)',
+        fontWeight: 600,
+        color: 'var(--text-primary)',
+        fontFamily: 'var(--font-ui)',
+        letterSpacing: '-0.03em',
+        lineHeight: 1.1,
+        margin: '0 0 12px 0',
+      }}>{title}</h1>
+      <SectionLead>{lead}</SectionLead>
+    </section>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FAQ DATA
+   ═══════════════════════════════════════════════════════════════════ */
+
+const FAQ_ITEMS = [
+  { q: 'Mes données sont-elles privées ?',
+    r: 'Oui. Toutes les intégrations OAuth sont chiffrées avec une clé Fernet côté serveur. Les tokens ne sont jamais loggés. Tu peux supprimer ton compte à tout moment depuis Réglages → Sécurité.' },
+  { q: 'Pourquoi mon premier login peut prendre 30 secondes ?',
+    r: 'Le backend tourne sur Render (plan free) qui s\'endort après 15 min d\'inactivité. Un bot GitHub + UptimeRobot le pinge toutes les 14 minutes, mais il peut arriver qu\'il faille le réveiller.' },
+  { q: 'Comment fonctionne le système de points ?',
+    r: 'Chaque tâche complétée rapporte des points selon sa priorité : 30 pts pour Haute, 20 pts pour Moyenne, 10 pts pour Basse. Les points alimentent ton niveau global et tes badges (4 piliers).' },
+  { q: 'Puis-je utiliser GetShift hors ligne ?',
+    r: 'Partiellement. Une fois installée comme PWA, l\'app garde en cache l\'interface et les dernières données vues. La création/édition de tâches nécessite une connexion.' },
+  { q: 'Comment l\'IA accède à mon Calendar ?',
+    r: 'Lors de la connexion Google Calendar, tu autorises le scope calendar (read+write). GetShift lit tes events pour proposer des créneaux libres et peut créer des time blocks. Aucun accès aux contenus d\'événements privés sans cette autorisation.' },
+  { q: 'Qu\'est-ce que le Streak Freeze ?',
+    r: 'Un mécanisme qui protège ta série de jours actifs. Tu en gagnes 1 par semaine de productivité élevée (>70% des tâches Haute complétées). Stockable jusqu\'à 3. Si tu rates un jour, le freeze s\'utilise automatiquement.' },
+  { q: 'L\'extension Chrome existe-t-elle ?',
+    r: 'Pas encore. L\'extension est sur la roadmap pour capturer des tâches depuis n\'importe quelle page web.' },
+  { q: 'Puis-je exporter mes données ?',
+    r: 'Oui — Réglages → Exports. CSV, JSON, ou Excel pour l\'historique de complétion avec métriques.' },
 ]
 
-// ── GUIDE STEPS ───────────────────────────────────────────────────────
-const GUIDE = [
-  {
-    icon: '🚀', title: 'Créer ton compte',
-    desc: 'Inscription gratuite en 30 secondes. Connexion Google disponible.',
-    steps: ['Clique "Créer un compte" sur l\'accueil', 'Renseigne ton nom, email, mot de passe', 'Ou connecte-toi directement avec Google'],
-  },
-  {
-    icon: '✅', title: 'Ajouter tes premières tâches',
-    desc: 'Tape une tâche dans le Dashboard, choisis une priorité et une deadline.',
-    steps: ['Dans le Dashboard, tape dans "Que dois-tu faire ?"', 'Choisis la priorité : Basse / Moyenne / Haute', 'Ajoute une deadline pour recevoir un rappel', 'Entrée ou "Ajouter" pour créer'],
-  },
-  {
-    icon: '🤖', title: 'Lancer l\'Assistant IA',
-    desc: 'Décris un objectif ou pose une question — l\'IA agit directement dans l\'app.',
-    steps: ['Va dans "Assistant IA" dans la sidebar', 'Tape "Crée un plan pour apprendre Python"', 'L\'IA génère et ajoute les tâches directement', 'Tu peux aussi lui demander de planifier ta semaine'],
-  },
-  {
-    icon: '📅', title: 'Planifier avec le calendrier',
-    desc: 'Glisse tes tâches sur la grille horaire pour créer des time blocks.',
-    steps: ['Va dans "Planification"', 'Passe en vue Calendrier', 'Glisse une tâche depuis la liste vers un créneau', 'Utilise "Planifier auto" pour laisser l\'IA tout organiser'],
-  },
-  {
-    icon: '🔗', title: 'Connecter Google Calendar',
-    desc: 'Sync bidirectionnelle — ton agenda GetShift et Google ne font plus qu\'un.',
-    steps: ['Settings > Intégrations > Google Calendar', 'Clique "Connecter" et accepte les permissions', 'Les tâches avec deadline apparaissent dans Google Cal', 'Les events Google sont visibles dans Planification'],
-  },
-  {
-    icon: '📊', title: 'Suivre ta progression',
-    desc: 'Consulte tes analytiques et débloque des badges en progressant.',
-    steps: ['Va dans "Analytiques" pour tes stats détaillées', 'Consulte ton streak et ton niveau dans le Profil', 'Complète des tâches haute priorité pour progresser vite', 'Tomorrow Builder génère ton planning chaque soir à 19h'],
-  },
-]
+/* ═══════════════════════════════════════════════════════════════════
+   COMPOSANT PRINCIPAL
+   ═══════════════════════════════════════════════════════════════════ */
 
-// ── COMPONENT ─────────────────────────────────────────────────────────
 export default function Help() {
   const navigate = useNavigate()
-  const { T, theme } = useTheme()
-  const isMobile = useMediaQuery('(max-width: 768px)')
-  const user = JSON.parse(localStorage.getItem('user'))
+  const { T } = useTheme()
+  const isMobile = useMediaQuery('(max-width: 900px)')
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
+  const [tocOpen, setTocOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [activeSection, setActiveSection] = useState('demarrage')
+  const [openFaq, setOpenFaq] = useState(null)
+  const mainRef = useRef(null)
 
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
-  })
-  const toggleSidebar = () => {
-    const next = !sidebarOpen
-    setSidebarOpen(next)
-    try { localStorage.setItem('sidebar_open', String(next)) } catch {}
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.1) {
+            setActiveSection(entry.target.id)
+          }
+        })
+      },
+      { rootMargin: '-100px 0px -60% 0px', threshold: [0.1, 0.5] }
+    )
+    SECTIONS.forEach(s => {
+      const el = document.getElementById(s.id)
+      if (el) observer.observe(el)
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  const filteredSections = useMemo(() => {
+    if (!search.trim()) return null
+    const q = search.toLowerCase()
+    return SEARCH_INDEX.filter(item => item.terms.includes(q))
+  }, [search])
+
+  const scrollTo = (id) => {
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (isMobile) setTocOpen(false)
   }
 
-  const [search, setSearch]         = useState('')
-  const [openFaq, setOpenFaq]       = useState(null)
-  const [activeStep, setActiveStep] = useState(0)
-
-  const filteredFaq = FAQ.filter(f =>
-    !search || f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
-
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'var(--font-ui)', overflowX: 'hidden' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg-base)',
+      color: 'var(--text-primary)',
+      fontFamily: 'var(--font-ui)',
+      paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 20 : 0,
+    }}>
+      <AppSidebar T={T} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} />
+      {!isMobile && <SidebarToggle sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={() => setSidebarOpen(!sidebarOpen)} T={T} />}
+      {!isMobile && <FloatingLogo sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={() => setSidebarOpen(true)} T={T} />}
+      {isMobile && <MobileBackButton T={T} />}
 
-      <AppSidebar T={T} user={user} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} toggleSidebar={toggleSidebar} isMobile={isMobile}>
-        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
-        <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>THÈME</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '0 4px' }}>
-          {Object.entries(themes).map(([key, t]) => (
-            <motion.button key={key}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px', borderRadius: 8, background: theme === key ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${theme === key ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, color: theme === key ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontWeight: theme === key ? 600 : 400 }}
-              onClick={() => applyTheme(key)} whileHover={{ x: 1 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.accent }} />
-              {t.name}
-            </motion.button>
-          ))}
-        </div>
-      </AppSidebar>
-
-      <SidebarToggle T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
-      <FloatingLogo T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
-
-      <main style={{
-        marginLeft: mainMargin, transition: 'margin-left 0.3s ease', flex: 1, minWidth: 0,
-        paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 24 : 80,
+      <div style={{
+        marginLeft: !isMobile && sidebarOpen ? SIDEBAR_W : 0,
+        transition: 'margin-left 220ms var(--ease-out-quart)',
       }}>
 
-        {/* ══ HERO ══════════════════════════════════════════════════ */}
-        <div style={{
-          background: 'linear-gradient(135deg, var(--ember) 0%, var(--ember-hover) 100%)',
-          padding: isMobile ? '48px 24px 40px' : '64px 48px 56px',
-          paddingTop: isMobile ? 80 : 64,
+        {/* ─── TOP BAR ─────────────────────────────────────────── */}
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 20,
+          background: 'var(--bg-overlay)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid var(--border-subtle)',
+          padding: isMobile ? '14px 16px' : '16px 28px',
+          display: 'flex', alignItems: 'center', gap: 14,
         }}>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.15)', borderRadius: 99, padding: '6px 14px', marginBottom: 20 }}>
-              <Sparkles size={13} color="rgba(255,255,255,0.9)" />
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.9)', letterSpacing: 0.5 }}>Centre d'aide GetShift</span>
-            </div>
-            <h1 style={{ fontSize: isMobile ? 28 : 38, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', marginBottom: 12, lineHeight: 1.2 }}>
-              Comment pouvons-nous<br />vous aider ?
-            </h1>
-            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', marginBottom: 28, lineHeight: 1.6 }}>
-              Guides, FAQ et tutoriels pour maîtriser GetShift.
-            </p>
-            {/* Search */}
-            <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
-              <Search size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Chercher dans l'aide… (ex: Google Calendar, notifications)"
+          {isMobile && (
+            <button onClick={() => setTocOpen(o => !o)}
+              style={{
+                width: 34, height: 34, borderRadius: 8,
+                background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+              <MenuIcon size={16} strokeWidth={2} />
+            </button>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <BookOpen size={18} color="var(--ember)" strokeWidth={2} />
+            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Documentation</span>
+          </div>
+          <div style={{ flex: 1, maxWidth: 480, position: 'relative' }}>
+            <Search size={14} color="var(--text-tertiary)" strokeWidth={2}
+              style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher dans la documentation…"
+              style={{
+                width: '100%', padding: '8px 12px 8px 34px',
+                background: 'var(--surface-1)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 8,
+                color: 'var(--text-primary)',
+                fontSize: 13, fontFamily: 'var(--font-ui)',
+                outline: 'none',
+              }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')}
                 style={{
-                  width: '100%', padding: '14px 16px 14px 44px',
-                  borderRadius: 14, border: 'none', outline: 'none',
-                  fontSize: 14, background: 'rgba(255,255,255,0.95)',
-                  color: 'var(--text-primary)', boxSizing: 'border-box',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                }}
-              />
-              {search && (
-                <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
-              )}
+                  position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                  width: 22, height: 22, borderRadius: 5,
+                  background: 'var(--surface-2)', border: 'none',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                <X size={12} color="var(--text-tertiary)" />
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* ─── SEARCH RESULTS ──────────────────────────────────── */}
+        {filteredSections && (
+          <div style={{
+            padding: isMobile ? '20px 16px' : '24px 28px',
+            maxWidth: 760, margin: '0 auto',
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', letterSpacing: 1, marginBottom: 12 }}>
+              {filteredSections.length} RÉSULTAT{filteredSections.length > 1 ? 'S' : ''}
             </div>
-          </motion.div>
-        </div>
+            {filteredSections.length === 0 && (
+              <P>Aucun résultat. Essaie un autre mot-clé.</P>
+            )}
+            {filteredSections.map(item => (
+              <button key={`${item.sectionId}-${item.subId}`}
+                onClick={() => { scrollTo(item.subId); setSearch('') }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '12px 14px', marginBottom: 6,
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 10, cursor: 'pointer',
+                  fontFamily: 'var(--font-ui)',
+                }}>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>{item.parent}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500 }}>{item.label}</div>
+              </button>
+            ))}
+          </div>
+        )}
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '32px 20px' : '48px 40px' }}>
+        {/* ─── DOCS LAYOUT ─────────────────────────────────────── */}
+        {!filteredSections && (
+          <div style={{
+            display: 'flex',
+            maxWidth: 1280, margin: '0 auto',
+            padding: isMobile ? '0' : '24px 28px',
+            gap: 32,
+          }}>
 
-          {/* ══ QUICK ACTIONS ════════════════════════════════════════ */}
-          {!search && (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16, marginBottom: 56 }}>
-              {[
-                { icon: '⚡', title: 'Démarrage rapide', desc: 'Opérationnel en 5 minutes', action: () => setActiveStep(0), cta: 'Voir le guide' },
-                { icon: '📱', title: 'Installer l\'app', desc: 'PWA mobile iOS & Android', action: () => navigate('/settings', { state: { section: 'notifications' } }), cta: 'Installer' },
-                { icon: '🔗', title: 'Intégrations', desc: 'Google Calendar, Gmail, Notion…', action: () => navigate('/settings', { state: { section: 'integrations' } }), cta: 'Configurer' },
-              ].map((card, i) => (
-                <motion.div key={i}
-                  onClick={card.action}
-                  whileHover={{ y: -3, boxShadow: '0 12px 32px rgba(0,0,0,0.1)' }}
-                  whileTap={{ scale: 0.98 }}
-                  style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 18, padding: '24px', cursor: 'pointer', transition: 'box-shadow 0.2s' }}>
-                  <div style={{ fontSize: 28, marginBottom: 12 }}>{card.icon}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>{card.title}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>{card.desc}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--ember)' }}>
-                    {card.cta} <ArrowRight size={13} />
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-
-          {/* ══ FEATURES GRID ════════════════════════════════════════ */}
-          {!search && (
-            <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} style={{ marginBottom: 56 }}>
-              <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', marginBottom: 6 }}>Toutes les fonctionnalités</h2>
-                <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Clique sur une feature pour y accéder directement.</p>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: 12 }}>
-                {FEATURES.map((f, i) => {
-                  const Icon = f.icon
-                  return (
-                    <motion.div key={i}
-                      onClick={() => navigate(f.route)}
-                      whileHover={{ y: -2, borderColor: f.color }}
-                      whileTap={{ scale: 0.97 }}
-                      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 16px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${f.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                        <Icon size={18} color={f.color} strokeWidth={1.8} />
-                      </div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{f.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{f.desc}</div>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </motion.section>
-          )}
-
-          {/* ══ GUIDE INTERACTIF ═════════════════════════════════════ */}
-          {!search && (
-            <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ marginBottom: 56 }}>
-              <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', marginBottom: 6 }}>Guide pas à pas</h2>
-                <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>De zéro à productif en 6 étapes.</p>
-              </div>
-
-              {/* Step tabs */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto', paddingBottom: 4 }}>
-                {GUIDE.map((g, i) => (
-                  <motion.button key={i}
-                    onClick={() => setActiveStep(i)}
-                    whileTap={{ scale: 0.96 }}
+            {/* TOC SIDEBAR */}
+            <aside style={{
+              width: isMobile ? '100%' : 240,
+              flexShrink: 0,
+              position: isMobile ? 'fixed' : 'sticky',
+              top: isMobile ? 0 : 100,
+              left: isMobile ? 0 : 'auto',
+              height: isMobile ? '100vh' : 'fit-content',
+              maxHeight: isMobile ? '100vh' : 'calc(100vh - 120px)',
+              zIndex: isMobile ? 50 : 1,
+              background: isMobile ? 'var(--bg-base)' : 'transparent',
+              overflowY: 'auto',
+              padding: isMobile ? '60px 20px 20px' : 0,
+              transform: isMobile ? (tocOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+              transition: 'transform 220ms var(--ease-out-quart)',
+              borderRight: isMobile ? '1px solid var(--border-subtle)' : 'none',
+            }}>
+              {isMobile && (
+                <button onClick={() => setTocOpen(false)}
+                  style={{
+                    position: 'absolute', top: 18, right: 18,
+                    width: 32, height: 32, borderRadius: 8,
+                    background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-primary)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                  <X size={14} />
+                </button>
+              )}
+              {SECTIONS.map(section => (
+                <div key={section.id} style={{ marginBottom: 18 }}>
+                  <button onClick={() => scrollTo(section.id)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 7,
-                      padding: '8px 16px', borderRadius: 99, border: '1px solid',
-                      borderColor: activeStep === i ? 'var(--ember)' : 'var(--border-subtle)',
-                      background: activeStep === i ? 'var(--ember-soft)' : 'var(--surface-1)',
-                      color: activeStep === i ? 'var(--ember)' : 'var(--text-secondary)',
-                      fontSize: 13, fontWeight: activeStep === i ? 600 : 400,
-                      cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      width: '100%', textAlign: 'left',
+                      padding: '6px 10px',
+                      background: activeSection === section.id ? 'var(--ember-soft)' : 'transparent',
+                      border: 'none', borderRadius: 6,
+                      color: activeSection === section.id ? 'var(--ember)' : 'var(--text-primary)',
+                      fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'var(--font-ui)',
                     }}>
-                    <span>{g.icon}</span>
-                    <span style={{ display: isMobile ? 'none' : 'inline' }}>{g.title}</span>
-                    <span style={{ display: isMobile ? 'inline' : 'none' }}>{i + 1}</span>
-                  </motion.button>
+                    <section.Icon size={14} strokeWidth={2} />
+                    {section.label}
+                  </button>
+                  <div style={{ marginLeft: 30, marginTop: 2 }}>
+                    {section.sub.map(sub => (
+                      <button key={sub.id} onClick={() => scrollTo(sub.id)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '4px 10px',
+                          background: 'transparent', border: 'none',
+                          color: 'var(--text-tertiary)',
+                          fontSize: 12.5, cursor: 'pointer',
+                          fontFamily: 'var(--font-ui)',
+                          transition: 'color 120ms',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)' }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-tertiary)' }}
+                      >{sub.label}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </aside>
+
+            {/* MAIN CONTENT */}
+            <main ref={mainRef} style={{
+              flex: 1, minWidth: 0, maxWidth: 760,
+              padding: isMobile ? '20px 16px 80px' : '0',
+            }}>
+
+              {/* ─── DÉMARRAGE ───────────────────────────────── */}
+              <DocSection id="demarrage" Icon={Rocket} eyebrow="01 · Démarrage"
+                title="Démarrer avec GetShift"
+                lead="GetShift est un assistant de productivité avec IA contextuelle. Cette section te fait passer de zéro à opérationnel en moins de 10 minutes." />
+
+              <H3 id="qu-est-ce-que-getshift">Qu'est-ce que GetShift</H3>
+              <P>
+                Un outil de gestion de tâches augmenté d'une IA qui connaît ton calendrier, ta progression
+                et tes priorités. À la différence d'un Todoist ou d'un Notion, l'IA n'est pas un add-on —
+                elle est le cœur du produit. Tu lui parles en langage naturel, elle crée, modifie, planifie.
+              </P>
+              <P>Trois piliers :</P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Tâches & projets</strong> — collection, priorités, deadlines, dépendances</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Planification IA</strong> — time blocks auto, respect du Calendar</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Progression mesurable</strong> — analytics, niveaux, badges, streaks</li>
+              </ul>
+
+              <H3 id="premiers-pas">Premiers pas</H3>
+              <P>Trois étapes pour passer en mode productif :</P>
+              <ol style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.8 }}>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Connecte Google Calendar</strong> — Réglages → Intégrations. C'est la pièce maîtresse : sans, l'IA ne voit pas tes événements existants.</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Crée 5 à 10 tâches</strong> — donne du contexte à l'IA. Plus elle voit ta liste, mieux elle planifie.</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Demande à l'IA de planifier ta semaine</strong> — Page IA → <Code>« Planifie ma semaine en respectant mes meetings »</Code></li>
+              </ol>
+              <CTAButton to="/dashboard" navigate={navigate}>Aller au Dashboard</CTAButton>
+
+              <H3 id="installer-pwa">Installer comme app (PWA)</H3>
+              <P>GetShift est une Progressive Web App. Tu peux l'installer sur Mac, Windows, iOS, Android — sans passer par un store.</P>
+              <DemoFrame caption="install — desktop & mobile">
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>DESKTOP</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                      Chrome / Edge : icône <Code>⊕</Code> à droite de l'URL → « Installer GetShift »<br /><br />
+                      Safari : Fichier → Ajouter au Dock
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>MOBILE</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                      iOS Safari : Partager → Ajouter à l'écran d'accueil<br /><br />
+                      Android Chrome : menu → Ajouter à l'écran d'accueil
+                    </div>
+                  </div>
+                </div>
+              </DemoFrame>
+              <Callout kind="tip">
+                Une fois installée, GetShift fonctionne hors ligne pour les données déjà chargées, affiche un badge de notification sur l'icône, et bloque la mise en veille de l'écran pendant les sessions Pomodoro.
+              </Callout>
+
+              {/* ─── TÂCHES ─────────────────────────────────── */}
+              <DocSection id="taches" Icon={CheckSquare} eyebrow="02 · Cœur du produit"
+                title="Tâches & projets"
+                lead="Chaque tâche est une unité atomique de travail avec priorité, deadline et estimation. Les points qu'elle rapporte alimentent ta progression." />
+
+              <H3 id="creer-tache">Créer une tâche</H3>
+              <P>Quatre façons :</P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li>Dashboard → bouton « + » dans le HUD du jour</li>
+                <li>Kanban → bouton « + » dans une colonne</li>
+                <li>IA Chat → <Code>« Crée une tâche pour finir le rapport vendredi, priorité haute »</Code></li>
+                <li>Raccourci clavier : <Kbd>N</Kbd> (depuis le Dashboard)</li>
+              </ul>
+
+              <DemoFrame caption="exemple — liste de tâches">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <MockTask done={false} prio="haute" title="Finaliser le rapport Q4" deadline="15 mai" points="30" />
+                  <MockTask done={false} prio="moyenne" title="Préparer présentation client" deadline="18 mai" points="20" />
+                  <MockTask done={true} prio="basse" title="Mettre à jour le CRM" points="10" />
+                </div>
+              </DemoFrame>
+
+              <H3 id="priorites-points">Priorités, deadlines, points</H3>
+              <P>Le système de points est conçu pour récompenser le travail à forte valeur :</P>
+              <div style={{
+                display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 8,
+                marginTop: 14, marginBottom: 14,
+              }}>
+                <MockKPI label="Haute" value="30 pts" sub="Bloque, urgent" accent="var(--danger)" />
+                <MockKPI label="Moyenne" value="20 pts" sub="À traiter cette semaine" accent="var(--warning)" />
+                <MockKPI label="Basse" value="10 pts" sub="Quand tu as le temps" accent="var(--info)" />
+              </div>
+              <Callout kind="tip">
+                Une tâche en retard (deadline dépassée + non terminée) ne donne plus de points si tu la termines après échéance. C'est volontaire — l'IA détecte les retards et te le signale.
+              </Callout>
+
+              <H3 id="kanban">Vue Kanban</H3>
+              <P>
+                Trois colonnes par défaut — <strong>À faire · En cours · Terminé</strong>. Glisse-dépose entre colonnes,
+                ou utilise <Kbd>1</Kbd> <Kbd>2</Kbd> <Kbd>3</Kbd> sur une carte sélectionnée.
+              </P>
+              <P>
+                Filtres disponibles : par priorité, par tag, par projet, par deadline (cette semaine /
+                ce mois). Les filtres se cumulent.
+              </P>
+
+              <H3 id="mode-focus">Mode focus</H3>
+              <P>
+                Sélectionne 1 à 5 tâches « focus du jour ». Elles apparaissent en grand sur le Dashboard, masquant
+                le reste. Le Pomodoro pré-fill avec la tâche focus en cours. Idéal pour bloquer les distractions.
+              </P>
+
+              {/* ─── PLANIFICATION ──────────────────────────── */}
+              <DocSection id="planification" Icon={Calendar} eyebrow="03 · Time management"
+                title="Planification"
+                lead="Le calendrier de GetShift fusionne tes time blocks internes et tes événements Google Calendar. L'IA respecte tes meetings et te propose des créneaux libres." />
+
+              <H3 id="calendrier">Vue calendrier</H3>
+              <P>
+                Grille semaine, lundi au dimanche, 7h–23h par défaut (modifiable dans Réglages). Tes événements
+                Google Calendar apparaissent en grisé hachuré <em>(non-draggable, lecture seule)</em>, tes time
+                blocks GetShift en ember.
+              </P>
+
+              <DemoFrame caption="grille — lundi 09h-12h">
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 6, fontSize: 11.5 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 8, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                    <span>09h</span><span>10h</span><span>11h</span><span>12h</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <MockTimeBlock start="09:00" end="10:30" title="Deep work — Rapport Q4" />
+                    <div style={{
+                      padding: '8px 10px', borderRadius: 6,
+                      background: 'repeating-linear-gradient(45deg, rgba(160,163,155,0.1), rgba(160,163,155,0.1) 6px, transparent 6px, transparent 12px)',
+                      border: '1px solid var(--border-subtle)',
+                      fontSize: 11.5,
+                    }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3 }}>10:30 – 11:00</div>
+                      <div style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>📅 Calendar · Stand-up équipe</div>
+                    </div>
+                    <MockTimeBlock start="11:00" end="12:00" title="Préparer présentation" color="var(--info)" />
+                  </div>
+                </div>
+              </DemoFrame>
+
+              <H3 id="time-blocks">Time blocks</H3>
+              <P>
+                Lie une tâche à un créneau précis. Quand le créneau démarre, GetShift te notifie. Les blocks
+                créés depuis GetShift sont automatiquement syncés vers Google Calendar (si Calendar connecté
+                avec scope <Code>calendar</Code>).
+              </P>
+
+              <H3 id="conflits">Conflits Calendar</H3>
+              <P>
+                Si tu crées un time block qui chevauche un événement Calendar existant, un badge ⚠️ apparaît
+                sur le block avec le titre de l'événement en conflit. À toi de décider : déplacer, raccourcir,
+                ou ignorer.
+              </P>
+
+              <H3 id="planif-auto">Planification IA auto</H3>
+              <P>
+                Bouton 🪄 « Planifier auto » → l'IA récupère tes tâches non-terminées + ton agenda Calendar
+                de la semaine, puis propose un planning :
+              </P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li>Priorités hautes en matinée (créneau créatif)</li>
+                <li>Admin et tâches courtes en fin de journée</li>
+                <li>Max 6h de focus / jour</li>
+                <li>Aucun chevauchement avec tes events Calendar</li>
+              </ul>
+              <CTAButton to="/planification" navigate={navigate}>Ouvrir la Planification</CTAButton>
+
+              {/* ─── POMODORO ───────────────────────────────── */}
+              <DocSection id="pomodoro" Icon={Timer} eyebrow="04 · Focus"
+                title="Pomodoro"
+                lead="Sessions de focus de 25 minutes alternées avec des pauses de 5 minutes. Intégré au Dashboard, pré-rempli avec ta tâche en cours." />
+
+              <H3 id="pomodoro-sessions">Sessions de travail</H3>
+              <P>
+                Cycle par défaut : <strong>25 min focus → 5 min pause</strong>. Modifiable dans Réglages
+                (10/2, 50/10, 90/20…). À la fin de chaque session, une notification push s'affiche même
+                si l'app est en arrière-plan.
+              </P>
+
+              <H3 id="wake-lock">Wake Lock écran</H3>
+              <P>
+                Pendant une session active, GetShift bloque la mise en veille de l'écran (API <Code>Screen Wake Lock</Code>).
+                Plus de session interrompue parce que le téléphone s'est verrouillé. Désactivé automatiquement à la fin
+                de la session ou en arrière-plan.
+              </P>
+
+              {/* ─── IA ─────────────────────────────────────── */}
+              <DocSection id="ia" Icon={Bot} eyebrow="05 · Le cœur du produit"
+                title="Assistant IA"
+                lead="Un agent IA avec des outils. Tu lui parles, il agit. Il peut créer/modifier des tâches, naviguer dans l'app, analyser ta semaine, planifier." />
+
+              <H3 id="ia-comment">Comment lui parler</H3>
+              <P>
+                Pas de commandes spéciales, pas de syntaxe. Langage naturel direct. L'IA garde le contexte
+                de la conversation et accède à ton état complet (tâches, agenda, profil).
+              </P>
+
+              <DemoFrame caption="conversation typique">
+                <MockChatBubble role="user" text="Planifie ma semaine en évitant mes meetings Calendar" />
+                <MockChatBubble role="ai" text={`J'ai analysé ton agenda : 14h de créneaux libres cette semaine.
+
+• Lun 9h–11h — Rapport Q4 (haute priorité, deadline jeudi)
+• Mar 14h–16h — Présentation client
+• Jeu 10h–12h — Revue projet design
+
+Tu veux que j'applique ces time blocks ?`} />
+                <MockChatBubble role="user" text="Oui, et programme un Pomodoro pour la première session" />
+                <MockChatBubble role="ai" text={`✓ 3 time blocks créés et syncés sur ton Calendar
+✓ Pomodoro pré-rempli — démarrera quand tu cliques sur la tâche lundi 9h`} />
+              </DemoFrame>
+
+              <H3 id="ia-outils">Outils disponibles</H3>
+              <P>L'IA dispose des outils suivants — elle choisit lesquels utiliser selon ta demande :</P>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginTop: 12, marginBottom: 14 }}>
+                {[
+                  { label: 'create_task', desc: 'Crée une tâche complète' },
+                  { label: 'update_task', desc: 'Modifie titre / priorité / deadline' },
+                  { label: 'schedule_block', desc: 'Pose un time block' },
+                  { label: 'analyze_week', desc: 'Bilan rétrospectif' },
+                  { label: 'navigate', desc: 'T\'amène sur une page' },
+                  { label: 'team_query', desc: 'Données équipe (si team)' },
+                  { label: 'search_web', desc: 'Recherche externe ciblée' },
+                ].map(t => (
+                  <div key={t.label} style={{
+                    padding: '10px 12px', borderRadius: 8,
+                    background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
+                  }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--ember)', fontWeight: 600 }}>{t.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>{t.desc}</div>
+                  </div>
                 ))}
               </div>
 
-              {/* Active step */}
-              <AnimatePresence mode="wait">
-                <motion.div key={activeStep}
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.25 }}
-                  style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: isMobile ? '24px 20px' : '32px 36px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
-                    <div style={{ fontSize: 40, lineHeight: 1, flexShrink: 0 }}>{GUIDE[activeStep].icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600, letterSpacing: 1, marginBottom: 4 }}>ÉTAPE {activeStep + 1} / {GUIDE.length}</div>
-                      <h3 style={{ fontSize: isMobile ? 17 : 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.2px' }}>{GUIDE[activeStep].title}</h3>
-                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6 }}>{GUIDE[activeStep].desc}</p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {GUIDE[activeStep].steps.map((s, i) => (
-                          <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 }}
-                            style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--ember)', flexShrink: 0, marginTop: 1 }}>{i + 1}</div>
-                            <span style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6, paddingTop: 2 }}>{s}</span>
-                          </motion.div>
-                        ))}
-                      </div>
+              <H3 id="ia-prompts">Exemples de prompts efficaces</H3>
+              <CodeBlock>{`Planifie ma semaine en bloquant 2h le matin pour le projet client X
+Crée 5 tâches pour préparer mon entretien vendredi : recherche, questions, tenue, repérage trajet, debrief
+Quelles tâches haute priorité je peux finir avant 16h aujourd'hui ?
+Analyse ma productivité de la semaine dernière, identifie 2 points d'amélioration
+Quels meetings Calendar n'ont pas de tâche de préparation associée ?
+Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</CodeBlock>
+
+              <CTAButton to="/ia" navigate={navigate}>Ouvrir le chat IA</CTAButton>
+
+              {/* ─── BUILDERS ───────────────────────────────── */}
+              <DocSection id="builders" Icon={Sunrise} eyebrow="06 · Outils IA spécialisés"
+                title="Builders IA"
+                lead="Deux outils IA pré-cadrés pour des moments précis : préparer demain (Tomorrow Builder) et décomposer un objectif (Goal Reverse)." />
+
+              <H3 id="tomorrow-builder">Tomorrow Builder</H3>
+              <P>
+                À ouvrir en fin de journée. L'IA fait un récap de tes tâches accomplies, lit ton Calendar
+                pour demain, et propose 3 à 5 priorités du lendemain. Tu valides ou ajustes — les tâches
+                sont automatiquement marquées « focus du jour ».
+              </P>
+              <CTAButton to="/tomorrow" navigate={navigate}>Ouvrir Tomorrow Builder</CTAButton>
+
+              <H3 id="goal-reverse">Goal Reverse</H3>
+              <P>
+                À ouvrir en début de mois ou de projet. Tu donnes un objectif (« lancer mon side-project »,
+                « publier 4 articles ce trimestre »). L'IA le décompose en étapes hebdomadaires, puis en
+                tâches concrètes avec deadlines suggérées.
+              </P>
+              <Callout kind="tip">
+                Goal Reverse fonctionne mieux avec un objectif <strong>mesurable et délimité dans le temps</strong>.
+                « Devenir meilleur en design » → trop flou. « Compléter 3 cours Figma d'ici fin août » → ça marche.
+              </Callout>
+              <CTAButton to="/goals" navigate={navigate}>Ouvrir Goal Reverse</CTAButton>
+
+              {/* ─── ANALYTICS ──────────────────────────────── */}
+              <DocSection id="analytics" Icon={BarChart2} eyebrow="07 · Mesure"
+                title="Analytics"
+                lead="Tout ce que tu mesures, tu peux l'améliorer. GetShift suit une douzaine de métriques productivité, sans bullshit." />
+
+              <H3 id="metriques">Métriques clés</H3>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 8, marginTop: 14, marginBottom: 14 }}>
+                <MockKPI label="Taux complétion" value="84%" sub="↑ 12% vs sem. passée" accent="var(--success)" />
+                <MockKPI label="Tâches Haute" value="11" sub="cette semaine" accent="var(--ember)" />
+                <MockKPI label="Temps focus" value="22h" sub="↑ 4h vs moyenne" accent="var(--info)" />
+                <MockKPI label="Streak" value="14 j" sub="Record : 21 j" accent="#C28748" />
+              </div>
+
+              <H3 id="score-prod">Score de productivité</H3>
+              <P>
+                Un score 0–100 par jour, combinant : tâches complétées (pondérées par priorité), respect des
+                time blocks, ratio focus/admin, jour consécutif (streak). Pas une note morale — un signal pour
+                identifier tes jours-types et corriger les patterns qui ne marchent pas.
+              </P>
+
+              <CTAButton to="/analytics" navigate={navigate}>Voir Analytics</CTAButton>
+
+              {/* ─── PROGRESSION ────────────────────────────── */}
+              <DocSection id="progression" Icon={Award} eyebrow="08 · Gamification"
+                title="Progression"
+                lead="Niveaux globaux, 4 piliers de badges spécialisés, streaks avec mécanique de protection. Conçu pour t'engager sur la durée — pas pour t'enfermer dans des points stériles." />
+
+              <H3 id="niveaux">Niveaux · 10 paliers</H3>
+              <P>
+                Ton niveau global passe de <strong>Apprenti</strong> à <strong>Légende</strong> selon tes points cumulés.
+                Chaque palier débloque un titre + une nouvelle skin Profil. Les niveaux ne se perdent pas.
+              </P>
+
+              <H3 id="badges">Badges · 4 piliers</H3>
+              <P>4 piliers indépendants, chacun avec ses propres badges progressifs :</P>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14, marginBottom: 14 }}>
+                <MockBadge pillar="⚡" name="Constance" level={3} color="#E07A3E" />
+                <MockBadge pillar="🎯" name="Focus" level={2} color="#6B89A6" />
+                <MockBadge pillar="🚀" name="Volume" level={4} color="#7A9778" />
+                <MockBadge pillar="🧠" name="IA Mastery" level={1} color="#C28748" />
+              </div>
+
+              <H3 id="streaks">Streaks & Streak Freeze</H3>
+              <P>
+                Une <strong>streak</strong> = nombre de jours consécutifs avec au moins une tâche terminée.
+                Un <strong>Streak Freeze</strong> protège ta série si tu rates un jour : il s'utilise automatiquement.
+                Tu en gagnes 1 par semaine de productivité élevée (&gt;70% tâches Haute complétées). Max 3 stockés.
+              </P>
+
+              <CTAButton to="/profile" navigate={navigate}>Ouvrir ton Profil</CTAButton>
+
+              {/* ─── INTÉGRATIONS ───────────────────────────── */}
+              <DocSection id="integrations" Icon={Plug} eyebrow="09 · Connexions OAuth"
+                title="Intégrations"
+                lead="GetShift se connecte à tes outils existants. Sans intégrations, c'est un Todoist amélioré — avec, c'est un poste de commande." />
+
+              <H3 id="integ-calendar">Google Calendar</H3>
+              <P>
+                <strong>Sync bidirectionnelle.</strong> Les events Calendar apparaissent dans la Planification GetShift,
+                et les time blocks GetShift sont créés/mis à jour/supprimés sur Calendar en temps réel
+                (via webhooks). Scope OAuth requis : <Code>calendar</Code> (read + write).
+              </P>
+              <P>L'IA utilise Calendar pour :</P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li>Détecter les créneaux libres pour planifier</li>
+                <li>Éviter les conflits lors du time blocking</li>
+                <li>Identifier les meetings sans tâche de préparation</li>
+                <li>Proposer un récap matin avec ton agenda du jour</li>
+              </ul>
+
+              <H3 id="integ-drive">Google Drive</H3>
+              <P>
+                Lie un fichier Drive à une tâche (icône 📎 sur chaque carte). Le fichier devient accessible
+                en un clic depuis la tâche. Aucun fichier n'est copié — seul le lien est stocké.
+              </P>
+
+              <H3 id="integ-gmail">Gmail</H3>
+              <P>
+                Sur un email reçu, l'IA peut extraire l'action sous-jacente et la transformer en tâche
+                (avec deadline si mentionnée). Bouton « Transformer en tâche » sur les emails analysés.
+                Aucun email n'est lu de façon automatisée sans ton action.
+              </P>
+
+              <H3 id="integ-notion">Notion</H3>
+              <P>
+                Synchronise une base de données Notion (ex: ton kanban de tâches Notion) avec GetShift.
+                Mode lecture par défaut, sync écriture activable dans Réglages → Intégrations → Notion.
+              </P>
+
+              <H3 id="integ-slack">Slack</H3>
+              <P>
+                Webhook entrant : reçois les rappels de tâches dans le canal Slack de ton choix.
+                Configuration via Réglages → Intégrations → Slack → URL webhook (créée dans ton workspace Slack).
+              </P>
+              <Callout kind="warning">
+                Slack utilise un webhook (pas OAuth) — c'est intentionnel pour éviter de demander des permissions
+                lecture/écriture inutiles sur ton workspace. Contrepartie : les messages sont sortants uniquement.
+              </Callout>
+
+              <CTAButton to="/settings" navigate={navigate}>Gérer mes intégrations</CTAButton>
+
+              {/* ─── RÉGLAGES ───────────────────────────────── */}
+              <DocSection id="reglages" Icon={SettingsIcon} eyebrow="10 · Configuration"
+                title="Réglages"
+                lead="6 onglets : Profil, Notifications, Intégrations, Apparence, Sécurité, Données." />
+
+              <H3 id="themes">Thèmes · Parchemin / Graphite</H3>
+              <P>Deux thèmes <strong>Graphite & Ember</strong> exclusivement, conçus pour le deep work :</P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Parchemin</strong> (light) — fond papier japonais <Code>#F4F1EB</Code>, accent ember</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Graphite</strong> (dark) — fond minéral <Code>#0E1011</Code>, ember chaud</li>
+              </ul>
+              <P>Pas de thème système auto — tu choisis. Préférence sauvegardée par compte.</P>
+
+              <H3 id="notifs">Notifications push</H3>
+              <P>Trois canaux :</P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Rappels deadline</strong> — 24h avant, 2h avant, à l'heure</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Récap quotidien</strong> — 8h00 (heure modifiable)</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Alertes priorité haute</strong> — quand une tâche Haute est créée par l'IA ou un coéquipier</li>
+              </ul>
+              <DemoFrame caption="exemples — notifications">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <MockNotif title="GetShift" when="il y a 5 min" body="Rapport Q4 — deadline dans 2h. Time-block 14h–16h ?" />
+                  <MockNotif title="GetShift" when="08:00" body="Récap du matin : 3 tâches prioritaires, 2 réunions Calendar." />
+                </div>
+              </DemoFrame>
+
+              <H3 id="exports">Exports de données</H3>
+              <P>
+                Formats disponibles : <strong>CSV</strong> (tâches), <strong>JSON</strong> (état complet),
+                <strong>Excel</strong> (historique de complétion avec métriques). Aucune limite de fréquence.
+              </P>
+
+              <H3 id="securite">Sécurité & 2FA</H3>
+              <P>
+                Authentification à deux facteurs disponible via TOTP (Google Authenticator, Authy, 1Password).
+                Sessions actives consultables et révocables. Tokens d'intégrations chiffrés Fernet côté serveur.
+              </P>
+              <CTAButton to="/settings" navigate={navigate}>Ouvrir Réglages</CTAButton>
+
+              {/* ─── RACCOURCIS ─────────────────────────────── */}
+              <DocSection id="raccourcis" Icon={Command} eyebrow="11 · Productivité"
+                title="Raccourcis clavier"
+                lead="GetShift est conçu pour être piloté au clavier. Ces raccourcis fonctionnent depuis le Dashboard, sauf indication contraire." />
+
+              <H3 id="shortcuts-app">Raccourcis app</H3>
+              <div style={{
+                marginTop: 14, marginBottom: 14,
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 10, overflow: 'hidden',
+              }}>
+                {[
+                  { keys: ['N'], label: 'Nouvelle tâche' },
+                  { keys: ['K'], label: 'Focus rapide (sélectionner depuis liste)' },
+                  { keys: ['/'], label: 'Recherche globale' },
+                  { keys: ['G', 'D'], label: 'Aller au Dashboard' },
+                  { keys: ['G', 'P'], label: 'Aller à la Planification' },
+                  { keys: ['G', 'I'], label: 'Aller à l\'IA' },
+                  { keys: ['G', 'A'], label: 'Aller aux Analytics' },
+                  { keys: ['1'], label: 'Marquer tâche sélectionnée comme « À faire »' },
+                  { keys: ['2'], label: 'Marquer comme « En cours »' },
+                  { keys: ['3'], label: 'Marquer comme « Terminé »' },
+                  { keys: ['?'], label: 'Afficher tous les raccourcis' },
+                  { keys: ['Esc'], label: 'Fermer modal / annuler' },
+                ].map((s, i, arr) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '11px 14px',
+                    borderBottom: i < arr.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                  }}>
+                    <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>{s.label}</span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {s.keys.map((k, j) => (
+                        <Kbd key={j}>{k}</Kbd>
+                      ))}
                     </div>
                   </div>
-                  {/* Nav */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--border-subtle)' }}>
-                    <button onClick={() => activeStep > 0 && setActiveStep(activeStep - 1)}
-                      style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: activeStep === 0 ? 'not-allowed' : 'pointer', opacity: activeStep === 0 ? 0.4 : 1 }}>
-                      ← Précédent
-                    </button>
-                    {activeStep < GUIDE.length - 1 ? (
-                      <motion.button onClick={() => setActiveStep(activeStep + 1)} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 20px', borderRadius: 10, background: 'var(--ember)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        Suivant <ArrowRight size={14} />
-                      </motion.button>
-                    ) : (
-                      <motion.button onClick={() => navigate('/dashboard')} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 20px', borderRadius: 10, background: 'var(--ember)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        <Star size={14} /> Commencer !
-                      </motion.button>
-                    )}
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </motion.section>
-          )}
-
-          {/* ══ FAQ ══════════════════════════════════════════════════ */}
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }} style={{ marginBottom: 56 }}>
-            <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', marginBottom: 6 }}>
-                {search ? `Résultats pour "${search}"` : 'Questions fréquentes'}
-              </h2>
-              {search && <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{filteredFaq.length} résultat{filteredFaq.length !== 1 ? 's' : ''} trouvé{filteredFaq.length !== 1 ? 's' : ''}</p>}
-            </div>
-
-            {filteredFaq.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', fontSize: 14 }}>
-                Aucun résultat. <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: 'var(--ember)', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>Effacer la recherche</button>
+                ))}
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {filteredFaq.map((f, i) => (
-                  <motion.div key={i} layout style={{ background: 'var(--surface-1)', border: `1px solid ${openFaq === i ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.2s' }}>
-                    <button
-                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                      style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', gap: 16 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>{f.q}</span>
-                      <motion.div animate={{ rotate: openFaq === i ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ flexShrink: 0 }}>
-                        <ChevronDown size={16} color="var(--text-secondary)" />
-                      </motion.div>
+
+              {/* ─── FAQ ────────────────────────────────────── */}
+              <DocSection id="faq" Icon={HelpCircle} eyebrow="12 · Questions fréquentes"
+                title="FAQ"
+                lead="Les réponses aux questions qui reviennent souvent. Si tu ne trouves pas, écris-nous." />
+
+              <div id="faq-list" style={{ marginTop: 24, scrollMarginTop: 100 }}>
+                {FAQ_ITEMS.map((item, i) => (
+                  <div key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '14px 0',
+                        background: 'transparent', border: 'none',
+                        color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500,
+                        cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                      }}>
+                      <span>{item.q}</span>
+                      <ChevronDown size={16}
+                        style={{
+                          transform: openFaq === i ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 180ms var(--ease-out-quart)',
+                          color: 'var(--text-tertiary)', flexShrink: 0, marginLeft: 14,
+                        }} />
                     </button>
-                    <AnimatePresence>
+                    <AnimatePresence initial={false}>
                       {openFaq === i && (
                         <motion.div
-                          initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25 }}
                           style={{ overflow: 'hidden' }}>
-                          <div style={{ padding: '0 20px 18px', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
-                            {f.a}
-                          </div>
+                          <div style={{
+                            padding: '0 0 18px 0', fontSize: 14, lineHeight: 1.65,
+                            color: 'var(--text-secondary)',
+                          }}>{item.r}</div>
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
-            )}
-          </motion.section>
 
-          {/* ══ FOOTER CTA ═══════════════════════════════════════════ */}
-          {!search && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: isMobile ? '28px 24px' : '40px 48px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: 24 }}>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: isMobile ? 17 : 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Prêt à être productif ?</h3>
-                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  Tu as tout ce qu'il faut. Lance-toi — le Dashboard t'attend.
-                </p>
+              {/* Footer CTA */}
+              <div style={{
+                marginTop: 60, marginBottom: 40,
+                padding: '24px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--surface-1)',
+                border: '1px solid var(--border-subtle)',
+                textAlign: 'center',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                  <GetShiftMark size={40} />
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 400, color: 'var(--text-primary)', marginBottom: 6, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
+                  Quelque chose manque ?
+                </div>
+                <P>
+                  Cette documentation est vivante. Si tu cherches une fonctionnalité et que tu ne la trouves pas ici,
+                  écris-nous — ça nous indique ce qu'on doit améliorer.
+                </P>
+                <a href="mailto:hello@getshift.app"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                    marginTop: 6,
+                    padding: '9px 18px',
+                    background: 'var(--ember)', color: 'var(--text-on-ember)',
+                    border: 'none', borderRadius: 8,
+                    fontSize: 13.5, fontWeight: 600, textDecoration: 'none',
+                    boxShadow: 'var(--shadow-ember)',
+                  }}>
+                  <Mail size={14} strokeWidth={2} /> hello@getshift.app
+                </a>
               </div>
-              <div style={{ display: 'flex', gap: 12, flexShrink: 0, flexWrap: 'wrap' }}>
-                <motion.button onClick={() => navigate('/dashboard')} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 12, background: 'var(--ember)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                  Ouvrir le Dashboard <ArrowRight size={15} />
-                </motion.button>
-                <motion.button
-                  onClick={() => window.open('https://github.com/chamdaane-a11y/taskflow/issues', '_blank')}
-                  whileHover={{ scale: 1.02 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 12, background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-                  <MessageCircle size={15} /> Signaler un bug
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
 
-        </div>
-      </main>
+            </main>
+          </div>
+        )}
 
-      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
+      </div>
+
       {isMobile && <BottomNavMobile T={T} />}
     </div>
   )
