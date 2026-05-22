@@ -33,6 +33,7 @@ const SECTIONS = [
     id: 'taches', label: 'Tâches', Icon: CheckSquare,
     sub: [
       { id: 'creer-tache',     label: 'Créer une tâche' },
+      { id: 'task-dna',        label: 'Task DNA — analyse avant création' },
       { id: 'priorites-points',label: 'Priorités · deadlines · points' },
       { id: 'kanban',          label: 'Vue Kanban' },
       { id: 'mode-focus',      label: 'Mode focus' },
@@ -72,8 +73,9 @@ const SECTIONS = [
   {
     id: 'analytics', label: 'Analytics', Icon: BarChart2,
     sub: [
-      { id: 'metriques',  label: 'Métriques clés' },
-      { id: 'score-prod', label: 'Score de productivité' },
+      { id: 'metriques',      label: 'Métriques clés' },
+      { id: 'score-prod',     label: 'Score de productivité' },
+      { id: 'calibration',    label: 'Calibration Task DNA' },
     ],
   },
   {
@@ -750,15 +752,24 @@ export default function Help() {
 
               <H3 id="qu-est-ce-que-getshift">Qu'est-ce que GetShift</H3>
               <P>
-                Un outil de gestion de tâches augmenté d'une IA qui connaît ton calendrier, ta progression
-                et tes priorités. À la différence d'un Todoist ou d'un Notion, l'IA n'est pas un add-on —
-                elle est le cœur du produit. Tu lui parles en langage naturel, elle crée, modifie, planifie.
+                Un assistant de productivité avec une IA contextuelle qui connaît ton calendrier, ta progression
+                et tes priorités. À la différence d'un Todoist ou d'un Notion, l'IA n'est pas un add-on — elle est
+                le cœur du produit.
               </P>
-              <P>Trois piliers :</P>
+              <Callout kind="tip">
+                <strong>La règle qui guide tout GetShift :</strong> l'app répond à <em>tes</em> besoins — pas l'inverse.
+                Aucun workflow forcé, aucun « happy path » obligatoire. L'IA propose, tu décides toujours.
+              </Callout>
+              <P>
+                Le but unique : te rendre <strong>maximalement performant</strong>. Si une feature ne te rend pas plus performant,
+                elle n'a rien à faire dans GetShift.
+              </P>
+              <P>Quatre piliers :</P>
               <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
-                <li><strong style={{ color: 'var(--text-primary)' }}>Tâches & projets</strong> — collection, priorités, deadlines, dépendances</li>
-                <li><strong style={{ color: 'var(--text-primary)' }}>Planification IA</strong> — time blocks auto, respect du Calendar</li>
-                <li><strong style={{ color: 'var(--text-primary)' }}>Progression mesurable</strong> — analytics, niveaux, badges, streaks</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Tâches & projets</strong> — collection, priorités, deadlines, analyse de viabilité (Task DNA)</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Planification IA</strong> — time blocks auto qui respectent ton Calendar et ton rythme</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Assistant IA contextuel</strong> — un agent qui crée, analyse, planifie en langage naturel</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Progression mesurable</strong> — analytics, calibration, niveaux, badges, streaks</li>
               </ul>
 
               <H3 id="premiers-pas">Premiers pas</H3>
@@ -816,6 +827,64 @@ export default function Help() {
                 </div>
               </DemoFrame>
 
+              <H3 id="task-dna">Task DNA — analyse avant création</H3>
+              <P>
+                Avant de créer une tâche, l'IA peut l'analyser et te donner un <strong>score de viabilité 0–100</strong>.
+                C'est un signal — pas une censure. À toi de décider ensuite si tu crées la tâche, la reformules,
+                ou la décomposes.
+              </P>
+              <P>Le Task DNA évalue quatre dimensions :</P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Clarté</strong> — la formulation est-elle assez précise pour qu'on sache quand c'est fait ?</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Atomicité</strong> — la tâche est-elle une seule action ou un projet déguisé ?</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Temps estimé</strong> — réaliste vs sous-estimé ?</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Contexte</strong> — manque-t-il une dépendance, une ressource, un prérequis ?</li>
+              </ul>
+
+              <DemoFrame caption="Task DNA — popup d'analyse">
+                <div style={{
+                  padding: '14px 16px', borderRadius: 10,
+                  background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 12 }}>
+                    <div style={{
+                      width: 60, height: 60, borderRadius: '50%',
+                      border: '4px solid var(--warning)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--warning)', fontSize: 18,
+                      flexShrink: 0,
+                    }}>54</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)' }}>Risquée — marge d'amélioration</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>« Préparer présentation »</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ember)', fontFamily: 'var(--font-mono)', letterSpacing: 0.5, marginBottom: 6 }}>SUGGESTION DE REFORMULATION</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: 10 }}>« Rédiger les 8 slides clés de la présentation client jeudi »</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10.5, color: 'var(--success)', fontWeight: 700, marginBottom: 4 }}>✓ FACTEURS DE SUCCÈS</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>Deadline claire · Format défini</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10.5, color: 'var(--danger)', fontWeight: 700, marginBottom: 4 }}>⚠ FACTEURS DE RISQUE</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>Verbe vague · Pas de nb slides</div>
+                    </div>
+                  </div>
+                </div>
+              </DemoFrame>
+
+              <P>
+                Si le score est bas, accepter la reformulation suggérée en un clic. Tu peux toujours créer la
+                tâche telle quelle si tu n'es pas d'accord — c'est ton outil, pas un examen.
+              </P>
+
+              <Callout kind="tip">
+                Plus tu utilises Task DNA, plus la <strong>calibration</strong> de tes estimations s'affine —
+                visible dans Analytics. À long terme, tu apprends à formuler tes tâches d'une façon qui te
+                fait gagner du temps mentalement.
+              </Callout>
+
               <H3 id="priorites-points">Priorités, deadlines, points</H3>
               <P>Le système de points est conçu pour récompenser le travail à forte valeur :</P>
               <div style={{
@@ -849,7 +918,7 @@ export default function Help() {
               {/* ─── PLANIFICATION ──────────────────────────── */}
               <DocSection id="planification" Icon={Calendar} eyebrow="03 · Time management"
                 title="Planification"
-                lead="Le calendrier de GetShift fusionne tes time blocks internes et tes événements Google Calendar. L'IA respecte tes meetings et te propose des créneaux libres." />
+                lead="Le calendrier de GetShift fusionne tes time blocks internes et tes événements Google Calendar. L'IA respecte tes meetings et te propose des créneaux libres — elle ne dicte jamais ta journée." />
 
               <H3 id="calendrier">Vue calendrier</H3>
               <P>
@@ -928,7 +997,7 @@ export default function Help() {
               {/* ─── IA ─────────────────────────────────────── */}
               <DocSection id="ia" Icon={Bot} eyebrow="05 · Le cœur du produit"
                 title="Assistant IA"
-                lead="Un agent IA avec des outils. Tu lui parles, il agit. Il peut créer/modifier des tâches, naviguer dans l'app, analyser ta semaine, planifier." />
+                lead="Un agent IA avec des outils. Tu lui parles, il agit. L'IA propose toujours, n'impose jamais — le contrôle final reste avec toi." />
 
               <H3 id="ia-comment">Comment lui parler</H3>
               <P>
@@ -954,13 +1023,14 @@ Tu veux que j'applique ces time blocks ?`} />
               <P>L'IA dispose des outils suivants — elle choisit lesquels utiliser selon ta demande :</P>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginTop: 12, marginBottom: 14 }}>
                 {[
-                  { label: 'create_task', desc: 'Crée une tâche complète' },
-                  { label: 'update_task', desc: 'Modifie titre / priorité / deadline' },
-                  { label: 'schedule_block', desc: 'Pose un time block' },
-                  { label: 'analyze_week', desc: 'Bilan rétrospectif' },
-                  { label: 'navigate', desc: 'T\'amène sur une page' },
-                  { label: 'team_query', desc: 'Données équipe (si team)' },
-                  { label: 'search_web', desc: 'Recherche externe ciblée' },
+                  { label: 'create_task',        desc: 'Crée une tâche complète' },
+                  { label: 'update_task',        desc: 'Modifie titre / priorité / deadline' },
+                  { label: 'analyser_task_dna',  desc: 'Évalue la viabilité d\'une tâche (Task DNA)' },
+                  { label: 'schedule_block',     desc: 'Pose un time block' },
+                  { label: 'analyze_week',       desc: 'Bilan rétrospectif' },
+                  { label: 'naviguer_vers',      desc: 'T\'amène sur une page' },
+                  { label: 'team_query',         desc: 'Données équipe (si team)' },
+                  { label: 'search_web',         desc: 'Recherche externe ciblée' },
                 ].map(t => (
                   <div key={t.label} style={{
                     padding: '10px 12px', borderRadius: 8,
@@ -1026,6 +1096,24 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
                 time blocks, ratio focus/admin, jour consécutif (streak). Pas une note morale — un signal pour
                 identifier tes jours-types et corriger les patterns qui ne marchent pas.
               </P>
+
+              <H3 id="calibration">Calibration Task DNA</H3>
+              <P>
+                À mesure que tu termines des tâches en notant leur temps réel, GetShift mesure ta capacité à
+                <strong> estimer correctement</strong>. C'est une compétence — qui s'améliore avec la pratique.
+              </P>
+              <P>
+                Tu vois trois choses dans la carte Task DNA Analytics :
+              </P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Calibration globale</strong> — % de tes tâches dont le temps réel est ≤ 1.2× l'estimation</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Tâches sous-estimées</strong> — celles où tu prends 2× plus de temps que prévu (typique : tâches créatives)</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Tâches sur-estimées</strong> — celles où tu vas plus vite que prévu (typique : tâches admin)</li>
+              </ul>
+              <Callout kind="tip">
+                Au bout de 30 jours d'usage régulier, ta calibration devrait dépasser 70%. C'est un gain concret :
+                tu peux planifier ta semaine avec confiance.
+              </Callout>
 
               <CTAButton to="/analytics" navigate={navigate}>Voir Analytics</CTAButton>
 
