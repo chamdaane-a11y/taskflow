@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import GetShiftMark from './GetShiftMark'
 import {
   LayoutDashboard, Bot, BarChart2, Calendar, Users, HelpCircle, Sparkles, Flag,
-  Layers, PanelLeftClose, PanelLeftOpen, ChevronUp, User, Settings, Star, LogOut
+  PanelLeftClose, PanelLeftOpen, ChevronUp, User, Settings, Star, LogOut
 } from 'lucide-react'
 
 export const SIDEBAR_W = 248
@@ -52,13 +53,7 @@ export function FloatingLogo({ sidebarOpen, isMobile, onClick, T }) {
         boxShadow: 'var(--shadow-sm)',
       }}
       title="Ouvrir la sidebar">
-      <div style={{
-        width: 26, height: 26, borderRadius: 7,
-        background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        <Layers size={14} color="var(--text-on-ember)" strokeWidth={2.5} />
-      </div>
+      <GetShiftMark size={26} showAccent={false} />
       {!isMobile && (
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>GetShift</span>
       )}
@@ -239,13 +234,7 @@ export default function AppSidebar({
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(20px,4vh,32px)', padding: '0 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <Layers size={16} color="var(--text-on-ember)" strokeWidth={2.5} />
-            </div>
+            <GetShiftMark size={32} />
             <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>GetShift</span>
           </div>
           {!isMobile && (

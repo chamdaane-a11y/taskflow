@@ -20,17 +20,22 @@ const API = 'https://getshift-backend.onrender.com'
 const GetShiftMark = ({ size = 40 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="gs-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="var(--ember-hover, #E07A3E)" />
-        <stop offset="100%" stopColor="var(--ember, #B8521C)" />
+      <linearGradient id="gs-mark-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#E07A3E" />
+        <stop offset="100%" stopColor="#B8521C" />
+      </linearGradient>
+      <linearGradient id="gs-mark-hl" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.16" />
+        <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
       </linearGradient>
     </defs>
-    <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#gs-grad)" />
+    <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#gs-mark-bg)" />
+    <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#gs-mark-hl)" />
     <path
-      d="M 22 22 L 38 22 Q 42 22 42 26 Q 42 30 38 30 L 26 30 Q 22 30 22 34 L 22 42 Q 22 46 26 46 L 38 46 Q 42 46 42 42"
-      stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none"
+      d="M 46 22 Q 46 14 38 14 L 26 14 Q 14 14 14 26 L 14 38 Q 14 50 26 50 L 38 50 Q 46 50 46 42 L 46 30 L 32 30"
+      stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none"
     />
-    <circle cx="42" cy="42" r="2.5" fill="white" />
+    <circle cx="48" cy="48" r="2.5" fill="#FFFFFF" />
   </svg>
 )
 

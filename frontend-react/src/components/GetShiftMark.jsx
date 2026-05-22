@@ -1,0 +1,33 @@
+export default function GetShiftMark({ size = 32, showAccent = true }) {
+  const gid = `gs-mark-${size}`
+  return (
+    <svg
+      width={size} height={size}
+      viewBox="0 0 64 64" fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ flexShrink: 0, display: 'block' }}
+    >
+      <defs>
+        <linearGradient id={`${gid}-bg`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#E07A3E" />
+          <stop offset="100%" stopColor="#B8521C" />
+        </linearGradient>
+        <linearGradient id={`${gid}-hl`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.16" />
+          <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="60" height="60" rx="14" fill={`url(#${gid}-bg)`} />
+      <rect x="2" y="2" width="60" height="60" rx="14" fill={`url(#${gid}-hl)`} />
+      <path
+        d="M 46 22 Q 46 14 38 14 L 26 14 Q 14 14 14 26 L 14 38 Q 14 50 26 50 L 38 50 Q 46 50 46 42 L 46 30 L 32 30"
+        stroke="#FFFFFF"
+        strokeWidth={size < 24 ? 6 : 5}
+        strokeLinecap="round" strokeLinejoin="round" fill="none"
+      />
+      {showAccent && size >= 24 && (
+        <circle cx="48" cy="48" r="2.5" fill="#FFFFFF" />
+      )}
+    </svg>
+  )
+}
