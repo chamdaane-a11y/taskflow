@@ -61,6 +61,7 @@ function QRCode({ value, size = 160 }) {
 function ModalePartage({ T, equipe, onFermer }) {
   const [copie, setCopie] = useState(false)
   const [onglet, setOnglet] = useState('lien')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const lien = `${window.location.origin}/taskflow/#/collaboration?code=${equipe.code_invitation}`
   const texteEnc = encodeURIComponent(`Rejoins mon équipe "${equipe.nom}" sur GetShift !`)
   const lienEnc = encodeURIComponent(lien)
@@ -133,7 +134,7 @@ function ModalePartage({ T, equipe, onFermer }) {
             {onglet === 'reseaux' && (
               <motion.div key="reseaux" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.65 }}>Partage directement sur tes réseaux sociaux.</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr', gap: 10 }}>
                   {reseaux.map(r => (
                     <motion.a key={r.nom}
                       href={r.url || undefined} target={r.url ? '_blank' : undefined} rel="noopener noreferrer"
@@ -572,6 +573,7 @@ function ColonneDroppable({ T, col, children, isOver }) {
 
 // ===== MODALE TÂCHE =====
 function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], onToggleLabel, onFermer, onSauvegarder }) {
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const [form, setForm] = useState({ titre: tache?.titre || '', description: tache?.description || '', priorite: tache?.priorite || 'moyenne', statut: tache?.statut || 'todo', assignee_id: tache?.assignee_id || '' })
   const [sousTaches, setSousTaches] = useState([])
   const [nouvelleST, setNouvelleST] = useState('')
@@ -622,7 +624,7 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
             placeholder="Titre *" value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })} autoFocus />
           <textarea style={{ padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 70, fontFamily: "var(--font-ui)", width: '100%' }}
             placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr', gap: 10 }}>
             <div>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>PRIORITÉ</label>
               <select style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer' }}
@@ -1515,6 +1517,7 @@ function MiniBar({ valeur, max, couleur, label, T }) {
 
 // ===== DRAWER ANALYTICS ÉQUIPE =====
 function DrawerAnalytiques({ T, equipe_id, onFermer }) {
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -1560,7 +1563,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
         ) : (
           <>
             {/* KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr 1fr' : '1fr 1fr 1fr', gap: 10 }}>
               {[
                 { label: 'Total', valeur: stats.total, couleur: 'var(--ember)' },
                 { label: 'Terminées', valeur: stats.par_statut?.termine || 0, couleur: '#4caf82' },
@@ -1803,6 +1806,7 @@ export default function Collaboration() {
   const { T } = useTheme()
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {

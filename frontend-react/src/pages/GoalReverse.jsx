@@ -62,7 +62,8 @@ export default function GoalReverse() {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [iterating, setIterating] = useState(false)
   const [iterationInput, setIterationInput] = useState('')
-  const isMobile = window.innerWidth <= 768
+  const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
 
   // Sidebar toggle persistant (clé globale partagée)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -331,7 +332,7 @@ export default function GoalReverse() {
           </div>
 
           {/* Deadline + Niveau */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 20 }}>
             {/* Deadline */}
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, display: 'block', marginBottom: 8 }}>DEADLINE FINALE</label>
@@ -392,7 +393,7 @@ export default function GoalReverse() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
 
               {/* Résumé */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 10, marginBottom: isMobile ? 18 : 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 10, marginBottom: isMobile ? 18 : 24 }}>
                 {[
                   { label: 'Semaines', val: result.duree_semaines, icon: Calendar, color: 'var(--ember)' },
                   { label: 'Jalons', val: result.jalons?.length, icon: Flag, color: 'var(--ember)' },

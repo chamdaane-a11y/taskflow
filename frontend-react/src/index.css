@@ -19,6 +19,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overscroll-behavior: none; /* PWA app-like: prevents page bounce / pull-to-refresh */
 }
 
 /* Chiffres tabulaires natifs pour les composants .mono / timers */
@@ -310,4 +311,31 @@ body {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb, rgba(128, 128, 128, 0.3)) transparent;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE — iOS & Android
+══════════════════════════════════════════════════════════════ */
+
+/* Prevent iOS auto-zoom on input focus (font-size < 16px triggers zoom) */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Prevent double-tap zoom on all interactive elements (iOS & Android)
+   touch-action: manipulation disables double-tap and pinch-to-zoom on element */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Prevent iOS long-press callout on buttons/links (photo save, copy link menu) */
+button, a {
+  -webkit-touch-callout: none;
+}
+
+/* Contain scroll bounce on nested scrollable areas (prevent parent scroll bleed) */
+.scroll-contain {
+  overscroll-behavior: contain;
 }

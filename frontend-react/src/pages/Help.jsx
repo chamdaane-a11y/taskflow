@@ -329,8 +329,10 @@ export default function Help() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", overflowX: 'hidden' }}>
 
       <style>{`
-        @media (max-width: 768px) {
+        @media (max-width: 1100px) {
           .help-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 768px) {
           .main-padding { padding: 16px !important; }
         }
       `}</style>
