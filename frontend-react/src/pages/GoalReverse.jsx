@@ -14,7 +14,7 @@ import {
   Wand2, BookOpen, Send, Lightbulb, X
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
-import BottomNavMobile from '../components/BottomNavMobile'
+import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 
@@ -195,7 +195,7 @@ export default function GoalReverse() {
   const niveauActif = NIVEAUX.find(n => n.id === niveau)
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", overflowX: 'hidden' }}>
 
       {/* Notification */}
       <AnimatePresence>
@@ -229,6 +229,7 @@ export default function GoalReverse() {
   flex: 1,
   padding: isMobile ? '16px' : '40px',
   paddingTop: isMobile ? '70px' : '40px',
+  paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : '40px',
   minWidth: 0,
   maxWidth: 900,
   margin: isMobile ? '0 auto' : `0 auto 0 ${sidebarOpen ? SIDEBAR_W : 0}px`

@@ -11,6 +11,9 @@ import {
 } from 'lucide-react'
 import { themes } from '../themes'
 import { useTheme } from '../useTheme'
+import { useMediaQuery } from '../useMediaQuery'
+import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import {
   niveaux as NIVEAUX_SOURCE, BADGES_CONFIG,
   BADGE_ICONS, TIER_STYLES, BADGE_CATEGORIES, getProchainBadge,
@@ -320,6 +323,14 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
 export default function Profile() {
   const navigate = useNavigate()
   const { theme, T } = useTheme()
+  const isMobile = useMediaQuery('(max-width: 768px)')
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
+  })
+  const toggleSidebar = () => {
+    const next = !sidebarOpen; setSidebarOpen(next)
+    try { localStorage.setItem('sidebar_open', String(next)) } catch {}
+  }
   const [user, setUser]             = useState(null)
   const [badgesData, setBadgesData] = useState({ nb_obtenus: 0, nb_total: 28, streak_freeze_disponible: true })
   const [timeline, setTimeline]     = useState([])
@@ -556,8 +567,10 @@ export default function Profile() {
   const secuPct   = Math.round(secuScore / secuMax * 100)
   const secuColor = secuPct >= 100 ? 'var(--success)' : secuPct >= 60 ? '#facc15' : '#ef4444'
 
+  const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
+
   return (
-    <div style={{ minHeight: '100vh', background: bg, fontFamily: "var(--font-ui)", color: text, position: 'relative', overflowX: 'hidden' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: bg, fontFamily: "var(--font-ui)", color: text, overflowX: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .pf-input { width: 100%; padding: 13px 16px; border-radius: 10px; font-size: 15px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
@@ -567,6 +580,25 @@ export default function Profile() {
           .pf-tabs { overflow-x: auto; }
         }
       `}</style>
+
+      <AppSidebar
+        T={T} user={user}
+        niveau={user?.niveau || 1} points={user?.points || 0}
+        streak={user?.streak || 0}
+        niveauActuel={niveauInfo} pctNiveau={progression}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        isMobile={isMobile}
+      />
+      <SidebarToggle T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
+      <FloatingLogo T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
+
+      <motion.div
+        animate={{ marginLeft: mainMargin }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ flex: 1, minWidth: 0, position: 'relative', paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT : 0 }}
+      >
 
       {/* Orbes fond */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
@@ -1146,6 +1178,10 @@ export default function Profile() {
         </motion.div>
 
       </div>
+
+      </motion.div>
+
+      {isMobile && <BottomNavMobile />}
     </div>
   )
 }

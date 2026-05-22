@@ -17,7 +17,7 @@ import {
 } from 'chart.js'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 import { useMediaQuery } from '../useMediaQuery'
-import BottomNavMobile from '../components/BottomNavMobile'
+import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import {
@@ -1248,7 +1248,7 @@ export default function TomorrowBuilder() {
       <motion.div
         animate={{ marginLeft: mainMargin }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
+        style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT : 0, overflowX: 'hidden' }}>
 
       {/* HEADER */}
       <div style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--border-subtle)', padding: isMobile ? '14px 16px' : '16px 32px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 100 }}>

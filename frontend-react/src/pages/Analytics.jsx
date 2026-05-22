@@ -1240,6 +1240,7 @@ export default function Analytics() {
 
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const user = JSON.parse(localStorage.getItem('user'))
   const { T } = useTheme()
 
@@ -1554,7 +1555,7 @@ export default function Analytics() {
       <motion.main
         animate={{ marginLeft: mainMargin }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, padding: 'clamp(20px,4vw,36px)', paddingTop: isMobile ? 56 : 'clamp(20px,4vw,36px)', paddingBottom: isMobile ? 90 : 'clamp(20px,4vw,36px)', overflowX: 'hidden' }}>
+        style={{ flex: 1, padding: 'clamp(20px,4vw,36px)', paddingTop: isMobile ? 56 : 'clamp(20px,4vw,36px)', paddingBottom: isMobile ? 90 : 'clamp(20px,4vw,36px)', overflowX: 'hidden', maxWidth: 1440 }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
@@ -1629,7 +1630,7 @@ export default function Analytics() {
               <TrajectoryCard stats={stats} T={T} loading={loading} isMobile={isMobile} />
 
               {/* KPI Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : 4}, 1fr)`, gap: 14, marginBottom: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : isTablet ? 3 : 4}, 1fr)`, gap: 14, marginBottom: 24 }}>
                 <KPICard icon={Target}     label="Taux de complétion"    value={loading ? '—' : `${stats?.taux || 0}%`}           sub={`${data?.terminees || 0}/${data?.total || 0} tâches`} color="var(--ember)"  delta={stats?.wow}   loading={loading} />
                 <KPICard icon={Zap}        label="Vélocité"               value={loading ? '—' : `${stats?.velocity || 0}/j`}       sub="Tâches/jour actif"                                    color="#4caf82"   delta={undefined}    loading={loading} />
                 <KPICard icon={Award}      label="Score de focus"          value={loading ? '—' : `${stats?.focusScore || 0}/100`}  sub="Priorité haute vs vanité"                             color="#e08a3c"   delta={undefined}    loading={loading} />
@@ -1841,7 +1842,7 @@ export default function Analytics() {
                 )}
               </ChartCard>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 14, marginTop: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: 14, marginTop: 16 }}>
                 {[
                   { label: 'Total période', value: stats?.total || 0, icon: CheckSquare, color: 'var(--ember)' },
                   { label: 'Meilleur jour', value: stats?.maxVal || 0, icon: Star,        color: '#e08a3c' },

@@ -13,7 +13,7 @@ import {
   Users, Compass, UserPlus,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
-import BottomNavMobile from '../components/BottomNavMobile'
+import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 
@@ -895,7 +895,7 @@ export default function IAChat() {
 
       {/* ── MAIN ────────────────────────────────────────────────────── */}
       <main
-        style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0), transition: 'margin-left 0.3s ease', flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', minWidth: 0, position: 'relative', zIndex: 1 }}
+        style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0), transition: 'margin-left 0.3s ease', flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', minWidth: 0, position: 'relative', zIndex: 1, paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT : 0 }}
         onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; if (!isDragging) setIsDragging(true) }}
         onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
         onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setIsDragging(false) }}

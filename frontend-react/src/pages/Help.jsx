@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { themes } from '../themes'
 import { useMediaQuery } from '../useMediaQuery'
-import BottomNavMobile from '../components/BottomNavMobile'
+import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import {
   Layers, Menu, Settings, Award, Palette, LogOut,
@@ -326,7 +326,7 @@ export default function Help() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", overflowX: 'hidden' }}>
 
       <style>{`
         @media (max-width: 768px) {
@@ -361,7 +361,7 @@ export default function Help() {
       <FloatingLogo T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
 
       {/* Main */}
-      <main className="main-padding" style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0), transition: 'margin-left 0.3s ease', flex: 1, padding: 'clamp(16px, 4vw, 40px)', minWidth: 0, paddingTop: isMobile ? 72 : 'clamp(16px, 4vw, 40px)' }}>
+      <main className="main-padding" style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0), transition: 'margin-left 0.3s ease', flex: 1, padding: 'clamp(16px, 4vw, 40px)', minWidth: 0, paddingTop: isMobile ? 72 : 'clamp(16px, 4vw, 40px)', paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : undefined }}>
 
         {/* Header */}
         <motion.div style={{ marginBottom: 40 }} initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>

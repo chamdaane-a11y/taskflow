@@ -7,7 +7,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
-import BottomNavMobile from '../components/BottomNavMobile'
+import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import {
   Users, Plus, Copy, Check, X, Send, MessageCircle,
   LayoutDashboard, Bot, BarChart2, Calendar, HelpCircle, Layers,
@@ -2364,7 +2364,7 @@ export default function Collaboration() {
 
       {/* MAIN */}
       <motion.main animate={{ marginLeft: mainMargin }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT : 0 }}>
 
         {/* HEADER */}
         <div style={{ padding: '13px clamp(14px,3vw,24px)', paddingLeft: isMobile ? 62 : undefined, borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>

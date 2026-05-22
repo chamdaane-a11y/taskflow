@@ -170,12 +170,12 @@ const SousTaches = memo(function SousTaches({ tache, T }) {
       )}
       {sousTaches.map(st => (
         <div key={st.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: `1px solid var(--border-default)` }}>
-          <motion.button style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${st.terminee ? '#4caf82' : 'var(--border-subtle)'}`, background: st.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onClick={() => toggle(st)} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}>
-            {st.terminee && <CheckSquare size={8} color="white" strokeWidth={3} />}
+          <motion.button style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${st.terminee ? '#4caf82' : 'var(--border-subtle)'}`, background: st.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => toggle(st)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+            {st.terminee && <CheckSquare size={10} color="white" strokeWidth={3} />}
           </motion.button>
           <span style={{ flex: 1, fontSize: 12, color: st.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: st.terminee ? 'line-through' : 'none' }}>{st.titre}</span>
-          <motion.button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 2, display: 'flex' }} onClick={() => supprimer(st.id)} whileHover={{ color: '#e05c5c' }}>
+          <motion.button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 8, display: 'flex' }} onClick={() => supprimer(st.id)} whileHover={{ color: '#e05c5c' }}>
             <Trash2 size={11} strokeWidth={1.8} />
           </motion.button>
         </div>
@@ -535,10 +535,10 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
             <IconLock size={10} color="#e05c5c" />
           </div>
         ) : (
-          <motion.button style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${tache.terminee ? '#4caf82' : 'var(--border-subtle)'}`, background: tache.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          <motion.button style={{ width: 36, height: 36, borderRadius: '50%', border: `2px solid ${tache.terminee ? '#4caf82' : 'var(--border-subtle)'}`, background: tache.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={() => d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)}
-            whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}>
-            {tache.terminee && <CheckSquare size={11} color="white" strokeWidth={3} />}
+            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+            {tache.terminee && <CheckSquare size={14} color="white" strokeWidth={3} />}
           </motion.button>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -2498,7 +2498,7 @@ export default function Dashboard() {
           MAIN
       ══════════════════════════════════════════════════════════════ */}
       <motion.main animate={{ marginLeft: mainMarginL }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%' }}>
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: 1440 }}>
 
         {/* ── BARRE D'ACTIONS MOBILE (toujours visible) ── */}
         {isMobile && (

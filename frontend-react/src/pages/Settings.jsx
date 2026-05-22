@@ -9,7 +9,7 @@ import {
   Settings as SettingsIcon, Flame,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
-import BottomNavMobile from '../components/BottomNavMobile'
+import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import OutilsIntegrations from './OutilsIntegrations'
 import {
@@ -572,7 +572,7 @@ export default function Settings() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", overflowX: 'hidden' }}>
 
       {/* Notification toast */}
       <AnimatePresence>
@@ -627,7 +627,7 @@ export default function Settings() {
         )}
 
         {/* ── CONTENU PRINCIPAL ── */}
-        <main style={{ flex: 1, padding: isMobile ? '16px' : '40px 48px', maxWidth: 720, minWidth: 0 }}>
+        <main style={{ flex: 1, padding: isMobile ? '16px' : '40px 48px', maxWidth: 720, minWidth: 0, paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : undefined }}>
 
           {/* Header mobile */}
           {isMobile && (
@@ -661,8 +661,7 @@ export default function Settings() {
           </AnimatePresence>
         </main>
       </div>
-      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
-      {isMobile && <BottomNavMobile T={T} />}
+      {isMobile && <BottomNavMobile />}
     </div>
   )
 }
