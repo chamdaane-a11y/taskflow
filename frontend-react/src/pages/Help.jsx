@@ -7,10 +7,11 @@ import GetShiftMark from '../components/GetShiftMark'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
+import { useSidebarUser } from '../components/useSidebarUser'
 import {
   Search, ArrowUpRight, Menu as MenuIcon, X,
   Rocket, CheckSquare, Calendar, Timer, Bot, Sunrise,
-  BarChart2, Award, Plug, Settings as SettingsIcon, Command,
+  BarChart2, Award, Plug, Settings as SettingsIcon, Lightbulb,
   HelpCircle, BookOpen, Sparkles, Bell, Mail,
   ChevronDown, Check, AlertTriangle, Info,
 } from 'lucide-react'
@@ -103,9 +104,11 @@ const SECTIONS = [
     ],
   },
   {
-    id: 'raccourcis', label: 'Raccourcis', Icon: Command,
+    id: 'bonnes-pratiques', label: 'Bonnes pratiques', Icon: Lightbulb,
     sub: [
-      { id: 'shortcuts-app', label: 'Raccourcis app' },
+      { id: 'bp-deep-work',    label: 'Maximiser le deep work' },
+      { id: 'bp-ia-prompts',   label: 'Tirer le max de l\'IA' },
+      { id: 'bp-progression',  label: 'Construire sa progression' },
     ],
   },
   {
@@ -512,6 +515,7 @@ export default function Help() {
   const navigate = useNavigate()
   const { T } = useTheme()
   const isMobile = useMediaQuery('(max-width: 900px)')
+  const { user, niveau, points, streak, niveauActuel, pctNiveau } = useSidebarUser()
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
   const [tocOpen, setTocOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -557,7 +561,12 @@ export default function Help() {
       fontFamily: 'var(--font-ui)',
       paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 20 : 0,
     }}>
-      <AppSidebar T={T} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} />
+      <AppSidebar
+        T={T} user={user}
+        niveau={niveau} points={points} streak={streak}
+        niveauActuel={niveauActuel} pctNiveau={pctNiveau}
+        sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
+        toggleSidebar={() => setSidebarOpen(o => !o)} isMobile={isMobile} />
       {!isMobile && <SidebarToggle sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={() => setSidebarOpen(!sidebarOpen)} T={T} />}
       {!isMobile && <FloatingLogo sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={() => setSidebarOpen(true)} T={T} />}
       {isMobile && <MobileBackButton T={T} />}
@@ -796,7 +805,7 @@ export default function Help() {
                 <li>Dashboard → bouton « + » dans le HUD du jour</li>
                 <li>Kanban → bouton « + » dans une colonne</li>
                 <li>IA Chat → <Code>« Crée une tâche pour finir le rapport vendredi, priorité haute »</Code></li>
-                <li>Raccourci clavier : <Kbd>N</Kbd> (depuis le Dashboard)</li>
+                <li>Bouton « + » flottant sur mobile (en bas à droite)</li>
               </ul>
 
               <DemoFrame caption="exemple — liste de tâches">
@@ -824,7 +833,7 @@ export default function Help() {
               <H3 id="kanban">Vue Kanban</H3>
               <P>
                 Trois colonnes par défaut — <strong>À faire · En cours · Terminé</strong>. Glisse-dépose entre colonnes,
-                ou utilise <Kbd>1</Kbd> <Kbd>2</Kbd> <Kbd>3</Kbd> sur une carte sélectionnée.
+                ou clique sur le bouton de statut de chaque carte pour la déplacer.
               </P>
               <P>
                 Filtres disponibles : par priorité, par tag, par projet, par deadline (cette semaine /
@@ -1139,45 +1148,50 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               </P>
               <CTAButton to="/settings" navigate={navigate}>Ouvrir Réglages</CTAButton>
 
-              {/* ─── RACCOURCIS ─────────────────────────────── */}
-              <DocSection id="raccourcis" Icon={Command} eyebrow="11 · Productivité"
-                title="Raccourcis clavier"
-                lead="GetShift est conçu pour être piloté au clavier. Ces raccourcis fonctionnent depuis le Dashboard, sauf indication contraire." />
+              {/* ─── BONNES PRATIQUES ───────────────────────── */}
+              <DocSection id="bonnes-pratiques" Icon={Lightbulb} eyebrow="11 · Tirer le max"
+                title="Bonnes pratiques"
+                lead="Quelques principes pour utiliser GetShift comme un outil de productivité, pas comme une todo-list de plus." />
 
-              <H3 id="shortcuts-app">Raccourcis app</H3>
-              <div style={{
-                marginTop: 14, marginBottom: 14,
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 10, overflow: 'hidden',
-              }}>
-                {[
-                  { keys: ['N'], label: 'Nouvelle tâche' },
-                  { keys: ['K'], label: 'Focus rapide (sélectionner depuis liste)' },
-                  { keys: ['/'], label: 'Recherche globale' },
-                  { keys: ['G', 'D'], label: 'Aller au Dashboard' },
-                  { keys: ['G', 'P'], label: 'Aller à la Planification' },
-                  { keys: ['G', 'I'], label: 'Aller à l\'IA' },
-                  { keys: ['G', 'A'], label: 'Aller aux Analytics' },
-                  { keys: ['1'], label: 'Marquer tâche sélectionnée comme « À faire »' },
-                  { keys: ['2'], label: 'Marquer comme « En cours »' },
-                  { keys: ['3'], label: 'Marquer comme « Terminé »' },
-                  { keys: ['?'], label: 'Afficher tous les raccourcis' },
-                  { keys: ['Esc'], label: 'Fermer modal / annuler' },
-                ].map((s, i, arr) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '11px 14px',
-                    borderBottom: i < arr.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                  }}>
-                    <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>{s.label}</span>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {s.keys.map((k, j) => (
-                        <Kbd key={j}>{k}</Kbd>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <H3 id="bp-deep-work">Maximiser le deep work</H3>
+              <P>
+                Time-bloque tes tâches haute priorité <strong>le matin</strong> (ou ton créneau créatif, paramétré dans
+                ton profil). Les tâches admin courtes (réponse email, mise à jour CRM, etc.) en fin de journée
+                quand la charge cognitive est plus faible.
+              </P>
+              <P>
+                Ne fais pas plus de <strong>6h de focus par jour</strong>. Au-delà, la qualité chute. L'IA en
+                planification auto respecte cette limite — fais-en autant manuellement.
+              </P>
+              <Callout kind="tip">
+                Démarre un Pomodoro dès que tu ouvres une tâche focus. La friction réduite (un clic) fait
+                toute la différence entre démarrer et procrastiner.
+              </Callout>
+
+              <H3 id="bp-ia-prompts">Tirer le max de l'IA</H3>
+              <P>L'IA est bonne quand tu lui donnes du contexte. Quelques principes :</P>
+              <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Sois concret</strong> — « planifie ma semaine » est moins efficace que « planifie ma semaine en gardant lundi matin pour le rapport Q4 »</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Donne le pourquoi</strong> — « crée 3 tâches préparation entretien » devient meilleur avec « pour un poste de PM dans une scale-up SaaS »</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Demande une analyse avant d'agir</strong> — « quelles tâches je dois absolument finir cette semaine ? » avant « planifie-moi ces tâches »</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Itère</strong> — si la première proposition ne convient pas, dis pourquoi : « refais en mettant l'admin en fin de semaine »</li>
+              </ul>
+
+              <H3 id="bp-progression">Construire sa progression</H3>
+              <P>
+                Les <strong>streaks comptent plus que les points</strong>. Une tâche par jour pendant 30 jours
+                te fera bien plus progresser que 30 tâches en un week-end suivi de 4 jours d'inactivité.
+              </P>
+              <P>
+                Le <strong>Streak Freeze</strong> n'est pas une triche — c'est un filet de sécurité. Si tu
+                cumules une mauvaise journée + un jour off légitime (maladie, vacances), il préserve ta
+                régularité psychologique. Utilise-le sans culpabilité.
+              </P>
+              <Callout kind="tip">
+                Une fois par semaine, ouvre <strong>Analytics</strong> pour 5 minutes. Pas pour les chiffres en soi
+                — pour identifier un pattern : quel jour tu es le plus productif, quelle catégorie de tâches tu
+                procrastines le plus, etc. Ces insights orientent la semaine suivante.
+              </Callout>
 
               {/* ─── FAQ ────────────────────────────────────── */}
               <DocSection id="faq" Icon={HelpCircle} eyebrow="12 · Questions fréquentes"

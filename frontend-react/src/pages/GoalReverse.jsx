@@ -17,6 +17,7 @@ import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import { useSidebarUser } from '../components/useSidebarUser'
 
 registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
@@ -44,7 +45,7 @@ const QUICK_ITERATIONS = [
 
 export default function GoalReverse() {
   const navigate = useNavigate()
-  const user = (() => { try { return JSON.parse(localStorage.getItem('user')) } catch { return null } })()
+  const { user, niveau: userNiveau, points: userPoints, streak: userStreak, niveauActuel: userNiveauActuel, pctNiveau: userPctNiveau } = useSidebarUser()
   const themeKey = localStorage.getItem('theme') || 'light'
   const T = themes[themeKey]
 
@@ -215,6 +216,8 @@ export default function GoalReverse() {
       {/* ── SIDEBAR (shared component) ── */}
       <AppSidebar
         T={T} user={user}
+        niveau={userNiveau} points={userPoints} streak={userStreak}
+        niveauActuel={userNiveauActuel} pctNiveau={userPctNiveau}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         toggleSidebar={toggleSidebar}

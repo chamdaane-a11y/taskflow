@@ -20,6 +20,7 @@ import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import { useSidebarUser } from '../components/useSidebarUser'
 import {
   DndContext, closestCenter, DragOverlay,
   PointerSensor, TouchSensor, useSensor, useSensors
@@ -823,7 +824,7 @@ function EnergySliderCheckin({ value, onChange, T }) {
 export default function TomorrowBuilder() {
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
-  const user = JSON.parse(localStorage.getItem('user'))
+  const { user, niveau, points, streak, niveauActuel, pctNiveau } = useSidebarUser()
   const theme = localStorage.getItem('theme') || 'light'
   const T = themes[theme]
 
@@ -1241,6 +1242,8 @@ export default function TomorrowBuilder() {
     <>
       <AppSidebar
         T={T} user={user}
+        niveau={niveau} points={points} streak={streak}
+        niveauActuel={niveauActuel} pctNiveau={pctNiveau}
         sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
         toggleSidebar={toggleSidebar} isMobile={isMobile} />
       <SidebarToggle T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
