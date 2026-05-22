@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import { themes } from '../themes'
+import { applyTheme } from '../useTheme'
 import {
   ArrowLeft, Award, Palette, ExternalLink, LogOut, User,
   Bell, Shield, ChevronRight, Check, Star, Lock,
@@ -107,7 +108,7 @@ export default function Settings() {
       setNiveau(res.data.niveau || 1)
       const t = res.data.theme || 'light'
       setTheme(t)
-      localStorage.setItem('theme', t)
+      applyTheme(t)
     } catch {}
   }
 
@@ -128,7 +129,7 @@ export default function Settings() {
 
   const changerTheme = async (newTheme) => {
     setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
+    applyTheme(newTheme)
     try { await axios.put(`${API}/users/${user.id}/theme`, { theme: newTheme }) } catch {}
     afficherNotification('Thème mis à jour')
   }

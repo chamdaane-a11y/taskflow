@@ -1,30 +1,40 @@
 import { useState, useEffect } from 'react'
 import { themes } from './themes'
 
-/**
- * useTheme — retourne le thème actif et synchronise data-theme sur <html>
- * pour que les CSS tokens (src/theme/tokens.css) soient cohérents avec
- * le thème JS consommé par les composants.
- *
- * Deux thèmes uniquement : "dark" (Graphite) et "light" (Parchemin).
- */
 const themeToDataAttr = (themeKey) => (themeKey === 'light' ? 'parchemin' : 'graphite')
 
+// Helper exporté — tous les endroits qui changent le thème l'utilisent
+// pour que useTheme() se mette à jour dans tous les composants montés.
+export function applyTheme(t) {
+  const safe = (t === 'light' || t === 'dark') ? t : 'light'
+  try { localStorage.setItem('theme', safe) } catch {}
+  document.documentElement.setAttribute('data-theme', themeToDataAttr(safe))
+  document.documentElement.style.colorScheme = safe === 'light' ? 'light' : 'dark'
+  window.dispatchEvent(new CustomEvent('gs:theme-change', { detail: safe }))
+}
+
 export function useTheme() {
-  const [theme] = useState(() => {
+  const [theme, setTheme] = useState(() => {
     const stored = localStorage.getItem('theme')
     if (stored === 'light' || stored === 'dark') return stored
-    // Migration douce : tout ancien thème supprimé (ocean/forest/sunset) → parchemin
+    // Migration douce : tout ancien thème → parchemin
     if (stored && stored !== 'light') {
-      try { localStorage.setItem('theme', 'light') } catch { /* noop */ }
+      try { localStorage.setItem('theme', 'light') } catch {}
     }
     return 'light'
   })
 
+  // Réagit aux changements de thème déclenchés depuis n'importe quel composant
   useEffect(() => {
-    const root = document.documentElement
-    root.setAttribute('data-theme', themeToDataAttr(theme))
-    root.style.colorScheme = theme === 'light' ? 'light' : 'dark'
+    const handler = (e) => setTheme(e.detail)
+    window.addEventListener('gs:theme-change', handler)
+    return () => window.removeEventListener('gs:theme-change', handler)
+  }, [])
+
+  // Applique data-theme sur <html> dès le montage et à chaque changement
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', themeToDataAttr(theme))
+    document.documentElement.style.colorScheme = theme === 'light' ? 'light' : 'dark'
   }, [theme])
 
   const T = themes[theme] || themes['light']

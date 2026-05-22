@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import confetti from 'canvas-confetti'
 import { themes } from '../themes'
+import { applyTheme } from '../useTheme'
 import {
   sauvegarderTachesLocalement, lireTachesLocalement,
   sauvegarderProfilLocalement, lireProfilLocalement,
@@ -288,7 +289,7 @@ export function useDashboard() {
       setNiveau(local.niveau || 1)
       const lt = local.theme || 'light'
       setTheme(lt)
-      localStorage.setItem('theme', lt)
+      applyTheme(lt)
     }
     try {
       const res = await api.get(`/users/${user.id}`)
@@ -296,7 +297,7 @@ export function useDashboard() {
       setNiveau(res.data.niveau || 1)
       const t = res.data.theme || 'light'
       setTheme(t)
-      localStorage.setItem('theme', t)
+      applyTheme(t)
       await sauvegarderProfilLocalement(res.data)
     } catch {
       // déjà géré par le fallback local ci-dessus
@@ -364,7 +365,7 @@ export function useDashboard() {
 
   const changerTheme = useCallback(async (t) => {
     setTheme(t); setShowSettings(false)
-    localStorage.setItem('theme', t)
+    applyTheme(t)
     await api.put(`/users/${user.id}/theme`, { theme: t })
   }, [user?.id])
 
