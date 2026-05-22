@@ -17,27 +17,28 @@ const API = 'https://getshift-backend.onrender.com'
    BRAND LOGOS — SVG inline officiels
    ═══════════════════════════════════════════════════════════════════ */
 
-const GetShiftMark = ({ size = 40 }) => (
-  <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="gs-mark-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#E07A3E" />
-        <stop offset="100%" stopColor="#B8521C" />
-      </linearGradient>
-      <linearGradient id="gs-mark-hl" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.16" />
-        <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
-      </linearGradient>
-    </defs>
-    <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#gs-mark-bg)" />
-    <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#gs-mark-hl)" />
-    <path
-      d="M 46 22 Q 46 14 38 14 L 26 14 Q 14 14 14 26 L 14 38 Q 14 50 26 50 L 38 50 Q 46 50 46 42 L 46 30 L 32 30"
-      stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none"
-    />
-    <circle cx="48" cy="48" r="2.5" fill="#FFFFFF" />
-  </svg>
-)
+const GetShiftMark = ({ size = 40 }) => {
+  const gid = `gs-onb-${size}`
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`${gid}-bg`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#E07A3E" />
+          <stop offset="100%" stopColor="#B8521C" />
+        </linearGradient>
+        <linearGradient id={`${gid}-hl`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.16" />
+          <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="60" height="60" rx="14" fill={`url(#${gid}-bg)`} />
+      <rect x="2" y="2" width="60" height="60" rx="14" fill={`url(#${gid}-hl)`} />
+      <rect x="14" y="26" width="24" height="24" rx="5"
+        fill="none" stroke="#FFFFFF" strokeWidth="3" strokeOpacity="0.6" />
+      <rect x="26" y="14" width="24" height="24" rx="5" fill="#FFFFFF" />
+    </svg>
+  )
+}
 
 const GoogleCalendarLogo = ({ size = 28 }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
