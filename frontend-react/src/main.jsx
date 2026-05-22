@@ -20,6 +20,14 @@ axios.interceptors.request.use(config => {
   return config
 })
 
+// Enregistrement SW dès le démarrage — toutes les pages bénéficient du cache offline
+// et des push notifications, pas seulement celles qui chargent useDashboard.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/taskflow/sw.js').catch(() => {})
+  })
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
