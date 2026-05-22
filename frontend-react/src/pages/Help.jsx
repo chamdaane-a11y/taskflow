@@ -27,6 +27,7 @@ const SECTIONS = [
       { id: 'qu-est-ce-que-getshift', label: 'Qu\'est-ce que GetShift' },
       { id: 'premiers-pas',            label: 'Premiers pas' },
       { id: 'installer-pwa',           label: 'Installer comme app (PWA)' },
+      { id: 'pwa-avantages',           label: 'Pourquoi installer la PWA' },
     ],
   },
   {
@@ -782,28 +783,79 @@ export default function Help() {
               <CTAButton to="/dashboard" navigate={navigate}>Aller au Dashboard</CTAButton>
 
               <H3 id="installer-pwa">Installer comme app (PWA)</H3>
-              <P>GetShift est une Progressive Web App. Tu peux l'installer sur Mac, Windows, iOS, Android — sans passer par un store.</P>
-              <DemoFrame caption="install — desktop & mobile">
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>DESKTOP</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                      Chrome / Edge : icône <Code>⊕</Code> à droite de l'URL → « Installer GetShift »<br /><br />
-                      Safari : Fichier → Ajouter au Dock
-                    </div>
+              <P>
+                GetShift est une <strong>Progressive Web App</strong> — la même app que tu utilises dans le navigateur peut s'installer comme une vraie application native sur <strong>iPhone, iPad, Android, Mac, Windows et Linux</strong>. Sans passer par l'App Store ni le Play Store, sans téléchargement, en 10 secondes.
+              </P>
+              <P>
+                Une fois installée, elle apparaît sur ton écran d'accueil ou ton dock comme n'importe quelle app, s'ouvre en plein écran (sans la barre du navigateur), reçoit des notifications push, et fonctionne hors ligne pour les données déjà consultées.
+              </P>
+
+              <DemoFrame caption="ios safari — installer en 3 étapes">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 20 }}>🍎</span>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>MOBILE</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                      iOS Safari : Partager → Ajouter à l'écran d'accueil<br /><br />
-                      Android Chrome : menu → Ajouter à l'écran d'accueil
-                    </div>
-                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>iPhone / iPad — Safari</div>
+                </div>
+                <ol style={{ paddingLeft: 22, margin: 0, color: 'var(--text-secondary)', fontSize: 13.5, lineHeight: 1.85 }}>
+                  <li>Ouvre GetShift dans <strong>Safari</strong> (pas Chrome ni Firefox — sur iOS, seul Safari sait installer une PWA).</li>
+                  <li>Appuie sur l'icône <Code>⎙ Partager</Code> en bas de l'écran (carré avec flèche vers le haut).</li>
+                  <li>Fais défiler le menu et touche <strong>« Sur l'écran d'accueil »</strong>.</li>
+                  <li>Ajuste le nom si tu veux, puis touche <strong>« Ajouter »</strong> en haut à droite.</li>
+                </ol>
+                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                  L'icône GetShift apparaît sur ton écran d'accueil. Touche-la pour ouvrir l'app en plein écran, sans barre Safari.
                 </div>
               </DemoFrame>
+
+              <DemoFrame caption="android — installer en 1 clic">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 20 }}>🤖</span>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Android — Chrome / Edge / Samsung Internet</div>
+                </div>
+                <ol style={{ paddingLeft: 22, margin: 0, color: 'var(--text-secondary)', fontSize: 13.5, lineHeight: 1.85 }}>
+                  <li>Ouvre GetShift dans Chrome (ou Edge, ou Samsung Internet).</li>
+                  <li>Une bannière <strong>« Installer l'application »</strong> apparaît en bas. Touche-la et confirme.</li>
+                  <li>Ou bien : menu <Code>⋮</Code> en haut à droite → <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
+                </ol>
+                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                  GetShift s'installe comme une vraie app : tiroir d'applications, raccourci écran d'accueil, notifications push.
+                </div>
+              </DemoFrame>
+
+              <DemoFrame caption="desktop — mac, windows, linux">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 20 }}>💻</span>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Ordinateur — Chrome, Edge, Safari</div>
+                </div>
+                <ul style={{ paddingLeft: 22, margin: 0, color: 'var(--text-secondary)', fontSize: 13.5, lineHeight: 1.85 }}>
+                  <li><strong>Chrome / Edge :</strong> icône <Code>⊕</Code> ou <Code>⊞</Code> à droite de la barre d'adresse → <strong>« Installer GetShift »</strong>.</li>
+                  <li><strong>Safari (macOS Sonoma+) :</strong> menu <strong>Fichier</strong> → <strong>« Ajouter au Dock »</strong>.</li>
+                  <li><strong>Firefox :</strong> pas de support natif. Reste en navigateur — fonctionne aussi très bien.</li>
+                </ul>
+                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                  L'app s'ouvre dans sa propre fenêtre, avec son icône dans la barre des tâches / le dock.
+                </div>
+              </DemoFrame>
+
               <Callout kind="tip">
-                Une fois installée, GetShift fonctionne hors ligne pour les données déjà chargées, affiche un badge de notification sur l'icône, et bloque la mise en veille de l'écran pendant les sessions Pomodoro.
+                Tu as déjà un raccourci dans <Code>Réglages → Notifications</Code> qui te propose l'installation en un bouton si ton navigateur le permet. Sur iOS, on t'affiche les 3 étapes inline puisque Safari ne donne pas d'API d'installation.
               </Callout>
+
+              <H3 id="pwa-avantages">Pourquoi installer la PWA ?</H3>
+              <ul style={{ paddingLeft: 22, marginBottom: 18, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.75 }}>
+                <li><strong>Plein écran natif</strong> — fini la barre d'adresse, les onglets, les boutons retour du navigateur. L'app prend toute la place comme une vraie app iOS/Android.</li>
+                <li><strong>Notifications push</strong> — rappels de deadline, Tomorrow Builder du soir, conflits Calendar : tu reçois les notifs même quand le navigateur est fermé.</li>
+                <li><strong>Wake Lock Pomodoro</strong> — pendant une session focus, l'écran ne se met pas en veille. Tu vois le timer en permanence.</li>
+                <li><strong>Hors ligne</strong> — l'interface et les dernières données chargées restent accessibles même sans connexion (lecture seule).</li>
+                <li><strong>Démarrage instantané</strong> — cache local : l'app s'ouvre en &lt; 1s, même sur 3G.</li>
+                <li><strong>Badge sur l'icône</strong> — sur certains OS, l'icône affiche un compteur de notifs non lues.</li>
+                <li><strong>Toujours à jour</strong> — pas de mise à jour manuelle, l'app se rafraîchit toute seule en arrière-plan.</li>
+              </ul>
 
               {/* ─── TÂCHES ─────────────────────────────────── */}
               <DocSection id="taches" Icon={CheckSquare} eyebrow="02 · Cœur du produit"

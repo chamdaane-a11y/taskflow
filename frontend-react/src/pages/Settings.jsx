@@ -58,11 +58,22 @@ export default function Settings() {
 
   // ── 2FA TOTP ──────────────────────────────────────────────────────
   const [twoFaEnabled, setTwoFaEnabled] = useState(false)
-  const [twoFaStep, setTwoFaStep] = useState(null) // null | 'setup' | 'verify' | 'disable'
+  // null | 'setup-password' | 'setup-verify' | 'disable'
+  const [twoFaStep, setTwoFaStep] = useState(null)
   const [twoFaSecret, setTwoFaSecret] = useState('')
   const [twoFaQr, setTwoFaQr] = useState('')
   const [twoFaCode, setTwoFaCode] = useState('')
+  const [twoFaPassword, setTwoFaPassword] = useState('')
   const [twoFaLoading, setTwoFaLoading] = useState(false)
+
+  // Nettoie les secrets en mémoire dès que le wizard se ferme
+  const closeTwoFaWizard = () => {
+    setTwoFaStep(null)
+    setTwoFaSecret('')
+    setTwoFaQr('')
+    setTwoFaCode('')
+    setTwoFaPassword('')
+  }
   const [slackWebhook, setSlackWebhook] = useState('')
   const [slackSaving, setSlackSaving] = useState(false)
   const [slackSaved, setSlackSaved] = useState(false)
@@ -175,26 +186,31 @@ export default function Settings() {
     } catch { afficherNotification('Erreur', 'error') }
   }
 
+  // Étape 1 : password gate → backend génère le secret + QR
   const demarrer2faSetup = async () => {
+    if (!twoFaPassword) { afficherNotification('Mot de passe requis', 'error'); return }
     setTwoFaLoading(true)
     try {
-      const res = await axios.post(`${API}/users/${user.id}/2fa/setup`)
+      const res = await axios.post(`${API}/users/${user.id}/2fa/setup`, { password: twoFaPassword })
       setTwoFaSecret(res.data.secret)
       setTwoFaQr(res.data.qr)
-      setTwoFaStep('verify')
+      setTwoFaPassword('')
+      setTwoFaStep('setup-verify')
       setTwoFaCode('')
-    } catch { afficherNotification('Erreur lors de la configuration 2FA', 'error') }
+    } catch (e) {
+      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+    }
     setTwoFaLoading(false)
   }
 
+  // Étape 2 : code TOTP → activation
   const verifier2fa = async () => {
     if (twoFaCode.length !== 6) { afficherNotification('Code à 6 chiffres requis', 'error'); return }
     setTwoFaLoading(true)
     try {
       await axios.post(`${API}/users/${user.id}/2fa/verify`, { code: twoFaCode })
       setTwoFaEnabled(true)
-      setTwoFaStep(null)
-      setTwoFaCode('')
+      closeTwoFaWizard()
       afficherNotification('2FA activée — ton compte est maintenant protégé')
     } catch (e) {
       afficherNotification(e.response?.data?.erreur || 'Code invalide', 'error')
@@ -202,17 +218,17 @@ export default function Settings() {
     setTwoFaLoading(false)
   }
 
+  // Désactivation : password (pas TOTP) — voleur de phone ne peut pas désactiver
   const desactiver2fa = async () => {
-    if (twoFaCode.length !== 6) { afficherNotification('Code à 6 chiffres requis', 'error'); return }
+    if (!twoFaPassword) { afficherNotification('Mot de passe requis', 'error'); return }
     setTwoFaLoading(true)
     try {
-      await axios.post(`${API}/users/${user.id}/2fa/disable`, { code: twoFaCode })
+      await axios.post(`${API}/users/${user.id}/2fa/disable`, { password: twoFaPassword })
       setTwoFaEnabled(false)
-      setTwoFaStep(null)
-      setTwoFaCode('')
+      closeTwoFaWizard()
       afficherNotification('2FA désactivée')
     } catch (e) {
-      afficherNotification(e.response?.data?.erreur || 'Code invalide', 'error')
+      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
     }
     setTwoFaLoading(false)
   }
@@ -342,6 +358,77 @@ export default function Settings() {
       // ── THÈME ──
       case 'theme': return (
         <motion.div key="theme" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+
+          {/* ── INSTALL PWA — proéminent en haut de la section par défaut ── */}
+          {!appInstalled && (
+            <div style={{
+              background: 'linear-gradient(135deg, var(--ember-soft), var(--surface-1))',
+              border: '1px solid var(--ember-ring, var(--ember))',
+              borderRadius: 20, padding: '22px 24px', marginBottom: 28,
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', background: 'radial-gradient(circle, var(--ember-soft), transparent 70%)', opacity: 0.5, pointerEvents: 'none' }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, position: 'relative' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--ember)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'var(--shadow-ember, 0 4px 14px rgba(184,82,28,0.25))' }}>
+                  <Smartphone size={20} color="#fff" strokeWidth={2} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                      Installe GetShift comme une vraie app
+                    </h3>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ember)', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))', borderRadius: 99, padding: '2px 8px', letterSpacing: 0.5 }}>NOUVEAU</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.55 }}>
+                    iPhone, iPad, Android, Mac, Windows — sans App Store, sans téléchargement. Plein écran, notifications push, hors ligne.
+                  </p>
+
+                  {/* CTA principal */}
+                  {installPrompt && (
+                    <motion.button onClick={installerApp}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}>
+                      Installer maintenant
+                    </motion.button>
+                  )}
+
+                  {isIOS && !installPrompt && (
+                    <>
+                      <motion.button onClick={() => setShowIOSGuide(v => !v)}
+                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+                        {showIOSGuide ? 'Masquer' : 'Voir les étapes iOS'}
+                      </motion.button>
+                      {showIOSGuide && (
+                        <div style={{ marginTop: 14, padding: '14px 16px', background: 'var(--surface-2)', borderRadius: 12, fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.85 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.5, marginBottom: 8 }}>iPhone / iPad — SAFARI</div>
+                          1. Ouvre <strong>Safari</strong> (pas Chrome/Firefox)<br/>
+                          2. Appuie sur <strong>⎙ Partager</strong> en bas de l'écran<br/>
+                          3. Fais défiler et touche <strong>« Sur l'écran d'accueil »</strong><br/>
+                          4. Touche <strong>« Ajouter »</strong> en haut à droite
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {!installPrompt && !isIOS && (
+                    <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>Android :</strong> Chrome → menu <strong style={{ fontFamily: 'var(--font-mono, monospace)' }}>⋮</strong> → « Installer l'application »<br/>
+                      <strong style={{ color: 'var(--text-primary)' }}>Desktop :</strong> Chrome/Edge → icône <strong style={{ fontFamily: 'var(--font-mono, monospace)' }}>⊕</strong> à droite de l'URL → « Installer GetShift »
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {appInstalled && (
+            <div style={{ background: 'rgba(76,175,130,0.06)', border: '1px solid rgba(76,175,130,0.25)', borderRadius: 14, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Check size={16} color="#4caf82" strokeWidth={2.5} />
+              <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)' }}>GetShift est installée comme application sur cet appareil ✓</span>
+            </div>
+          )}
+
           <SectionTitle>Apparence</SectionTitle>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
             Personnalise l'apparence de GetShift. Le thème est synchronisé sur tous tes appareils.
@@ -421,51 +508,17 @@ export default function Settings() {
         <motion.div key="notifications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <SectionTitle>Notifications</SectionTitle>
 
-          {/* ── Install PWA ─────────────────────────────────────────── */}
+          {/* Rappel install — l'install card complète est dans Apparence */}
           {!appInstalled && (
-            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--ember-soft)', borderRadius: 16, padding: '20px', marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                <div style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>📲</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                    Installer GetShift
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>
-                    Accès rapide depuis l'écran d'accueil, mode plein écran, notifications push.
-                  </div>
-                  {installPrompt && (
-                    <button onClick={installerApp} style={{ padding: '9px 20px', borderRadius: 10, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                      Installer l'application
-                    </button>
-                  )}
-                  {isIOS && !installPrompt && (
-                    <>
-                      <button onClick={() => setShowIOSGuide(v => !v)} style={{ padding: '9px 20px', borderRadius: 10, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        Comment installer sur iOS
-                      </button>
-                      {showIOSGuide && (
-                        <div style={{ marginTop: 12, padding: '14px 16px', background: 'var(--surface-2)', borderRadius: 12, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.8 }}>
-                          1. Appuie sur <strong>⎙ Partager</strong> en bas de Safari<br />
-                          2. Fais défiler et tape <strong>"Sur l'écran d'accueil"</strong><br />
-                          3. Appuie sur <strong>Ajouter</strong>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  {!installPrompt && !isIOS && (
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                      Ouvre ce site dans Chrome pour installer l'app.
-                    </span>
-                  )}
-                </div>
+            <button onClick={() => setActiveSection('theme')}
+              style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))', borderRadius: 14, marginBottom: 16, cursor: 'pointer', color: 'var(--text-primary)', fontFamily: 'inherit' }}>
+              <Smartphone size={18} color="var(--ember)" strokeWidth={2} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Installer GetShift pour activer les notifications push</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Voir les étapes dans l'onglet Apparence ↑</div>
               </div>
-            </div>
-          )}
-          {appInstalled && (
-            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Check size={16} color="var(--ember)" />
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>GetShift est installé sur cet appareil</span>
-            </div>
+              <ChevronRight size={15} color="var(--text-secondary)" />
+            </button>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -619,14 +672,14 @@ export default function Settings() {
             {twoFaStep === null && !twoFaEnabled && (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                  Protège ton compte avec une application d'authentification (Google Authenticator, Authy, 1Password…).
+                  Protège ton compte avec une application d'authentification (Google Authenticator, Authy, 1Password…). Chaque connexion demandera un code à 6 chiffres en plus de ton mot de passe.
                 </p>
                 <motion.button
-                  onClick={demarrer2faSetup} disabled={twoFaLoading}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: twoFaLoading ? 'wait' : 'pointer', opacity: twoFaLoading ? 0.7 : 1 }}
+                  onClick={() => { setTwoFaStep('setup-password'); setTwoFaPassword('') }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                   whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.97 }}>
                   <Lock size={14} />
-                  {twoFaLoading ? 'Génération…' : 'Activer la 2FA'}
+                  Activer la 2FA
                 </motion.button>
               </>
             )}
@@ -638,7 +691,7 @@ export default function Settings() {
                   <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Ton compte est protégé par la double authentification.</span>
                 </div>
                 <motion.button
-                  onClick={() => { setTwoFaStep('disable'); setTwoFaCode('') }}
+                  onClick={() => { setTwoFaStep('disable'); setTwoFaPassword('') }}
                   style={{ fontSize: 13, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}
                   whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
                   Désactiver la 2FA
@@ -646,16 +699,47 @@ export default function Settings() {
               </>
             )}
 
-            {twoFaStep === 'verify' && (
+            {/* Étape 1 : confirmation par mot de passe */}
+            {twoFaStep === 'setup-password' && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
+                  Confirme ton identité avec ton mot de passe actuel avant de générer le secret 2FA.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="password"
+                    placeholder="Mot de passe actuel"
+                    value={twoFaPassword}
+                    onChange={e => setTwoFaPassword(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && demarrer2faSetup()}
+                    autoFocus
+                    style={INPUT_STYLE}
+                  />
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <motion.button onClick={closeTwoFaWizard}
+                      style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                      whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                    <motion.button onClick={demarrer2faSetup} disabled={twoFaLoading || !twoFaPassword}
+                      style={{ flex: 1, padding: '10px', background: twoFaPassword ? 'var(--ember)' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaPassword ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaPassword ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
+                      whileTap={twoFaPassword ? { scale: 0.97 } : {}}>
+                      {twoFaLoading ? 'Génération…' : 'Continuer'}
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Étape 2 : QR code + code TOTP */}
+            {twoFaStep === 'setup-verify' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
                   Scanne ce QR code avec ton application d'authentification, puis entre le code affiché.
                 </p>
                 {twoFaQr && (
-                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 20, alignItems: isMobile ? 'flex-start' : 'flex-start', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 20, alignItems: 'flex-start', marginBottom: 16 }}>
                     <img src={`data:image/png;base64,${twoFaQr}`} alt="QR Code 2FA"
                       style={{ width: 160, height: 160, borderRadius: 12, border: '1px solid var(--border-subtle)', background: 'white', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 8px' }}>Ou entre la clé manuellement :</p>
                       <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '8px 12px', letterSpacing: '0.1em', wordBreak: 'break-all' }}>
                         {twoFaSecret}
@@ -673,7 +757,7 @@ export default function Settings() {
                     style={{ ...INPUT_STYLE, letterSpacing: '0.15em', fontSize: 18, textAlign: 'center' }}
                   />
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <motion.button onClick={() => { setTwoFaStep(null); setTwoFaCode('') }}
+                    <motion.button onClick={closeTwoFaWizard}
                       style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                       whileTap={{ scale: 0.97 }}>Annuler</motion.button>
                     <motion.button onClick={verifier2fa} disabled={twoFaLoading || twoFaCode.length !== 6}
@@ -686,27 +770,29 @@ export default function Settings() {
               </motion.div>
             )}
 
+            {/* Désactivation : password (pas le code TOTP) */}
             {twoFaStep === 'disable' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                  Entre le code de ton application d'authentification pour désactiver la 2FA.
+                  Entre ton mot de passe pour désactiver la 2FA. <strong>Pas le code TOTP</strong> — pour éviter qu'un voleur de téléphone puisse retirer la protection.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
-                    type="text" inputMode="numeric" pattern="[0-9]*"
-                    placeholder="Code à 6 chiffres"
-                    value={twoFaCode}
-                    onChange={e => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    type="password"
+                    placeholder="Mot de passe actuel"
+                    value={twoFaPassword}
+                    onChange={e => setTwoFaPassword(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && desactiver2fa()}
-                    style={{ ...INPUT_STYLE, letterSpacing: '0.15em', fontSize: 18, textAlign: 'center' }}
+                    autoFocus
+                    style={INPUT_STYLE}
                   />
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <motion.button onClick={() => { setTwoFaStep(null); setTwoFaCode('') }}
+                    <motion.button onClick={closeTwoFaWizard}
                       style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                       whileTap={{ scale: 0.97 }}>Annuler</motion.button>
-                    <motion.button onClick={desactiver2fa} disabled={twoFaLoading || twoFaCode.length !== 6}
-                      style={{ flex: 1, padding: '10px', background: twoFaCode.length === 6 ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaCode.length === 6 ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaCode.length === 6 ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
-                      whileTap={twoFaCode.length === 6 ? { scale: 0.97 } : {}}>
+                    <motion.button onClick={desactiver2fa} disabled={twoFaLoading || !twoFaPassword}
+                      style={{ flex: 1, padding: '10px', background: twoFaPassword ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaPassword ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaPassword ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
+                      whileTap={twoFaPassword ? { scale: 0.97 } : {}}>
                       {twoFaLoading ? 'Désactivation…' : 'Désactiver'}
                     </motion.button>
                   </div>

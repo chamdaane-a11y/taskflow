@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-22-settings-tier4-v1'
+APP_BUILD_MARKER = '2026-05-22-settings-tier4-2fa-hardening-v2'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1300,6 +1300,10 @@ def run_migrations():
         if not col_exists(curseur, 'users', 'totp_enabled'):
             curseur.execute("ALTER TABLE users ADD COLUMN totp_enabled TINYINT(1) NOT NULL DEFAULT 0")
             print("[Migrations] users.totp_enabled ✅")
+        # Anti-replay : dernier compteur TOTP consommé (window 30s)
+        if not col_exists(curseur, 'users', 'totp_last_counter'):
+            curseur.execute("ALTER TABLE users ADD COLUMN totp_last_counter BIGINT NULL")
+            print("[Migrations] users.totp_last_counter ✅")
 
         # Pending invitations — flow invitation QR/lien sans localStorage côté ami
         curseur.execute("""CREATE TABLE IF NOT EXISTS pending_invitations (
@@ -1661,14 +1665,15 @@ def login():
         if not user.get('email_verifie'):
             return jsonify({"erreur": "Veuillez vérifier votre email avant de vous connecter !", "non_verifie": True}), 403
 
-        # 2FA : si activé → retourner un token temporaire, pas le JWT de session
+        # 2FA : si activé → retourner un token temporaire, pas le JWT de session.
+        # Le user_id est dans le claim `sub` du temp_token, pas exposé en clair.
         if user.get('totp_enabled'):
             temp_token = create_access_token(
                 identity=str(user['id']),
                 expires_delta=timedelta(minutes=5),
-                additional_claims={'type': 'totp_pending', 'uid': user['id']}
+                additional_claims={'type': 'totp_pending'}
             )
-            return jsonify({"requires_2fa": True, "temp_token": temp_token, "user_id": user['id']}), 200
+            return jsonify({"requires_2fa": True, "temp_token": temp_token}), 200
 
         # Si invite_code fourni OU si pending existe pour cet email → auto-attach
         equipes_rejointes = []
@@ -2180,13 +2185,53 @@ def update_notif_prefs(id):
 def _make_qr_base64(uri):
     """Génère un QR code PNG en base64 à partir d'un URI otpauth://."""
     qr = qrcode.QRCode(version=1, box_size=8, border=2,
-                       error_correction=qrcode.constants.ERROR_CORRECT_L)
+                       error_correction=qrcode.constants.ERROR_CORRECT_M)
     qr.add_data(uri)
     qr.make(fit=True)
     img = qr.make_image(fill_color='black', back_color='white')
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     return base64.b64encode(buf.getvalue()).decode()
+
+def _verify_user_password(user_id, password):
+    """Vérifie qu'un password en clair correspond au hash stocké. Refuse les
+    comptes Google-only (password NULL) — pour eux, le password n'est pas
+    une preuve d'identité."""
+    if not password:
+        return False, "Mot de passe requis"
+    pw_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+    db = connecter(); cur = db.cursor(dictionary=True)
+    cur.execute("SELECT password, google_id FROM users WHERE id=%s", (user_id,))
+    row = cur.fetchone(); cur.close(); db.close()
+    if not row:
+        return False, "Utilisateur introuvable"
+    if not row.get('password'):
+        return False, "Compte Google : configure la 2FA via Google directement"
+    if row['password'] != pw_hash:
+        return False, "Mot de passe incorrect"
+    return True, None
+
+def _verify_totp_anti_replay(secret, code, last_counter):
+    """Vérifie le code TOTP avec protection anti-replay.
+    Retourne le compteur consommé, ou None si invalide / déjà utilisé."""
+    if not code or len(code) != 6 or not code.isdigit():
+        return None
+    totp = pyotp.TOTP(secret)
+    now = int(time.time())
+    last = last_counter or 0
+    # Fenêtre ±30s (offsets en pas de 30s)
+    for offset in (0, -1, 1):
+        t = now + offset * 30
+        counter = t // 30
+        if counter <= last:
+            continue  # déjà consommé ou plus ancien
+        try:
+            expected = totp.at(t)
+        except Exception:
+            continue
+        if expected == code:
+            return counter
+    return None
 
 @app.route('/users/<int:id>/2fa/status', methods=['GET'])
 def get_2fa_status(id):
@@ -2201,19 +2246,29 @@ def get_2fa_status(id):
         return jsonify({"erreur": str(e)}), 500
 
 @app.route('/users/<int:id>/2fa/setup', methods=['POST'])
+@limiter.limit("5 per hour")
 def setup_2fa(id):
-    """Génère un secret TOTP et retourne l'URI + QR code. Ne l'active pas encore."""
+    """Génère un secret TOTP et retourne l'URI + QR code. Ne l'active pas
+    encore. Exige le mot de passe actuel pour éviter qu'un attaquant écrase
+    le secret d'une victime."""
     try:
+        data = request.get_json() or {}
+        password = (data.get('password') or '').strip()
+        ok, err = _verify_user_password(id, password)
+        if not ok:
+            return jsonify({"erreur": err}), 400
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT email FROM users WHERE id=%s", (id,))
+        cur.execute("SELECT email, totp_enabled FROM users WHERE id=%s", (id,))
         row = cur.fetchone()
-        if not row:
-            db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        if row.get('totp_enabled'):
+            db.close()
+            return jsonify({"erreur": "La 2FA est déjà activée. Désactive-la d'abord."}), 400
         secret = pyotp.random_base32()
         totp = pyotp.TOTP(secret)
         uri = totp.provisioning_uri(name=row['email'], issuer_name='GetShift')
         cur2 = db.cursor()
-        cur2.execute("UPDATE users SET totp_secret=%s, totp_enabled=0 WHERE id=%s", (secret, id))
+        # Reset le compteur quand on regénère un secret
+        cur2.execute("UPDATE users SET totp_secret=%s, totp_enabled=0, totp_last_counter=NULL WHERE id=%s", (secret, id))
         db.commit(); db.close()
         qr_b64 = _make_qr_base64(uri)
         return jsonify({"secret": secret, "uri": uri, "qr": qr_b64})
@@ -2221,42 +2276,50 @@ def setup_2fa(id):
         return jsonify({"erreur": str(e)}), 500
 
 @app.route('/users/<int:id>/2fa/verify', methods=['POST'])
+@limiter.limit("10 per minute")
 def verify_2fa(id):
-    """Vérifie le code TOTP et active la 2FA si correct."""
+    """Vérifie le code TOTP et active la 2FA si correct. Anti-replay via
+    totp_last_counter. Doit suivre un /2fa/setup réussi (donc déjà
+    authentifié par password)."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         code = str(data.get('code', '')).strip()
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT totp_secret FROM users WHERE id=%s", (id,))
+        cur.execute("SELECT totp_secret, totp_enabled, totp_last_counter FROM users WHERE id=%s", (id,))
         row = cur.fetchone()
         if not row or not row.get('totp_secret'):
             db.close(); return jsonify({"erreur": "Lance d'abord /2fa/setup"}), 400
-        totp = pyotp.TOTP(row['totp_secret'])
-        if not totp.verify(code, valid_window=1):
+        if row.get('totp_enabled'):
+            db.close(); return jsonify({"erreur": "Déjà activée"}), 400
+        counter = _verify_totp_anti_replay(row['totp_secret'], code, row.get('totp_last_counter'))
+        if counter is None:
             db.close(); return jsonify({"erreur": "Code invalide"}), 400
         cur2 = db.cursor()
-        cur2.execute("UPDATE users SET totp_enabled=1 WHERE id=%s", (id,))
+        cur2.execute("UPDATE users SET totp_enabled=1, totp_last_counter=%s WHERE id=%s", (counter, id))
         db.commit(); db.close()
         return jsonify({"message": "2FA activée"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
 @app.route('/users/<int:id>/2fa/disable', methods=['POST'])
+@limiter.limit("10 per minute")
 def disable_2fa(id):
-    """Désactive la 2FA en vérifiant un code TOTP valide."""
+    """Désactive la 2FA. Exige le mot de passe (pas le code TOTP) — l'idée
+    est qu'un voleur de téléphone avec accès à l'authenticator ne doit pas
+    pouvoir désactiver la 2FA. Le password reste connu uniquement de l'user."""
     try:
-        data = request.get_json()
-        code = str(data.get('code', '')).strip()
+        data = request.get_json() or {}
+        password = (data.get('password') or '').strip()
+        ok, err = _verify_user_password(id, password)
+        if not ok:
+            return jsonify({"erreur": err}), 400
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT totp_secret, totp_enabled FROM users WHERE id=%s", (id,))
+        cur.execute("SELECT totp_enabled FROM users WHERE id=%s", (id,))
         row = cur.fetchone()
         if not row or not row.get('totp_enabled'):
             db.close(); return jsonify({"erreur": "La 2FA n'est pas activée"}), 400
-        totp = pyotp.TOTP(row['totp_secret'])
-        if not totp.verify(code, valid_window=1):
-            db.close(); return jsonify({"erreur": "Code invalide"}), 400
         cur2 = db.cursor()
-        cur2.execute("UPDATE users SET totp_enabled=0, totp_secret=NULL WHERE id=%s", (id,))
+        cur2.execute("UPDATE users SET totp_enabled=0, totp_secret=NULL, totp_last_counter=NULL WHERE id=%s", (id,))
         db.commit(); db.close()
         return jsonify({"message": "2FA désactivée"})
     except Exception as e:
@@ -2265,9 +2328,10 @@ def disable_2fa(id):
 @app.route('/login/totp', methods=['POST'])
 @limiter.limit("10 per minute")
 def login_totp():
-    """Étape 2 de la connexion : vérifie le code TOTP + émet le JWT de session."""
+    """Étape 2 de la connexion : vérifie le code TOTP + émet le JWT de session.
+    Anti-replay via totp_last_counter."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         temp_token = data.get('temp_token', '')
         code = str(data.get('code', '')).strip()
         if not temp_token or not code:
@@ -2278,18 +2342,22 @@ def login_totp():
             return jsonify({"erreur": "Token invalide ou expiré"}), 401
         if token_data.get('type') != 'totp_pending':
             return jsonify({"erreur": "Token invalide"}), 401
-        user_id = token_data.get('sub') or token_data.get('uid')
+        user_id = token_data.get('sub')
         if not user_id:
             return jsonify({"erreur": "Token invalide"}), 401
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT id, nom, email, theme, totp_secret, totp_enabled FROM users WHERE id=%s", (user_id,))
+        cur.execute("SELECT id, nom, email, theme, totp_secret, totp_enabled, totp_last_counter FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone(); cur.close(); db.close()
-        if not user or not user.get('totp_secret'):
-            return jsonify({"erreur": "Utilisateur introuvable"}), 404
-        totp = pyotp.TOTP(user['totp_secret'])
-        if not totp.verify(code, valid_window=1):
+        if not user or not user.get('totp_enabled') or not user.get('totp_secret'):
+            return jsonify({"erreur": "2FA non configurée"}), 400
+        counter = _verify_totp_anti_replay(user['totp_secret'], code, user.get('totp_last_counter'))
+        if counter is None:
             return jsonify({"erreur": "Code invalide"}), 400
-        # Code OK → finaliser la session
+        # Code OK → on persiste le compteur pour bloquer le replay
+        db = connecter(); cur = db.cursor()
+        cur.execute("UPDATE users SET totp_last_counter=%s WHERE id=%s", (counter, user['id']))
+        db.commit(); cur.close(); db.close()
+        # Finaliser la session
         invite_code = (data.get('invite_code') or '').strip()
         equipes_rejointes = []
         try:

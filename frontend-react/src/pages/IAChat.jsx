@@ -629,12 +629,24 @@ export default function IAChat() {
         if (data.action?.type === 'redirect_tomorrow_builder')
           setTimeout(() => navigate('/planification'), 1800)
 
-        // Navigation déclenchée explicitement par l'IA via naviguer_vers
+        // Navigation déclenchée explicitement par l'IA via naviguer_vers.
+        // Les slugs envoyés par le backend (tomorrow-builder, goal-reverse, ia, …)
+        // ne correspondent PAS toujours aux routes du frontend → mapping explicite.
         const navAction = toolsDone.find(a => a.tool === 'naviguer_vers')
         if (navAction) {
-          const page = navAction.page
+          const PAGE_ROUTES = {
+            dashboard:        '/dashboard',
+            planification:    '/planification',
+            collaboration:    '/collaboration',
+            analytics:        '/analytics',
+            'tomorrow-builder': '/tomorrow',
+            'goal-reverse':   '/goal',
+            profile:          '/profile',
+            settings:         '/settings',
+            ia:               '/ia',
+          }
+          const route = PAGE_ROUTES[navAction.page] || `/${navAction.page}`
           const section = navAction.section
-          const route = page === 'ia' ? '/ia' : `/${page}`
           const state = section ? { section } : undefined
           setTimeout(() => navigate(route, state ? { state } : undefined), 1000)
         }
