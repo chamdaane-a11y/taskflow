@@ -167,6 +167,28 @@ export default function Planification() {
   const [autoplanLoading, setAutoplanLoading] = useState(false)
   const [autoplanMeta, setAutoplanMeta]     = useState(null) // {conflicts_avoided, gcal_connected}
 
+  const chargerDonnees = useCallback(async () => {
+    setLoading(true)
+    try {
+      // Tâches + planification en parallèle → affichage immédiat
+      const [t, p] = await Promise.all([
+        axios.get(`${API}/taches/${user.id}`),
+        axios.get(`${API}/planification/${user.id}`),
+      ])
+      setTaches(t.data.map(task => ({ ...task, _score: calcPriorityScore(task) })))
+      setPlanification(normalizePlan(p.data))
+      setLoading(false)
+
+      // Priorités chargées en arrière-plan — ne bloque pas l'affichage
+      axios.get(`${API}/taches/${user.id}/priorite-intelligente`)
+        .then(pr => setPriorities(pr.data.slice(0, 5)))
+        .catch(() => {})
+    } catch (err) {
+      console.error(err)
+      setLoading(false)
+    }
+  }, [user?.id])
+
   const lancerAutoplan = useCallback(async () => {
     setAutoplanLoading(true)
     try {
@@ -240,28 +262,6 @@ export default function Planification() {
     if (!user) { navigate('/'); return }
     chargerDonnees()
   }, [])
-
-  const chargerDonnees = useCallback(async () => {
-    setLoading(true)
-    try {
-      // Tâches + planification en parallèle → affichage immédiat
-      const [t, p] = await Promise.all([
-        axios.get(`${API}/taches/${user.id}`),
-        axios.get(`${API}/planification/${user.id}`),
-      ])
-      setTaches(t.data.map(task => ({ ...task, _score: calcPriorityScore(task) })))
-      setPlanification(normalizePlan(p.data))
-      setLoading(false)
-
-      // Priorités chargées en arrière-plan — ne bloque pas l'affichage
-      axios.get(`${API}/taches/${user.id}/priorite-intelligente`)
-        .then(pr => setPriorities(pr.data.slice(0, 5)))
-        .catch(() => {})
-    } catch (err) {
-      console.error(err)
-      setLoading(false)
-    }
-  }, [user?.id])
 
   function normalizePlan(entries) {
     return entries.map(e => ({
