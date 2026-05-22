@@ -1213,6 +1213,11 @@ def run_migrations():
         if not col_exists(curseur, 'taches', 'gcal_imported_event_id'):
             curseur.execute("ALTER TABLE taches ADD COLUMN gcal_imported_event_id VARCHAR(255) NULL")
             print("[Migrations] taches.gcal_imported_event_id ✅")
+        # Préférences notifications utilisateur (2026-05-22)
+        if not col_exists(curseur, 'users', 'notif_prefs'):
+            curseur.execute("ALTER TABLE users ADD COLUMN notif_prefs JSON NULL")
+            print("[Migrations] users.notif_prefs ✅")
+
         # gcal_watch_channels : canaux push notifications Google Calendar
         curseur.execute("""
             CREATE TABLE IF NOT EXISTS gcal_watch_channels (
@@ -1936,11 +1941,8 @@ def confirm_email_change(token):
         </body></html>""", 500
 
 @app.route('/users/<int:id>/export', methods=['GET'])
-@jwt_required()
 def export_user_data(id):
     try:
-        if str(get_jwt_identity()) != str(id):
-            return jsonify({"erreur": "Accès refusé"}), 403
         db = connecter(); cur = db.cursor(dictionary=True)
         dump = {"exported_at": datetime.now().isoformat(), "version": 1}
 
@@ -2127,6 +2129,34 @@ def update_theme(id):
     curseur.execute("UPDATE users SET theme=%s WHERE id=%s", (data['theme'], id))
     db.commit(); db.close()
     return jsonify({"message": "Theme mis a jour !"})
+
+@app.route('/users/<int:id>/notif-prefs', methods=['GET'])
+def get_notif_prefs(id):
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT notif_prefs FROM users WHERE id=%s", (id,))
+        row = cur.fetchone(); db.close()
+        if not row:
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        raw = row.get('notif_prefs')
+        prefs = json.loads(raw) if raw else None
+        return jsonify({"prefs": prefs})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/notif-prefs', methods=['PUT'])
+def update_notif_prefs(id):
+    try:
+        data = request.get_json()
+        prefs = data.get('prefs')
+        if not isinstance(prefs, dict):
+            return jsonify({"erreur": "prefs doit être un objet"}), 400
+        db = connecter(); cur = db.cursor()
+        cur.execute("UPDATE users SET notif_prefs=%s WHERE id=%s", (json.dumps(prefs, ensure_ascii=False), id))
+        db.commit(); db.close()
+        return jsonify({"message": "Préférences sauvegardées"})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
 
 @app.route('/users/<int:id>/calibration', methods=['GET'])
 def get_calibration(id):

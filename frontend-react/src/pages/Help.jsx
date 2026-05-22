@@ -102,7 +102,7 @@ const SECTIONS = [
       { id: 'themes',     label: 'Thèmes · Parchemin / Graphite' },
       { id: 'notifs',     label: 'Notifications push' },
       { id: 'exports',    label: 'Exports de données' },
-      { id: 'securite',   label: 'Sécurité & 2FA' },
+      { id: 'securite',   label: 'Sécurité' },
     ],
   },
   {
@@ -506,7 +506,7 @@ const FAQ_ITEMS = [
   { q: 'L\'extension Chrome existe-t-elle ?',
     r: 'Pas encore. L\'extension est sur la roadmap pour capturer des tâches depuis n\'importe quelle page web.' },
   { q: 'Puis-je exporter mes données ?',
-    r: 'Oui — Réglages → Exports. CSV, JSON, ou Excel pour l\'historique de complétion avec métriques.' },
+    r: 'Oui — Réglages → Compte → Télécharger (JSON). L\'export contient toutes tes données : tâches, objectifs, planning, badges et intégrations.' },
 ]
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1199,7 +1199,7 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               {/* ─── RÉGLAGES ───────────────────────────────── */}
               <DocSection id="reglages" Icon={SettingsIcon} eyebrow="10 · Configuration"
                 title="Réglages"
-                lead="6 onglets : Profil, Notifications, Intégrations, Apparence, Sécurité, Données." />
+                lead="4 onglets : Apparence, Intégrations, Notifications, Compte." />
 
               <H3 id="themes">Thèmes · Parchemin / Graphite</H3>
               <P>Deux thèmes <strong>Graphite & Ember</strong> exclusivement, conçus pour le deep work :</P>
@@ -1213,7 +1213,7 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               <P>Trois canaux :</P>
               <ul style={{ paddingLeft: 22, marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14.5, lineHeight: 1.7 }}>
                 <li><strong style={{ color: 'var(--text-primary)' }}>Rappels deadline</strong> — 24h avant, 2h avant, à l'heure</li>
-                <li><strong style={{ color: 'var(--text-primary)' }}>Récap quotidien</strong> — 8h00 (heure modifiable)</li>
+                <li><strong style={{ color: 'var(--text-primary)' }}>Récap quotidien</strong> — 8h00 chaque matin</li>
                 <li><strong style={{ color: 'var(--text-primary)' }}>Alertes priorité haute</strong> — quand une tâche Haute est créée par l'IA ou un coéquipier</li>
               </ul>
               <DemoFrame caption="exemples — notifications">
@@ -1225,14 +1225,14 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
 
               <H3 id="exports">Exports de données</H3>
               <P>
-                Formats disponibles : <strong>CSV</strong> (tâches), <strong>JSON</strong> (état complet),
-                <strong>Excel</strong> (historique de complétion avec métriques). Aucune limite de fréquence.
+                Un seul clic pour télécharger l'intégralité de tes données GetShift au format <strong>JSON</strong> (tâches,
+                objectifs, planning, badges, intégrations). Aucune limite de fréquence.
               </P>
 
-              <H3 id="securite">Sécurité & 2FA</H3>
+              <H3 id="securite">Sécurité</H3>
               <P>
-                Authentification à deux facteurs disponible via TOTP (Google Authenticator, Authy, 1Password).
-                Sessions actives consultables et révocables. Tokens d'intégrations chiffrés Fernet côté serveur.
+                Modification du mot de passe depuis Réglages → Compte. Tokens d'intégrations OAuth chiffrés Fernet côté serveur —
+                jamais loggés. Suppression de compte disponible sur demande.
               </P>
               <CTAButton to="/settings" navigate={navigate}>Ouvrir Réglages</CTAButton>
 
