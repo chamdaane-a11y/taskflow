@@ -3,7 +3,8 @@ import { applyTheme } from '../useTheme'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
-import { Layers, ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowRight, Sparkles } from 'lucide-react'
+import GetShiftMark from '../components/GetShiftMark'
 import axios from 'axios'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -119,9 +120,7 @@ function LoginInner() {
       <motion.nav initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
         style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 64, padding: '0 clamp(20px, 5vw, 80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border-subtle)' }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-ember)' }}>
-            <Layers size={17} color="var(--text-on-ember)" strokeWidth={2.5} />
-          </div>
+          <GetShiftMark size={34} />
           <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>GetShift</span>
         </Link>
         <Link to="/register" style={{ padding: '8px 20px', background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', borderRadius: 9, color: 'var(--text-on-ember)', fontSize: 14, fontWeight: 600, textDecoration: 'none', boxShadow: 'var(--shadow-ember)', fontFamily: 'var(--font-ui)' }}>

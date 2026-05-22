@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Layers, ArrowRight, Mail } from 'lucide-react'
+import { ArrowRight, Mail } from 'lucide-react'
+import GetShiftMark from '../components/GetShiftMark'
 import axios from 'axios'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -56,9 +57,7 @@ export default function ForgotPassword() {
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
         style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40, position: 'relative', zIndex: 2 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-ember)' }}>
-            <Layers size={17} color="var(--text-on-ember)" strokeWidth={2.5} />
-          </div>
+          <GetShiftMark size={34} />
           <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>GetShift</span>
         </Link>
       </motion.div>

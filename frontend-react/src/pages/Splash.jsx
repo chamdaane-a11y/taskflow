@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Layers, CheckSquare, Bot, BarChart2, Sparkles } from 'lucide-react'
+import { CheckSquare, Bot, BarChart2, Sparkles } from 'lucide-react'
+import GetShiftMark from '../components/GetShiftMark'
 
 export default function Splash() {
   const [etape, setEtape] = useState(0)
@@ -81,9 +82,9 @@ export default function Splash() {
         <motion.div
           animate={{ boxShadow: ['var(--shadow-ember)', '0 8px 40px rgba(184,82,28,0.35)', 'var(--shadow-ember)'] }}
           transition={{ duration: 2.5, repeat: Infinity }}
-          style={{ width: 80, height: 80, borderRadius: 22, background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 22, boxShadow: 'var(--shadow-ember)' }}
+          style={{ marginBottom: 22, borderRadius: 22, boxShadow: 'var(--shadow-ember)' }}
         >
-          <Layers size={34} color="var(--text-on-ember)" strokeWidth={2.5} />
+          <GetShiftMark size={80} />
         </motion.div>
 
         <motion.h1
