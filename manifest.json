@@ -6,8 +6,8 @@
   "scope": "/taskflow/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#080810",
-  "theme_color": "#6c63ff",
+  "background_color": "#0E1011",
+  "theme_color": "#E07A3E",
   "lang": "fr",
   "categories": ["productivity", "utilities"],
   "icons": [
