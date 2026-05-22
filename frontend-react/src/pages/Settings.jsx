@@ -51,6 +51,29 @@ export default function Settings() {
   const [slackSaved, setSlackSaved] = useState(false)
   const [notification, setNotification] = useState(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  // ── PWA install ────────────────────────────────────────────────────
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [appInstalled, setAppInstalled]   = useState(
+    window.matchMedia('(display-mode: standalone)').matches
+  )
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream
+  const [showIOSGuide, setShowIOSGuide] = useState(false)
+
+  useEffect(() => {
+    const h = (e) => { e.preventDefault(); setInstallPrompt(e) }
+    window.addEventListener('beforeinstallprompt', h)
+    window.addEventListener('appinstalled', () => { setAppInstalled(true); setInstallPrompt(null) })
+    return () => window.removeEventListener('beforeinstallprompt', h)
+  }, [])
+
+  const installerApp = async () => {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setAppInstalled(true)
+    setInstallPrompt(null)
+  }
+
   const [notifPrefs, setNotifPrefs] = useState(() => {
     try {
       const saved = localStorage.getItem('notif_prefs')
@@ -460,6 +483,54 @@ export default function Settings() {
       case 'notifications': return (
         <motion.div key="notifications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <SectionTitle>Notifications</SectionTitle>
+
+          {/* ── Install PWA ─────────────────────────────────────────── */}
+          {!appInstalled && (
+            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--ember-soft)', borderRadius: 16, padding: '20px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                <div style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>📲</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                    Installer GetShift
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>
+                    Accès rapide depuis l'écran d'accueil, mode plein écran, notifications push.
+                  </div>
+                  {installPrompt && (
+                    <button onClick={installerApp} style={{ padding: '9px 20px', borderRadius: 10, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      Installer l'application
+                    </button>
+                  )}
+                  {isIOS && !installPrompt && (
+                    <>
+                      <button onClick={() => setShowIOSGuide(v => !v)} style={{ padding: '9px 20px', borderRadius: 10, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        Comment installer sur iOS
+                      </button>
+                      {showIOSGuide && (
+                        <div style={{ marginTop: 12, padding: '14px 16px', background: 'var(--surface-2)', borderRadius: 12, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.8 }}>
+                          1. Appuie sur <strong>⎙ Partager</strong> en bas de Safari<br />
+                          2. Fais défiler et tape <strong>"Sur l'écran d'accueil"</strong><br />
+                          3. Appuie sur <strong>Ajouter</strong>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {!installPrompt && !isIOS && (
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      Ouvre ce site dans Chrome pour installer l'app.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {appInstalled && (
+            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Check size={16} color="var(--ember)" />
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>GetShift est installé sur cet appareil</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
               { label: 'Rappels de deadline',       desc: 'Notifiez-moi 24h avant chaque deadline' },

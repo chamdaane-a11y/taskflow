@@ -24,7 +24,17 @@ axios.interceptors.request.use(config => {
 // et des push notifications, pas seulement celles qui chargent useDashboard.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/taskflow/sw.js').catch(() => {})
+    navigator.serviceWorker.register('/taskflow/sw.js').then(reg => {
+      // Quand un nouveau SW est prêt, notifier l'UI pour proposer un rechargement
+      reg.addEventListener('updatefound', () => {
+        const next = reg.installing
+        next.addEventListener('statechange', () => {
+          if (next.state === 'installed' && navigator.serviceWorker.controller) {
+            window.dispatchEvent(new CustomEvent('sw-update-ready'))
+          }
+        })
+      })
+    }).catch(() => {})
   })
 }
 

@@ -164,6 +164,17 @@ export function useDashboard() {
 
   const bloquees = useMemo(() => taches.filter(t => t.bloquee && !t.terminee).length, [taches])
 
+  // Badge API — icône app avec compteur tâches urgentes (overdue + haute priorité)
+  useEffect(() => {
+    if (!('setAppBadge' in navigator)) return
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const overdue = taches.filter(t => !t.terminee && t.deadline && new Date(t.deadline) < today).length
+    const haute   = taches.filter(t => !t.terminee && t.priorite === 'haute').length
+    const count   = overdue + haute
+    if (count > 0) navigator.setAppBadge(count).catch(() => {})
+    else navigator.clearAppBadge().catch(() => {})
+  }, [taches])
+
   const todayISO = () => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`

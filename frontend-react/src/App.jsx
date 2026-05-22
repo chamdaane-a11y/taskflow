@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 
 const Splash           = lazy(() => import('./pages/Splash'))
@@ -26,9 +26,42 @@ const PageLoader = () => (
   </div>
 )
 
+function UpdateBanner() {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const handler = () => setVisible(true)
+    window.addEventListener('sw-update-ready', handler)
+    return () => window.removeEventListener('sw-update-ready', handler)
+  }, [])
+  if (!visible) return null
+  return (
+    <div style={{
+      position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 9999, background: 'var(--surface-1)', border: '1px solid var(--ember)',
+      borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center',
+      gap: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.25)', maxWidth: 360, width: 'calc(100% - 32px)',
+    }}>
+      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>
+        Nouvelle version disponible
+      </span>
+      <button
+        onClick={() => window.location.reload()}
+        style={{ padding: '7px 16px', borderRadius: 9, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+        Actualiser
+      </button>
+      <button
+        onClick={() => setVisible(false)}
+        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>
+        ×
+      </button>
+    </div>
+  )
+}
+
 function App() {
   return (
     <HashRouter>
+      <UpdateBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/goal"              element={<GoalReverse />} />
