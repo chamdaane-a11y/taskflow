@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-2fa-email-otp-v6'
+APP_BUILD_MARKER = '2026-05-23-weekly-day-push-brand-v7'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -174,11 +174,21 @@ def envoyer_email_verification(email, nom, token):
 # PUSH NOTIFICATIONS
 # ============================================
 
-def envoyer_push(subscription_json, titre, body, url="/dashboard"):
+def envoyer_push(subscription_json, titre, body, url="/dashboard", tag=None, image=None, require_interaction=False, renotify=False):
+    """Envoie une push notification. Options optionnelles pour branding/UX :
+    - tag : groupe les notifs (ex: 'deadline', 'team', 'system'). Même tag = remplace.
+    - image : URL d'une bannière riche (Android Chrome only).
+    - require_interaction : la notif reste affichée jusqu'à action user.
+    - renotify : true = re-notifie même si même tag (par défaut false)."""
     try:
+        payload = {"title": titre, "body": body, "url": url}
+        if tag: payload["tag"] = tag
+        if image: payload["image"] = image
+        if require_interaction: payload["require_interaction"] = True
+        if renotify: payload["renotify"] = True
         webpush(
             subscription_info=json.loads(subscription_json),
-            data=json.dumps({"title": titre, "body": body, "url": url}),
+            data=json.dumps(payload),
             vapid_private_key=VAPID_PRIVATE_KEY,
             vapid_claims=VAPID_CLAIMS
         )
@@ -1072,11 +1082,20 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
     }
 
 
-def job_email_resume_hebdo():
+def job_email_resume_hebdo(force_user_id=None):
+    """Envoie le bilan hebdo aux users dont weekly_report_day == aujourd'hui.
+    Si force_user_id est fourni : envoie uniquement à cet user (utile pour test/manuel)."""
     try:
+        today_dow = datetime.now().weekday()  # 0=Lun … 6=Dim
         db = connecter()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("""
+        if force_user_id:
+            where_extra = "AND u.id = %s"
+            params = (force_user_id,)
+        else:
+            where_extra = "AND COALESCE(u.weekly_report_day, 4) = %s"
+            params = (today_dow,)
+        cursor.execute(f"""
             SELECT u.id, u.nom, u.email, u.points, u.niveau,
                 COUNT(CASE WHEN t.terminee = TRUE AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
                 COUNT(CASE WHEN t.terminee = TRUE AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(t.terminee_le, t.updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
@@ -1084,14 +1103,15 @@ def job_email_resume_hebdo():
                 COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
                 COUNT(t.id) as total
             FROM users u LEFT JOIN taches t ON u.id = t.user_id
-            WHERE u.email_verifie = TRUE GROUP BY u.id
-        """)
+            WHERE u.email_verifie = TRUE {where_extra} GROUP BY u.id
+        """, params)
         users = cursor.fetchall()
         from datetime import date, timedelta
         semaine_fin = date.today()
         semaine_debut = semaine_fin - timedelta(days=6)
         for u in users:
-            if u['total'] == 0:
+            # Skip users sans aucune tâche (sauf si force = test manuel)
+            if u['total'] == 0 and not force_user_id:
                 continue
             user_id = u['id']
             terminees = u['terminees'] or 0
@@ -1153,7 +1173,8 @@ def demarrer_scheduler():
     schedule.every().day.at("09:00").do(job_email_rappel_veille)
     schedule.every().day.at("08:00").do(job_email_rappel_jour_j)
     schedule.every().day.at("10:00").do(job_email_taches_retard)
-    schedule.every().friday.at("18:00").do(job_email_resume_hebdo)
+    # Bilan hebdo : check tous les jours à 18h, le job filtre par weekly_report_day de chaque user
+    schedule.every().day.at("18:00").do(job_email_resume_hebdo)
     schedule.every().day.at("00:00").do(job_backup_quotidien)
     print("[Scheduler] Démarré ✅")
     while True:
@@ -1315,6 +1336,11 @@ def run_migrations():
         if not col_exists(curseur, 'users', 'email_2fa_attempts'):
             curseur.execute("ALTER TABLE users ADD COLUMN email_2fa_attempts INT NOT NULL DEFAULT 0")
             print("[Migrations] users.email_2fa_attempts ✅")
+
+        # Jour rapport hebdo configurable (2026-05-23) : 0=Lun … 6=Dim, défaut 4=Vendredi
+        if not col_exists(curseur, 'users', 'weekly_report_day'):
+            curseur.execute("ALTER TABLE users ADD COLUMN weekly_report_day TINYINT NOT NULL DEFAULT 4")
+            print("[Migrations] users.weekly_report_day ✅")
 
         # Pending invitations — flow invitation QR/lien sans localStorage côté ami
         curseur.execute("""CREATE TABLE IF NOT EXISTS pending_invitations (
@@ -5105,6 +5131,42 @@ def trigger_email_taches_retard():
 def trigger_email_resume_hebdo():
     threading.Thread(target=job_email_resume_hebdo).start()
     return jsonify({"message": "Emails résumé hebdo déclenchés !"})
+
+@app.route('/users/<int:id>/weekly-report-day', methods=['GET'])
+def get_weekly_report_day(id):
+    """Retourne le jour de la semaine où l'utilisateur reçoit son rapport hebdo.
+    0=Lundi … 6=Dimanche. Défaut : 4 (Vendredi)."""
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT weekly_report_day FROM users WHERE id=%s", (id,))
+        row = cur.fetchone(); cur.close(); db.close()
+        if not row:
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        return jsonify({"day": int(row.get('weekly_report_day') if row.get('weekly_report_day') is not None else 4)})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/weekly-report-day', methods=['PUT'])
+def set_weekly_report_day(id):
+    """Définit le jour de réception du rapport hebdo (0=Lundi … 6=Dimanche)."""
+    try:
+        data = request.get_json() or {}
+        day = data.get('day')
+        if not isinstance(day, int) or day < 0 or day > 6:
+            return jsonify({"erreur": "Jour invalide (0-6)"}), 400
+        db = connecter(); cur = db.cursor()
+        cur.execute("UPDATE users SET weekly_report_day=%s WHERE id=%s", (day, id))
+        db.commit(); cur.close(); db.close()
+        return jsonify({"message": "Jour mis à jour", "day": day})
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+@app.route('/users/<int:id>/email/resume-hebdo-test', methods=['POST'])
+@limiter.limit("3 per hour")
+def trigger_resume_hebdo_for_user(id):
+    """Test manuel : envoie le rapport hebdo à un user spécifique, ignore son day."""
+    threading.Thread(target=job_email_resume_hebdo, args=(id,)).start()
+    return jsonify({"message": "Rapport hebdo envoyé (vérifie ton email dans 1 min)"})
 
 
 # ════════════════════════════════════════════════════════════════════════

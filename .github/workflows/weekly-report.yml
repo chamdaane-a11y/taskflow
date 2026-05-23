@@ -1,11 +1,12 @@
 name: Weekly Report Email
 
-# Tourne chaque vendredi à 17h UTC (= 18h Paris heure d'hiver, 19h heure d'été)
-# Garantit la livraison du rapport hebdo même si le backend Render dort.
+# Tourne chaque jour à 17h UTC (= 18h Paris hiver, 19h Paris été).
+# Le backend filtre selon users.weekly_report_day pour chaque utilisateur,
+# donc chaque user reçoit son rapport le jour qu'il a choisi (défaut : vendredi).
 on:
   schedule:
-    - cron: '0 17 * * 5'
-  workflow_dispatch:  # déclenchement manuel possible depuis l'UI GitHub
+    - cron: '0 17 * * *'
+  workflow_dispatch:
 
 jobs:
   send-weekly-report:

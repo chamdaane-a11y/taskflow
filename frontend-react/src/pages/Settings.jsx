@@ -56,6 +56,11 @@ export default function Settings() {
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const [deletingSession, setDeletingSession] = useState(null)
 
+  // ── Rapport hebdo : jour de réception (0=Lun … 6=Dim) ─────────────
+  const [weeklyReportDay, setWeeklyReportDay] = useState(4) // défaut vendredi
+  const [weeklyReportSaving, setWeeklyReportSaving] = useState(false)
+  const [weeklyTestSending, setWeeklyTestSending] = useState(false)
+
   // ── 2FA email OTP ─────────────────────────────────────────────────
   const [twoFaEnabled, setTwoFaEnabled] = useState(false)
   // null | 'setup-password' | 'setup-verify' | 'disable'
@@ -133,10 +138,11 @@ export default function Settings() {
 
   const chargerProfil = async () => {
     try {
-      const [resUser, resNotif, res2fa] = await Promise.allSettled([
+      const [resUser, resNotif, res2fa, resWeekly] = await Promise.allSettled([
         axios.get(`${API}/users/${user.id}`),
         axios.get(`${API}/users/${user.id}/notif-prefs`),
         axios.get(`${API}/users/${user.id}/2fa/status`),
+        axios.get(`${API}/users/${user.id}/weekly-report-day`),
       ])
       if (resUser.status === 'fulfilled') {
         const d = resUser.value.data
@@ -153,6 +159,9 @@ export default function Settings() {
       }
       if (res2fa.status === 'fulfilled') {
         setTwoFaEnabled(res2fa.value.data?.enabled || false)
+      }
+      if (resWeekly.status === 'fulfilled' && typeof resWeekly.value.data?.day === 'number') {
+        setWeeklyReportDay(resWeekly.value.data.day)
       }
     } catch {}
   }
@@ -229,6 +238,31 @@ export default function Settings() {
       afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
     }
     setTwoFaLoading(false)
+  }
+
+  const sauvegarderJourRapport = async (day) => {
+    const prev = weeklyReportDay
+    setWeeklyReportDay(day)
+    setWeeklyReportSaving(true)
+    try {
+      await axios.put(`${API}/users/${user.id}/weekly-report-day`, { day })
+      afficherNotification('Jour de rapport mis à jour')
+    } catch (e) {
+      setWeeklyReportDay(prev)
+      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+    }
+    setWeeklyReportSaving(false)
+  }
+
+  const envoyerRapportTest = async () => {
+    setWeeklyTestSending(true)
+    try {
+      await axios.post(`${API}/users/${user.id}/email/resume-hebdo-test`)
+      afficherNotification('Rapport envoyé — vérifie ton email dans 1 min (et le dossier spam)')
+    } catch (e) {
+      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+    }
+    setWeeklyTestSending(false)
   }
 
   const chargerSlack = async () => {
@@ -519,12 +553,56 @@ export default function Settings() {
             </button>
           )}
 
+          {/* Rapport hebdomadaire — jour configurable + test */}
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <Mail size={16} color="var(--ember)" />
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Rapport hebdomadaire</div>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
+              Bilan de ta semaine envoyé par email à 18h le jour de ton choix. Analyse de tes tâches terminées, conseil IA, et challenge pour la semaine suivante.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 14 }}>
+              {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((label, idx) => {
+                const fullLabels = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche']
+                const active = weeklyReportDay === idx
+                return (
+                  <motion.button key={idx}
+                    onClick={() => sauvegarderJourRapport(idx)}
+                    disabled={weeklyReportSaving}
+                    title={fullLabels[idx]}
+                    style={{
+                      padding: '10px 0',
+                      background: active ? 'var(--ember)' : 'var(--surface-2)',
+                      color: active ? '#fff' : 'var(--text-secondary)',
+                      border: `1px solid ${active ? 'var(--ember)' : 'var(--border-subtle)'}`,
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      transition: 'all 0.2s',
+                    }}
+                    whileTap={{ scale: 0.94 }}
+                    whileHover={!active ? { borderColor: 'var(--ember)', color: 'var(--text-primary)' } : {}}>
+                    {label}
+                  </motion.button>
+                )
+              })}
+            </div>
+            <motion.button onClick={envoyerRapportTest} disabled={weeklyTestSending}
+              style={{ width: '100%', padding: '10px', background: 'transparent', color: 'var(--ember)', border: '1px solid var(--ember)', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: weeklyTestSending ? 0.6 : 1 }}
+              whileTap={{ scale: 0.97 }}>
+              {weeklyTestSending ? 'Envoi…' : "Envoyer un test maintenant"}
+            </motion.button>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
               { label: 'Rappels de deadline',       desc: 'Notifiez-moi 24h avant chaque deadline' },
               { label: 'Nouvelles tâches bloquées', desc: 'Alerte quand une tâche devient bloquée' },
               { label: 'Tomorrow Builder (19h)',    desc: "Génération automatique du planning du lendemain" },
-              { label: 'Résumé hebdomadaire',       desc: 'Rapport de productivité chaque lundi matin' },
+              { label: 'Résumé hebdomadaire',       desc: 'Email récap envoyé le jour choisi ci-dessus' },
             ].map((item) => {
               const active = notifPrefs[item.label] ?? true
               return (

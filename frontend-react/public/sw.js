@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getshift-v20'
+const CACHE_NAME = 'getshift-v21'
 const STATIC_ASSETS = [
   '/taskflow/',
   '/taskflow/index.html',
@@ -77,18 +77,31 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   const data = e.data ? e.data.json() : { title: 'GetShift', body: 'Nouvelle notification' }
   const targetUrl = data.url || '/dashboard'
+  const options = {
+    body: data.body || '',
+    icon: '/taskflow/icons/icon-192.png',
+    badge: '/taskflow/icons/icon-72.png',
+    // Couleur thème ember pour Android (statut bar + accent)
+    // Chrome/Android utilise theme_color du manifest mais on peut surcharger ici
+    color: '#E07A3E',
+    // Signature vibrate GetShift — pattern court, premium
+    vibrate: [120, 60, 120],
+    data: { url: targetUrl, ts: Date.now() },
+    // Tag groupe les notifs du même type (remplace au lieu d'empiler)
+    tag: data.tag || 'getshift',
+    // Renotify = nouvelle notif même si même tag (par défaut false = silencieux pour le remplacement)
+    renotify: !!data.renotify,
+    // Image bannière riche (Android Chrome). Peut être surchargée par le backend.
+    image: data.image || undefined,
+    requireInteraction: !!data.require_interaction,
+    silent: false,
+    actions: [
+      { action: 'open', title: 'Ouvrir', icon: '/taskflow/icons/icon-72.png' },
+      { action: 'dismiss', title: 'Ignorer' }
+    ],
+  }
   e.waitUntil(
-    self.registration.showNotification(data.title || 'GetShift', {
-      body: data.body || '',
-      icon: '/taskflow/icons/icon-192.png',
-      badge: '/taskflow/icons/icon-72.png',
-      data: { url: targetUrl },
-      tag: data.tag || 'getshift',
-      actions: [
-        { action: 'open', title: 'Ouvrir' },
-        { action: 'dismiss', title: 'Ignorer' }
-      ]
-    })
+    self.registration.showNotification(data.title || 'GetShift', options)
   )
 })
 
