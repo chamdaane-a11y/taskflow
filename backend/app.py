@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-weekly-day-push-brand-v7'
+APP_BUILD_MARKER = '2026-05-23-debug-hebdo-v8'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -5167,6 +5167,73 @@ def trigger_resume_hebdo_for_user(id):
     """Test manuel : envoie le rapport hebdo à un user spécifique, ignore son day."""
     threading.Thread(target=job_email_resume_hebdo, args=(id,)).start()
     return jsonify({"message": "Rapport hebdo envoyé (vérifie ton email dans 1 min)"})
+
+@app.route('/debug/resume-hebdo/<int:id>', methods=['GET'])
+def debug_resume_hebdo(id):
+    """Debug : run job hebdo synchrone pour un user et retourne tout résultat / erreur."""
+    import traceback
+    result = {"user_id": id, "steps": []}
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("""
+            SELECT u.id, u.nom, u.email, u.points, u.niveau, u.email_verifie,
+                COUNT(CASE WHEN t.terminee = TRUE AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees,
+                COUNT(CASE WHEN t.terminee = TRUE AND COALESCE(t.terminee_le, t.updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(t.terminee_le, t.updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_prec,
+                COUNT(CASE WHEN t.terminee = FALSE THEN 1 END) as en_cours,
+                COUNT(CASE WHEN t.terminee = FALSE AND t.deadline < CURDATE() AND t.deadline IS NOT NULL THEN 1 END) as en_retard,
+                COUNT(t.id) as total
+            FROM users u LEFT JOIN taches t ON u.id = t.user_id
+            WHERE u.id = %s GROUP BY u.id
+        """, (id,))
+        u = cur.fetchone()
+        if not u:
+            return jsonify({"erreur": "user introuvable"}), 404
+        result["user"] = {"id": u['id'], "nom": u['nom'], "email": u['email'], "email_verifie": bool(u['email_verifie']), "total_taches": u['total']}
+        result["steps"].append("user fetched")
+        try:
+            extra = _collecter_stats_hebdo(cur, u['id'], u)
+            result["steps"].append("stats collected")
+            result["extra_keys"] = list(extra.keys())
+        except Exception as e:
+            result["erreur_stats"] = f"{type(e).__name__}: {e}"
+            result["traceback_stats"] = traceback.format_exc()
+            return jsonify(result), 500
+        try:
+            terminees = u['terminees'] or 0
+            taux = round((terminees / max(u['total'], 1)) * 100, 0) if terminees else 0
+            from datetime import date, timedelta
+            semaine_fin = date.today()
+            semaine_debut = semaine_fin - timedelta(days=6)
+            stats = {
+                "terminees": terminees, "terminees_prec": u['terminees_prec'] or 0,
+                "en_cours": u['en_cours'] or 0, "en_retard": u['en_retard'] or 0,
+                "taux": int(taux), "points": u['points'] or 0, "niveau": u['niveau'] or 1,
+                "conseil_ia": "Test debug — pas de conseil IA pour gagner du temps.",
+                "semaine_debut": semaine_debut.strftime('%d/%m'),
+                "semaine_fin": semaine_fin.strftime('%d/%m/%Y'),
+                **extra,
+            }
+            html = _html_resume_hebdo(u['nom'], stats)
+            result["steps"].append(f"html generated ({len(html)} chars)")
+        except Exception as e:
+            result["erreur_html"] = f"{type(e).__name__}: {e}"
+            result["traceback_html"] = traceback.format_exc()
+            return jsonify(result), 500
+        try:
+            sujet = f"[DEBUG] Bilan · {semaine_debut.strftime('%d/%m')} → {semaine_fin.strftime('%d/%m')} — GetShift"
+            sent = envoyer_email(u['email'], sujet, html)
+            result["steps"].append(f"envoyer_email returned: {sent}")
+            result["email_envoye"] = bool(sent)
+        except Exception as e:
+            result["erreur_email"] = f"{type(e).__name__}: {e}"
+            result["traceback_email"] = traceback.format_exc()
+            return jsonify(result), 500
+        cur.close(); db.close()
+        return jsonify(result)
+    except Exception as e:
+        result["erreur_globale"] = f"{type(e).__name__}: {e}"
+        result["traceback_globale"] = traceback.format_exc()
+        return jsonify(result), 500
 
 
 # ════════════════════════════════════════════════════════════════════════
