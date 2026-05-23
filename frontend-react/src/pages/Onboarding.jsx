@@ -10,6 +10,9 @@ import {
   User, Users, Building2, Shuffle,
   Layers, Clock4, Target, Hourglass,
 } from 'lucide-react'
+import {
+  GoogleCalendarLogo, GoogleDriveLogo, GmailLogo, NotionLogo, SlackLogo,
+} from '../components/BrandLogos'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -39,58 +42,6 @@ const GetShiftMark = ({ size = 40 }) => {
     </svg>
   )
 }
-
-const GoogleCalendarLogo = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#fff" d="M37 9H11a2 2 0 0 0-2 2v26a2 2 0 0 0 2 2h26a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2z"/>
-    <path fill="#1A73E8" d="M22.677 27.245c-.526-.355-.891-.875-1.092-1.558l1.336-.55c.112.427.308.758.589.992.279.235.618.351 1.016.351.406 0 .754-.123 1.043-.371.289-.247.434-.562.434-.943 0-.39-.152-.708-.456-.955-.305-.246-.687-.37-1.143-.37h-.772v-1.322h.693c.393 0 .724-.106.992-.319.27-.213.404-.504.404-.875 0-.331-.121-.594-.362-.79-.241-.197-.547-.296-.917-.296a1.43 1.43 0 0 0-.892.288 1.7 1.7 0 0 0-.527.71l-1.322-.55c.18-.51.51-.96.994-1.347.484-.388 1.102-.583 1.852-.583.555 0 1.054.107 1.497.32.444.213.792.51 1.045.886.252.376.378.798.378 1.267 0 .478-.115.882-.346 1.214a2.38 2.38 0 0 1-.851.776v.079c.401.169.745.42 1.024.764.281.343.421.755.421 1.236 0 .482-.122.913-.366 1.291a2.5 2.5 0 0 1-1.012.886c-.43.216-.913.325-1.451.325-.622.001-1.196-.177-1.722-.531zM30.625 21.969l-1.466 1.06-.733-1.112 2.629-1.895h1.008v8.937h-1.438v-6.991z"/>
-    <path fill="#EA4335" d="M37 9H11a2 2 0 0 0-2 2v8h30v-8a2 2 0 0 0-2-2z"/>
-    <path fill="#34A853" d="M39 39v-8H9v8a2 2 0 0 0 2 2h26a2 2 0 0 0 2-2z"/>
-    <path fill="#FBBC04" d="M9 19h30v12H9z"/>
-    <path fill="#188038" d="M9 31h30v8H9z"/>
-    <path fill="#1967D2" d="M39 11v8h-4v-8h4z"/>
-    <path fill="#fff" d="M11 7v6m26-6v6" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
-  </svg>
-)
-
-const GoogleDriveLogo = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#FFC107" d="M17 6h14l13 22.5L31 51H17L4 28.5z"/>
-    <path fill="#1976D2" d="M44 28.5L31 51H17l7-12h20z"/>
-    <path fill="#4CAF50" d="M4 28.5L17 6h14l-7 12z"/>
-    <path fill="#388E3C" d="M24 18l-7 12 7 12 7-12z" opacity=".25"/>
-    <path fill="#1565C0" d="M44 28.5L31 6l-7 12 13 22.5z" opacity=".15"/>
-  </svg>
-)
-
-const GmailLogo = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#4285F4" d="M6 38h7V18L3 10.5V35a3 3 0 0 0 3 3z"/>
-    <path fill="#34A853" d="M35 38h7a3 3 0 0 0 3-3V10.5L35 18z"/>
-    <path fill="#FBBC04" d="M35 13v25l10-7.5V10.5a3 3 0 0 0-3-3h-2.34z"/>
-    <path fill="#EA4335" d="M6 13l29 22V13L24 21z"/>
-    <path fill="#C5221F" d="M3 10.5V13l10 7.5V13l-4.5-3.34A3 3 0 0 0 3 10.5z"/>
-  </svg>
-)
-
-const NotionLogo = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-    <rect width="64" height="64" rx="10" fill="#FFFFFF"/>
-    <path d="M16 13l4-.4 14 11V47l-6-2V20l-12-1z" stroke="#000" strokeWidth="2" fill="#000"/>
-    <path d="M16 13v33l5 2V20l-5-7z" fill="#000"/>
-    <path d="M44 17v23l4 2V19l-4-2z" fill="#000"/>
-    <path d="M48 14l-4 3v25l-7-3V21l-9-7 9-2 11 2z" fill="#000"/>
-  </svg>
-)
-
-const SlackLogo = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#E01E5A" d="M14.5 28.5a3 3 0 1 1-3-3h3v3zm1.5 0a3 3 0 1 1 6 0v7.5a3 3 0 1 1-6 0v-7.5z"/>
-    <path fill="#36C5F0" d="M19 14.5a3 3 0 1 1 3-3v3h-3zm0 1.5a3 3 0 1 1 0 6h-7.5a3 3 0 1 1 0-6H19z"/>
-    <path fill="#2EB67D" d="M33.5 19a3 3 0 1 1 3 3h-3v-3zm-1.5 0a3 3 0 1 1-6 0v-7.5a3 3 0 1 1 6 0V19z"/>
-    <path fill="#ECB22E" d="M29 33.5a3 3 0 1 1-3 3v-3h3zm0-1.5a3 3 0 1 1 0-6h7.5a3 3 0 1 1 0 6H29z"/>
-  </svg>
-)
 
 /* ═══════════════════════════════════════════════════════════════════
    DATA

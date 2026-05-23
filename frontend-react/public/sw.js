@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getshift-v21'
+const CACHE_NAME = 'getshift-v22'
 const STATIC_ASSETS = [
   '/taskflow/',
   '/taskflow/index.html',
