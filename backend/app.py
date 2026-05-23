@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-2fa-google-fix-v3'
+APP_BUILD_MARKER = '2026-05-23-2fa-google-hybrid-v4'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -2250,8 +2250,8 @@ def get_2fa_status(id):
 @limiter.limit("5 per hour")
 def setup_2fa(id):
     """Génère un secret TOTP et retourne l'URI + QR code. Ne l'active pas
-    encore. Exige le mot de passe pour les comptes classiques. Les comptes
-    Google-only n'ont pas de mot de passe : la session JWT suffit."""
+    encore. Pour les comptes Google (google_id set, même hybrides) la session
+    JWT suffit. Pour les comptes classiques le mot de passe est requis."""
     try:
         data = request.get_json() or {}
         password = (data.get('password') or '').strip()
@@ -2260,8 +2260,8 @@ def setup_2fa(id):
         row = cur.fetchone()
         if not row:
             db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
-        is_google_only = bool(row.get('google_id')) and not row.get('password')
-        if not is_google_only:
+        is_google_account = bool(row.get('google_id'))
+        if not is_google_account:
             ok, err = _verify_user_password(id, password)
             if not ok:
                 db.close(); return jsonify({"erreur": err}), 400
@@ -2309,8 +2309,8 @@ def verify_2fa(id):
 @app.route('/users/<int:id>/2fa/disable', methods=['POST'])
 @limiter.limit("10 per minute")
 def disable_2fa(id):
-    """Désactive la 2FA. Exige le mot de passe pour les comptes classiques.
-    Comptes Google-only : session JWT suffit (pas de mot de passe possible)."""
+    """Désactive la 2FA. Comptes Google : session JWT suffit. Comptes
+    classiques : mot de passe requis."""
     try:
         data = request.get_json() or {}
         password = (data.get('password') or '').strip()
@@ -2319,8 +2319,8 @@ def disable_2fa(id):
         user_row = cur.fetchone()
         if not user_row:
             db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
-        is_google_only = bool(user_row.get('google_id')) and not user_row.get('password')
-        if not is_google_only:
+        is_google_account = bool(user_row.get('google_id'))
+        if not is_google_account:
             ok, err = _verify_user_password(id, password)
             if not ok:
                 db.close(); return jsonify({"erreur": err}), 400

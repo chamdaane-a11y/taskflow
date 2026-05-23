@@ -47,7 +47,6 @@ export default function Settings() {
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailPending, setEmailPending] = useState(null)
   const [isGoogleAccount, setIsGoogleAccount] = useState(false)
-  const [hasPassword, setHasPassword] = useState(true) // défaut true = sécurisé, mis à jour au fetch
   const [deleteForm, setDeleteForm] = useState({ confirmation: '', password: '' })
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [showDeleteZone, setShowDeleteZone] = useState(false)
@@ -147,7 +146,6 @@ export default function Settings() {
         setTheme(t)
         applyTheme(t)
         setIsGoogleAccount(!!d.google_id)
-        setHasPassword(d.has_password ?? true)
         if (d.email_change_new) setEmailPending(d.email_change_new)
       }
       if (resNotif.status === 'fulfilled' && resNotif.value.data?.prefs) {
@@ -191,7 +189,8 @@ export default function Settings() {
   // Étape 1 : password gate → backend génère le secret + QR
   const demarrer2faSetup = async (passwordOverride = null) => {
     const pwd = passwordOverride !== null ? passwordOverride : twoFaPassword
-    if (hasPassword && !pwd) { afficherNotification('Mot de passe requis', 'error'); return }
+    // Comptes Google : pas de mot de passe requis (la session JWT suffit)
+    if (!isGoogleAccount && !pwd) { afficherNotification('Mot de passe requis', 'error'); return }
     setTwoFaLoading(true)
     try {
       const res = await axios.post(`${API}/users/${user.id}/2fa/setup`, { password: pwd })
@@ -221,9 +220,9 @@ export default function Settings() {
     setTwoFaLoading(false)
   }
 
-  // Désactivation : password pour comptes classiques ; comptes Google-only sans password
+  // Désactivation : password pour comptes classiques ; comptes Google : session JWT suffit
   const desactiver2fa = async () => {
-    if (hasPassword && !twoFaPassword) { afficherNotification('Mot de passe requis', 'error'); return }
+    if (!isGoogleAccount && !twoFaPassword) { afficherNotification('Mot de passe requis', 'error'); return }
     setTwoFaLoading(true)
     try {
       await axios.post(`${API}/users/${user.id}/2fa/disable`, { password: twoFaPassword })
@@ -679,8 +678,9 @@ export default function Settings() {
                 </p>
                 <motion.button
                   onClick={() => {
-                    if (hasPassword) { setTwoFaStep('setup-password'); setTwoFaPassword('') }
-                    else demarrer2faSetup('')
+                    // Compte Google : pas de password requis, on appelle direct l'API
+                    if (isGoogleAccount) demarrer2faSetup('')
+                    else { setTwoFaStep('setup-password'); setTwoFaPassword('') }
                   }}
                   disabled={twoFaLoading}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: twoFaLoading ? 0.7 : 1 }}
@@ -781,12 +781,12 @@ export default function Settings() {
             {twoFaStep === 'disable' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                  {hasPassword
-                    ? <>Entre ton mot de passe pour désactiver la 2FA. <strong>Pas le code TOTP</strong> — pour éviter qu'un voleur de téléphone puisse retirer la protection.</>
-                    : 'Désactiver la double authentification sur ton compte Google GetShift.'}
+                  {isGoogleAccount
+                    ? 'Désactiver la double authentification sur ton compte Google GetShift.'
+                    : <>Entre ton mot de passe pour désactiver la 2FA. <strong>Pas le code TOTP</strong> — pour éviter qu'un voleur de téléphone puisse retirer la protection.</>}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {hasPassword && (
+                  {!isGoogleAccount && (
                     <input
                       type="password"
                       placeholder="Mot de passe actuel"
@@ -801,9 +801,9 @@ export default function Settings() {
                     <motion.button onClick={closeTwoFaWizard}
                       style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                       whileTap={{ scale: 0.97 }}>Annuler</motion.button>
-                    <motion.button onClick={desactiver2fa} disabled={twoFaLoading || (hasPassword && !twoFaPassword)}
-                      style={{ flex: 1, padding: '10px', background: (!hasPassword || twoFaPassword) ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: (!hasPassword || twoFaPassword) ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: (!hasPassword || twoFaPassword) ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
-                      whileTap={(!hasPassword || twoFaPassword) ? { scale: 0.97 } : {}}>
+                    <motion.button onClick={desactiver2fa} disabled={twoFaLoading || (!isGoogleAccount && !twoFaPassword)}
+                      style={{ flex: 1, padding: '10px', background: (isGoogleAccount || twoFaPassword) ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: (isGoogleAccount || twoFaPassword) ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: (isGoogleAccount || twoFaPassword) ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
+                      whileTap={(isGoogleAccount || twoFaPassword) ? { scale: 0.97 } : {}}>
                       {twoFaLoading ? 'Désactivation…' : 'Désactiver'}
                     </motion.button>
                   </div>

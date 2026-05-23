@@ -13,25 +13,32 @@ const EMPTY = {
   niveauActuel: NIVEAUX[0], pctNiveau: 0,
 }
 
+function computeFromLocalStorage() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}')
+    if (!u?.id) return EMPTY
+    const niveau = u.niveau || 1
+    const points = u.points || 0
+    const streak = u.streak || 0
+    const niveauActuel = NIVEAUX.find(n => n.niveau === niveau) || NIVEAUX[0]
+    const niveauSuivant = NIVEAUX.find(n => n.niveau === niveau + 1)
+    const pctNiveau = niveauSuivant
+      ? Math.round(((points - niveauActuel.min) / (niveauSuivant.min - niveauActuel.min)) * 100)
+      : 100
+    return { user: u, niveau, points, streak, niveauActuel, pctNiveau }
+  } catch {
+    return EMPTY
+  }
+}
+
 export function useSidebarUser() {
-  const [data, setData] = useState(EMPTY)
+  // Initializer synchrone : user dispo au PREMIER render (sinon les composants
+  // qui font `if (!user) navigate('/')` au mount redirigent à tort).
+  const [data, setData] = useState(computeFromLocalStorage)
 
   useEffect(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}')
-      if (!u?.id) return
-
-      const niveau = u.niveau || 1
-      const points = u.points || 0
-      const streak = u.streak || 0
-      const niveauActuel = NIVEAUX.find(n => n.niveau === niveau) || NIVEAUX[0]
-      const niveauSuivant = NIVEAUX.find(n => n.niveau === niveau + 1)
-      const pctNiveau = niveauSuivant
-        ? Math.round(((points - niveauActuel.min) / (niveauSuivant.min - niveauActuel.min)) * 100)
-        : 100
-
-      setData({ user: u, niveau, points, streak, niveauActuel, pctNiveau })
-    } catch {}
+    // Re-sync au mount au cas où localStorage a changé entre temps
+    setData(computeFromLocalStorage())
   }, [])
 
   return data
