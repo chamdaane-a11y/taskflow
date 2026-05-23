@@ -627,7 +627,7 @@ export default function IAChat() {
           chargerTaches()
         }
         if (data.action?.type === 'redirect_tomorrow_builder')
-          setTimeout(() => navigate('/planification'), 1800)
+          setTimeout(() => navigate('/tomorrow'), 1800)
 
         // Navigation déclenchée explicitement par l'IA via naviguer_vers.
         // Les slugs envoyés par le backend (tomorrow-builder, goal-reverse, ia, …)

@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-22-settings-tier4-2fa-hardening-v2'
+APP_BUILD_MARKER = '2026-05-23-2fa-google-fix-v3'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1815,7 +1815,7 @@ def get_user(id):
     curseur = db.cursor(dictionary=True)
     curseur.execute(
         "SELECT id, nom, email, points, niveau, theme, streak, derniere_activite, "
-        "streak_freeze_used_at, created_at, email_verifie, google_id, "
+        "streak_freeze_used_at, created_at, email_verifie, google_id, password, "
         "email_change_new, email_change_expiry FROM users WHERE id=%s",
         (id,)
     )
@@ -1830,6 +1830,7 @@ def get_user(id):
         # Booléens propres
         user['email_verifie'] = bool(user.get('email_verifie'))
         user['google_id'] = user.get('google_id') or None
+        user['has_password'] = bool(user.pop('password', None))  # ne jamais exposer le hash
     db.close()
     return jsonify(user)
 
@@ -2249,17 +2250,21 @@ def get_2fa_status(id):
 @limiter.limit("5 per hour")
 def setup_2fa(id):
     """Génère un secret TOTP et retourne l'URI + QR code. Ne l'active pas
-    encore. Exige le mot de passe actuel pour éviter qu'un attaquant écrase
-    le secret d'une victime."""
+    encore. Exige le mot de passe pour les comptes classiques. Les comptes
+    Google-only n'ont pas de mot de passe : la session JWT suffit."""
     try:
         data = request.get_json() or {}
         password = (data.get('password') or '').strip()
-        ok, err = _verify_user_password(id, password)
-        if not ok:
-            return jsonify({"erreur": err}), 400
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT email, totp_enabled FROM users WHERE id=%s", (id,))
+        cur.execute("SELECT email, totp_enabled, password, google_id FROM users WHERE id=%s", (id,))
         row = cur.fetchone()
+        if not row:
+            db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        is_google_only = bool(row.get('google_id')) and not row.get('password')
+        if not is_google_only:
+            ok, err = _verify_user_password(id, password)
+            if not ok:
+                db.close(); return jsonify({"erreur": err}), 400
         if row.get('totp_enabled'):
             db.close()
             return jsonify({"erreur": "La 2FA est déjà activée. Désactive-la d'abord."}), 400
@@ -2304,19 +2309,22 @@ def verify_2fa(id):
 @app.route('/users/<int:id>/2fa/disable', methods=['POST'])
 @limiter.limit("10 per minute")
 def disable_2fa(id):
-    """Désactive la 2FA. Exige le mot de passe (pas le code TOTP) — l'idée
-    est qu'un voleur de téléphone avec accès à l'authenticator ne doit pas
-    pouvoir désactiver la 2FA. Le password reste connu uniquement de l'user."""
+    """Désactive la 2FA. Exige le mot de passe pour les comptes classiques.
+    Comptes Google-only : session JWT suffit (pas de mot de passe possible)."""
     try:
         data = request.get_json() or {}
         password = (data.get('password') or '').strip()
-        ok, err = _verify_user_password(id, password)
-        if not ok:
-            return jsonify({"erreur": err}), 400
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT totp_enabled FROM users WHERE id=%s", (id,))
-        row = cur.fetchone()
-        if not row or not row.get('totp_enabled'):
+        cur.execute("SELECT totp_enabled, password, google_id FROM users WHERE id=%s", (id,))
+        user_row = cur.fetchone()
+        if not user_row:
+            db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        is_google_only = bool(user_row.get('google_id')) and not user_row.get('password')
+        if not is_google_only:
+            ok, err = _verify_user_password(id, password)
+            if not ok:
+                db.close(); return jsonify({"erreur": err}), 400
+        if not user_row.get('totp_enabled'):
             db.close(); return jsonify({"erreur": "La 2FA n'est pas activée"}), 400
         cur2 = db.cursor()
         cur2.execute("UPDATE users SET totp_enabled=0, totp_secret=NULL, totp_last_counter=NULL WHERE id=%s", (id,))
