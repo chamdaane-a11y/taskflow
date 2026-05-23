@@ -14,7 +14,9 @@ const ForgotPassword   = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword    = lazy(() => import('./pages/ResetPassword'))
 const Profile          = lazy(() => import('./pages/Profile'))
 const Landing          = lazy(() => import('./pages/Landing'))
-const CGU              = lazy(() => import('./pages/CGU'))
+const CGU                    = lazy(() => import('./pages/CGU'))
+const ConfidentialitePolicy  = lazy(() => import('./pages/ConfidentialitePolicy'))
+const MentionsLegales        = lazy(() => import('./pages/MentionsLegales'))
 const TomorrowBuilder  = lazy(() => import('./pages/TomorrowBuilder'))
 const Settings         = lazy(() => import('./pages/Settings'))
 const GoalReverse      = lazy(() => import('./pages/GoalReverse'))
@@ -67,6 +69,8 @@ function App() {
           <Route path="/goal"              element={<GoalReverse />} />
           <Route path="/tomorrow"          element={<TomorrowBuilder />} />
           <Route path="/cgu"               element={<CGU />} />
+          <Route path="/confidentialite"   element={<ConfidentialitePolicy />} />
+          <Route path="/mentions-legales"  element={<MentionsLegales />} />
           <Route path="/"                  element={<Landing />} />
           <Route path="/splash"            element={<Splash />} />
           <Route path="/login"             element={<Login />} />
