@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-debug-hebdo-v8'
+APP_BUILD_MARKER = '2026-05-23-fix-hebdo-groupby-v9'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -930,7 +930,6 @@ def _collecter_stats_hebdo(cursor, user_id, base_user):
     # updated_at change à chaque édition → ne reflète pas la date de complétion.
     cursor.execute("""
         SELECT DATE(COALESCE(terminee_le, updated_at)) AS jour,
-               DAYOFWEEK(COALESCE(terminee_le, updated_at)) AS dow_sql,
                COUNT(*) AS count
         FROM taches WHERE user_id=%s AND terminee=TRUE
           AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)
