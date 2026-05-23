@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-2fa-google-hybrid-v4'
+APP_BUILD_MARKER = '2026-05-23-2fa-pillow-pwd-v5'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -2207,7 +2207,7 @@ def _verify_user_password(user_id, password):
     if not row:
         return False, "Utilisateur introuvable"
     if not row.get('password'):
-        return False, "Compte Google : configure la 2FA via Google directement"
+        return False, "Définis d'abord un mot de passe via 'Mot de passe oublié' depuis la page de login"
     if row['password'] != pw_hash:
         return False, "Mot de passe incorrect"
     return True, None
@@ -2250,21 +2250,18 @@ def get_2fa_status(id):
 @limiter.limit("5 per hour")
 def setup_2fa(id):
     """Génère un secret TOTP et retourne l'URI + QR code. Ne l'active pas
-    encore. Pour les comptes Google (google_id set, même hybrides) la session
-    JWT suffit. Pour les comptes classiques le mot de passe est requis."""
+    encore. Exige le mot de passe (style WhatsApp : 2FA = password + TOTP)."""
     try:
         data = request.get_json() or {}
         password = (data.get('password') or '').strip()
+        ok, err = _verify_user_password(id, password)
+        if not ok:
+            return jsonify({"erreur": err}), 400
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT email, totp_enabled, password, google_id FROM users WHERE id=%s", (id,))
+        cur.execute("SELECT email, totp_enabled FROM users WHERE id=%s", (id,))
         row = cur.fetchone()
         if not row:
             db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
-        is_google_account = bool(row.get('google_id'))
-        if not is_google_account:
-            ok, err = _verify_user_password(id, password)
-            if not ok:
-                db.close(); return jsonify({"erreur": err}), 400
         if row.get('totp_enabled'):
             db.close()
             return jsonify({"erreur": "La 2FA est déjà activée. Désactive-la d'abord."}), 400
@@ -2309,21 +2306,19 @@ def verify_2fa(id):
 @app.route('/users/<int:id>/2fa/disable', methods=['POST'])
 @limiter.limit("10 per minute")
 def disable_2fa(id):
-    """Désactive la 2FA. Comptes Google : session JWT suffit. Comptes
-    classiques : mot de passe requis."""
+    """Désactive la 2FA. Exige le mot de passe (pas le code TOTP) — un voleur
+    de téléphone avec accès à l'authenticator ne doit pas pouvoir désactiver."""
     try:
         data = request.get_json() or {}
         password = (data.get('password') or '').strip()
+        ok, err = _verify_user_password(id, password)
+        if not ok:
+            return jsonify({"erreur": err}), 400
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT totp_enabled, password, google_id FROM users WHERE id=%s", (id,))
+        cur.execute("SELECT totp_enabled FROM users WHERE id=%s", (id,))
         user_row = cur.fetchone()
         if not user_row:
             db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
-        is_google_account = bool(user_row.get('google_id'))
-        if not is_google_account:
-            ok, err = _verify_user_password(id, password)
-            if not ok:
-                db.close(); return jsonify({"erreur": err}), 400
         if not user_row.get('totp_enabled'):
             db.close(); return jsonify({"erreur": "La 2FA n'est pas activée"}), 400
         cur2 = db.cursor()

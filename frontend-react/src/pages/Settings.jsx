@@ -189,8 +189,7 @@ export default function Settings() {
   // Étape 1 : password gate → backend génère le secret + QR
   const demarrer2faSetup = async (passwordOverride = null) => {
     const pwd = passwordOverride !== null ? passwordOverride : twoFaPassword
-    // Comptes Google : pas de mot de passe requis (la session JWT suffit)
-    if (!isGoogleAccount && !pwd) { afficherNotification('Mot de passe requis', 'error'); return }
+    if (!pwd) { afficherNotification('Mot de passe requis', 'error'); return }
     setTwoFaLoading(true)
     try {
       const res = await axios.post(`${API}/users/${user.id}/2fa/setup`, { password: pwd })
@@ -220,9 +219,9 @@ export default function Settings() {
     setTwoFaLoading(false)
   }
 
-  // Désactivation : password pour comptes classiques ; comptes Google : session JWT suffit
+  // Désactivation : password requis pour tous (sécurité contre voleur de téléphone)
   const desactiver2fa = async () => {
-    if (!isGoogleAccount && !twoFaPassword) { afficherNotification('Mot de passe requis', 'error'); return }
+    if (!twoFaPassword) { afficherNotification('Mot de passe requis', 'error'); return }
     setTwoFaLoading(true)
     try {
       await axios.post(`${API}/users/${user.id}/2fa/disable`, { password: twoFaPassword })
@@ -677,16 +676,11 @@ export default function Settings() {
                   Protège ton compte avec une application d'authentification (Google Authenticator, Authy, 1Password…). Chaque connexion demandera un code à 6 chiffres en plus de ton mot de passe.
                 </p>
                 <motion.button
-                  onClick={() => {
-                    // Compte Google : pas de password requis, on appelle direct l'API
-                    if (isGoogleAccount) demarrer2faSetup('')
-                    else { setTwoFaStep('setup-password'); setTwoFaPassword('') }
-                  }}
-                  disabled={twoFaLoading}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: twoFaLoading ? 0.7 : 1 }}
+                  onClick={() => { setTwoFaStep('setup-password'); setTwoFaPassword('') }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                   whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.97 }}>
                   <Lock size={14} />
-                  {twoFaLoading ? 'Génération…' : 'Activer la 2FA'}
+                  Activer la 2FA
                 </motion.button>
               </>
             )}
@@ -777,33 +771,29 @@ export default function Settings() {
               </motion.div>
             )}
 
-            {/* Désactivation : password pour comptes classiques, confirmation pour comptes Google */}
+            {/* Désactivation : password requis (pas TOTP) — bloque voleur de téléphone */}
             {twoFaStep === 'disable' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                  {isGoogleAccount
-                    ? 'Désactiver la double authentification sur ton compte Google GetShift.'
-                    : <>Entre ton mot de passe pour désactiver la 2FA. <strong>Pas le code TOTP</strong> — pour éviter qu'un voleur de téléphone puisse retirer la protection.</>}
+                  Entre ton mot de passe pour désactiver la 2FA. <strong>Pas le code TOTP</strong> — pour éviter qu'un voleur de téléphone puisse retirer la protection.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {!isGoogleAccount && (
-                    <input
-                      type="password"
-                      placeholder="Mot de passe actuel"
-                      value={twoFaPassword}
-                      onChange={e => setTwoFaPassword(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && desactiver2fa()}
-                      autoFocus
-                      style={INPUT_STYLE}
-                    />
-                  )}
+                  <input
+                    type="password"
+                    placeholder="Mot de passe actuel"
+                    value={twoFaPassword}
+                    onChange={e => setTwoFaPassword(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && desactiver2fa()}
+                    autoFocus
+                    style={INPUT_STYLE}
+                  />
                   <div style={{ display: 'flex', gap: 10 }}>
                     <motion.button onClick={closeTwoFaWizard}
                       style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                       whileTap={{ scale: 0.97 }}>Annuler</motion.button>
-                    <motion.button onClick={desactiver2fa} disabled={twoFaLoading || (!isGoogleAccount && !twoFaPassword)}
-                      style={{ flex: 1, padding: '10px', background: (isGoogleAccount || twoFaPassword) ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: (isGoogleAccount || twoFaPassword) ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: (isGoogleAccount || twoFaPassword) ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
-                      whileTap={(isGoogleAccount || twoFaPassword) ? { scale: 0.97 } : {}}>
+                    <motion.button onClick={desactiver2fa} disabled={twoFaLoading || !twoFaPassword}
+                      style={{ flex: 1, padding: '10px', background: twoFaPassword ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaPassword ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaPassword ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
+                      whileTap={twoFaPassword ? { scale: 0.97 } : {}}>
                       {twoFaLoading ? 'Désactivation…' : 'Désactiver'}
                     </motion.button>
                   </div>
