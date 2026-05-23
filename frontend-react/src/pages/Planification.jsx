@@ -10,6 +10,7 @@ import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import { useSidebarUser } from '../components/useSidebarUser'
 import {
   Calendar, CalendarDays, LogOut, Layers, Sparkles,
   Menu, Columns, BarChart, CheckSquare, Check, Zap, Target, X,
@@ -245,13 +246,14 @@ export default function Planification() {
   const [filtre, setFiltre] = useState('toutes')
   const bloquees = 0
 
-  // Mock user data for profile
+  // Source unifiée (= Dashboard) — remplace les valeurs mock hardcodées.
   const userData = { nom: user?.nom || 'Utilisateur', email: user?.email || 'user@example.com' }
-  const points = 1250
-  const niveau = 3
-  const niveauActuel = { label: 'Productif' }
-  const pctNiveau = 42
-  const streak = 5
+  const sb = useSidebarUser()
+  const points = sb.points
+  const niveau = sb.niveau
+  const niveauActuel = sb.niveauActuel
+  const pctNiveau = sb.pctNiveau
+  const streak = sb.streak
 
   const GANTT_DAY_W   = isMobile ? 26 : 36
   const GANTT_LABEL_W = isMobile ? 130 : 220

@@ -16,6 +16,7 @@ import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import { useSidebarUser } from '../components/useSidebarUser'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -407,6 +408,7 @@ export default function IAChat() {
   const [loading,           setLoading]           = useState(false)
   const [taches,            setTaches]            = useState([])
   const [profil,            setProfil]            = useState(null)
+  const sb = useSidebarUser()
   const [tacheSelectionnee, setTacheSelectionnee] = useState(null)
   const [historique,        setHistorique]        = useState([])
   const [showHistorique,    setShowHistorique]    = useState(false)
@@ -821,11 +823,11 @@ export default function IAChat() {
       {/* ── SIDEBAR (shared component) ── */}
       <AppSidebar
         T={T} user={user}
-        niveau={profil?.niveau ?? 1}
-        points={profil?.points ?? 0}
-        streak={profil?.streak ?? 0}
-        niveauActuel={{ label: profil?.label || '' }}
-        pctNiveau={profil?.pctNiveau ?? 0}
+        niveau={sb.niveau}
+        points={sb.points}
+        streak={sb.streak}
+        niveauActuel={sb.niveauActuel}
+        pctNiveau={sb.pctNiveau}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         toggleSidebar={toggleSidebar}

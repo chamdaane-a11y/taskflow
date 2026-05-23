@@ -18,6 +18,7 @@ import {
   TrendingUp, AlertCircle, Zap, Brain, ChevronDown, Loader
 } from 'lucide-react'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import { useSidebarUser } from '../components/useSidebarUser'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -2312,9 +2313,13 @@ export default function Collaboration() {
   const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
 
   const userData = { nom: user?.nom || 'Utilisateur', email: user?.email || 'user@example.com' }
-  const points = 1250; const niveau = 3
-  const niveauActuel = { label: 'Productif' }
-  const pctNiveau = 42; const streak = 5
+  // Source unifiée (= Dashboard) — remplace les valeurs mock hardcodées.
+  const sb = useSidebarUser()
+  const points = sb.points
+  const niveau = sb.niveau
+  const niveauActuel = sb.niveauActuel
+  const pctNiveau = sb.pctNiveau
+  const streak = sb.streak
 
   const IconLock = ({ size = 14, color = 'currentColor' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

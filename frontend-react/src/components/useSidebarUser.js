@@ -1,44 +1,78 @@
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 
-const NIVEAUX = [
-  { niveau: 1, label: 'Débutant',  min: 0 },
-  { niveau: 2, label: 'Apprenti',  min: 100 },
-  { niveau: 3, label: 'Confirmé',  min: 250 },
-  { niveau: 4, label: 'Expert',    min: 500 },
-  { niveau: 5, label: 'Maître',    min: 1000 },
-]
+const API = 'https://getshift-backend.onrender.com'
+
+// Source de vérité : /dashboard/stats/{id} — même endpoint que le Dashboard.
+// Toutes les pages qui affichent niveau/points dans la sidebar doivent passer
+// par ce hook pour rester alignées avec le Dashboard (sinon désync visible).
 
 const EMPTY = {
   user: null, niveau: 1, points: 0, streak: 0,
-  niveauActuel: NIVEAUX[0], pctNiveau: 0,
+  niveauActuel: { label: '' }, pctNiveau: 0,
 }
 
-function computeFromLocalStorage() {
+function readUser() {
   try {
     const u = JSON.parse(localStorage.getItem('user') || '{}')
-    if (!u?.id) return EMPTY
-    const niveau = u.niveau || 1
-    const points = u.points || 0
-    const streak = u.streak || 0
-    const niveauActuel = NIVEAUX.find(n => n.niveau === niveau) || NIVEAUX[0]
-    const niveauSuivant = NIVEAUX.find(n => n.niveau === niveau + 1)
-    const pctNiveau = niveauSuivant
-      ? Math.round(((points - niveauActuel.min) / (niveauSuivant.min - niveauActuel.min)) * 100)
-      : 100
-    return { user: u, niveau, points, streak, niveauActuel, pctNiveau }
-  } catch {
-    return EMPTY
+    return u?.id ? u : null
+  } catch { return null }
+}
+
+function fromLocalStorage(u) {
+  if (!u) return EMPTY
+  return {
+    user: u,
+    niveau: u.niveau || 1,
+    points: u.points || 0,
+    streak: u.streak || 0,
+    niveauActuel: { label: '' },
+    pctNiveau: 0,
   }
 }
 
 export function useSidebarUser() {
-  // Initializer synchrone : user dispo au PREMIER render (sinon les composants
-  // qui font `if (!user) navigate('/')` au mount redirigent à tort).
-  const [data, setData] = useState(computeFromLocalStorage)
+  // Render synchrone : valeurs localStorage dispo au premier render
+  // pour éviter les `if (!user) navigate('/')` qui redirigent à tort.
+  const [data, setData] = useState(() => fromLocalStorage(readUser()))
 
   useEffect(() => {
-    // Re-sync au mount au cas où localStorage a changé entre temps
-    setData(computeFromLocalStorage())
+    const u = readUser()
+    if (!u) return
+
+    // Cache court partagé pour éviter N fetchs à chaque navigation.
+    const cacheKey = `sidebar_stats_${u.id}`
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null')
+      if (cached && Date.now() - cached.ts < 60 * 1000) {
+        setData({
+          user: u,
+          niveau: cached.data.niveau ?? 1,
+          points: cached.data.points ?? 0,
+          streak: cached.data.streak ?? 0,
+          niveauActuel: { label: cached.data.niveau_label || '' },
+          pctNiveau: cached.data.progres_niveau ?? 0,
+        })
+        return
+      }
+    } catch {}
+
+    axios.get(`${API}/dashboard/stats/${u.id}`, { timeout: 8000 })
+      .then(r => {
+        const s = r.data || {}
+        setData({
+          user: u,
+          niveau: s.niveau ?? u.niveau ?? 1,
+          points: s.points ?? u.points ?? 0,
+          streak: s.streak ?? u.streak ?? 0,
+          niveauActuel: { label: s.niveau_label || '' },
+          pctNiveau: s.progres_niveau ?? 0,
+        })
+        try { sessionStorage.setItem(cacheKey, JSON.stringify({ data: s, ts: Date.now() })) } catch {}
+      })
+      .catch(() => {
+        // Réseau KO → on garde le snapshot localStorage déjà rendu
+      })
   }, [])
 
   return data

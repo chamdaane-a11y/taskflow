@@ -22,6 +22,7 @@ import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile from '../components/BottomNavMobile'
 import { CoachFloat } from './CoachFloat'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
+import { useSidebarUser } from '../components/useSidebarUser'
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -1294,11 +1295,14 @@ export default function Analytics() {
 
   // Profil + gamification — données RÉELLES du backend (avec fallback pendant le fetch)
   const userData = { nom: user?.nom || 'Utilisateur', email: user?.email || 'user@example.com' }
-  const points = gamification?.points ?? 0
-  const niveau = gamification?.niveau ?? 1
-  const niveauActuel = { label: gamification?.label || 'Débutant' }
-  const pctNiveau = gamification?.pctNiveau ?? 0
-  const streak = gamification?.streak ?? (stats?.streak || 0)
+  // Source unifiée (= Dashboard) pour niveau/points/streak. Évite la désync
+  // avec /users/{id}/gamification qui a un palier différent.
+  const sb = useSidebarUser()
+  const points = sb.points
+  const niveau = sb.niveau
+  const niveauActuel = { label: sb.niveauActuel?.label || gamification?.label || 'Débutant' }
+  const pctNiveau = sb.pctNiveau
+  const streak = sb.streak ?? gamification?.streak ?? (stats?.streak || 0)
 
   const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
 
@@ -1409,8 +1413,8 @@ export default function Analytics() {
       labels: stats.labels,
       datasets: [{
         data: stats.cumulative,
-        borderColor: PASTEL.lavender,
-        backgroundColor: makeAreaGradient(PASTEL.lavender),
+        borderColor: PASTEL.main,
+        backgroundColor: makeAreaGradient(PASTEL.main),
         borderWidth: 2.5,
         pointRadius: 0,
         pointHoverRadius: 6,
@@ -1453,7 +1457,7 @@ export default function Analytics() {
         backgroundColor: compressed.map((v) => {
           const intensity = max > 0 ? v / max : 0
           const alpha = Math.round((0.45 + intensity * 0.55) * 255).toString(16).padStart(2, '0')
-          return PASTEL.lavender + alpha
+          return PASTEL.main + alpha
         }),
         borderRadius: 10,
         borderSkipped: false,

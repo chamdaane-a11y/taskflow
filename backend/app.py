@@ -2649,22 +2649,17 @@ def get_gamification(id):
         if not u:
             return jsonify({"erreur": "Utilisateur introuvable"}), 404
         points = u['points'] or 0
-        niveau_db = u['niveau'] or 1
         streak = u['streak'] or 0
-        paliers = [(1,0),(2,100),(3,250),(4,500),(5,1000),(6,2000),(7,5000),(8,10000)]
-        labels = {1:"Débutant",2:"Apprenti",3:"Confirmé",4:"Expert",5:"Maître",6:"Légende",7:"Mythique",8:"Immortel"}
-        # Recalcule niveau à la volée pour cohérence (au cas où la BDD aurait dérivé)
-        niveau = max([n for n, m in paliers if points >= m])
-        # Seuils niveau actuel et suivant
-        seuil_actuel = next(m for n, m in paliers if n == niveau)
-        seuil_suivant = next((m for n, m in paliers if n == niveau + 1), seuil_actuel + 1)
+        # Source canonique : NIVEAUX (10 paliers, sync frontend data/badges.js)
+        niveau, label = niveau_for_points(points)
+        seuil_actuel = next(m for n, m, _ in NIVEAUX if n == niveau)
+        seuil_suivant = next((m for n, m, _ in NIVEAUX if n == niveau + 1), seuil_actuel + 1)
         delta = max(seuil_suivant - seuil_actuel, 1)
-        pct_niveau = round((points - seuil_actuel) / delta * 100)
-        pct_niveau = max(0, min(100, pct_niveau))
+        pct_niveau = max(0, min(100, round((points - seuil_actuel) / delta * 100)))
         return jsonify({
             "points": points,
             "niveau": niveau,
-            "label": labels.get(niveau, f"Niveau {niveau}"),
+            "label": label,
             "pctNiveau": pct_niveau,
             "pointsToNext": max(seuil_suivant - points, 0),
             "streak": streak,
@@ -3183,22 +3178,15 @@ def dashboard_stats(user_id):
             FROM taches WHERE user_id=%s""", (user_id,))
         cnt = c.fetchone()
 
-        # Niveau brackets : 1: 0-100, 2: 100-300, 3: 300-700, 4: 700-1500, 5: 1500-3000, 6: 3000+
-        BRACKETS = [0, 100, 300, 700, 1500, 3000]
+        # Source canonique : NIVEAUX (10 paliers, sync frontend data/badges.js)
         points = u['points'] or 0
-        niveau_actuel = 1
-        for i, threshold in enumerate(BRACKETS):
-            if points >= threshold:
-                niveau_actuel = i + 1
-        niveau_actuel = min(niveau_actuel, len(BRACKETS))
+        niveau_actuel, niveau_nom = niveau_for_points(points)
         if niveau_actuel != (u['niveau'] or 1):
             c.execute("UPDATE users SET niveau=%s WHERE id=%s", (niveau_actuel, user_id))
             db.commit()
-        prev_threshold = BRACKETS[niveau_actuel - 1] if niveau_actuel >= 1 else 0
-        next_threshold = BRACKETS[niveau_actuel] if niveau_actuel < len(BRACKETS) else (BRACKETS[-1] + 1500)
-        progres_niveau = round((points - prev_threshold) / max(1, next_threshold - prev_threshold) * 100)
-        progres_niveau = max(0, min(100, progres_niveau))
-        niveau_nom = niveau_label(niveau_actuel)
+        prev_threshold = next(m for n, m, _ in NIVEAUX if n == niveau_actuel)
+        next_threshold = next((m for n, m, _ in NIVEAUX if n == niveau_actuel + 1), prev_threshold + 1)
+        progres_niveau = max(0, min(100, round((points - prev_threshold) / max(1, next_threshold - prev_threshold) * 100)))
 
         # Streak — auto-reset si > 1 jour d'inactivité
         streak = u['streak'] or 0
