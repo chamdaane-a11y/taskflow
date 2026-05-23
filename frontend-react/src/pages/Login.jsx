@@ -18,10 +18,11 @@ function LoginInner() {
   const [gLoading, setGLoading] = useState(false)
   const [nonVerifie, setNonVerifie] = useState(false)
   const [renvoyeMsg, setRenvoyeMsg] = useState('')
-  // 2FA
+  // 2FA email OTP
   const [twoFaRequired, setTwoFaRequired] = useState(false)
   const [twoFaTempToken, setTwoFaTempToken] = useState('')
   const [twoFaCode, setTwoFaCode] = useState('')
+  const [twoFaEmailMasked, setTwoFaEmailMasked] = useState('')
   const [pendingInviteCode, setPendingInviteCode] = useState(null)
   const navigate = useNavigate()
 
@@ -34,6 +35,7 @@ function LoginInner() {
       if (res.data.requires_2fa) {
         setTwoFaRequired(true)
         setTwoFaTempToken(res.data.temp_token)
+        setTwoFaEmailMasked(res.data.email_masked || '')
         setPendingInviteCode(pendingCode)
         setLoading(false)
         return
@@ -214,10 +216,10 @@ function LoginInner() {
             {twoFaRequired ? (
               <motion.div key="2fa" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(76,175,130,0.08)', border: '1px solid rgba(76,175,130,0.2)', borderRadius: 10, marginBottom: 22 }}>
-                  <span style={{ fontSize: 18 }}>🔒</span>
+                  <span style={{ fontSize: 18 }}>📧</span>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Double authentification requise</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Ouvre ton application d'authentification et entre le code.</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Double authentification</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Code envoyé à <strong>{twoFaEmailMasked || 'ton email'}</strong>. Vérifie aussi le dossier spam.</div>
                   </div>
                 </div>
                 <div style={{ marginBottom: 20 }}>
@@ -238,7 +240,7 @@ function LoginInner() {
                 <button className="tf-btn-main" onClick={loginTotp} disabled={loading || twoFaCode.length !== 6}>
                   {loading ? 'Vérification...' : <><span>Vérifier</span><ArrowRight size={16}/></>}
                 </button>
-                <button onClick={() => { setTwoFaRequired(false); setTwoFaCode(''); setErreur('') }}
+                <button onClick={() => { setTwoFaRequired(false); setTwoFaCode(''); setTwoFaEmailMasked(''); setErreur('') }}
                   style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 13, cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit' }}>
                   ← Retour à la connexion
                 </button>

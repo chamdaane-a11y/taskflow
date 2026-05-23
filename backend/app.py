@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-2fa-pillow-pwd-v5'
+APP_BUILD_MARKER = '2026-05-23-2fa-email-otp-v6'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -1305,6 +1305,17 @@ def run_migrations():
             curseur.execute("ALTER TABLE users ADD COLUMN totp_last_counter BIGINT NULL")
             print("[Migrations] users.totp_last_counter ✅")
 
+        # 2FA email OTP (2026-05-23) : remplace TOTP par code 6 chiffres envoyé par email
+        if not col_exists(curseur, 'users', 'email_2fa_code'):
+            curseur.execute("ALTER TABLE users ADD COLUMN email_2fa_code VARCHAR(6) NULL")
+            print("[Migrations] users.email_2fa_code ✅")
+        if not col_exists(curseur, 'users', 'email_2fa_code_expiry'):
+            curseur.execute("ALTER TABLE users ADD COLUMN email_2fa_code_expiry DATETIME NULL")
+            print("[Migrations] users.email_2fa_code_expiry ✅")
+        if not col_exists(curseur, 'users', 'email_2fa_attempts'):
+            curseur.execute("ALTER TABLE users ADD COLUMN email_2fa_attempts INT NOT NULL DEFAULT 0")
+            print("[Migrations] users.email_2fa_attempts ✅")
+
         # Pending invitations — flow invitation QR/lien sans localStorage côté ami
         curseur.execute("""CREATE TABLE IF NOT EXISTS pending_invitations (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1665,15 +1676,18 @@ def login():
         if not user.get('email_verifie'):
             return jsonify({"erreur": "Veuillez vérifier votre email avant de vous connecter !", "non_verifie": True}), 403
 
-        # 2FA : si activé → retourner un token temporaire, pas le JWT de session.
-        # Le user_id est dans le claim `sub` du temp_token, pas exposé en clair.
+        # 2FA : si activé → envoyer un code à 6 chiffres par email + retourner
+        # un token temporaire. Le user_id est dans le claim `sub` du temp_token.
         if user.get('totp_enabled'):
+            _store_and_send_2fa_code(user['id'], user['email'], user['nom'], contexte='connexion')
             temp_token = create_access_token(
                 identity=str(user['id']),
-                expires_delta=timedelta(minutes=5),
+                expires_delta=timedelta(minutes=10),
                 additional_claims={'type': 'totp_pending'}
             )
-            return jsonify({"requires_2fa": True, "temp_token": temp_token}), 200
+            at = user['email'].index('@')
+            masked = user['email'][0] + '*' * max(1, at - 2) + user['email'][at-1:] if at > 1 else user['email']
+            return jsonify({"requires_2fa": True, "temp_token": temp_token, "email_masked": masked}), 200
 
         # Si invite_code fourni OU si pending existe pour cet email → auto-attach
         equipes_rejointes = []
@@ -2181,18 +2195,54 @@ def update_notif_prefs(id):
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
-# ── 2FA TOTP ──────────────────────────────────────────────────────────────────
+# ── 2FA email OTP ─────────────────────────────────────────────────────────────
 
-def _make_qr_base64(uri):
-    """Génère un QR code PNG en base64 à partir d'un URI otpauth://."""
-    qr = qrcode.QRCode(version=1, box_size=8, border=2,
-                       error_correction=qrcode.constants.ERROR_CORRECT_M)
-    qr.add_data(uri)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color='black', back_color='white')
-    buf = io.BytesIO()
-    img.save(buf, format='PNG')
-    return base64.b64encode(buf.getvalue()).decode()
+def _generate_2fa_code():
+    """Code à 6 chiffres, zero-padded (ex: '042817')."""
+    import secrets
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+def _send_2fa_code_email(to_email, nom, code, contexte='connexion'):
+    """Envoie le code 2FA par email via Brevo. contexte='connexion' ou 'activation'."""
+    titre = "Code de connexion" if contexte == 'connexion' else "Activation de la 2FA"
+    sous_titre = (
+        "Quelqu'un (probablement toi) essaie de se connecter à GetShift."
+        if contexte == 'connexion' else
+        "Tu actives la double authentification sur ton compte GetShift."
+    )
+    html = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:520px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:36px 32px;border-radius:16px;">
+        <div style="text-align:center;margin-bottom:24px;">
+            <h1 style="color:#f97316;margin:0;font-size:28px;letter-spacing:-0.5px;">GetShift</h1>
+        </div>
+        <h2 style="font-size:20px;margin:0 0 8px;color:#fff;">{titre}</h2>
+        <p style="color:#a0a0aa;font-size:14px;line-height:1.6;margin:0 0 24px;">Salut {nom}, {sous_titre} Entre ce code à 6 chiffres dans GetShift :</p>
+        <div style="background:#1a1a1f;border:1px solid #2a2a30;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+            <div style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:36px;font-weight:700;letter-spacing:0.4em;color:#f97316;">{code}</div>
+        </div>
+        <p style="color:#80808a;font-size:13px;line-height:1.6;margin:0;">⏱️ Ce code expire dans <strong>10 minutes</strong>.</p>
+        <p style="color:#80808a;font-size:13px;line-height:1.6;margin:6px 0 0;">Si tu n'as rien demandé, ignore cet email et change ton mot de passe.</p>
+        <div style="margin-top:32px;padding-top:20px;border-top:1px solid #2a2a30;text-align:center;">
+            <p style="color:#60606a;font-size:12px;margin:0;">GetShift — la productivité sans friction</p>
+        </div>
+    </div>"""
+    threading.Thread(target=envoyer_email, args=(to_email, f"GetShift — {titre} : {code}", html)).start()
+
+def _store_and_send_2fa_code(user_id, email, nom, contexte='connexion'):
+    """Génère un code, le stocke avec expiry +10min, reset attempts, envoie l'email.
+    Retourne le code (pour les tests) ou None si erreur."""
+    code = _generate_2fa_code()
+    expiry = datetime.now() + timedelta(minutes=10)
+    db = connecter(); cur = db.cursor()
+    try:
+        cur.execute(
+            "UPDATE users SET email_2fa_code=%s, email_2fa_code_expiry=%s, email_2fa_attempts=0 WHERE id=%s",
+            (code, expiry, user_id)
+        )
+        db.commit()
+    finally:
+        cur.close(); db.close()
+    _send_2fa_code_email(email, nom, code, contexte)
+    return code
 
 def _verify_user_password(user_id, password):
     """Vérifie qu'un password en clair correspond au hash stocké. Refuse les
@@ -2249,8 +2299,8 @@ def get_2fa_status(id):
 @app.route('/users/<int:id>/2fa/setup', methods=['POST'])
 @limiter.limit("5 per hour")
 def setup_2fa(id):
-    """Génère un secret TOTP et retourne l'URI + QR code. Ne l'active pas
-    encore. Exige le mot de passe (style WhatsApp : 2FA = password + TOTP)."""
+    """Envoie un code à 6 chiffres par email. Exige le mot de passe en amont.
+    L'utilisateur entre ensuite ce code via /2fa/verify pour activer la 2FA."""
     try:
         data = request.get_json() or {}
         password = (data.get('password') or '').strip()
@@ -2258,47 +2308,55 @@ def setup_2fa(id):
         if not ok:
             return jsonify({"erreur": err}), 400
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT email, totp_enabled FROM users WHERE id=%s", (id,))
-        row = cur.fetchone()
+        cur.execute("SELECT nom, email, totp_enabled FROM users WHERE id=%s", (id,))
+        row = cur.fetchone(); cur.close(); db.close()
         if not row:
-            db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
         if row.get('totp_enabled'):
-            db.close()
             return jsonify({"erreur": "La 2FA est déjà activée. Désactive-la d'abord."}), 400
-        secret = pyotp.random_base32()
-        totp = pyotp.TOTP(secret)
-        uri = totp.provisioning_uri(name=row['email'], issuer_name='GetShift')
-        cur2 = db.cursor()
-        # Reset le compteur quand on regénère un secret
-        cur2.execute("UPDATE users SET totp_secret=%s, totp_enabled=0, totp_last_counter=NULL WHERE id=%s", (secret, id))
-        db.commit(); db.close()
-        qr_b64 = _make_qr_base64(uri)
-        return jsonify({"secret": secret, "uri": uri, "qr": qr_b64})
+        _store_and_send_2fa_code(id, row['email'], row['nom'], contexte='activation')
+        # On masque l'email pour le retour (ex: c***e@gmail.com)
+        email = row['email']; at = email.index('@')
+        masked = email[0] + '*' * max(1, at - 2) + email[at-1:] if at > 1 else email
+        return jsonify({"message": f"Code envoyé à {masked}", "email_masked": masked})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 
 @app.route('/users/<int:id>/2fa/verify', methods=['POST'])
 @limiter.limit("10 per minute")
 def verify_2fa(id):
-    """Vérifie le code TOTP et active la 2FA si correct. Anti-replay via
-    totp_last_counter. Doit suivre un /2fa/setup réussi (donc déjà
-    authentifié par password)."""
+    """Vérifie le code 6 chiffres reçu par email et active la 2FA si correct.
+    Max 5 tentatives par code, expiry 10 min."""
     try:
         data = request.get_json() or {}
         code = str(data.get('code', '')).strip()
+        if not code or len(code) != 6 or not code.isdigit():
+            return jsonify({"erreur": "Code à 6 chiffres requis"}), 400
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT totp_secret, totp_enabled, totp_last_counter FROM users WHERE id=%s", (id,))
+        cur.execute("SELECT email_2fa_code, email_2fa_code_expiry, email_2fa_attempts, totp_enabled FROM users WHERE id=%s", (id,))
         row = cur.fetchone()
-        if not row or not row.get('totp_secret'):
-            db.close(); return jsonify({"erreur": "Lance d'abord /2fa/setup"}), 400
+        if not row or not row.get('email_2fa_code'):
+            cur.close(); db.close()
+            return jsonify({"erreur": "Lance d'abord /2fa/setup"}), 400
         if row.get('totp_enabled'):
-            db.close(); return jsonify({"erreur": "Déjà activée"}), 400
-        counter = _verify_totp_anti_replay(row['totp_secret'], code, row.get('totp_last_counter'))
-        if counter is None:
-            db.close(); return jsonify({"erreur": "Code invalide"}), 400
-        cur2 = db.cursor()
-        cur2.execute("UPDATE users SET totp_enabled=1, totp_last_counter=%s WHERE id=%s", (counter, id))
-        db.commit(); db.close()
+            cur.close(); db.close()
+            return jsonify({"erreur": "Déjà activée"}), 400
+        if row['email_2fa_code_expiry'] and row['email_2fa_code_expiry'] < datetime.now():
+            cur.close(); db.close()
+            return jsonify({"erreur": "Code expiré, redemande-en un nouveau"}), 400
+        if (row.get('email_2fa_attempts') or 0) >= 5:
+            cur.close(); db.close()
+            return jsonify({"erreur": "Trop de tentatives, redemande un nouveau code"}), 400
+        if row['email_2fa_code'] != code:
+            cur.execute("UPDATE users SET email_2fa_attempts=email_2fa_attempts+1 WHERE id=%s", (id,))
+            db.commit(); cur.close(); db.close()
+            return jsonify({"erreur": "Code invalide"}), 400
+        # Code OK → activer + clear
+        cur.execute(
+            "UPDATE users SET totp_enabled=1, email_2fa_code=NULL, email_2fa_code_expiry=NULL, email_2fa_attempts=0 WHERE id=%s",
+            (id,)
+        )
+        db.commit(); cur.close(); db.close()
         return jsonify({"message": "2FA activée"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -2306,8 +2364,8 @@ def verify_2fa(id):
 @app.route('/users/<int:id>/2fa/disable', methods=['POST'])
 @limiter.limit("10 per minute")
 def disable_2fa(id):
-    """Désactive la 2FA. Exige le mot de passe (pas le code TOTP) — un voleur
-    de téléphone avec accès à l'authenticator ne doit pas pouvoir désactiver."""
+    """Désactive la 2FA. Exige le mot de passe (pas le code email) — un voleur
+    de session email ne doit pas pouvoir désactiver."""
     try:
         data = request.get_json() or {}
         password = (data.get('password') or '').strip()
@@ -2318,12 +2376,14 @@ def disable_2fa(id):
         cur.execute("SELECT totp_enabled FROM users WHERE id=%s", (id,))
         user_row = cur.fetchone()
         if not user_row:
-            db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
+            cur.close(); db.close(); return jsonify({"erreur": "Utilisateur introuvable"}), 404
         if not user_row.get('totp_enabled'):
-            db.close(); return jsonify({"erreur": "La 2FA n'est pas activée"}), 400
-        cur2 = db.cursor()
-        cur2.execute("UPDATE users SET totp_enabled=0, totp_secret=NULL, totp_last_counter=NULL WHERE id=%s", (id,))
-        db.commit(); db.close()
+            cur.close(); db.close(); return jsonify({"erreur": "La 2FA n'est pas activée"}), 400
+        cur.execute(
+            "UPDATE users SET totp_enabled=0, email_2fa_code=NULL, email_2fa_code_expiry=NULL, email_2fa_attempts=0 WHERE id=%s",
+            (id,)
+        )
+        db.commit(); cur.close(); db.close()
         return jsonify({"message": "2FA désactivée"})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -2331,14 +2391,16 @@ def disable_2fa(id):
 @app.route('/login/totp', methods=['POST'])
 @limiter.limit("10 per minute")
 def login_totp():
-    """Étape 2 de la connexion : vérifie le code TOTP + émet le JWT de session.
-    Anti-replay via totp_last_counter."""
+    """Étape 2 de la connexion : vérifie le code 6 chiffres reçu par email
+    + émet le JWT de session. Max 5 tentatives, expiry 10 min."""
     try:
         data = request.get_json() or {}
         temp_token = data.get('temp_token', '')
         code = str(data.get('code', '')).strip()
         if not temp_token or not code:
             return jsonify({"erreur": "Token et code requis"}), 400
+        if len(code) != 6 or not code.isdigit():
+            return jsonify({"erreur": "Code à 6 chiffres requis"}), 400
         try:
             token_data = decode_token(temp_token)
         except Exception:
@@ -2349,16 +2411,26 @@ def login_totp():
         if not user_id:
             return jsonify({"erreur": "Token invalide"}), 401
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT id, nom, email, theme, totp_secret, totp_enabled, totp_last_counter FROM users WHERE id=%s", (user_id,))
-        user = cur.fetchone(); cur.close(); db.close()
-        if not user or not user.get('totp_enabled') or not user.get('totp_secret'):
-            return jsonify({"erreur": "2FA non configurée"}), 400
-        counter = _verify_totp_anti_replay(user['totp_secret'], code, user.get('totp_last_counter'))
-        if counter is None:
+        cur.execute("SELECT id, nom, email, theme, totp_enabled, email_2fa_code, email_2fa_code_expiry, email_2fa_attempts FROM users WHERE id=%s", (user_id,))
+        user = cur.fetchone()
+        if not user or not user.get('totp_enabled') or not user.get('email_2fa_code'):
+            cur.close(); db.close()
+            return jsonify({"erreur": "Code non émis ou 2FA non configurée"}), 400
+        if user.get('email_2fa_code_expiry') and user['email_2fa_code_expiry'] < datetime.now():
+            cur.close(); db.close()
+            return jsonify({"erreur": "Code expiré, reconnecte-toi"}), 400
+        if (user.get('email_2fa_attempts') or 0) >= 5:
+            cur.close(); db.close()
+            return jsonify({"erreur": "Trop de tentatives, reconnecte-toi"}), 400
+        if user['email_2fa_code'] != code:
+            cur.execute("UPDATE users SET email_2fa_attempts=email_2fa_attempts+1 WHERE id=%s", (user['id'],))
+            db.commit(); cur.close(); db.close()
             return jsonify({"erreur": "Code invalide"}), 400
-        # Code OK → on persiste le compteur pour bloquer le replay
-        db = connecter(); cur = db.cursor()
-        cur.execute("UPDATE users SET totp_last_counter=%s WHERE id=%s", (counter, user['id']))
+        # Code OK → clear le code pour éviter replay
+        cur.execute(
+            "UPDATE users SET email_2fa_code=NULL, email_2fa_code_expiry=NULL, email_2fa_attempts=0 WHERE id=%s",
+            (user['id'],)
+        )
         db.commit(); cur.close(); db.close()
         # Finaliser la session
         invite_code = (data.get('invite_code') or '').strip()

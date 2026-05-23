@@ -8,7 +8,7 @@ import {
   ArrowLeft, Palette, ExternalLink, LogOut,
   Bell, Shield, ChevronRight, Check, Eye, EyeOff, Download,
   Settings as SettingsIcon, Monitor, Smartphone, Globe, Trash2,
-  Lock, Unlock, QrCode, RefreshCw, Laptop,
+  Lock, Unlock, Mail, RefreshCw, Laptop,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
@@ -56,23 +56,21 @@ export default function Settings() {
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const [deletingSession, setDeletingSession] = useState(null)
 
-  // ── 2FA TOTP ──────────────────────────────────────────────────────
+  // ── 2FA email OTP ─────────────────────────────────────────────────
   const [twoFaEnabled, setTwoFaEnabled] = useState(false)
   // null | 'setup-password' | 'setup-verify' | 'disable'
   const [twoFaStep, setTwoFaStep] = useState(null)
-  const [twoFaSecret, setTwoFaSecret] = useState('')
-  const [twoFaQr, setTwoFaQr] = useState('')
   const [twoFaCode, setTwoFaCode] = useState('')
   const [twoFaPassword, setTwoFaPassword] = useState('')
+  const [twoFaEmailMasked, setTwoFaEmailMasked] = useState('')
   const [twoFaLoading, setTwoFaLoading] = useState(false)
 
-  // Nettoie les secrets en mémoire dès que le wizard se ferme
+  // Nettoie les états en mémoire dès que le wizard se ferme
   const closeTwoFaWizard = () => {
     setTwoFaStep(null)
-    setTwoFaSecret('')
-    setTwoFaQr('')
     setTwoFaCode('')
     setTwoFaPassword('')
+    setTwoFaEmailMasked('')
   }
   const [slackWebhook, setSlackWebhook] = useState('')
   const [slackSaving, setSlackSaving] = useState(false)
@@ -193,8 +191,7 @@ export default function Settings() {
     setTwoFaLoading(true)
     try {
       const res = await axios.post(`${API}/users/${user.id}/2fa/setup`, { password: pwd })
-      setTwoFaSecret(res.data.secret)
-      setTwoFaQr(res.data.qr)
+      setTwoFaEmailMasked(res.data.email_masked || '')
       setTwoFaPassword('')
       setTwoFaStep('setup-verify')
       setTwoFaCode('')
@@ -204,7 +201,7 @@ export default function Settings() {
     setTwoFaLoading(false)
   }
 
-  // Étape 2 : code TOTP → activation
+  // Étape 2 : code email → activation
   const verifier2fa = async () => {
     if (twoFaCode.length !== 6) { afficherNotification('Code à 6 chiffres requis', 'error'); return }
     setTwoFaLoading(true)
@@ -661,7 +658,7 @@ export default function Settings() {
             )}
           </div>
 
-          {/* 2FA TOTP */}
+          {/* 2FA email OTP */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>DOUBLE AUTHENTIFICATION (2FA)</p>
@@ -673,7 +670,7 @@ export default function Settings() {
             {twoFaStep === null && !twoFaEnabled && (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                  Protège ton compte avec une application d'authentification (Google Authenticator, Authy, 1Password…). Chaque connexion demandera un code à 6 chiffres en plus de ton mot de passe.
+                  Protège ton compte avec un code à 6 chiffres envoyé sur ton email. Chaque connexion demandera ce code en plus de ton mot de passe.
                 </p>
                 <motion.button
                   onClick={() => { setTwoFaStep('setup-password'); setTwoFaPassword('') }}
@@ -730,24 +727,18 @@ export default function Settings() {
               </motion.div>
             )}
 
-            {/* Étape 2 : QR code + code TOTP */}
+            {/* Étape 2 : code 6 chiffres reçu par email */}
             {twoFaStep === 'setup-verify' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                  Scanne ce QR code avec ton application d'authentification, puis entre le code affiché.
-                </p>
-                {twoFaQr && (
-                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 20, alignItems: 'flex-start', marginBottom: 16 }}>
-                    <img src={`data:image/png;base64,${twoFaQr}`} alt="QR Code 2FA"
-                      style={{ width: 160, height: 160, borderRadius: 12, border: '1px solid var(--border-subtle)', background: 'white', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 8px' }}>Ou entre la clé manuellement :</p>
-                      <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '8px 12px', letterSpacing: '0.1em', wordBreak: 'break-all' }}>
-                        {twoFaSecret}
-                      </div>
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, marginBottom: 16 }}>
+                  <Mail size={18} color="var(--ember)" style={{ flexShrink: 0 }} />
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    Code envoyé à <strong>{twoFaEmailMasked || 'ton email'}</strong>. Vérifie ta boîte de réception (et les spams) puis entre le code à 6 chiffres ci-dessous.
                   </div>
-                )}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
+                  ⏱️ Le code expire dans 10 minutes.
+                </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
                     type="text" inputMode="numeric" pattern="[0-9]*"
@@ -755,7 +746,8 @@ export default function Settings() {
                     value={twoFaCode}
                     onChange={e => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     onKeyDown={e => e.key === 'Enter' && verifier2fa()}
-                    style={{ ...INPUT_STYLE, letterSpacing: '0.15em', fontSize: 18, textAlign: 'center' }}
+                    autoFocus
+                    style={{ ...INPUT_STYLE, letterSpacing: '0.35em', fontSize: 22, textAlign: 'center', fontWeight: 600 }}
                   />
                   <div style={{ display: 'flex', gap: 10 }}>
                     <motion.button onClick={closeTwoFaWizard}
@@ -771,11 +763,11 @@ export default function Settings() {
               </motion.div>
             )}
 
-            {/* Désactivation : password requis (pas TOTP) — bloque voleur de téléphone */}
+            {/* Désactivation : password requis (pas le code email) — bloque accès email compromis */}
             {twoFaStep === 'disable' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                  Entre ton mot de passe pour désactiver la 2FA. <strong>Pas le code TOTP</strong> — pour éviter qu'un voleur de téléphone puisse retirer la protection.
+                  Entre ton mot de passe pour désactiver la 2FA. <strong>Pas un code email</strong> — pour éviter qu'un accès à ton email puisse retirer la protection.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
