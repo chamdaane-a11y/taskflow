@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-fix-hebdo-groupby-v9'
+APP_BUILD_MARKER = '2026-05-23-emails-graphite-ember-v10'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -158,17 +158,20 @@ def envoyer_email(to_email, subject, html_content, attachment=None):
         return False
 
 def envoyer_email_verification(email, nom, token):
-    lien = f"https://getshift-backend.onrender.com/verify-email/{token}"
-    html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
-        <h1 style="color:#6c63ff;">GetShift</h1>
-        <h2>Bonjour {nom} !</h2>
-        <p>Merci de vous etre inscrit. Cliquez ci-dessous pour verifier votre email :</p>
-        <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
-            Verifier mon email
-        </a>
-        <p style="color:#888;font-size:12px;">Ce lien expire dans 24h.</p>
-    </div>"""
-    threading.Thread(target=envoyer_email, args=(email, "Verifiez votre email GetShift", html)).start()
+    # On utilise _base_email pour l'identité GRAPHITE & EMBER, mais cette fonction
+    # peut être appelée AVANT que EMAIL_TOKENS soit défini si l'import order change ;
+    # donc on défère la création du HTML à l'envoi.
+    def _send():
+        t = EMAIL_TOKENS
+        lien = f"https://getshift-backend.onrender.com/verify-email/{token}"
+        contenu = f"""
+        <h1 style="color:{t['text']};margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Bienvenue {nom}</h1>
+        <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Merci de t'être inscrit. Confirme ton adresse email pour activer ton compte GetShift.</p>
+        {_email_cta_btn("Vérifier mon email", lien)}
+        <p style="color:{t['text_3']};margin:24px 0 0;font-size:12px;">Ce lien expire dans 24h. Si tu n'as pas créé de compte, ignore ce message.</p>
+        """
+        envoyer_email(email, "Vérifie ton email — GetShift", _base_email(contenu, "Vérifie ton email"))
+    threading.Thread(target=_send).start()
 
 # ============================================
 # PUSH NOTIFICATIONS
@@ -226,17 +229,17 @@ def _ensure_email_change_columns():
         print(f"[email_change] schema error: {e}", flush=True)
 
 def envoyer_email_changement(new_email, nom, token):
-    lien = f"https://getshift-backend.onrender.com/confirm-email-change/{token}"
-    html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:40px;border-radius:16px;">
-        <h1 style="color:#6c63ff;">GetShift</h1>
-        <h2>Bonjour {nom},</h2>
-        <p>Tu as demandé à changer l'email de ton compte GetShift vers cette adresse. Confirme ci-dessous :</p>
-        <a href="{lien}" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:20px 0;">
-            Confirmer le changement d'email
-        </a>
-        <p style="color:#888;font-size:12px;">Ce lien expire dans 24h. Si tu n'as pas demandé ce changement, ignore ce message.</p>
-    </div>"""
-    threading.Thread(target=envoyer_email, args=(new_email, "Confirme ton nouvel email GetShift", html)).start()
+    def _send():
+        t = EMAIL_TOKENS
+        lien = f"https://getshift-backend.onrender.com/confirm-email-change/{token}"
+        contenu = f"""
+        <h1 style="color:{t['text']};margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Confirmation du changement</h1>
+        <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Bonjour <strong style="color:{t['text']};">{nom}</strong>. Tu as demandé à changer l'email de ton compte GetShift vers cette adresse. Confirme pour finaliser.</p>
+        {_email_cta_btn("Confirmer le changement", lien)}
+        <p style="color:{t['text_3']};margin:24px 0 0;font-size:12px;">Ce lien expire dans 24h. Si tu n'as pas demandé ce changement, ignore ce message.</p>
+        """
+        envoyer_email(new_email, "Confirme ton nouvel email — GetShift", _base_email(contenu, "Changement d'email"))
+    threading.Thread(target=_send).start()
 
 
 # ── Sessions actives ──────────────────────────────────────────────────
@@ -449,116 +452,202 @@ def job_encouragements():
 # TEMPLATES HTML EMAILS
 # ============================================
 
+# ─── DESIGN TOKENS EMAIL (GRAPHITE & EMBER) ──────────────────────────────────
+# Source-of-truth alignée sur frontend-react/src/theme/tokens.css [data-theme="dark"]
+EMAIL_TOKENS = {
+    'bg':           '#0E1011',  # bg-base
+    'surface_1':    '#171A1C',
+    'surface_2':    '#1F2326',
+    'border':       '#2B2F33',  # border-subtle
+    'border_2':     '#383D42',  # border-default
+    'ember':        '#E07A3E',
+    'ember_hover':  '#F0884A',
+    'ember_dark':   '#B8521C',
+    'ember_soft':   '#231914',  # ember-soft applied on bg
+    'text':         '#ECEAE5',  # text-primary (jamais blanc pur)
+    'text_2':       '#A8A39B',  # text-secondary
+    'text_3':       '#6E6A65',  # text-tertiary
+    'success':      '#7A9778',
+    'warning':      '#C28748',
+    'danger':       '#B8593F',
+}
+
+def _email_logo_html(size=40):
+    """Logo GetShift en HTML pur (table-based) : carré ember arrondi avec
+    deux carrés blancs décalés. Compatible Gmail/Outlook (pas de SVG, pas
+    de position absolute). Reproduit le concept 'plaques décalées'."""
+    t = EMAIL_TOKENS
+    inner = int(size * 0.4)   # taille d'une plaque
+    gap = int(size * 0.1)
+    return f"""<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['ember']};border-radius:{int(size*0.22)}px;display:inline-block;">
+        <tr><td style="padding:{gap}px;">
+            <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                    <td style="width:{inner}px;height:{inner}px;"></td>
+                    <td style="width:{inner}px;height:{inner}px;background:#FFFFFF;border-radius:{int(inner*0.2)}px;"></td>
+                </tr>
+                <tr>
+                    <td style="width:{inner}px;height:{inner}px;background:transparent;border:2px solid rgba(255,255,255,0.55);border-radius:{int(inner*0.2)}px;"></td>
+                    <td style="width:{inner}px;height:{inner}px;"></td>
+                </tr>
+            </table>
+        </td></tr>
+    </table>"""
+
 def _base_email(contenu_html, titre_preheader="GetShift"):
+    """Wrapper email GRAPHITE & EMBER. Reproduit l'identité visuelle de l'app :
+    fond graphite profond, surface 1 pour le card, accents ember, off-white."""
+    t = EMAIL_TOKENS
+    logo = _email_logo_html(size=36)
     return f"""<!DOCTYPE html>
 <html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{titre_preheader}</title></head>
-<body style="margin:0;padding:0;background:#0c0c12;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0c0c12;padding:40px 16px;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>{titre_preheader}</title>
+</head>
+<body style="margin:0;padding:0;background:{t['bg']};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Arial,sans-serif;color:{t['text']};">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['bg']};padding:32px 16px;">
   <tr><td align="center">
-    <table width="100%" style="max-width:540px;background:#13131e;border-radius:20px;border:1px solid #ffffff0f;overflow:hidden;">
-      <tr><td style="background:linear-gradient(135deg,#6c63ff,#a855f7);padding:28px 36px;">
-        <span style="font-size:20px;font-weight:800;color:white;">GetShift</span>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:560px;background:{t['surface_1']};border-radius:18px;border:1px solid {t['border']};overflow:hidden;">
+
+      <!-- ── Header avec logo + wordmark ──────────────────────────── -->
+      <tr><td style="padding:24px 32px;border-bottom:1px solid {t['border']};">
+        <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+          <tr>
+            <td style="vertical-align:middle;padding-right:12px;">{logo}</td>
+            <td style="vertical-align:middle;">
+              <div style="font-size:18px;font-weight:700;color:{t['text']};letter-spacing:-0.3px;">GetShift</div>
+              <div style="font-size:11px;color:{t['text_3']};margin-top:2px;letter-spacing:0.3px;text-transform:uppercase;">Organize · Automate · Perform</div>
+            </td>
+          </tr>
+        </table>
       </td></tr>
-      <tr><td style="padding:36px;">{contenu_html}</td></tr>
-      <tr><td style="padding:20px 36px 28px;border-top:1px solid #ffffff08;">
-        <p style="margin:0;font-size:11px;color:#44445a;text-align:center;">
+
+      <!-- ── Body ───────────────────────────────────────────────── -->
+      <tr><td style="padding:32px;">{contenu_html}</td></tr>
+
+      <!-- ── Footer ─────────────────────────────────────────────── -->
+      <tr><td style="padding:20px 32px 24px;border-top:1px solid {t['border']};background:{t['bg']};">
+        <p style="margin:0;font-size:11px;color:{t['text_3']};text-align:center;line-height:1.6;">
           Tu reçois cet email car tu as un compte GetShift.<br>
-          <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff;text-decoration:none;">Ouvrir GetShift</a>
+          <a href="https://chamdaane-a11y.github.io/taskflow" style="color:{t['ember']};text-decoration:none;font-weight:600;">Ouvrir GetShift</a>
+          &nbsp;·&nbsp;
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/settings" style="color:{t['text_2']};text-decoration:none;">Préférences</a>
         </p>
       </td></tr>
+
     </table>
   </td></tr>
 </table>
 </body></html>"""
 
+def _email_cta_btn(label, href, primary=True):
+    t = EMAIL_TOKENS
+    if primary:
+        bg = t['ember']
+        color = '#1A1A1B'  # text-on-ember
+    else:
+        bg = t['surface_2']
+        color = t['text']
+    return f'<a href="{href}" style="display:inline-block;background:{bg};color:{color};padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:13px;letter-spacing:0.2px;">{label}</a>'
+
+def _email_task_row(titre, badge_text=None, badge_color=None):
+    t = EMAIL_TOKENS
+    badge_html = ""
+    if badge_text:
+        badge_html = f'<span style="display:inline-block;margin-left:10px;padding:3px 8px;background:{badge_color or t["surface_2"]}22;color:{badge_color or t["text_2"]};border-radius:6px;font-size:10px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">{badge_text}</span>'
+    return f'<tr><td style="padding:12px 14px;border-bottom:1px solid {t["border"]};"><span style="color:{t["text"]};font-weight:500;font-size:13.5px;">{titre}</span>{badge_html}</td></tr>'
+
 def _html_rappel_veille(nom, taches):
+    t = EMAIL_TOKENS
     lignes = ""
-    for t in taches:
-        prio_color = {"haute": "#e05c5c", "moyenne": "#e08a3c", "basse": "#4caf82"}.get(t.get("priorite","moyenne"), "#e08a3c")
-        lignes += f'<tr><td style="padding:12px 14px;border-bottom:1px solid #ffffff08;"><span style="color:#e8e8f0;font-weight:600;">{t["titre"]}</span><span style="color:{prio_color};margin-left:8px;">{t.get("priorite","moyenne").upper()}</span></td></tr>'
-    contenu = f"""<h2 style="color:#fff;">Rappel · Demain c'est deadline</h2>
-    <p style="color:#8888a8;">Bonjour <strong style="color:#e8e8f0;">{nom}</strong>, tu as <strong style="color:#6c63ff;">{len(taches)} tâche(s)</strong> à rendre demain.</p>
-    <table width="100%" style="background:#0f0f18;border-radius:12px;border:1px solid #ffffff0a;margin-bottom:24px;">{lignes}</table>
-    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;">Ouvrir le Dashboard →</a>"""
+    for tk in taches:
+        prio = tk.get("priorite", "moyenne")
+        prio_color = {"haute": t['danger'], "moyenne": t['warning'], "basse": t['success']}.get(prio, t['warning'])
+        lignes += _email_task_row(tk["titre"], prio.upper(), prio_color)
+    contenu = f"""<h1 style="color:{t['text']};margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Deadline demain</h1>
+    <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Bonjour <strong style="color:{t['text']};">{nom}</strong>. Tu as <strong style="color:{t['ember']};">{len(taches)} tâche{'s' if len(taches)>1 else ''}</strong> à rendre demain.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['bg']};border-radius:12px;border:1px solid {t['border']};margin-bottom:24px;">{lignes}</table>
+    {_email_cta_btn("Ouvrir le Dashboard", "https://chamdaane-a11y.github.io/taskflow/#/dashboard")}"""
     return _base_email(contenu, "Rappel deadline demain — GetShift")
 
 def _html_rappel_jour_j(nom, taches):
+    t = EMAIL_TOKENS
     lignes = ""
-    for t in taches:
-        prio_color = {"haute": "#e05c5c", "moyenne": "#e08a3c", "basse": "#4caf82"}.get(t.get("priorite","moyenne"), "#e08a3c")
-        lignes += f'<tr><td style="padding:12px 14px;border-bottom:1px solid #ffffff08;"><span style="color:#e8e8f0;font-weight:600;">{t["titre"]}</span></td></tr>'
-    contenu = f"""<h2 style="color:#fff;">Deadline aujourd'hui</h2>
-    <p style="color:#8888a8;">Bonjour <strong>{nom}</strong>, <strong style="color:#e05c5c;">{len(taches)} tâche(s)</strong> sont à rendre aujourd'hui.</p>
-    <table width="100%" style="background:#0f0f18;border-radius:12px;margin-bottom:24px;">{lignes}</table>
-    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#e08a3c);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;">Terminer maintenant →</a>"""
+    for tk in taches:
+        lignes += _email_task_row(tk["titre"])
+    contenu = f"""<h1 style="color:{t['text']};margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Deadline aujourd'hui</h1>
+    <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Bonjour <strong style="color:{t['text']};">{nom}</strong>. <strong style="color:{t['danger']};">{len(taches)} tâche{'s' if len(taches)>1 else ''}</strong> à rendre aujourd'hui.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['bg']};border-radius:12px;border:1px solid {t['border']};margin-bottom:24px;">{lignes}</table>
+    {_email_cta_btn("Terminer maintenant", "https://chamdaane-a11y.github.io/taskflow/#/dashboard")}"""
     return _base_email(contenu, "Deadline aujourd'hui — GetShift")
 
 def _html_taches_retard(nom, taches):
+    t = EMAIL_TOKENS
     lignes = ""
-    for t in taches:
-        jours = t.get("jours_retard", 0)
-        lignes += f'<tr><td style="padding:12px 14px;border-bottom:1px solid #ffffff08;"><span style="color:#e8e8f0;font-weight:600;">{t["titre"]}</span><span style="color:#e05c5c;margin-left:8px;">+{jours}j</span></td></tr>'
-    contenu = f"""<h2 style="color:#fff;">Tâches en retard</h2>
-    <p style="color:#8888a8;">Bonjour <strong>{nom}</strong>, tu as <strong style="color:#e05c5c;">{len(taches)} tâche(s) en retard</strong>.</p>
-    <table width="100%" style="background:#0f0f18;border-radius:12px;margin-bottom:24px;">{lignes}</table>
-    <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:inline-block;background:linear-gradient(135deg,#e05c5c,#a855f7);color:white;padding:13px 28px;border-radius:11px;text-decoration:none;font-weight:700;">Rattraper le retard →</a>"""
+    for tk in taches:
+        jours = tk.get("jours_retard", 0)
+        lignes += _email_task_row(tk["titre"], f"+{jours}j", t['danger'])
+    contenu = f"""<h1 style="color:{t['text']};margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Tâches en retard</h1>
+    <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Bonjour <strong style="color:{t['text']};">{nom}</strong>. <strong style="color:{t['danger']};">{len(taches)} tâche{'s' if len(taches)>1 else ''} en retard</strong> à rattraper.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['bg']};border-radius:12px;border:1px solid {t['border']};margin-bottom:24px;">{lignes}</table>
+    {_email_cta_btn("Rattraper le retard", "https://chamdaane-a11y.github.io/taskflow/#/dashboard")}"""
     return _base_email(contenu, "Tâches en retard — GetShift")
 
 def _html_resume_hebdo(nom, stats):
+    """Bilan hebdomadaire GRAPHITE & EMBER. Pas d'emojis, design tokens-aligned."""
+    t = EMAIL_TOKENS
     terminees = stats.get("terminees", 0)
     en_cours = stats.get("en_cours", 0)
     en_retard = stats.get("en_retard", 0)
     taux = stats.get("taux", 0)
     points = stats.get("points", 0)
     niveau = stats.get("niveau", 1)
-    points_semaine = stats.get("points_semaine", 0)
     terminees_prec = stats.get("terminees_prec", 0)
     conseil_ia = stats.get("conseil_ia", "")
     taches_haute_done = stats.get("taches_haute_done", [])
     taches_haute_attente = stats.get("taches_haute_attente", [])
-    jours_actifs = stats.get("jours_actifs", [])  # liste [{jour, count}]
+    jours_actifs = stats.get("jours_actifs", [])
     streak = stats.get("streak", 0)
     heure_pointe = stats.get("heure_pointe")
-    categories = stats.get("categories", [])  # [{nom, count}]
+    categories = stats.get("categories", [])
     badges_semaine = stats.get("badges_semaine", [])
     calibration_globale = stats.get("calibration_globale")
     semaine_debut = stats.get("semaine_debut", "")
     semaine_fin = stats.get("semaine_fin", "")
     xp_par_prio = stats.get("xp_par_prio", {"haute": 0, "moyenne": 0, "basse": 0})
 
-    taux_color = "#4caf82" if taux >= 70 else "#e08a3c" if taux >= 40 else "#e05c5c"
+    # ── Coloration sémantique cohérente avec tokens.css ──
+    def perf_color(pct):
+        if pct >= 70: return t['success']
+        if pct >= 40: return t['warning']
+        return t['danger']
+
+    taux_color = perf_color(taux)
     barre_w = max(4, min(100, int(taux)))
     diff = terminees - terminees_prec
-    diff_color = "#4caf82" if diff > 0 else ("#e05c5c" if diff < 0 else "#8888a8")
-    diff_label = f"{'▲ +' if diff > 0 else ('▼ ' if diff < 0 else '·')}{abs(diff)} vs semaine -1"
+    diff_color = t['success'] if diff > 0 else (t['danger'] if diff < 0 else t['text_3'])
+    diff_label = f"{'+' if diff > 0 else ''}{diff} vs semaine -1"
     niveau_nom = niveau_label(niveau)
     xp_semaine = xp_par_prio.get("haute", 0)*50 + xp_par_prio.get("moyenne", 0)*25 + xp_par_prio.get("basse", 0)*10
 
-    # ── Vibe emoji : performance, pas confort ──
-    if terminees == 0: vibe = "⚡"
-    elif en_retard >= 3: vibe = "⚠️"
-    elif streak >= 7: vibe = "🏆"
-    elif streak >= 3: vibe = "🔥"
-    elif diff > 5: vibe = "🚀"
-    elif diff < -5: vibe = "📉"
-    else: vibe = "💪"
-
-    # ── Calcul du défi semaine prochaine (objectif challengeant) ──
+    # ── Calcul du défi semaine prochaine ──
     jour_top = max([j.get("count", 0) for j in jours_actifs] + [0]) if jours_actifs else 0
-    potentiel_semaine = jour_top * 5  # 5 jours actifs au lieu de 7 = réaliste
+    potentiel_semaine = jour_top * 5
     if terminees == 0:
-        objectif_semaine_prochaine = max(7, 5)  # plancher 7 ou plus
+        objectif_semaine_prochaine = max(7, 5)
     elif diff < -5:
-        objectif_semaine_prochaine = max(terminees_prec, terminees + 5)  # retour à la précédente +5
+        objectif_semaine_prochaine = max(terminees_prec, terminees + 5)
     elif terminees < potentiel_semaine * 0.7 and jour_top > 0:
-        objectif_semaine_prochaine = potentiel_semaine  # vise ton potentiel
+        objectif_semaine_prochaine = potentiel_semaine
     else:
-        objectif_semaine_prochaine = int(terminees * 1.3)  # +30% sur ton actuel
+        objectif_semaine_prochaine = int(terminees * 1.3)
     challenge_gap = max(0, objectif_semaine_prochaine - terminees)
 
-    # ── Phrase d'accroche CHALLENGER (pousse, ne console pas) ──
+    # ── Phrase d'accroche CHALLENGER (sans emoji) ──
     if terminees == 0:
         accroche = f"Zéro tâche cette semaine. Le top 10% en fait déjà {potentiel_semaine if potentiel_semaine > 7 else 15}. À toi de jouer."
     elif diff < -5:
@@ -574,197 +663,203 @@ def _html_resume_hebdo(nom, stats):
     elif taux >= 70:
         accroche = f"Taux {taux}% — tu transformes ce que tu décides. Augmente le volume maintenant."
     else:
-        accroche = f"{terminees} tâches bouclées. C'est correct, pas exceptionnel. Vise +30% la semaine prochaine."
+        accroche = f"{terminees} tâches bouclées. Correct, pas exceptionnel. Vise +30% la semaine prochaine."
 
     periode_label = f"{semaine_debut} → {semaine_fin}" if semaine_debut else "7 derniers jours"
 
-    # ── SECTION 1 : Header storytelling ──
+    # ── Helpers de section ──
+    def section_card(content, accent=None, padding=18):
+        border_color = accent if accent else t['border']
+        return f'<div style="background:{t["bg"]};border:1px solid {border_color};border-radius:14px;padding:{padding}px;margin-bottom:14px;">{content}</div>'
+
+    def section_label(label, color=None):
+        c = color or t['text_3']
+        return f'<div style="color:{c};font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;">{label}</div>'
+
+    # ── HEADER ──
     section_header = f"""
-    <div style="font-size:48px;text-align:center;margin-bottom:8px;">{vibe}</div>
-    <h2 style="color:#fff;margin:0 0 6px;font-size:22px;text-align:center;">Bonjour {nom}</h2>
-    <p style="color:#8888a8;font-size:12px;text-align:center;margin:0 0 6px;">Bilan {periode_label}</p>
-    <p style="color:#c8c8e8;font-size:14px;text-align:center;margin:0 0 24px;line-height:1.5;">{accroche}</p>
-    """
-
-    # ── SECTION 2 : KPI principaux ──
-    section_kpi = f"""
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-      <tr>
-        <td width="33%" style="padding:0 5px 0 0;"><div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:14px;padding:16px;text-align:center;">
-          <div style="font-size:30px;font-weight:800;color:#4caf82;">{terminees}</div>
-          <div style="font-size:11px;color:#8888a8;">Terminées</div>
-          <div style="font-size:10px;color:{diff_color};margin-top:4px;">{diff_label}</div>
-        </div></td>
-        <td width="33%" style="padding:0 2px;"><div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:16px;text-align:center;">
-          <div style="font-size:30px;font-weight:800;color:#6c63ff;">{en_cours}</div>
-          <div style="font-size:11px;color:#8888a8;">En cours</div>
-          <div style="font-size:10px;color:#8888a8;margin-top:4px;">à venir</div>
-        </div></td>
-        <td width="33%" style="padding:0 0 0 5px;"><div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:16px;text-align:center;">
-          <div style="font-size:30px;font-weight:800;color:#e05c5c;">{en_retard}</div>
-          <div style="font-size:11px;color:#8888a8;">En retard</div>
-          <div style="font-size:10px;color:#8888a8;margin-top:4px;">{'à rattraper' if en_retard > 0 else 'aucun ✓'}</div>
-        </div></td>
-      </tr>
-    </table>
-    """
-
-    # ── SECTION 3 : Streak + XP + Niveau ──
-    section_progression = f"""
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-      <tr>
-        <td width="33%" style="padding:0 5px 0 0;"><div style="background:#0f0f18;border:1px solid #e08a3c22;border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:24px;font-weight:800;color:#e08a3c;">🔥 {streak}j</div>
-          <div style="font-size:10px;color:#8888a8;margin-top:3px;">Série en cours</div>
-        </div></td>
-        <td width="33%" style="padding:0 2px;"><div style="background:#0f0f18;border:1px solid #a855f722;border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:24px;font-weight:800;color:#a855f7;">+{xp_semaine} XP</div>
-          <div style="font-size:10px;color:#8888a8;margin-top:3px;">Cette semaine</div>
-        </div></td>
-        <td width="33%" style="padding:0 0 0 5px;"><div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:16px;font-weight:800;color:#6c63ff;">Niveau {niveau}</div>
-          <div style="font-size:10px;color:#8888a8;margin-top:3px;">{niveau_nom} · {points} pts</div>
-        </div></td>
-      </tr>
-    </table>
-    """
-
-    # ── SECTION 4 : Taux + barre ──
-    section_taux = f"""
-    <div style="background:#0f0f18;border-radius:14px;padding:16px;margin-bottom:16px;">
-      <div style="margin-bottom:8px;">
-        <span style="color:#8888a8;font-size:11px;letter-spacing:1px;">TAUX DE COMPLÉTION</span>
-        <span style="font-size:20px;font-weight:800;color:{taux_color};float:right;">{taux}%</span>
-      </div>
-      <div style="height:8px;background:#ffffff08;border-radius:99px;clear:both;">
-        <div style="height:8px;width:{barre_w}%;background:linear-gradient(90deg,{taux_color},{taux_color}aa);border-radius:99px;"></div>
-      </div>
+    <div style="margin-bottom:24px;">
+      <p style="color:{t['text_3']};font-size:11px;letter-spacing:1px;text-transform:uppercase;margin:0 0 6px;">Bilan · {periode_label}</p>
+      <h1 style="color:{t['text']};margin:0 0 10px;font-size:24px;font-weight:700;letter-spacing:-0.4px;">Bonjour {nom}</h1>
+      <p style="color:{t['text_2']};font-size:14px;margin:0;line-height:1.6;">{accroche}</p>
     </div>
     """
 
-    # ── SECTION 5 : Activité par jour (mini barres) ──
+    # ── KPI principaux : terminées / en cours / en retard ──
+    section_kpi = f"""
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:14px;">
+      <tr>
+        <td width="33%" style="padding-right:4px;"><div style="background:{t['bg']};border:1px solid {t['border']};border-radius:12px;padding:16px 12px;text-align:center;">
+          <div style="font-size:28px;font-weight:700;color:{t['success']};letter-spacing:-0.5px;">{terminees}</div>
+          <div style="font-size:11px;color:{t['text_2']};margin-top:2px;">Terminées</div>
+          <div style="font-size:10px;color:{diff_color};margin-top:6px;font-weight:600;">{diff_label}</div>
+        </div></td>
+        <td width="33%" style="padding:0 2px;"><div style="background:{t['bg']};border:1px solid {t['border']};border-radius:12px;padding:16px 12px;text-align:center;">
+          <div style="font-size:28px;font-weight:700;color:{t['text']};letter-spacing:-0.5px;">{en_cours}</div>
+          <div style="font-size:11px;color:{t['text_2']};margin-top:2px;">En cours</div>
+          <div style="font-size:10px;color:{t['text_3']};margin-top:6px;">à venir</div>
+        </div></td>
+        <td width="33%" style="padding-left:4px;"><div style="background:{t['bg']};border:1px solid {t['border']};border-radius:12px;padding:16px 12px;text-align:center;">
+          <div style="font-size:28px;font-weight:700;color:{t['danger'] if en_retard > 0 else t['text_2']};letter-spacing:-0.5px;">{en_retard}</div>
+          <div style="font-size:11px;color:{t['text_2']};margin-top:2px;">En retard</div>
+          <div style="font-size:10px;color:{t['text_3']};margin-top:6px;">{'à rattraper' if en_retard > 0 else 'aucun'}</div>
+        </div></td>
+      </tr>
+    </table>
+    """
+
+    # ── Streak / XP / Niveau ──
+    section_progression = f"""
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:14px;">
+      <tr>
+        <td width="33%" style="padding-right:4px;"><div style="background:{t['bg']};border:1px solid {t['border']};border-radius:12px;padding:14px 12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:{t['ember']};letter-spacing:-0.3px;">{streak}j</div>
+          <div style="font-size:10px;color:{t['text_3']};margin-top:4px;letter-spacing:0.3px;">SÉRIE EN COURS</div>
+        </div></td>
+        <td width="33%" style="padding:0 2px;"><div style="background:{t['bg']};border:1px solid {t['border']};border-radius:12px;padding:14px 12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:{t['text']};letter-spacing:-0.3px;">+{xp_semaine}</div>
+          <div style="font-size:10px;color:{t['text_3']};margin-top:4px;letter-spacing:0.3px;">XP CETTE SEMAINE</div>
+        </div></td>
+        <td width="33%" style="padding-left:4px;"><div style="background:{t['bg']};border:1px solid {t['border']};border-radius:12px;padding:14px 12px;text-align:center;">
+          <div style="font-size:14px;font-weight:700;color:{t['text']};letter-spacing:-0.2px;">N{niveau} · {niveau_nom}</div>
+          <div style="font-size:10px;color:{t['text_3']};margin-top:4px;letter-spacing:0.3px;">{points} POINTS</div>
+        </div></td>
+      </tr>
+    </table>
+    """
+
+    # ── Taux + barre ──
+    section_taux = section_card(f"""
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:10px;">
+        <tr>
+          <td>{section_label("Taux de complétion")}</td>
+          <td style="text-align:right;"><span style="font-size:18px;font-weight:700;color:{taux_color};letter-spacing:-0.3px;">{taux}%</span></td>
+        </tr>
+      </table>
+      <div style="height:6px;background:{t['surface_2']};border-radius:99px;">
+        <div style="height:6px;width:{barre_w}%;background:{taux_color};border-radius:99px;"></div>
+      </div>
+    """, padding=16)
+
+    # ── Activité par jour (barres) ──
     section_activite = ""
     if jours_actifs:
         max_count = max([j.get("count", 0) for j in jours_actifs] + [1])
-        cellules = ""
         jours_fr = {0:"Lun",1:"Mar",2:"Mer",3:"Jeu",4:"Ven",5:"Sam",6:"Dim"}
+        cellules = ""
         for j in jours_actifs:
             count = j.get("count", 0)
-            h = max(int((count / max_count) * 60), 4) if count > 0 else 4
-            jour_label = jours_fr.get(j.get("dow", 0), "")
-            color = "#4caf82" if count >= max_count*0.7 else "#6c63ff" if count > 0 else "#ffffff15"
-            cellules += f'<td style="vertical-align:bottom;padding:0 3px;width:14%;"><div style="height:64px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;"><div style="height:{h}px;width:100%;background:{color};border-radius:6px 6px 2px 2px;"></div></div><div style="text-align:center;font-size:10px;color:#8888a8;margin-top:4px;">{jour_label}</div><div style="text-align:center;font-size:11px;font-weight:700;color:#c8c8e8;">{count}</div></td>'
+            h = max(int((count / max_count) * 56), 3) if count > 0 else 3
+            jour_label_txt = jours_fr.get(j.get("dow", 0), "")
+            bar_color = t['ember'] if count >= max_count * 0.7 else t['text_2'] if count > 0 else t['border']
+            cellules += f'<td style="vertical-align:bottom;padding:0 3px;width:14%;"><div style="height:60px;text-align:center;"><div style="display:inline-block;height:{h}px;width:80%;background:{bar_color};border-radius:4px 4px 1px 1px;vertical-align:bottom;"></div></div><div style="text-align:center;font-size:10px;color:{t["text_3"]};margin-top:6px;letter-spacing:0.3px;">{jour_label_txt}</div><div style="text-align:center;font-size:11px;font-weight:700;color:{t["text"]};margin-top:2px;">{count}</div></td>'
         max_jour = max(jours_actifs, key=lambda x: x.get("count", 0)) if jours_actifs else None
         meilleur_label = ""
         if max_jour and max_jour.get("count", 0) > 0:
-            meilleur_label = f"<div style='text-align:center;font-size:11px;color:#8888a8;margin-top:10px;'>Meilleur jour : <span style='color:#4caf82;font-weight:700;'>{jours_fr.get(max_jour.get('dow', 0), '?')} ({max_jour.get('count', 0)} tâches)</span>"
+            meilleur_label = f'<div style="text-align:center;font-size:11px;color:{t["text_2"]};margin-top:14px;padding-top:12px;border-top:1px solid {t["border"]};">Meilleur jour : <span style="color:{t["ember"]};font-weight:600;">{jours_fr.get(max_jour.get("dow", 0), "?")} · {max_jour.get("count", 0)} tâches</span>'
             if heure_pointe is not None:
-                meilleur_label += f" · Heure de pointe : <span style='color:#a855f7;font-weight:700;'>{heure_pointe}h</span>"
-            meilleur_label += "</div>"
-        section_activite = f"""
-        <div style="background:#0f0f18;border-radius:14px;padding:16px;margin-bottom:16px;">
-          <div style="color:#8888a8;font-size:11px;letter-spacing:1px;margin-bottom:12px;">ACTIVITÉ PAR JOUR</div>
-          <table width="100%" cellpadding="0" cellspacing="0"><tr>{cellules}</tr></table>
-          {meilleur_label}
-        </div>
-        """
+                meilleur_label += f' &nbsp;·&nbsp; Pointe : <span style="color:{t["text"]};font-weight:600;">{heure_pointe}h</span>'
+            meilleur_label += '</div>'
+        section_activite = section_card(
+            section_label("Activité par jour") +
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr>{cellules}</tr></table>' +
+            meilleur_label
+        )
 
-    # ── SECTION 6 : Top tâches haute prio accomplies ──
+    # ── Top réussites haute prio ──
     section_top_done = ""
     if taches_haute_done:
         items = ""
-        for t in taches_haute_done[:5]:
-            items += f'<div style="padding:8px 0;border-bottom:1px solid #ffffff06;color:#c8c8e8;font-size:12.5px;">✓ {t}</div>'
-        section_top_done = f"""
-        <div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:14px;padding:16px;margin-bottom:16px;">
-          <div style="color:#4caf82;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;">🏆 TOP RÉUSSITES HAUTE PRIORITÉ</div>
-          {items}
-        </div>
-        """
+        for tk in taches_haute_done[:5]:
+            items += f'<div style="padding:9px 0;border-bottom:1px solid {t["border"]};color:{t["text"]};font-size:13px;line-height:1.5;">{tk}</div>'
+        items = items.rstrip()
+        # Retire le dernier border-bottom
+        items = items.replace(f'border-bottom:1px solid {t["border"]};', 'border-bottom:none;', items.count(f'border-bottom:1px solid {t["border"]};'))
+        # En fait il faut juste ne pas mettre border-bottom sur le dernier — refait proprement :
+        items = ""
+        for i, tk in enumerate(taches_haute_done[:5]):
+            border = f'border-bottom:1px solid {t["border"]};' if i < min(len(taches_haute_done), 5) - 1 else ''
+            items += f'<div style="padding:9px 0;{border}color:{t["text"]};font-size:13px;line-height:1.5;">{tk}</div>'
+        section_top_done = section_card(
+            section_label("Top réussites · haute priorité", color=t['success']) + items,
+            accent=t['border']
+        )
 
-    # ── SECTION 7 : Tâches haute prio en attente ──
+    # ── Tâches haute prio en attente ──
     section_attente = ""
     if taches_haute_attente:
         items = ""
-        for t in taches_haute_attente[:3]:
-            items += f'<div style="padding:8px 0;border-bottom:1px solid #ffffff06;color:#c8c8e8;font-size:12.5px;">⏳ {t}</div>'
-        section_attente = f"""
-        <div style="background:#0f0f18;border:1px solid #e05c5c22;border-radius:14px;padding:16px;margin-bottom:16px;">
-          <div style="color:#e05c5c;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;">⚠️ TON FOCUS SEMAINE PROCHAINE</div>
-          {items}
-        </div>
-        """
+        for i, tk in enumerate(taches_haute_attente[:3]):
+            border = f'border-bottom:1px solid {t["border"]};' if i < min(len(taches_haute_attente), 3) - 1 else ''
+            items += f'<div style="padding:9px 0;{border}color:{t["text"]};font-size:13px;line-height:1.5;">{tk}</div>'
+        section_attente = section_card(
+            section_label("Ton focus semaine prochaine", color=t['warning']) + items,
+            accent=t['border']
+        )
 
-    # ── SECTION 8 : Catégories ──
+    # ── Catégories ──
     section_categories = ""
     if categories:
         total_cat = sum(c.get("count", 0) for c in categories)
         rows = ""
         for c in categories[:4]:
             pct = round((c.get("count", 0) / max(total_cat, 1)) * 100)
-            rows += f'<tr><td style="padding:6px 0;color:#c8c8e8;font-size:12px;">{c.get("nom", "—")}</td><td style="padding:6px 0;text-align:right;color:#8888a8;font-size:11px;">{c.get("count", 0)} tâches · {pct}%</td></tr>'
-        section_categories = f"""
-        <div style="background:#0f0f18;border-radius:14px;padding:16px;margin-bottom:16px;">
-          <div style="color:#8888a8;font-size:11px;letter-spacing:1px;margin-bottom:8px;">RÉPARTITION PAR CATÉGORIE</div>
-          <table width="100%" cellpadding="0" cellspacing="0">{rows}</table>
-        </div>
-        """
+            rows += f'<tr><td style="padding:7px 0;color:{t["text"]};font-size:13px;">{c.get("nom", "—")}</td><td style="padding:7px 0;text-align:right;color:{t["text_2"]};font-size:11px;">{c.get("count", 0)} tâches · {pct}%</td></tr>'
+        section_categories = section_card(
+            section_label("Répartition par catégorie") +
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">{rows}</table>'
+        )
 
-    # ── SECTION 9 : Calibration ──
+    # ── Calibration Task DNA ──
     section_calibration = ""
     if calibration_globale is not None:
-        cal_color = "#4caf82" if calibration_globale > 70 else "#e08a3c" if calibration_globale > 40 else "#e05c5c"
-        section_calibration = f"""
-        <div style="background:#0f0f18;border-radius:14px;padding:14px;margin-bottom:16px;">
-          <span style="color:#8888a8;font-size:11px;letter-spacing:1px;">CALIBRATION DES DURÉES (Task DNA)</span>
-          <span style="float:right;font-size:18px;font-weight:800;color:{cal_color};">{calibration_globale}%</span>
-        </div>
-        """
+        cal_color = perf_color(calibration_globale)
+        section_calibration = section_card(f"""
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+            <tr>
+              <td>{section_label("Calibration des durées · Task DNA")}</td>
+              <td style="text-align:right;"><span style="font-size:16px;font-weight:700;color:{cal_color};">{calibration_globale}%</span></td>
+            </tr>
+          </table>
+        """, padding=14)
 
-    # ── SECTION 10 : Badges semaine ──
+    # ── Badges débloqués ──
     section_badges = ""
     if badges_semaine:
-        badges_html = " ".join([f'<span style="display:inline-block;padding:6px 12px;background:#a855f718;border:1px solid #a855f730;border-radius:99px;color:#a855f7;font-size:11px;font-weight:600;margin:3px;">{b.get("icon", "🏅")} {b.get("nom", "")}</span>' for b in badges_semaine])
-        section_badges = f"""
-        <div style="background:#0f0f18;border-radius:14px;padding:16px;margin-bottom:16px;">
-          <div style="color:#a855f7;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;">🎖️ BADGES DÉBLOQUÉS</div>
-          <div>{badges_html}</div>
-        </div>
-        """
+        badges_html = "".join([
+            f'<span style="display:inline-block;padding:5px 12px;background:{t["ember_soft"]};border:1px solid {t["ember_dark"]};border-radius:99px;color:{t["ember_hover"]};font-size:11px;font-weight:600;margin:3px 4px 3px 0;">{b.get("nom", "")}</span>'
+            for b in badges_semaine
+        ])
+        section_badges = section_card(
+            section_label("Badges débloqués cette semaine", color=t['ember']) + f'<div>{badges_html}</div>'
+        )
 
-    # ── SECTION 11 : Conseil IA ──
+    # ── Conseil IA ──
     section_conseil = ""
     if conseil_ia:
         section_conseil = f"""
-        <div style="background:linear-gradient(135deg,#a855f712,#6c63ff12);border:1px solid #a855f725;border-radius:14px;padding:18px;margin-bottom:18px;">
-          <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1px;margin-bottom:8px;">💡 ANALYSE COACH IA</div>
-          <div style="font-size:13.5px;color:#e8e8f0;line-height:1.6;">{conseil_ia}</div>
+        <div style="background:{t['ember_soft']};border:1px solid {t['ember_dark']};border-radius:14px;padding:18px;margin-bottom:14px;">
+          {section_label("Analyse coach IA", color=t['ember'])}
+          <div style="font-size:13.5px;color:{t['text']};line-height:1.65;">{conseil_ia}</div>
         </div>
         """
 
-    # ── SECTION 11.5 : DÉFI SEMAINE PROCHAINE (challenger) ──
+    # ── Défi semaine prochaine ──
     section_defi = ""
     if objectif_semaine_prochaine > 0:
-        gap_text = f"+{challenge_gap}" if challenge_gap > 0 else "égaler"
-        progress_pct = min(100, int(terminees / max(objectif_semaine_prochaine, 1) * 100))
-        # Calcul tâches/jour requis sur 5 jours
+        gap_text = f"+{challenge_gap}" if challenge_gap > 0 else "à égaler"
         tpj = round(objectif_semaine_prochaine / 5, 1)
         section_defi = f"""
-        <div style="background:linear-gradient(135deg,#ef444412,#e08a3c12);border:1px solid #ef444430;border-radius:14px;padding:20px;margin-bottom:18px;position:relative;overflow:hidden;">
-          <div style="position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,#ef444420,transparent 70%);"></div>
-          <div style="font-size:11px;font-weight:700;color:#ef4444;letter-spacing:1.5px;margin-bottom:6px;">🎯 TON DÉFI SEMAINE PROCHAINE</div>
-          <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:4px;">{objectif_semaine_prochaine} tâches</div>
-          <div style="font-size:12.5px;color:#c8c8e8;line-height:1.5;margin-bottom:12px;">
-            Soit <strong style="color:#ef4444;">{gap_text}</strong> tâches vs cette semaine. Sur 5 jours actifs, c'est <strong>{tpj} tâches/jour</strong>. Précis, atteignable, exigeant.
+        <div style="background:{t['surface_2']};border:1px solid {t['ember_dark']};border-radius:14px;padding:20px;margin-bottom:14px;">
+          {section_label("Ton défi semaine prochaine", color=t['ember'])}
+          <div style="font-size:28px;font-weight:700;color:{t['text']};margin-bottom:6px;letter-spacing:-0.5px;">{objectif_semaine_prochaine} tâches</div>
+          <div style="font-size:13px;color:{t['text_2']};line-height:1.6;">
+            Soit <strong style="color:{t['ember']};">{gap_text}</strong> tâches vs cette semaine. Sur 5 jours actifs, c'est <strong style="color:{t['text']};">{tpj} tâches/jour</strong>. Précis, atteignable, exigeant.
           </div>
-          <div style="height:6px;background:#ffffff10;border-radius:99px;overflow:hidden;">
-            <div style="height:6px;width:{progress_pct}%;background:linear-gradient(90deg,#ef4444,#e08a3c);border-radius:99px;"></div>
-          </div>
-          <div style="font-size:10px;color:#8888a8;margin-top:6px;">Semaine actuelle : {terminees}/{objectif_semaine_prochaine}</div>
         </div>
         """
 
-    # ── SECTION 11.7 : POTENTIEL NON EXPLOITÉ ──
+    # ── Potentiel non exploité ──
     section_potentiel = ""
     if jours_actifs:
         max_jour = max(jours_actifs, key=lambda x: x.get("count", 0))
@@ -772,19 +867,16 @@ def _html_resume_hebdo(nom, stats):
         if jour_top_count >= 3 and terminees < jour_top_count * 5:
             jours_fr = {0:"lundi",1:"mardi",2:"mercredi",3:"jeudi",4:"vendredi",5:"samedi",6:"dimanche"}
             jour_nom = jours_fr.get(max_jour.get("dow", 0), "")
-            section_potentiel = f"""
-            <div style="background:#0f0f18;border:1px solid #a855f725;border-radius:14px;padding:16px;margin-bottom:16px;">
-              <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:1.5px;margin-bottom:8px;">⚡ TON POTENTIEL NON EXPLOITÉ</div>
-              <div style="font-size:13px;color:#e8e8f0;line-height:1.6;">
-                Ton meilleur jour ({jour_nom}) : <strong style="color:#a855f7;">{jour_top_count} tâches</strong>.
-                Tu sais que tu en es capable. Si tu reproduis ça 5 jours/semaine, c'est <strong style="color:#a855f7;">{jour_top_count * 5} tâches</strong>
-                — tu n'en es qu'à {terminees}.
-                <br><span style="color:#8888a8;">Le potentiel est en toi, pas dans une nouvelle méthode.</span>
-              </div>
-            </div>
-            """
+            section_potentiel = section_card(
+                section_label("Ton potentiel non exploité") +
+                f"""<div style="font-size:13.5px;color:{t['text']};line-height:1.65;">
+                  Ton meilleur jour ({jour_nom}) : <strong style="color:{t['ember']};">{jour_top_count} tâches</strong>.
+                  Tu sais que tu en es capable. Reproduis ça 5 jours/semaine, c'est <strong style="color:{t['ember']};">{jour_top_count * 5} tâches</strong> — tu n'en es qu'à {terminees}.
+                  <br><span style="color:{t['text_2']};font-size:12.5px;">Le potentiel est en toi, pas dans une nouvelle méthode.</span>
+                </div>"""
+            )
 
-    # ── SECTION 11.9 : Objectifs en cours (Goal Reverse) ──
+    # ── Objectifs en cours (Goal Reverse) ──
     section_objectifs = ""
     objectifs_hebdo = stats.get("objectifs_en_cours", [])
     if objectifs_hebdo:
@@ -792,53 +884,50 @@ def _html_resume_hebdo(nom, stats):
         for obj in objectifs_hebdo[:4]:
             pct_obj = obj.get("progression", 0)
             barre_obj = max(4, min(100, int(pct_obj)))
-            couleur_obj = "#4caf82" if pct_obj >= 70 else "#e08a3c" if pct_obj >= 30 else "#e05c5c"
+            couleur_obj = perf_color(pct_obj)
             j_rest = obj.get("jours_restants")
             urgence = ""
             if j_rest is not None:
                 if j_rest < 0:
-                    urgence = f'<span style="color:#e05c5c;font-weight:700;">⚠️ En retard de {abs(j_rest)}j</span>'
+                    urgence = f'<span style="color:{t["danger"]};font-weight:700;font-size:11px;">En retard · {abs(j_rest)}j</span>'
                 elif j_rest <= 7:
-                    urgence = f'<span style="color:#e08a3c;font-weight:700;">⏰ J-{j_rest}</span>'
+                    urgence = f'<span style="color:{t["warning"]};font-weight:700;font-size:11px;">J-{j_rest}</span>'
                 else:
-                    urgence = f'<span style="color:#8888a8;">J-{j_rest}</span>'
-            retard_label = f' <span style="color:#e05c5c;">(⚠ {obj.get("taches_en_retard",0)} en retard)</span>' if obj.get("taches_en_retard", 0) > 0 else ""
+                    urgence = f'<span style="color:{t["text_3"]};font-size:11px;">J-{j_rest}</span>'
+            retard_label = f' <span style="color:{t["danger"]};font-size:11px;">({obj.get("taches_en_retard",0)} en retard)</span>' if obj.get("taches_en_retard", 0) > 0 else ""
             rows_obj += f"""
             <div style="margin-bottom:14px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                <span style="font-size:12.5px;color:#e8e8f0;font-weight:600;">{obj.get('titre','')}{retard_label}</span>
-                <span style="font-size:11px;">{urgence}</span>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:6px;">
+                <tr>
+                  <td style="font-size:13px;color:{t["text"]};font-weight:600;">{obj.get('titre','')}{retard_label}</td>
+                  <td style="text-align:right;">{urgence}</td>
+                </tr>
+              </table>
+              <div style="height:5px;background:{t['surface_2']};border-radius:99px;margin-bottom:4px;">
+                <div style="height:5px;width:{barre_obj}%;background:{couleur_obj};border-radius:99px;"></div>
               </div>
-              <div style="height:6px;background:#ffffff10;border-radius:99px;margin-bottom:4px;">
-                <div style="height:6px;width:{barre_obj}%;background:{couleur_obj};border-radius:99px;"></div>
-              </div>
-              <div style="font-size:10px;color:#8888a8;">{obj.get('taches_done',0)}/{obj.get('taches_total',0)} tâches · {pct_obj}%</div>
+              <div style="font-size:10.5px;color:{t['text_3']};">{obj.get('taches_done',0)}/{obj.get('taches_total',0)} tâches · {pct_obj}%</div>
             </div>
             """
-        section_objectifs = f"""
-        <div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:14px;padding:16px;margin-bottom:16px;">
-          <div style="color:#6c63ff;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px;">🎯 TES OBJECTIFS EN COURS</div>
-          {rows_obj}
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/goal" style="display:inline-block;margin-top:4px;font-size:11px;color:#6c63ff;text-decoration:none;font-weight:600;">Voir tous mes objectifs →</a>
-        </div>
-        """
+        section_objectifs = section_card(
+            section_label("Tes objectifs en cours") + rows_obj +
+            f'<a href="https://chamdaane-a11y.github.io/taskflow/#/goal" style="display:inline-block;margin-top:4px;font-size:11.5px;color:{t["ember"]};text-decoration:none;font-weight:600;">Voir tous mes objectifs →</a>'
+        )
 
-    # ── SECTION 12 : CTAs ──
-    section_cta = """
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+    # ── CTAs finaux ──
+    section_cta = f"""
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-top:24px;">
       <tr>
-        <td style="padding:0 4px 8px 0;" width="50%">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#6c63ff,#a855f7);color:white;padding:13px;border-radius:11px;text-decoration:none;font-weight:700;font-size:13px;">Dashboard →</a>
+        <td width="50%" style="padding-right:4px;">
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:block;text-align:center;background:{t['ember']};color:#1A1A1B;padding:13px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.2px;">Ouvrir le Dashboard</a>
         </td>
-        <td style="padding:0 0 8px 4px;" width="50%">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/analytics" style="display:block;text-align:center;background:linear-gradient(135deg,#4caf82,#22a06b);color:white;padding:13px;border-radius:11px;text-decoration:none;font-weight:700;font-size:13px;">Analytics →</a>
+        <td width="50%" style="padding-left:4px;">
+          <a href="https://chamdaane-a11y.github.io/taskflow/#/analytics" style="display:block;text-align:center;background:{t['surface_2']};color:{t['text']};padding:13px;border-radius:10px;text-decoration:none;font-weight:600;font-size:13px;border:1px solid {t['border']};">Voir les analytics</a>
         </td>
       </tr>
-      <tr>
-        <td colspan="2">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/planification" style="display:block;text-align:center;background:#1a1a28;color:#c8c8e8;padding:11px;border-radius:11px;text-decoration:none;font-weight:600;font-size:12px;border:1px solid #ffffff0f;">📅 Planifier la semaine prochaine</a>
-        </td>
-      </tr>
+      <tr><td colspan="2" style="padding-top:8px;">
+        <a href="https://chamdaane-a11y.github.io/taskflow/#/planification" style="display:block;text-align:center;background:transparent;color:{t['text_2']};padding:11px;border-radius:10px;text-decoration:none;font-weight:500;font-size:12px;border:1px solid {t['border']};">Planifier la semaine prochaine →</a>
+      </td></tr>
     </table>
     """
 
@@ -1795,27 +1884,14 @@ def forgot_password():
         curseur.execute("UPDATE users SET reset_token=%s, reset_token_expiry=%s WHERE id=%s", (reset_token, expiry, user['id']))
         db.commit(); db.close()
         lien = f"https://chamdaane-a11y.github.io/taskflow/#/reset-password/{reset_token}"
-        html = f"""<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#F5F0EB;padding:48px 40px;border-radius:16px;border:1px solid #E8DDD5;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;">
-              <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#B8521C,#C96830);display:inline-flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-weight:900;font-size:16px;">G</span>
-              </div>
-              <span style="font-size:17px;font-weight:800;letter-spacing:-0.5px;color:#1A1410;">GetShift</span>
-            </div>
-            <h2 style="color:#1A1410;font-size:22px;font-weight:700;margin:0 0 8px 0;">Bonjour {user['nom']} !</h2>
-            <p style="color:#6B5E54;font-size:15px;line-height:1.6;margin:0 0 28px 0;">
-              Tu as demandé à réinitialiser ton mot de passe. Clique sur le bouton ci-dessous pour choisir un nouveau mot de passe.
-            </p>
-            <a href="{lien}" style="display:inline-block;background:linear-gradient(135deg,#B8521C,#C96830);color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px;">
-              Réinitialiser mon mot de passe →
-            </a>
-            <p style="color:#9C8C80;font-size:13px;margin:0;line-height:1.5;">
-              Ce lien expire dans <strong>1h</strong>. Si tu n'as pas demandé cette réinitialisation, ignore cet email.
-            </p>
-            <hr style="border:none;border-top:1px solid #E8DDD5;margin:28px 0 20px 0;">
-            <p style="color:#B8A89A;font-size:12px;margin:0;">GetShift · <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#B8521C;text-decoration:none;">Ouvrir l'app</a></p>
-        </div>"""
-        threading.Thread(target=envoyer_email, args=(email, "Réinitialisation mot de passe GetShift", html)).start()
+        t = EMAIL_TOKENS
+        contenu = f"""
+        <h1 style="color:{t['text']};margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Réinitialisation du mot de passe</h1>
+        <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Bonjour <strong style="color:{t['text']};">{user['nom']}</strong>. Tu as demandé à réinitialiser ton mot de passe. Clique sur le bouton ci-dessous pour en choisir un nouveau.</p>
+        {_email_cta_btn("Réinitialiser mon mot de passe", lien)}
+        <p style="color:{t['text_3']};margin:24px 0 0;font-size:12px;line-height:1.6;">Ce lien expire dans <strong>1h</strong>. Si tu n'as pas demandé cette réinitialisation, ignore cet email.</p>
+        """
+        threading.Thread(target=envoyer_email, args=(email, "Réinitialisation mot de passe — GetShift", _base_email(contenu, "Réinitialisation"))).start()
         return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
@@ -2229,28 +2305,23 @@ def _generate_2fa_code():
 
 def _send_2fa_code_email(to_email, nom, code, contexte='connexion'):
     """Envoie le code 2FA par email via Brevo. contexte='connexion' ou 'activation'."""
+    t = EMAIL_TOKENS
     titre = "Code de connexion" if contexte == 'connexion' else "Activation de la 2FA"
     sous_titre = (
         "Quelqu'un (probablement toi) essaie de se connecter à GetShift."
         if contexte == 'connexion' else
         "Tu actives la double authentification sur ton compte GetShift."
     )
-    html = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:520px;margin:auto;background:#0f0f13;color:#f0f0f5;padding:36px 32px;border-radius:16px;">
-        <div style="text-align:center;margin-bottom:24px;">
-            <h1 style="color:#f97316;margin:0;font-size:28px;letter-spacing:-0.5px;">GetShift</h1>
-        </div>
-        <h2 style="font-size:20px;margin:0 0 8px;color:#fff;">{titre}</h2>
-        <p style="color:#a0a0aa;font-size:14px;line-height:1.6;margin:0 0 24px;">Salut {nom}, {sous_titre} Entre ce code à 6 chiffres dans GetShift :</p>
-        <div style="background:#1a1a1f;border:1px solid #2a2a30;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
-            <div style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:36px;font-weight:700;letter-spacing:0.4em;color:#f97316;">{code}</div>
-        </div>
-        <p style="color:#80808a;font-size:13px;line-height:1.6;margin:0;">⏱️ Ce code expire dans <strong>10 minutes</strong>.</p>
-        <p style="color:#80808a;font-size:13px;line-height:1.6;margin:6px 0 0;">Si tu n'as rien demandé, ignore cet email et change ton mot de passe.</p>
-        <div style="margin-top:32px;padding-top:20px;border-top:1px solid #2a2a30;text-align:center;">
-            <p style="color:#60606a;font-size:12px;margin:0;">GetShift — la productivité sans friction</p>
-        </div>
-    </div>"""
-    threading.Thread(target=envoyer_email, args=(to_email, f"GetShift — {titre} : {code}", html)).start()
+    contenu = f"""
+    <h1 style="color:{t['text']};margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">{titre}</h1>
+    <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Salut <strong style="color:{t['text']};">{nom}</strong>. {sous_titre} Entre ce code à 6 chiffres dans GetShift :</p>
+    <div style="background:{t['bg']};border:1px solid {t['ember_dark']};border-radius:12px;padding:24px;text-align:center;margin-bottom:20px;">
+      <div style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:36px;font-weight:700;letter-spacing:0.4em;color:{t['ember']};">{code}</div>
+    </div>
+    <p style="color:{t['text_3']};font-size:12.5px;line-height:1.6;margin:0;">Ce code expire dans <strong style="color:{t['text_2']};">10 minutes</strong>.</p>
+    <p style="color:{t['text_3']};font-size:12.5px;line-height:1.6;margin:6px 0 0;">Si tu n'as rien demandé, ignore cet email et change ton mot de passe.</p>
+    """
+    threading.Thread(target=envoyer_email, args=(to_email, f"GetShift — {titre} : {code}", _base_email(contenu, titre))).start()
 
 def _store_and_send_2fa_code(user_id, email, nom, contexte='connexion'):
     """Génère un code, le stocke avec expiry +10min, reset attempts, envoie l'email.
@@ -4700,15 +4771,16 @@ def ajouter_commentaire_equipe():
                 for m in mentions:
                     mentionné = next((mb for mb in membres if mb['nom'].lower().startswith(m.lower()) and mb['id'] != data['user_id']), None)
                     if mentionné:
-                        html = f"""<div style="font-family:sans-serif;max-width:520px;margin:0 auto">
-<div style="background:linear-gradient(135deg,#6c63ff,#a855f7);padding:20px 24px;border-radius:12px 12px 0 0">
-<h2 style="color:white;margin:0;font-size:18px">💬 Nouvelle mention — GetShift</h2></div>
-<div style="background:#f8f8ff;padding:20px 24px;border-radius:0 0 12px 12px;border:1px solid #e8e8f0">
-<p style="color:#333;font-size:14px"><strong>{auteur}</strong> t'a mentionné dans un commentaire sur la tâche <strong>« {tache_titre} »</strong> :</p>
-<div style="background:white;border-left:3px solid #6c63ff;padding:12px 16px;border-radius:0 8px 8px 0;color:#555;font-size:14px;line-height:1.6">{contenu}</div>
-<a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;margin-top:18px;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:13px">Répondre →</a>
-</div></div>"""
-                        envoyer_email(mentionné['email'], f"💬 {auteur} t'a mentionné sur GetShift", html)
+                        et = EMAIL_TOKENS
+                        # Échapper le contenu pour éviter injection HTML basique
+                        contenu_safe = (contenu or "").replace("<","&lt;").replace(">","&gt;")
+                        mention_contenu = f"""
+                        <h1 style="color:{et['text']};margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Nouvelle mention</h1>
+                        <p style="color:{et['text_2']};margin:0 0 20px;font-size:14px;line-height:1.6;"><strong style="color:{et['text']};">{auteur}</strong> t'a mentionné dans un commentaire sur la tâche <strong style="color:{et['text']};">« {tache_titre} »</strong>.</p>
+                        <div style="background:{et['bg']};border:1px solid {et['border']};border-left:3px solid {et['ember']};border-radius:10px;padding:14px 16px;color:{et['text']};font-size:13.5px;line-height:1.6;margin-bottom:24px;">{contenu_safe}</div>
+                        {_email_cta_btn("Répondre dans GetShift", "https://chamdaane-a11y.github.io/taskflow/#/collaboration")}
+                        """
+                        envoyer_email(mentionné['email'], f"{auteur} t'a mentionné — GetShift", _base_email(mention_contenu, "Nouvelle mention"))
         db.close()
         return jsonify({"message": "Commentaire ajoute"})
     except Exception as e:
