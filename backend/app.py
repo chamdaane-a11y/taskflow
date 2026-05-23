@@ -82,7 +82,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-emails-graphite-ember-v10'
+APP_BUILD_MARKER = '2026-05-23-emails-real-logo-v11'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -473,26 +473,10 @@ EMAIL_TOKENS = {
 }
 
 def _email_logo_html(size=40):
-    """Logo GetShift en HTML pur (table-based) : carré ember arrondi avec
-    deux carrés blancs décalés. Compatible Gmail/Outlook (pas de SVG, pas
-    de position absolute). Reproduit le concept 'plaques décalées'."""
-    t = EMAIL_TOKENS
-    inner = int(size * 0.4)   # taille d'une plaque
-    gap = int(size * 0.1)
-    return f"""<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['ember']};border-radius:{int(size*0.22)}px;display:inline-block;">
-        <tr><td style="padding:{gap}px;">
-            <table cellpadding="0" cellspacing="0" border="0" role="presentation">
-                <tr>
-                    <td style="width:{inner}px;height:{inner}px;"></td>
-                    <td style="width:{inner}px;height:{inner}px;background:#FFFFFF;border-radius:{int(inner*0.2)}px;"></td>
-                </tr>
-                <tr>
-                    <td style="width:{inner}px;height:{inner}px;background:transparent;border:2px solid rgba(255,255,255,0.55);border-radius:{int(inner*0.2)}px;"></td>
-                    <td style="width:{inner}px;height:{inner}px;"></td>
-                </tr>
-            </table>
-        </td></tr>
-    </table>"""
+    """Logo GetShift dans l'email : le vrai PNG hosté sur GitHub Pages.
+    Source-of-truth identique à l'app (PWA icon 192x192, design 'plaques décalées')."""
+    url = "https://chamdaane-a11y.github.io/taskflow/icons/icon-192.png"
+    return f'<img src="{url}" alt="GetShift" width="{size}" height="{size}" style="display:block;border:0;outline:none;border-radius:{int(size*0.22)}px;">'
 
 def _base_email(contenu_html, titre_preheader="GetShift"):
     """Wrapper email GRAPHITE & EMBER. Reproduit l'identité visuelle de l'app :
