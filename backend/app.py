@@ -1309,6 +1309,10 @@ def run_migrations():
         if not col_exists(curseur, 'taches', 'gcal_imported_event_id'):
             curseur.execute("ALTER TABLE taches ADD COLUMN gcal_imported_event_id VARCHAR(255) NULL")
             print("[Migrations] taches.gcal_imported_event_id ✅")
+        # heure_debut : heure de début préservée depuis les events GCal timed (HH:MM)
+        if not col_exists(curseur, 'taches', 'heure_debut'):
+            curseur.execute("ALTER TABLE taches ADD COLUMN heure_debut VARCHAR(5) NULL")
+            print("[Migrations] taches.heure_debut ✅")
         # Préférences notifications utilisateur (2026-05-22)
         if not col_exists(curseur, 'users', 'notif_prefs'):
             curseur.execute("ALTER TABLE users ADD COLUMN notif_prefs JSON NULL")
@@ -6186,9 +6190,11 @@ def _do_gcal_import(user_id):
         if not start_dt:
             continue
         deadline = start_dt[:10]
+        all_day = 'dateTime' not in start
+        heure_debut = start_dt[11:16] if not all_day and len(start_dt) >= 16 else None
         c.execute(
-            "INSERT INTO taches (titre, priorite, deadline, user_id, gcal_imported_event_id) VALUES (%s, %s, %s, %s, %s)",
-            (titre[:200], 'moyenne', deadline, user_id, event_id),
+            "INSERT INTO taches (titre, priorite, deadline, user_id, gcal_imported_event_id, heure_debut) VALUES (%s, %s, %s, %s, %s, %s)",
+            (titre[:200], 'moyenne', deadline, user_id, event_id, heure_debut),
         )
         created += 1
         already.add(event_id)

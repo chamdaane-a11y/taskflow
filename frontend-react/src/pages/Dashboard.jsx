@@ -15,6 +15,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Link2, Sunset, ArrowRight, TrendingUp,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
+import { GoogleCalendarLogo } from '../components/BrandLogos'
 import ExportModal from './ExportModal'
 import Onboarding from './Onboarding'
 import { useDashboard } from './useDashboard'
@@ -2811,11 +2812,16 @@ export default function Dashboard() {
                           {tache.titre}
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                          {tache.gcal_imported_event_id && (
+                            <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0 }}>
+                              <GoogleCalendarLogo size={12} />
+                            </span>
+                          )}
                           {tache.deadline && (
                             <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                               <Calendar size={10} strokeWidth={1.8} />
                               {new Date(tache.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                              {' · '}{new Date(tache.deadline).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                              {tache.heure_debut && <>{' · '}{tache.heure_debut}</>}
                             </span>
                           )}
                           {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600 }}>+{pts} pts</span>}
