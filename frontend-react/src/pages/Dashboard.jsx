@@ -2817,13 +2817,23 @@ export default function Dashboard() {
                               <GoogleCalendarLogo size={12} />
                             </span>
                           )}
-                          {tache.deadline && (
-                            <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <Calendar size={10} strokeWidth={1.8} />
-                              {new Date(tache.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                              {tache.heure_debut && <>{' · '}{tache.heure_debut}</>}
-                            </span>
-                          )}
+                          {tache.deadline && (() => {
+                            const [y, m, d] = tache.deadline.split('-').map(Number)
+                            const today = new Date(); const t = [today.getFullYear(), today.getMonth()+1, today.getDate()]
+                            const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1)
+                            const tm = [tomorrow.getFullYear(), tomorrow.getMonth()+1, tomorrow.getDate()]
+                            const label = (y===t[0]&&m===t[1]&&d===t[2]) ? 'Aujourd\'hui'
+                              : (y===tm[0]&&m===tm[1]&&d===tm[2]) ? 'Demain'
+                              : new Date(y, m-1, d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                            const isUrgent = (y===t[0]&&m===t[1]&&d===t[2]) && !tache.terminee
+                            return (
+                              <span style={{ fontSize: 11, color: isUrgent ? 'var(--ember)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                <Calendar size={10} strokeWidth={1.8} />
+                                {label}
+                                {tache.heure_debut && <>{' · '}{tache.heure_debut}</>}
+                              </span>
+                            )
+                          })()}
                           {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600 }}>+{pts} pts</span>}
                           {isBloquee && <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: 'rgba(224,92,92,0.1)', color: '#e05c5c', fontWeight: 600 }}>Bloquée</span>}
                         </div>
