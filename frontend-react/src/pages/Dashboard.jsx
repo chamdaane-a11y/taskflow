@@ -34,6 +34,17 @@ registerLocale('fr', fr)
 
 const API = 'https://getshift-backend.onrender.com'
 
+const labelDate = (deadline) => {
+  const [y, m, d] = deadline.split('-').map(Number)
+  const now = new Date()
+  const t = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
+  const tom = new Date(now); tom.setDate(now.getDate() + 1)
+  const tm = [tom.getFullYear(), tom.getMonth() + 1, tom.getDate()]
+  if (y === t[0] && m === t[1] && d === t[2]) return "Aujourd'hui"
+  if (y === tm[0] && m === tm[1] && d === tm[2]) return 'Demain'
+  return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+
 const PRIORITES = [
   { val: 'haute', label: 'Haute', bg: 'rgba(224,92,92,0.12)', color: '#e05c5c' },
   { val: 'moyenne', label: 'Moyenne', bg: 'rgba(224,138,60,0.12)', color: '#e08a3c' },
@@ -1713,7 +1724,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                 </span>
                 {t.deadline && (
                   <span style={{ fontSize: 10, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                    {new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    {labelDate(t.deadline)}
                   </span>
                 )}
                 <motion.button
@@ -1758,7 +1769,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                     {t.deadline && (
                       <span style={{ fontSize: 10.5, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                         <Calendar size={9} strokeWidth={2} />
-                        {new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        {labelDate(t.deadline)}
                       </span>
                     )}
                     <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 700 }}>+{pts}</span>
@@ -1823,7 +1834,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
                   {t.deadline && (
                     <span style={{ fontSize: 10.5, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                      {new Date(t.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      {labelDate(t.deadline)}
                     </span>
                   )}
                 </button>
@@ -2818,18 +2829,12 @@ export default function Dashboard() {
                             </span>
                           )}
                           {tache.deadline && (() => {
-                            const [y, m, d] = tache.deadline.split('-').map(Number)
-                            const today = new Date(); const t = [today.getFullYear(), today.getMonth()+1, today.getDate()]
-                            const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1)
-                            const tm = [tomorrow.getFullYear(), tomorrow.getMonth()+1, tomorrow.getDate()]
-                            const label = (y===t[0]&&m===t[1]&&d===t[2]) ? 'Aujourd\'hui'
-                              : (y===tm[0]&&m===tm[1]&&d===tm[2]) ? 'Demain'
-                              : new Date(y, m-1, d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-                            const isUrgent = (y===t[0]&&m===t[1]&&d===t[2]) && !tache.terminee
+                            const lbl = labelDate(tache.deadline)
+                            const isUrgent = lbl === "Aujourd'hui" && !tache.terminee
                             return (
                               <span style={{ fontSize: 11, color: isUrgent ? 'var(--ember)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                                 <Calendar size={10} strokeWidth={1.8} />
-                                {label}
+                                {lbl}
                                 {tache.heure_debut && <>{' · '}{tache.heure_debut}</>}
                               </span>
                             )
