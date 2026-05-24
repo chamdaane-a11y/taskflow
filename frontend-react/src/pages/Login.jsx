@@ -179,19 +179,19 @@ function LoginInner() {
 
           <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
             style={{ fontSize: 'clamp(40px, 5vw, 66px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
-            Organisez.{' '}
-            <span className="ember-text">Automatisez.</span>
-            <br />Performez.
+            Organise.{' '}
+            <span className="ember-text">Performe.</span>
+            <br />Évolue.
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
             style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 460, lineHeight: 1.75, marginBottom: 48, fontWeight: 400 }}>
-            GetShift combine la gestion de tâches et l'IA pour vous aider à accomplir plus, en moins de temps.
+            Gestion de tâches, analytics et planification intelligente — tout ce qu'il faut pour performer chaque jour.
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
             style={{ display: 'flex', gap: 40 }}>
-            {[{ val: '10k+', label: 'Utilisateurs actifs' }, { val: '4.9/5', label: 'Satisfaction' }, { val: '100%', label: 'Gratuit' }].map((s, i) => (
+            {[{ val: '27', label: 'Badges' }, { val: '10', label: 'Niveaux' }, { val: '100%', label: 'Gratuit' }].map((s, i) => (
               <div key={i}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px', fontFamily: 'var(--font-ui)' }}>{s.val}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>{s.label}</div>

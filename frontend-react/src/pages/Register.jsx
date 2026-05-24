@@ -136,14 +136,14 @@ function RegisterInner() {
 
           <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
             style={{ fontSize: 'clamp(40px, 5vw, 66px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
-            Organisez.{' '}
-            <span className="ember-text">Automatisez.</span>
-            <br />Performez.
+            Organise.{' '}
+            <span className="ember-text">Performe.</span>
+            <br />Évolue.
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
             style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 460, lineHeight: 1.75, marginBottom: 44, fontWeight: 400 }}>
-            Rejoignez des milliers d'utilisateurs qui organisent leur quotidien avec GetShift.
+            Crée ton compte gratuitement — sans carte bancaire, sans engagement.
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
