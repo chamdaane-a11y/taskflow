@@ -929,13 +929,12 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
       style={{
         background: 'var(--surface-1)',
-        border: `1px solid ${personaColor}40`,
+        border: '1px solid var(--border-subtle)',
         borderRadius: 16,
         padding: isMobile ? '12px 14px' : '16px 20px',
         marginBottom: 14,
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: `0 0 0 1px ${personaColor}10, 0 4px 18px ${personaColor}10`,
       }}>
       <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${personaColor}, ${personaColor}80)` }} />
 
@@ -1117,8 +1116,8 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
           </div>
           {/* Points cette semaine */}
           <div style={{
-            background: 'rgba(168,85,247,0.08)',
-            border: `1px solid rgba(168,85,247,0.25)`,
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 10, padding: '8px 6px', textAlign: 'center',
           }}>
             <TrendingUp size={13} color={pointsColor} strokeWidth={2.2} />
@@ -1212,7 +1211,7 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
 
         {/* POINTS SEMAINE */}
         <motion.div whileHover={{ y: -1 }} style={{
-          background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.25)',
+          background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
           borderRadius: 12, padding: '14px 16px',
           display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 100,
         }}>
@@ -1233,7 +1232,7 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
 
         {/* TÂCHES : terminées / total */}
         <motion.div whileHover={{ y: -1 }} style={{
-          background: 'rgba(76,175,130,0.05)', border: '1px solid rgba(76,175,130,0.25)',
+          background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
           borderRadius: 12, padding: '14px 16px',
           display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 100,
         }}>
@@ -1625,11 +1624,10 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
       style={{
         position: 'relative',
         background: 'var(--surface-1)',
-        border: `1px solid var(--ember-soft)`,
+        border: '1px solid var(--border-subtle)',
         borderRadius: isMobile ? 14 : 16,
         padding: isMobile ? '10px 12px 10px' : '18px 22px 16px',
         marginBottom: isMobile ? 14 : 20,
-        boxShadow: `0 0 0 1px var(--ember-soft), 0 4px 18px var(--ember-soft)`,
         overflow: 'visible',
       }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: isMobile ? 2 : 3, background: `linear-gradient(90deg, var(--ember), var(--ember-hover))`, borderRadius: isMobile ? '14px 14px 0 0' : '16px 16px 0 0' }} />
