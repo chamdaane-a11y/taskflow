@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import CookieBanner from './components/CookieBanner'
 
 const Splash           = lazy(() => import('./pages/Splash'))
 const Login            = lazy(() => import('./pages/Login'))
@@ -63,6 +64,7 @@ function UpdateBanner() {
 function App() {
   return (
     <HashRouter>
+      <CookieBanner />
       <UpdateBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
