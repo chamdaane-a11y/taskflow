@@ -280,6 +280,7 @@ export const synchroniserAvecServeur = async (userId, apiUrl) => {
         const res = await fetch(`${apiUrl}/taches`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(action.data)
         })
         if (res.ok) {
@@ -293,6 +294,7 @@ export const synchroniserAvecServeur = async (userId, apiUrl) => {
         const res = await fetch(`${apiUrl}/taches/${action.data.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ terminee: action.data.terminee })
         })
         if (res.ok) {
@@ -303,7 +305,8 @@ export const synchroniserAvecServeur = async (userId, apiUrl) => {
 
       else if (action.type === 'SUPPRIMER_TACHE') {
         const res = await fetch(`${apiUrl}/taches/${action.data.id}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          credentials: 'include',
         })
         if (res.ok) {
           await supprimerActionSync(action.id)

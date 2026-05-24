@@ -13,6 +13,9 @@ fetch('https://getshift-backend.onrender.com/health').catch(() => {})
 // certaines couches navigateur/proxy l'ignorent). Ajouter un _t=timestamp force
 // une URL unique à chaque requête → impossible à matcher en cache.
 // Application : aucun utilisateur n'a besoin de hard refresh après un déploiement.
+// Envoie le cookie HttpOnly JWT sur toutes les requêtes cross-origin
+axios.defaults.withCredentials = true
+
 axios.interceptors.request.use(config => {
   if ((config.method || 'get').toLowerCase() === 'get') {
     config.params = { ...(config.params || {}), _t: Date.now() }

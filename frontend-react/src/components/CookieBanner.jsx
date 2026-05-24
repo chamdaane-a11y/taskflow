@@ -3,16 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Cookie, X } from 'lucide-react'
 
 const KEY = 'gs_cookie_consent'
+export const CONSENT_VERSION = '2'  // incrémenter à chaque changement majeur de politique
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem(KEY)) setVisible(true)
+    try {
+      const stored = JSON.parse(localStorage.getItem(KEY) || 'null')
+      if (!stored || stored.v !== CONSENT_VERSION) setVisible(true)
+    } catch {
+      setVisible(true)
+    }
   }, [])
 
   function accept() {
-    localStorage.setItem(KEY, '1')
+    localStorage.setItem(KEY, JSON.stringify({ v: CONSENT_VERSION, at: Date.now() }))
     setVisible(false)
   }
 

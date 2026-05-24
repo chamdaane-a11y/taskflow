@@ -673,6 +673,7 @@ export default function IAChat() {
       const resp = await fetch(`${API}/ia/assistant/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       })
       if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`)
