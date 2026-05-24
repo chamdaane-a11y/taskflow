@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getshift-v22'
+const CACHE_NAME = 'getshift-v23'
 const STATIC_ASSETS = [
   '/taskflow/',
   '/taskflow/index.html',
@@ -25,10 +25,15 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url)
 
-  // ── API backend → Network First, pas de cache ────────────────────────
-  if (url.hostname.includes('railway.app') || url.hostname.includes('onrender.com')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('offline', { status: 503 })))
-    return
+  // ── API externes → bypass total, jamais intercepté par le SW ────────
+  const BYPASS_HOSTS = [
+    'railway.app', 'onrender.com',
+    'googleapis.com', 'google.com', 'accounts.google.com',
+    'groq.com', 'api.groq.com',
+    'fonts.googleapis.com', 'fonts.gstatic.com',
+  ]
+  if (BYPASS_HOSTS.some(h => url.hostname.includes(h))) {
+    return // laisse le navigateur gérer directement, sans e.respondWith
   }
 
   // ── HTML / navigation → NETWORK FIRST (sinon les nouveaux deploys cassent) ──
