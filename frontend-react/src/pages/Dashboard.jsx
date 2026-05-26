@@ -35,6 +35,7 @@ registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
 
 const labelDate = (deadline) => {
+  if (!deadline) return ''
   const [y, m, d] = deadline.slice(0, 10).split('-').map(Number)
   const now = new Date()
   const t = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
@@ -559,7 +560,7 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: pBg(tache.priorite), color: pColor(tache.priorite), fontWeight: 600 }}>{tache.priorite}</span>
-            {tache.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
+            {tache.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}</span>}
             {!tache.terminee && !isBloquee && <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
             {isBloquee && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: 'rgba(224,92,92,0.12)', color: '#e05c5c', fontWeight: 600 }}>Bloquée</span>}
           </div>
