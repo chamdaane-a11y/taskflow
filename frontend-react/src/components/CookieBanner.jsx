@@ -61,7 +61,7 @@ export default function CookieBanner() {
               GetShift utilise le stockage local pour ta session et tes préférences —
               nécessaire au fonctionnement de l'app.{' '}
             </span>
-            <a href="/#/confidentialite" style={{ fontSize: 13, color: 'var(--ember)', textDecoration: 'none', fontWeight: 500 }}
+            <a href="#/confidentialite" style={{ fontSize: 13, color: 'var(--ember)', textDecoration: 'none', fontWeight: 500 }}
               onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
               onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
               En savoir plus

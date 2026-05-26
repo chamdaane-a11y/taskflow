@@ -195,12 +195,12 @@ export default function CGU() {
 
           {/* Lien vers la politique de confidentialité */}
           <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="/#/confidentialite" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500 }}
+            <a href="#/confidentialite" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500 }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--ember)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}>
               <Lock size={12} /> Politique de confidentialité <ExternalLink size={11} />
             </a>
-            <a href="/#/mentions-legales" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500 }}
+            <a href="#/mentions-legales" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500 }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--ember)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}>
               <Shield size={12} /> Mentions légales <ExternalLink size={11} />

@@ -139,7 +139,7 @@ export default function MentionsLegales() {
 
         {/* Back links */}
         <div style={{ marginTop: 36, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-          {[['/#/cgu', 'Conditions générales d\'utilisation'], ['/#/confidentialite', 'Politique de confidentialité']].map(([href, label]) => (
+          {[['#/cgu', 'Conditions générales d\'utilisation'], ['#/confidentialite', 'Politique de confidentialité']].map(([href, label]) => (
             <a key={href} href={href} style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--ember)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}>

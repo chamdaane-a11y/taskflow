@@ -900,9 +900,9 @@ export default function Landing() {
         </div>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           {[
-            ['/#/cgu', 'CGU'],
-            ['/#/confidentialite', 'Confidentialité'],
-            ['/#/mentions-legales', 'Mentions légales'],
+            ['#/cgu', 'CGU'],
+            ['#/confidentialite', 'Confidentialité'],
+            ['#/mentions-legales', 'Mentions légales'],
             ['mailto:chamdaane1@gmail.com', 'Contact'],
           ].map(([href, label]) => (
             <a key={label} href={href} style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s' }}
