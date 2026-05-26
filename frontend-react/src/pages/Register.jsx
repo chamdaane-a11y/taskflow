@@ -43,7 +43,8 @@ function RegisterInner() {
       setGLoading(true); setErreur('')
       try {
         const userInfo = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+          withCredentials: false
         })
         const pendingCode = (() => { try { return localStorage.getItem('pending_invite_code') } catch { return null } })()
         const res = await axios.post(`${API}/auth/google`, {
