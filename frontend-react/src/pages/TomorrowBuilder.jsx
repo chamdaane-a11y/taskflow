@@ -1065,7 +1065,8 @@ export default function TomorrowBuilder() {
         titre: tache.titre,
         priorite: tache.priorite || 'moyenne',
         deadline: demainDate,
-        source_url: tache.gmail_message_id ? `https://mail.google.com/mail/#all/${tache.gmail_message_id}` : undefined
+        source_url: tache.gmail_message_id ? `https://mail.google.com/mail/#all/${tache.gmail_message_id}` : undefined,
+        gmail_message_id: tache.gmail_message_id
       })
       setGmailImporting(prev => ({ ...prev, [idx]: 'done' }))
     } catch (e) {

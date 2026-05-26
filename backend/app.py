@@ -6,6 +6,7 @@ import schedule
 import time
 import urllib.parse
 from flask import Flask, jsonify, request, make_response, redirect
+from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies, jwt_required, get_jwt, get_jwt_identity, decode_token
 from flask_limiter import Limiter
@@ -47,7 +48,17 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 print("[BOOT] Groq client OK", flush=True)
 print(f"[BOOT] Brevo API key set: {bool(os.getenv('BREVO_API_KEY'))}", flush=True)
 
+class ISODateJSONProvider(DefaultJSONProvider):
+    @staticmethod
+    def default(o):
+        from datetime import date, datetime
+        if isinstance(o, (datetime, date)):
+            return o.isoformat()
+        return DefaultJSONProvider.default(o)
+
 app = Flask(__name__)
+app.json_provider_class = ISODateJSONProvider
+app.json = ISODateJSONProvider(app)
 app.secret_key = os.getenv('SECRET_KEY', 'getshift_secret')
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'getshift_jwt_secret')
@@ -1341,6 +1352,24 @@ def run_migrations():
             )
         """)
         print("[Migrations] gcal_watch_channels ✅")
+
+        # gmail_imported : dédup des emails déjà transformés en tâche
+        # 2026-05-26 : empêche que /integrations/gmail/extract-tasks re-propose
+        # un email dont l'user a déjà importé une tâche.
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS gmail_imported (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                gmail_message_id VARCHAR(255) NOT NULL,
+                tache_id INT NULL,
+                imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_user_msg (user_id, gmail_message_id),
+                INDEX idx_user (user_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (tache_id) REFERENCES taches(id) ON DELETE SET NULL
+            )
+        """)
+        print("[Migrations] gmail_imported ✅")
 
         # Refonte design 2026-05-21 — nouveau défaut thème = 'light' (Parchemin).
         # Idempotent : on lit le DEFAULT actuel et on l'aligne sur 'light' si besoin.
@@ -3318,12 +3347,35 @@ def ajouter_tache():
         db = connecter()
         curseur = db.cursor()
         user_id = data['user_id']
+        # Dédup Gmail amont : si le message_id a déjà servi à créer une tâche,
+        # on bloque AVANT l'INSERT INTO taches (sinon double-clic = doublon).
+        gmail_msg_id = data.get('gmail_message_id')
+        if gmail_msg_id:
+            curseur.execute(
+                "SELECT tache_id FROM gmail_imported WHERE user_id=%s AND gmail_message_id=%s",
+                (user_id, gmail_msg_id)
+            )
+            existing = curseur.fetchone()
+            if existing:
+                db.close()
+                return jsonify({"erreur": "Cet email a déjà été importé en tâche", "tache_id": existing[0]}), 409
         # Compte AVANT insertion pour détecter 1ère tâche
         curseur.execute("SELECT COUNT(*) FROM taches WHERE user_id=%s", (user_id,))
         nb_avant = curseur.fetchone()[0]
         curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id, source_url) VALUES (%s, %s, %s, %s, %s, %s)", (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), user_id, data.get('categorie_id'), data.get('source_url')))
         db.commit()
         tache_id = curseur.lastrowid
+        # Dédup Gmail : on enregistre l'email source pour empêcher la
+        # re-proposition par /integrations/gmail/extract-tasks à l'avenir.
+        if gmail_msg_id:
+            try:
+                curseur.execute(
+                    "INSERT IGNORE INTO gmail_imported (user_id, gmail_message_id, tache_id) VALUES (%s, %s, %s)",
+                    (user_id, gmail_msg_id, tache_id)
+                )
+                db.commit()
+            except Exception as _e:
+                print(f"[Gmail dedup] insert failed: {_e}", flush=True)
         curseur2 = db.cursor(dictionary=True)
         curseur2.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
         row = curseur2.fetchone()
@@ -6535,12 +6587,28 @@ def gmail_extract_tasks(user_id):
     if not creds:
         return jsonify({"taches": [], "connected": False, "nb_emails": 0})
     try:
+        # 1) Emails déjà transformés en tâche (dédup robuste) — on les exclura de l'extraction.
+        db_ctx = connecter()
+        cur_ctx = db_ctx.cursor(dictionary=True)
+        cur_ctx.execute("SELECT gmail_message_id FROM gmail_imported WHERE user_id=%s", (user_id,))
+        imported_ids = {r['gmail_message_id'] for r in cur_ctx.fetchall()}
+        # 2) Tâches existantes non-terminées (contexte sémantique pour l'IA → évite les doublons métier).
+        cur_ctx.execute(
+            "SELECT titre FROM taches WHERE user_id=%s AND terminee=FALSE ORDER BY created_at DESC LIMIT 30",
+            (user_id,)
+        )
+        existing_titles = [r['titre'] for r in cur_ctx.fetchall()]
+        db_ctx.close()
+
         service = build('gmail', 'v1', credentials=creds, cache_discovery=False)
+        # Fenêtre élargie à 7j — la dédup gmail_imported empêche les re-suggestions.
         result = service.users().messages().list(
-            userId='me', q='is:unread newer_than:2d -category:promotions -category:social',
-            maxResults=15
+            userId='me', q='is:unread newer_than:7d -category:promotions -category:social',
+            maxResults=30
         ).execute()
-        msg_ids = [m['id'] for m in result.get('messages', [])]
+        raw_ids = [m['id'] for m in result.get('messages', [])]
+        # Filtre : on retire les emails déjà importés.
+        msg_ids = [mid for mid in raw_ids if mid not in imported_ids]
         if not msg_ids:
             return jsonify({"taches": [], "connected": True, "nb_emails": 0})
         emails_text = []
@@ -6554,7 +6622,14 @@ def gmail_extract_tasks(user_id):
             emails_text.append(f"De: {expediteur}\nSujet: {sujet}\nContenu: {body}")
             msg_ids_used.append(mid)
         emails_block = "\n---\n".join(f"[EMAIL_{i}]\n{txt}" for i, txt in enumerate(emails_text))
+        existing_block = (
+            "\n".join(f"- {t}" for t in existing_titles) if existing_titles
+            else "(aucune tâche en cours)"
+        )
         prompt = f"""Analyse ces {len(emails_text)} emails et extrais les VRAIES action items (choses concrètes à faire). Ignore newsletters, notifications auto, accusés de réception, marketing, publicités.
+
+TÂCHES DÉJÀ EXISTANTES (à NE PAS reproposer même reformulées) :
+{existing_block}
 
 EMAILS:
 {emails_block}
@@ -6567,7 +6642,8 @@ Règles:
 - priorité haute = deadline proche ou personne importante
 - duree_min réaliste en minutes (5/15/30/60)
 - email_index = numéro de l'email source (0, 1, 2...) entre les balises [EMAIL_N]
-- Si aucune vraie tâche, retourne {{"taches": []}}"""
+- IMPORTANT : si une action est déjà couverte par une tâche existante ci-dessus (même reformulée différemment), NE LA PROPOSE PAS
+- Si aucune vraie tâche nouvelle, retourne {{"taches": []}}"""
         response = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
