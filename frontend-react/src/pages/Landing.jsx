@@ -854,7 +854,7 @@ export default function Landing() {
                   whileHover={!plan.highlight ? { scale: 1.02 } : {}}
                   whileTap={!plan.highlight ? { scale: 0.97 } : {}}
                   style={{ width: '100%', padding: '13px 20px', borderRadius: 11, fontSize: 14, fontWeight: 700, cursor: plan.highlight ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)', border: 'none', background: plan.highlight ? 'var(--surface-3)' : 'linear-gradient(135deg,var(--ember),var(--ember-hover))', color: plan.highlight ? 'var(--text-tertiary)' : 'var(--text-on-ember)', boxShadow: plan.highlight ? 'none' : 'var(--shadow-ember)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, opacity: plan.highlight ? 0.7 : 1 }}>
-                  {plan.highlight ? '🔜 Bientôt' : <>{plan.cta} <ArrowRight size={15} /></>}
+                  {plan.highlight ? ' Bientôt' : <>{plan.cta} <ArrowRight size={15} /></>}
                 </motion.button>
               </div>
             </FadeUp>
