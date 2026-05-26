@@ -562,14 +562,14 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
             <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: pBg(tache.priorite), color: pColor(tache.priorite), fontWeight: 600 }}>{tache.priorite}</span>
             {tache.gcal_imported_event_id && (
               tache.source_url
-                ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={11} /></a>
-                : <span style={{ display: 'flex', alignItems: 'center', lineHeight: 0 }}><GoogleCalendarLogo size={11} /></span>
+                ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Calendar" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={11} /></a>
+                : <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7 }}><GoogleCalendarLogo size={11} /></span>
             )}
             {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={11} /></a>
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir l'email d'origine" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={11} /></a>
             )}
             {tache.source_url && tache.source_url.includes('drive.google.com') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={11} /></a>
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir le fichier Drive" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={11} /></a>
             )}
             {tache.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}</span>}
             {!tache.terminee && !isBloquee && <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
@@ -2253,6 +2253,112 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
+// SourceSpotlight — onboarding 1ère vue d'une tâche avec source (Gmail/Drive/GCal)
+// ══════════════════════════════════════════════════════════════════════════════
+const SourceSpotlight = memo(function SourceSpotlight({ onDismiss }) {
+  const [pos, setPos] = useState(null)
+  const [placement, setPlacement] = useState('bottom')
+
+  useEffect(() => {
+    const compute = () => {
+      const target = document.querySelector('[data-source-link]')
+      if (!target) { setPos(null); return }
+      const r = target.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - r.bottom
+      setPlacement(spaceBelow < 140 ? 'top' : 'bottom')
+      setPos({ top: r.top, left: r.left, width: r.width, height: r.height })
+    }
+    const t = setTimeout(compute, 400)
+    window.addEventListener('resize', compute)
+    window.addEventListener('scroll', compute, true)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('resize', compute)
+      window.removeEventListener('scroll', compute, true)
+    }
+  }, [])
+
+  if (!pos) return null
+
+  const centerX = pos.left + pos.width / 2
+  const bubbleWidth = 280
+  const bubbleLeft = Math.min(
+    Math.max(12, centerX - bubbleWidth / 2),
+    window.innerWidth - bubbleWidth - 12
+  )
+  const bubbleTop = placement === 'bottom' ? pos.top + pos.height + 20 : pos.top - 110
+  const arrowTop = placement === 'bottom' ? bubbleTop - 8 : bubbleTop + 95
+  const arrowRot = placement === 'bottom' ? 0 : 180
+
+  return (
+    <>
+      {/* Backdrop léger pour focus l'attention — n'intercepte pas le clic */}
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.45)',
+          zIndex: 9998, pointerEvents: 'none',
+        }}
+      />
+      {/* Pulse ring autour du logo */}
+      <div style={{
+        position: 'fixed',
+        top: pos.top - 8, left: pos.left - 8,
+        width: pos.width + 16, height: pos.height + 16,
+        borderRadius: '50%',
+        border: '2px solid var(--ember)',
+        boxShadow: '0 0 0 6px rgba(224,138,60,0.25), 0 0 24px rgba(224,138,60,0.5)',
+        animation: 'sourceSpotPulse 1.5s infinite',
+        zIndex: 9999, pointerEvents: 'none',
+      }} />
+      {/* Flèche pointant vers le logo */}
+      <div style={{
+        position: 'fixed',
+        top: arrowTop, left: centerX - 8,
+        width: 0, height: 0,
+        borderLeft: '8px solid transparent',
+        borderRight: '8px solid transparent',
+        borderBottom: '10px solid var(--ember)',
+        transform: `rotate(${arrowRot}deg)`,
+        zIndex: 10000, pointerEvents: 'none',
+      }} />
+      {/* Bulle textuelle */}
+      <motion.div
+        initial={{ opacity: 0, y: placement === 'bottom' ? -8 : 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        style={{
+          position: 'fixed',
+          top: bubbleTop, left: bubbleLeft,
+          width: bubbleWidth,
+          background: 'var(--ember)',
+          color: 'white',
+          padding: '14px 16px',
+          borderRadius: 12,
+          boxShadow: '0 12px 32px rgba(224,138,60,0.45)',
+          zIndex: 10000,
+          fontSize: 13, lineHeight: 1.5,
+        }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Astuce</div>
+        <div style={{ marginBottom: 12, opacity: 0.95 }}>
+          Tu peux retourner à la source d'une tâche en cliquant sur son logo (Gmail · Drive · Calendar).
+        </div>
+        <button onClick={onDismiss} style={{
+          background: 'rgba(255,255,255,0.22)',
+          border: '1px solid rgba(255,255,255,0.4)',
+          color: 'white',
+          padding: '6px 14px',
+          borderRadius: 8,
+          cursor: 'pointer',
+          fontSize: 12, fontWeight: 600,
+        }}>Compris</button>
+      </motion.div>
+    </>
+  )
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
 // DASHBOARD PRINCIPAL
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Dashboard() {
@@ -2285,6 +2391,32 @@ export default function Dashboard() {
     const next = !statsVisible; setStatsVisible(next)
     try { localStorage.setItem('stats_hud_visible', String(next)) } catch {}
   }
+
+  // ── Onboarding spotlight : 1ère vue d'une tâche avec source (Gmail/Drive/GCal) ──
+  const [showSourceSpot, setShowSourceSpot] = useState(false)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('source_spotlight_dismissed') === '1') return
+    } catch { return }
+    const hasSource = (d.taches || []).some(t => t.source_url || t.gcal_imported_event_id)
+    if (!hasSource) return
+    // Délai pour laisser les cards se rendre + l'utilisateur s'orienter.
+    const timer = setTimeout(() => setShowSourceSpot(true), 1800)
+    return () => clearTimeout(timer)
+  }, [d.taches])
+  const dismissSourceSpot = useCallback(() => {
+    try { localStorage.setItem('source_spotlight_dismissed', '1') } catch {}
+    setShowSourceSpot(false)
+  }, [])
+  // Dismiss automatique si l'user clique réellement sur un logo source.
+  useEffect(() => {
+    if (!showSourceSpot) return
+    const handler = (e) => {
+      if (e.target.closest('[data-source-link]')) dismissSourceSpot()
+    }
+    document.addEventListener('click', handler, true)
+    return () => document.removeEventListener('click', handler, true)
+  }, [showSourceSpot, dismissSourceSpot])
 
   // ── Import automatique GCal → tâches (une fois par jour par session) ──
   const [gcalImportNotif, setGcalImportNotif] = useState(null) // null | {count, tasks}
@@ -2753,14 +2885,14 @@ export default function Dashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
                           {tache.gcal_imported_event_id && (
                             tache.source_url
-                              ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Voir dans Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={12} /></a>
-                              : <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0 }}><GoogleCalendarLogo size={12} /></span>
+                              ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Calendar" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={12} /></a>
+                              : <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7 }}><GoogleCalendarLogo size={12} /></span>
                           )}
                           {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
-                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Voir l'email source" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={12} /></a>
+                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir l'email d'origine" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={12} /></a>
                           )}
                           {tache.source_url && tache.source_url.includes('drive.google.com') && (
-                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Voir le fichier Drive" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={12} /></a>
+                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir le fichier Drive" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={12} /></a>
                           )}
                           {tache.deadline && (() => {
                             const lbl = labelDate(tache.deadline)
@@ -3358,6 +3490,11 @@ export default function Dashboard() {
         {d.showCreerTemplate && (
           <CreerTemplateModal d={d} T={T} isMobile={isMobile} />
         )}
+      </AnimatePresence>
+
+      {/* Onboarding spotlight — 1ère vue d'une tâche avec source */}
+      <AnimatePresence>
+        {showSourceSpot && <SourceSpotlight onDismiss={dismissSourceSpot} />}
       </AnimatePresence>
 
       {/* Task DNA Popup */}

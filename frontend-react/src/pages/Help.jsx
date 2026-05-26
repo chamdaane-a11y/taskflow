@@ -8,6 +8,7 @@ import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../component
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import { useSidebarUser } from '../components/useSidebarUser'
+import { GoogleCalendarLogo, GoogleDriveLogo, GmailLogo } from '../components/BrandLogos'
 import {
   Search, ArrowUpRight, Menu as MenuIcon, X,
   Rocket, CheckSquare, Calendar, Timer, Bot, Sunrise,
@@ -38,6 +39,7 @@ const SECTIONS = [
       { id: 'priorites-points',label: 'Priorités · deadlines · points' },
       { id: 'kanban',          label: 'Vue Kanban' },
       { id: 'mode-focus',      label: 'Mode focus' },
+      { id: 'sources-logos',   label: 'Sources Gmail · Drive · Calendar' },
     ],
   },
   {
@@ -965,6 +967,58 @@ export default function Help() {
               <P>
                 Sélectionne 1 à 5 tâches « focus du jour ». Elles apparaissent en grand sur le Dashboard, masquant
                 le reste. Le Pomodoro pré-fill avec la tâche focus en cours. Idéal pour bloquer les distractions.
+              </P>
+
+              <H3 id="sources-logos">Sources Gmail · Drive · Calendar</H3>
+              <P>
+                Quand une tâche provient d'une intégration — un email transformé en action via{' '}
+                <strong>Tomorrow Builder</strong>, un événement Google Calendar importé, ou un fichier
+                Drive — un petit logo apparaît sur la carte. Il est <strong>cliquable</strong> et te
+                ramène directement à la source d'origine (l'email exact, l'event, le fichier).
+              </P>
+              <DemoFrame caption="logo cliquable sur une tâche issue de Gmail">
+                <div style={{
+                  background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
+                  borderRadius: 12, padding: '12px 14px',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid var(--border-subtle)' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                      Répondre à Marc — proposition contrat
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', fontSize: 11, color: 'var(--text-secondary)' }}>
+                      <span style={{ background: 'rgba(224,138,60,0.12)', color: 'var(--ember)', padding: '1px 7px', borderRadius: 99, fontWeight: 600 }}>haute</span>
+                      <span className="source-link" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} title="Ouvrir l'email d'origine">
+                        <GmailLogo size={12} />
+                      </span>
+                      <span>26 mai</span>
+                    </div>
+                  </div>
+                </div>
+              </DemoFrame>
+              <P>
+                <strong>3 sources visuellement reconnaissables</strong> :
+              </P>
+              <div style={{
+                display: 'flex', gap: 16, flexWrap: 'wrap',
+                margin: '8px 0 16px',
+                fontSize: 13, color: 'var(--text-primary)',
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <GmailLogo size={14} /> Gmail (email source)
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <GoogleDriveLogo size={14} /> Drive (fichier lié)
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <GoogleCalendarLogo size={14} /> Calendar (event importé)
+                </span>
+              </div>
+              <P>
+                Au survol, le logo s'éclaircit légèrement — c'est un indice qu'il est interactif. Un
+                clic ouvre la source dans un nouvel onglet. Aucune copie n'est stockée par GetShift :
+                seul le lien est sauvegardé.
               </P>
 
               {/* ─── PLANIFICATION ──────────────────────────── */}

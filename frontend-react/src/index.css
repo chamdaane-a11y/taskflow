@@ -339,3 +339,24 @@ button, a {
 .scroll-contain {
   overscroll-behavior: contain;
 }
+
+/* Source logos on task cards (Gmail / Drive / Calendar) — subtle affordance.
+   Default = légèrement atténué, hover = full opacity + scale léger.
+   Touch devices : effet déclenché par :active (équivalent du hover desktop). */
+.source-link {
+  opacity: 0.7;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+.source-link:hover,
+.source-link:focus-visible,
+.source-link:active {
+  opacity: 1;
+  transform: scale(1.12);
+}
+
+/* Spotlight onboarding — pulse autour du premier logo source (Dashboard) */
+@keyframes sourceSpotPulse {
+  0%, 100% { transform: scale(1);    opacity: 1;   }
+  50%      { transform: scale(1.18); opacity: 0.5; }
+}
