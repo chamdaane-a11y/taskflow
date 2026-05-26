@@ -1313,6 +1313,10 @@ def run_migrations():
         if not col_exists(curseur, 'taches', 'heure_debut'):
             curseur.execute("ALTER TABLE taches ADD COLUMN heure_debut VARCHAR(5) NULL")
             print("[Migrations] taches.heure_debut ✅")
+        # source_url : lien vers la source originale (email Gmail, fichier Drive, event GCal)
+        if not col_exists(curseur, 'taches', 'source_url'):
+            curseur.execute("ALTER TABLE taches ADD COLUMN source_url VARCHAR(500) NULL")
+            print("[Migrations] taches.source_url ✅")
         # Préférences notifications utilisateur (2026-05-22)
         if not col_exists(curseur, 'users', 'notif_prefs'):
             curseur.execute("ALTER TABLE users ADD COLUMN notif_prefs JSON NULL")
@@ -3311,7 +3315,7 @@ def ajouter_tache():
         # Compte AVANT insertion pour détecter 1ère tâche
         curseur.execute("SELECT COUNT(*) FROM taches WHERE user_id=%s", (user_id,))
         nb_avant = curseur.fetchone()[0]
-        curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id) VALUES (%s, %s, %s, %s, %s)", (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), user_id, data.get('categorie_id')))
+        curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id, source_url) VALUES (%s, %s, %s, %s, %s, %s)", (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), user_id, data.get('categorie_id'), data.get('source_url')))
         db.commit()
         tache_id = curseur.lastrowid
         curseur2 = db.cursor(dictionary=True)
@@ -6192,9 +6196,10 @@ def _do_gcal_import(user_id):
         deadline = start_dt[:10]
         all_day = 'dateTime' not in start
         heure_debut = start_dt[11:16] if not all_day and len(start_dt) >= 16 else None
+        source_url = ev.get('htmlLink') or None
         c.execute(
-            "INSERT INTO taches (titre, priorite, deadline, user_id, gcal_imported_event_id, heure_debut) VALUES (%s, %s, %s, %s, %s, %s)",
-            (titre[:200], 'moyenne', deadline, user_id, event_id, heure_debut),
+            "INSERT INTO taches (titre, priorite, deadline, user_id, gcal_imported_event_id, heure_debut, source_url) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (titre[:200], 'moyenne', deadline, user_id, event_id, heure_debut, source_url),
         )
         created += 1
         already.add(event_id)
@@ -6533,6 +6538,7 @@ def gmail_extract_tasks(user_id):
         if not msg_ids:
             return jsonify({"taches": [], "connected": True, "nb_emails": 0})
         emails_text = []
+        msg_ids_used = []
         for mid in msg_ids[:10]:
             msg = service.users().messages().get(userId='me', id=mid, format='full').execute()
             headers = {h['name']: h['value'] for h in msg.get('payload', {}).get('headers', [])}
@@ -6540,19 +6546,21 @@ def gmail_extract_tasks(user_id):
             expediteur = headers.get('From', '')[:80]
             body = _gmail_decode_body(msg.get('payload', {}))[:400]
             emails_text.append(f"De: {expediteur}\nSujet: {sujet}\nContenu: {body}")
-        emails_block = "\n---\n".join(emails_text)
+            msg_ids_used.append(mid)
+        emails_block = "\n---\n".join(f"[EMAIL_{i}]\n{txt}" for i, txt in enumerate(emails_text))
         prompt = f"""Analyse ces {len(emails_text)} emails et extrais les VRAIES action items (choses concrètes à faire). Ignore newsletters, notifications auto, accusés de réception, marketing, publicités.
 
 EMAILS:
 {emails_block}
 
-Réponds UNIQUEMENT en JSON: {{"taches": [{{"titre": "action concrète courte", "priorite": "haute|moyenne|basse", "duree_min": 15, "contexte_email": "expéditeur — sujet"}}]}}
+Réponds UNIQUEMENT en JSON: {{"taches": [{{"titre": "action concrète courte", "priorite": "haute|moyenne|basse", "duree_min": 15, "contexte_email": "expéditeur — sujet", "email_index": 0}}]}}
 
 Règles:
 - Maximum 5 tâches (les plus importantes)
 - titre = action verbale ("Répondre à X", "Préparer doc Y", "Confirmer rdv Z")
 - priorité haute = deadline proche ou personne importante
 - duree_min réaliste en minutes (5/15/30/60)
+- email_index = numéro de l'email source (0, 1, 2...) entre les balises [EMAIL_N]
 - Si aucune vraie tâche, retourne {{"taches": []}}"""
         response = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -6563,7 +6571,12 @@ Règles:
         if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
         elif '```' in contenu: contenu = contenu.split('```')[1].split('```')[0].strip()
         data = json.loads(contenu)
-        return jsonify({"taches": data.get('taches', []), "connected": True, "nb_emails": len(emails_text)})
+        taches = data.get('taches', [])
+        for t in taches:
+            idx = t.pop('email_index', None)
+            if idx is not None and 0 <= idx < len(msg_ids_used):
+                t['gmail_message_id'] = msg_ids_used[idx]
+        return jsonify({"taches": taches, "connected": True, "nb_emails": len(emails_text)})
     except Exception as e:
         return jsonify({"taches": [], "connected": False, "erreur": str(e)[:200]}), 200
 
@@ -6727,6 +6740,28 @@ def drive_recent_docs(user_id):
         return jsonify({"docs": docs, "connected": True})
     except Exception as e:
         return jsonify({"docs": [], "connected": False, "erreur": str(e)[:200]}), 200
+
+@app.route('/integrations/google-drive/to-task', methods=['POST'])
+def drive_to_task():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        file_name = (data.get('file_name') or 'Fichier Drive')[:200]
+        file_link = data.get('file_link', '')
+        if not user_id:
+            return jsonify({"erreur": "user_id requis"}), 400
+        db = connecter()
+        curseur = db.cursor()
+        curseur.execute(
+            "INSERT INTO taches (titre, priorite, user_id, source_url) VALUES (%s, %s, %s, %s)",
+            (file_name, 'moyenne', user_id, file_link)
+        )
+        db.commit()
+        tache_id = curseur.lastrowid
+        db.close()
+        return jsonify({"message": "Tâche créée", "tache_id": tache_id})
+    except Exception as e:
+        return jsonify({"erreur": str(e)[:200]}), 500
 
 @app.route('/integrations/google-drive/status/<int:user_id>', methods=['GET'])
 def drive_status(user_id):

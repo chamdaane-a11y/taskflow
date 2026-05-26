@@ -869,6 +869,18 @@ export default function TomorrowBuilder() {
   const [driveConnected, setDriveConnected] = useState(false)
   const [driveConnecting, setDriveConnecting] = useState(false)
   const [driveDocs, setDriveDocs] = useState([])
+  const [driveToTaskDone, setDriveToTaskDone] = useState(new Set())
+  const [driveToTaskLoading, setDriveToTaskLoading] = useState(new Set())
+
+  const creerTacheDepuisDrive = async (doc) => {
+    if (driveToTaskDone.has(doc.id) || driveToTaskLoading.has(doc.id)) return
+    setDriveToTaskLoading(prev => new Set([...prev, doc.id]))
+    try {
+      await axios.post(`${API}/integrations/google-drive/to-task`, { user_id: user.id, file_id: doc.id, file_name: doc.titre, file_link: doc.lien })
+      setDriveToTaskDone(prev => new Set([...prev, doc.id]))
+    } catch {}
+    setDriveToTaskLoading(prev => { const s = new Set(prev); s.delete(doc.id); return s })
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -1052,7 +1064,8 @@ export default function TomorrowBuilder() {
         user_id: user.id,
         titre: tache.titre,
         priorite: tache.priorite || 'moyenne',
-        deadline: demainDate
+        deadline: demainDate,
+        source_url: tache.gmail_message_id ? `https://mail.google.com/mail/#all/${tache.gmail_message_id}` : undefined
       })
       setGmailImporting(prev => ({ ...prev, [idx]: 'done' }))
     } catch (e) {
@@ -1646,12 +1659,19 @@ export default function TomorrowBuilder() {
                       </div>
                       <div>
                         {driveDocs.slice(0, 5).map((d, i) => (
-                          <a key={i} href={d.lien} target="_blank" rel="noopener noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none', textDecoration: 'none' }}>
-                            <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,172,71,0.12)', color: '#00AC47', fontWeight: 600, flexShrink: 0, textTransform: 'uppercase' }}>{d.type}</span>
-                            <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
-                            <ExternalLink size={11} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
-                          </a>
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+                            <a href={d.lien} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,172,71,0.12)', color: '#00AC47', fontWeight: 600, flexShrink: 0, textTransform: 'uppercase' }}>{d.type}</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
+                              <ExternalLink size={11} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+                            </a>
+                            <button
+                              onClick={() => creerTacheDepuisDrive(d)}
+                              title="Créer une tâche depuis ce fichier"
+                              style={{ flexShrink: 0, background: driveToTaskDone.has(d.id) ? 'rgba(0,172,71,0.15)' : 'var(--surface-2)', border: 'none', borderRadius: 6, padding: '3px 6px', cursor: driveToTaskDone.has(d.id) ? 'default' : 'pointer', display: 'flex', alignItems: 'center', color: driveToTaskDone.has(d.id) ? '#00AC47' : 'var(--text-secondary)' }}>
+                              {driveToTaskLoading.has(d.id) ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: 11 }}>↻</motion.span> : driveToTaskDone.has(d.id) ? <Check size={11} /> : <Plus size={11} />}
+                            </button>
+                          </div>
                         ))}
                         {driveDocs.length > 5 && (
                           <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', textAlign: 'center' }}>+ {driveDocs.length - 5} autre{driveDocs.length - 5 > 1 ? 's' : ''}</p>

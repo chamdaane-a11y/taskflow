@@ -15,7 +15,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Link2, Sunset, ArrowRight, TrendingUp,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
-import { GoogleCalendarLogo } from '../components/BrandLogos'
+import { GoogleCalendarLogo, GoogleDriveLogo, GmailLogo } from '../components/BrandLogos'
 import ExportModal from './ExportModal'
 import Onboarding from './Onboarding'
 import { useDashboard } from './useDashboard'
@@ -2824,9 +2824,15 @@ export default function Dashboard() {
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
                           {tache.gcal_imported_event_id && (
-                            <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0 }}>
-                              <GoogleCalendarLogo size={12} />
-                            </span>
+                            tache.source_url
+                              ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Voir dans Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={12} /></a>
+                              : <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0 }}><GoogleCalendarLogo size={12} /></span>
+                          )}
+                          {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
+                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Voir l'email source" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={12} /></a>
+                          )}
+                          {tache.source_url && tache.source_url.includes('drive.google.com') && (
+                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Voir le fichier Drive" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={12} /></a>
                           )}
                           {tache.deadline && (() => {
                             const lbl = labelDate(tache.deadline)
