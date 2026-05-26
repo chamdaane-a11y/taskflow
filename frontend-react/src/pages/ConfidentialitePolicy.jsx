@@ -125,8 +125,32 @@ Intégrations OAuth (activées uniquement sur votre demande explicite) :
 Aucun de ces prestataires ne reçoit vos données sans votre action explicite.`,
   },
   {
+    id: 'google-api',
+    titre: '7. Utilisation des données Google (Limited Use)',
+    contenu: `GetShift utilise les API Google (Google Calendar, Gmail, Google Drive) dans le strict respect de la politique d'utilisation des données Google (Google API Services User Data Policy).
+
+Données Google accédées et leur usage exclusif :
+
+Google Calendar : lecture et écriture des événements de votre calendrier, dans le seul but de synchroniser et créer des tâches GetShift associées à vos events. Aucune donnée de calendrier n'est transmise à des tiers.
+
+Gmail (lecture seule) : lecture de vos emails à votre demande explicite, dans le seul but d'extraire des tâches actionnables. GetShift ne lit pas vos emails en continu. La lecture n'a lieu que lorsque vous cliquez sur "Analyser mes emails" dans l'application.
+
+Google Drive (lecture des métadonnées uniquement) : lecture des noms et liens de vos fichiers Drive, dans le seul but de vous permettre de lier un fichier à une tâche GetShift.
+
+Engagements conformes à la Google API Services User Data Policy :
+
+— Les données Google ne sont pas utilisées à des fins publicitaires.
+— Les données Google ne sont pas revendues, partagées ou transmises à des tiers à des fins commerciales.
+— Aucune personne physique chez GetShift ne lit vos emails Gmail, sauf obligation légale ou sécurité.
+— Les tokens OAuth Google sont stockés de manière sécurisée et peuvent être révoqués à tout moment depuis myaccount.google.com/permissions.
+— GetShift n'utilise les données Google qu'aux fins décrites dans les permissions accordées lors de la connexion OAuth.
+
+Vous pouvez révoquer l'accès de GetShift à vos données Google à tout moment depuis :
+myaccount.google.com/permissions`,
+  },
+  {
     id: 'securite',
-    titre: '7. Sécurité des données',
+    titre: '8. Sécurité des données',
     contenu: `GetShift met en œuvre les mesures de sécurité suivantes :
 
 — Chiffrement HTTPS (TLS) pour toutes les communications
@@ -139,7 +163,7 @@ Aucun de ces prestataires ne reçoit vos données sans votre action explicite.`,
   },
   {
     id: 'cookies',
-    titre: '8. Cookies et stockage local',
+    titre: '9. Cookies et stockage local',
     contenu: `GetShift utilise le stockage local du navigateur (localStorage / sessionStorage) pour :
 
 — Maintenir votre session de connexion (token JWT)
@@ -152,14 +176,14 @@ L'application est une PWA (Progressive Web App) : une fois installée, certaines
   },
   {
     id: 'mineurs',
-    titre: '9. Protection des mineurs',
+    titre: '10. Protection des mineurs',
     contenu: `GetShift est accessible à toute personne, y compris les mineurs. Toutefois, les fonctionnalités d'intelligence artificielle nécessitent l'utilisation de services tiers (Groq) soumis à leurs propres conditions d'âge minimum.
 
 Si vous êtes mineur, nous vous recommandons d'obtenir l'accord d'un parent ou tuteur avant d'activer l'assistant IA ou les intégrations OAuth.`,
   },
   {
     id: 'modifications',
-    titre: '10. Modifications de cette politique',
+    titre: '11. Modifications de cette politique',
     contenu: `Cette politique de confidentialité peut être mise à jour pour refléter l'évolution du service ou des obligations légales. En cas de modification substantielle, vous serez notifié par email ou via une bannière dans l'application.
 
 Dernière mise à jour : 24 mai 2026

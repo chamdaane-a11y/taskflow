@@ -8,7 +8,7 @@ const SECTIONS_CGU = [
   {
     id: 'objet',
     titre: '1. Objet',
-    contenu: `Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme GetShift, accessible à l'adresse https://chamdaane-a11y.github.io/taskflow, éditée par Hamdaane CHITOU, domicilié au Bénin.
+    contenu: `Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme GetShift, accessible à l'adresse https://chamdaane-a11y.github.io/taskflow, éditée et développée par Hamdaane CHITOU, seul et unique fondateur de GetShift, domicilié au Bénin.
 
 En accédant à GetShift et en créant un compte, vous acceptez sans réserve les présentes CGU. Si vous n'acceptez pas ces conditions, vous devez cesser toute utilisation de la plateforme.`,
   },
@@ -86,11 +86,11 @@ Le service est fourni "en l'état" et "selon disponibilité", sans garantie d'au
   {
     id: 'propriete',
     titre: '8. Propriété intellectuelle',
-    contenu: `L'ensemble des éléments constituant la plateforme GetShift (design, code source, marque, logo, fonctionnalités) est la propriété exclusive de Hamdaane CHITOU et est protégé par les lois applicables en matière de propriété intellectuelle.
+    contenu: `L'ensemble des éléments constituant la plateforme GetShift (design, code source, marque, logo, fonctionnalités) est la propriété exclusive de Hamdaane CHITOU, seul et unique fondateur de GetShift, et est protégé par les lois applicables en matière de propriété intellectuelle.
 
-Toute reproduction, distribution, modification ou utilisation commerciale de ces éléments sans autorisation expresse et écrite est strictement interdite.
+Toute reproduction, distribution, modification ou utilisation commerciale de ces éléments sans autorisation expresse et écrite de Hamdaane CHITOU est strictement interdite.
 
-© 2026 GetShift — Hamdaane CHITOU. Tous droits réservés.`,
+© 2026 GetShift — Hamdaane CHITOU, fondateur. Tous droits réservés.`,
   },
   {
     id: 'responsabilite',
@@ -104,8 +104,29 @@ Toute reproduction, distribution, modification ou utilisation commerciale de ces
 — Des interruptions de service liées aux services tiers (Groq, Render, Google, Notion, Slack, Brevo).`,
   },
   {
+    id: 'droits',
+    titre: '10. Droits des utilisateurs (RGPD)',
+    contenu: `Conformément au Règlement Général sur la Protection des Données (RGPD — UE 2016/679), les utilisateurs résidant dans l'Union Européenne disposent des droits suivants sur leurs données personnelles :
+
+Droit d'accès (Art. 15) : vous pouvez demander une copie de l'ensemble des données que nous détenons sur vous.
+
+Droit de rectification (Art. 16) : vous pouvez corriger toute information inexacte directement depuis les paramètres de l'application.
+
+Droit à l'effacement (Art. 17) : vous pouvez demander la suppression de votre compte et de toutes vos données personnelles. Suppression effective sous 30 jours.
+
+Droit à la portabilité (Art. 20) : vous pouvez exporter vos tâches et données en CSV/JSON depuis les paramètres de l'application.
+
+Droit d'opposition (Art. 21) : vous pouvez désactiver les rapports hebdos et communications non essentielles depuis vos paramètres de notification.
+
+Droit de limitation (Art. 18) : vous pouvez demander la suspension temporaire du traitement de vos données.
+
+Pour exercer l'un de ces droits, contactez Hamdaane CHITOU à : chamdaane1@gmail.com. Toute demande sera traitée dans un délai maximum de 30 jours.
+
+La politique de confidentialité complète est disponible à l'adresse : /#/confidentialite`,
+  },
+  {
     id: 'emails',
-    titre: '10. Communications par email',
+    titre: '11. Communications par email',
     contenu: `En créant un compte, vous acceptez de recevoir :
 
 — Les emails transactionnels obligatoires : vérification de compte, réinitialisation de mot de passe, codes 2FA.
@@ -115,7 +136,7 @@ GetShift utilise Brevo (ex-Sendinblue, France) pour l'envoi des emails transacti
   },
   {
     id: 'modification',
-    titre: '11. Modification des CGU',
+    titre: '12. Modification des CGU',
     contenu: `Hamdaane CHITOU se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés des modifications substantielles par email ou par une notification sur la plateforme.
 
 La poursuite de l'utilisation du service après notification des modifications vaut acceptation des nouvelles CGU.
@@ -124,7 +145,7 @@ Dernière mise à jour : 24 mai 2026`,
   },
   {
     id: 'droit',
-    titre: '12. Droit applicable',
+    titre: '13. Droit applicable',
     contenu: `Les présentes CGU sont régies par le droit béninois. Pour les utilisateurs résidant dans l'Union Européenne, le droit de l'Union Européenne est également applicable (notamment le RGPD).
 
 En cas de litige relatif à l'interprétation ou à l'exécution des présentes CGU, les parties s'engagent à rechercher une solution amiable avant tout recours judiciaire.
@@ -244,7 +265,7 @@ export default function CGU() {
 
             <div style={{ padding: '20px 24px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', marginTop: 8, textAlign: 'center' }}>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                © 2026 GetShift — Propriété de <strong style={{ color: 'var(--text-primary)' }}>Hamdaane CHITOU</strong>, Bénin.<br />
+                © 2026 GetShift — Fondé et développé par <strong style={{ color: 'var(--text-primary)' }}>Hamdaane CHITOU</strong>, Bénin.<br />
                 Pour toute question : <a href="mailto:chamdaane1@gmail.com" style={{ color: 'var(--ember)', fontWeight: 600, textDecoration: 'none' }}>chamdaane1@gmail.com</a>
               </p>
             </div>
