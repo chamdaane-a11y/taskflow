@@ -35,7 +35,7 @@ registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
 
 const labelDate = (deadline) => {
-  const [y, m, d] = deadline.split('-').map(Number)
+  const [y, m, d] = deadline.slice(0, 10).split('-').map(Number)
   const now = new Date()
   const t = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
   const tom = new Date(now); tom.setDate(now.getDate() + 1)

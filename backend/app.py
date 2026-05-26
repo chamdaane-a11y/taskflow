@@ -8811,7 +8811,8 @@ def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, conte
                               coach_style: str = None, focus_today: list = None,
                               dna_summary: dict = None, recent_coach: list = None) -> str:
     terminees = sum(1 for t in taches if t.get('terminee'))
-    en_cours = [t for t in taches if not t.get('terminee')]
+    prio_order = {'haute': 0, 'moyenne': 1, 'basse': 2}
+    en_cours = sorted([t for t in taches if not t.get('terminee')], key=lambda t: prio_order.get(t.get('priorite', 'basse'), 2))
     en_retard = [t for t in en_cours if t.get('deadline') and str(t['deadline']) < datetime.now().strftime('%Y-%m-%d')]
     haute = [t for t in en_cours if t.get('priorite') == 'haute']
     taux = round(terminees / max(len(taches), 1) * 100)
@@ -9489,7 +9490,7 @@ def assistant_augmente():
             db.close()
             return jsonify({"erreur": "Utilisateur introuvable"}), 404
 
-        curseur.execute("SELECT id, titre, priorite, deadline, terminee, focus_date FROM taches WHERE user_id=%s ORDER BY terminee ASC, created_at DESC LIMIT 25", (user_id,))
+        curseur.execute("SELECT id, titre, priorite, deadline, terminee, focus_date FROM taches WHERE user_id=%s ORDER BY terminee ASC, FIELD(priorite,'haute','moyenne','basse') ASC, deadline ASC LIMIT 25", (user_id,))
         taches = curseur.fetchall()
         for t in taches:
             if t.get('deadline'): t['deadline'] = str(t['deadline'])
