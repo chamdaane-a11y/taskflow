@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getshift-v17'
+const CACHE_NAME = 'getshift-v23'
 const STATIC_ASSETS = [
   '/taskflow/',
   '/taskflow/index.html',
@@ -25,10 +25,15 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url)
 
-  // ── API backend → Network First, pas de cache ────────────────────────
-  if (url.hostname.includes('railway.app') || url.hostname.includes('onrender.com')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('offline', { status: 503 })))
-    return
+  // ── API externes → bypass total, jamais intercepté par le SW ────────
+  const BYPASS_HOSTS = [
+    'railway.app', 'onrender.com',
+    'googleapis.com', 'google.com', 'accounts.google.com',
+    'groq.com', 'api.groq.com',
+    'fonts.googleapis.com', 'fonts.gstatic.com',
+  ]
+  if (BYPASS_HOSTS.some(h => url.hostname.includes(h))) {
+    return // laisse le navigateur gérer directement, sans e.respondWith
   }
 
   // ── HTML / navigation → NETWORK FIRST (sinon les nouveaux deploys cassent) ──
@@ -77,18 +82,31 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   const data = e.data ? e.data.json() : { title: 'GetShift', body: 'Nouvelle notification' }
   const targetUrl = data.url || '/dashboard'
+  const options = {
+    body: data.body || '',
+    icon: '/taskflow/icons/icon-192.png',
+    badge: '/taskflow/icons/icon-72.png',
+    // Couleur thème ember pour Android (statut bar + accent)
+    // Chrome/Android utilise theme_color du manifest mais on peut surcharger ici
+    color: '#E07A3E',
+    // Signature vibrate GetShift — pattern court, premium
+    vibrate: [120, 60, 120],
+    data: { url: targetUrl, ts: Date.now() },
+    // Tag groupe les notifs du même type (remplace au lieu d'empiler)
+    tag: data.tag || 'getshift',
+    // Renotify = nouvelle notif même si même tag (par défaut false = silencieux pour le remplacement)
+    renotify: !!data.renotify,
+    // Image bannière riche (Android Chrome). Peut être surchargée par le backend.
+    image: data.image || undefined,
+    requireInteraction: !!data.require_interaction,
+    silent: false,
+    actions: [
+      { action: 'open', title: 'Ouvrir', icon: '/taskflow/icons/icon-72.png' },
+      { action: 'dismiss', title: 'Ignorer' }
+    ],
+  }
   e.waitUntil(
-    self.registration.showNotification(data.title || 'GetShift', {
-      body: data.body || '',
-      icon: '/taskflow/icons/icon-192.png',
-      badge: '/taskflow/icons/icon-72.png',
-      data: { url: targetUrl },
-      tag: data.tag || 'getshift',
-      actions: [
-        { action: 'open', title: 'Ouvrir' },
-        { action: 'dismiss', title: 'Ignorer' }
-      ]
-    })
+    self.registration.showNotification(data.title || 'GetShift', options)
   )
 })
 
