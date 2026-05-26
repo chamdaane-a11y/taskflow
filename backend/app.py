@@ -1317,6 +1317,12 @@ def run_migrations():
         if not col_exists(curseur, 'taches', 'source_url'):
             curseur.execute("ALTER TABLE taches ADD COLUMN source_url VARCHAR(500) NULL")
             print("[Migrations] taches.source_url ✅")
+        # Contrainte unicité gcal_imported_event_id par user (évite les doublons d'import)
+        try:
+            curseur.execute("ALTER TABLE taches ADD UNIQUE KEY uq_gcal_event_user (user_id, gcal_imported_event_id)")
+            print("[Migrations] taches.uq_gcal_event_user ✅")
+        except Exception:
+            pass  # index déjà existant
         # Préférences notifications utilisateur (2026-05-22)
         if not col_exists(curseur, 'users', 'notif_prefs'):
             curseur.execute("ALTER TABLE users ADD COLUMN notif_prefs JSON NULL")
@@ -6751,13 +6757,19 @@ def drive_to_task():
         if not user_id:
             return jsonify({"erreur": "user_id requis"}), 400
         db = connecter()
-        curseur = db.cursor()
-        curseur.execute(
+        curseur = db.cursor(dictionary=True)
+        if file_link:
+            curseur.execute("SELECT id FROM taches WHERE user_id=%s AND source_url=%s LIMIT 1", (user_id, file_link))
+            if curseur.fetchone():
+                db.close()
+                return jsonify({"message": "Tâche déjà existante", "already_exists": True})
+        curseur2 = db.cursor()
+        curseur2.execute(
             "INSERT INTO taches (titre, priorite, user_id, source_url) VALUES (%s, %s, %s, %s)",
             (file_name, 'moyenne', user_id, file_link)
         )
         db.commit()
-        tache_id = curseur.lastrowid
+        tache_id = curseur2.lastrowid
         db.close()
         return jsonify({"message": "Tâche créée", "tache_id": tache_id})
     except Exception as e:

@@ -876,8 +876,8 @@ export default function TomorrowBuilder() {
     if (driveToTaskDone.has(doc.id) || driveToTaskLoading.has(doc.id)) return
     setDriveToTaskLoading(prev => new Set([...prev, doc.id]))
     try {
-      await axios.post(`${API}/integrations/google-drive/to-task`, { user_id: user.id, file_id: doc.id, file_name: doc.titre, file_link: doc.lien })
-      setDriveToTaskDone(prev => new Set([...prev, doc.id]))
+      const res = await axios.post(`${API}/integrations/google-drive/to-task`, { user_id: user.id, file_id: doc.id, file_name: doc.titre, file_link: doc.lien })
+      if (res.data.tache_id || res.data.already_exists) setDriveToTaskDone(prev => new Set([...prev, doc.id]))
     } catch {}
     setDriveToTaskLoading(prev => { const s = new Set(prev); s.delete(doc.id); return s })
   }
