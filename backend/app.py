@@ -1371,6 +1371,36 @@ def run_migrations():
         """)
         print("[Migrations] gmail_imported ✅")
 
+        # notion_imported : dédup pages + blocs to_do Notion déjà transformés.
+        # 2026-05-27 : refonte intégration Notion (Tier 1+2+3).
+        # notion_block_id NULL = import au niveau page (contenu textuel).
+        # notion_block_id non-NULL = import d'un block to_do précis (sync inverse possible).
+        # Cohabitation via colonne calculée hash unique (MySQL ne traite pas NULL=NULL).
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS notion_imported (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                notion_page_id VARCHAR(255) NOT NULL,
+                notion_block_id VARCHAR(255) NULL,
+                tache_id INT NULL,
+                imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                dedup_key VARCHAR(520) GENERATED ALWAYS AS (
+                    CONCAT(notion_page_id, ':', COALESCE(notion_block_id, ''))
+                ) STORED,
+                UNIQUE KEY uq_user_dedup (user_id, dedup_key),
+                INDEX idx_user (user_id),
+                INDEX idx_block (notion_block_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (tache_id) REFERENCES taches(id) ON DELETE SET NULL
+            )
+        """)
+        print("[Migrations] notion_imported ✅")
+
+        # taches.notion_block_id : permet la sync inverse (cocher tâche → checked=true Notion).
+        if not col_exists(curseur, 'taches', 'notion_block_id'):
+            curseur.execute("ALTER TABLE taches ADD COLUMN notion_block_id VARCHAR(255) NULL")
+            print("[Migrations] taches.notion_block_id ✅")
+
         # Refonte design 2026-05-21 — nouveau défaut thème = 'light' (Parchemin).
         # Idempotent : on lit le DEFAULT actuel et on l'aligne sur 'light' si besoin.
         try:
@@ -3359,10 +3389,28 @@ def ajouter_tache():
             if existing:
                 db.close()
                 return jsonify({"erreur": "Cet email a déjà été importé en tâche", "tache_id": existing[0]}), 409
+        # Dédup Notion amont : page_id + block_id (block_id NULL = niveau page).
+        notion_page_id = data.get('notion_page_id')
+        notion_block_id = data.get('notion_block_id')  # peut être None
+        if notion_page_id:
+            if notion_block_id:
+                curseur.execute(
+                    "SELECT tache_id FROM notion_imported WHERE user_id=%s AND notion_page_id=%s AND notion_block_id=%s",
+                    (user_id, notion_page_id, notion_block_id)
+                )
+            else:
+                curseur.execute(
+                    "SELECT tache_id FROM notion_imported WHERE user_id=%s AND notion_page_id=%s AND notion_block_id IS NULL",
+                    (user_id, notion_page_id)
+                )
+            existing = curseur.fetchone()
+            if existing:
+                db.close()
+                return jsonify({"erreur": "Cette source Notion a déjà été importée", "tache_id": existing[0]}), 409
         # Compte AVANT insertion pour détecter 1ère tâche
         curseur.execute("SELECT COUNT(*) FROM taches WHERE user_id=%s", (user_id,))
         nb_avant = curseur.fetchone()[0]
-        curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id, source_url) VALUES (%s, %s, %s, %s, %s, %s)", (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), user_id, data.get('categorie_id'), data.get('source_url')))
+        curseur.execute("INSERT INTO taches (titre, priorite, deadline, user_id, categorie_id, source_url, notion_block_id) VALUES (%s, %s, %s, %s, %s, %s, %s)", (data['titre'], data.get('priorite', 'moyenne'), data.get('deadline'), user_id, data.get('categorie_id'), data.get('source_url'), notion_block_id))
         db.commit()
         tache_id = curseur.lastrowid
         # Dédup Gmail : on enregistre l'email source pour empêcher la
@@ -3376,6 +3424,16 @@ def ajouter_tache():
                 db.commit()
             except Exception as _e:
                 print(f"[Gmail dedup] insert failed: {_e}", flush=True)
+        # Dédup Notion : on enregistre la source pour empêcher la re-proposition.
+        if notion_page_id:
+            try:
+                curseur.execute(
+                    "INSERT IGNORE INTO notion_imported (user_id, notion_page_id, notion_block_id, tache_id) VALUES (%s, %s, %s, %s)",
+                    (user_id, notion_page_id, notion_block_id, tache_id)
+                )
+                db.commit()
+            except Exception as _e:
+                print(f"[Notion dedup] insert failed: {_e}", flush=True)
         curseur2 = db.cursor(dictionary=True)
         curseur2.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
         row = curseur2.fetchone()
@@ -3422,14 +3480,41 @@ def terminer_tache(id):
     else:
         curseur.execute("UPDATE taches SET terminee=FALSE, terminee_le=NULL WHERE id=%s", (id,))
     db.commit()
-    # Auto-sync : si on coche, supprimer l'event Google Calendar associé
-    if data.get('terminee'):
-        curseur.execute("SELECT user_id FROM taches WHERE id=%s", (id,))
-        row = curseur.fetchone()
-        if row:
-            _autosync_calendar_hook(row['user_id'], id, 'delete_event_if_synced')
+    # Récupère user_id + notion_block_id (utilisés pour les sync inverses)
+    curseur.execute("SELECT user_id, notion_block_id FROM taches WHERE id=%s", (id,))
+    info = curseur.fetchone() or {}
     db.close()
+    # Auto-sync GCal : si on coche, supprimer l'event Google Calendar associé
+    if data.get('terminee') and info.get('user_id'):
+        _autosync_calendar_hook(info['user_id'], id, 'delete_event_if_synced')
+    # Sync inverse Notion : si la tâche provient d'un bloc to_do, on propage l'état
+    if info.get('notion_block_id') and info.get('user_id'):
+        threading.Thread(
+            target=_notion_set_todo_checked,
+            args=(info['user_id'], info['notion_block_id'], bool(data.get('terminee'))),
+            daemon=True
+        ).start()
     return jsonify({"message": "Tâche mise à jour !"})
+
+def _notion_set_todo_checked(user_id, block_id, checked):
+    """Sync inverse — PATCH /v1/blocks/{id} pour cocher/décocher un to_do Notion.
+    Best-effort : silencieux en cas d'échec (token expiré, block supprimé, etc.)."""
+    try:
+        token = get_notion_token(user_id)
+        if not token:
+            return
+        http_requests.patch(
+            f"https://api.notion.com/v1/blocks/{block_id}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Notion-Version": "2022-06-28",
+                "Content-Type": "application/json",
+            },
+            json={"to_do": {"checked": bool(checked)}},
+            timeout=8
+        )
+    except Exception as e:
+        print(f"[Notion sync inverse] block {block_id} → {checked} failed: {e}", flush=True)
 
 @app.route('/taches/<int:id>', methods=['DELETE'])
 def supprimer_tache(id):
@@ -6977,73 +7062,263 @@ def auth_notion_callback():
         window.close();
     </script>"""
 
+def _notion_page_title(page):
+    """Extrait le titre d'une page Notion peu importe le type de la propriété title."""
+    props = page.get("properties", {})
+    for prop_val in props.values():
+        if prop_val.get("type") == "title":
+            titles = prop_val.get("title", [])
+            if titles:
+                return titles[0].get("plain_text", "")[:120]
+    # Fallback : icône, ou (Sans titre)
+    return "(Sans titre)"
+
+def _notion_rich_text_to_plain(rich_text_arr):
+    """Concatène un array rich_text Notion en string brute."""
+    return "".join(rt.get("plain_text", "") for rt in (rich_text_arr or []))
+
+def _notion_fetch_blocks(page_id, token, max_blocks=40):
+    """Récupère les blocs enfants d'une page. Limite à max_blocks pour éviter les pages géantes."""
+    try:
+        resp = http_requests.get(
+            f"https://api.notion.com/v1/blocks/{page_id}/children",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Notion-Version": "2022-06-28",
+            },
+            params={"page_size": max_blocks},
+            timeout=10
+        )
+        if resp.status_code != 200:
+            return []
+        return resp.json().get("results", [])
+    except Exception:
+        return []
+
+def _notion_blocks_summary(blocks):
+    """
+    Parcourt les blocs et sépare :
+      - explicit_todos : liste de {block_id, text, checked} pour les to_do non cochés
+      - text_content : str (paragraphs / headings / bullets agrégés, max 1200 chars)
+    """
+    explicit_todos = []
+    text_parts = []
+    for b in blocks:
+        btype = b.get("type")
+        if not btype:
+            continue
+        body = b.get(btype, {})
+        rt = body.get("rich_text", [])
+        text = _notion_rich_text_to_plain(rt).strip()
+        if btype == "to_do":
+            if not body.get("checked", False) and text:
+                explicit_todos.append({
+                    "block_id": b.get("id"),
+                    "text": text[:200],
+                })
+        elif btype in ("paragraph", "heading_1", "heading_2", "heading_3",
+                       "bulleted_list_item", "numbered_list_item", "quote", "callout"):
+            if text:
+                text_parts.append(text)
+    text_content = "\n".join(text_parts)[:1200]
+    return explicit_todos, text_content
+
 @app.route('/integrations/notion/extract-tasks/<int:user_id>', methods=['GET'])
 def notion_extract_tasks(user_id):
     token = get_notion_token(user_id)
     if not token:
         return jsonify({"taches": [], "connected": False, "nb_pages": 0})
+    # Optionnel : filtre par database_id sélectionné par l'user dans l'UI
+    database_id = request.args.get('database_id')
     try:
-        resp = http_requests.post(
-            "https://api.notion.com/v1/search",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Notion-Version": "2022-06-28",
-                "Content-Type": "application/json"
-            },
-            json={
-                "filter": {"value": "page", "property": "object"},
-                "sort": {"direction": "descending", "timestamp": "last_edited_time"},
-                "page_size": 10
-            },
-            timeout=15
+        # 1) Dédup : pages/blocs déjà importés
+        db_ctx = connecter()
+        cur_ctx = db_ctx.cursor(dictionary=True)
+        cur_ctx.execute(
+            "SELECT notion_page_id, notion_block_id FROM notion_imported WHERE user_id=%s",
+            (user_id,)
         )
-        if resp.status_code != 200:
-            return jsonify({"taches": [], "connected": True, "erreur": f"Notion API {resp.status_code}"}), 200
-        pages = resp.json().get("results", [])
+        imported_set = {(r['notion_page_id'], r['notion_block_id']) for r in cur_ctx.fetchall()}
+        # Index séparé pour les imports au niveau page (block_id NULL).
+        imported_pages = {p for (p, b) in imported_set if b is None}
+        imported_blocks = {b for (_, b) in imported_set if b}
+        # 2) Contexte tâches existantes (anti-doublon sémantique)
+        cur_ctx.execute(
+            "SELECT titre FROM taches WHERE user_id=%s AND terminee=FALSE ORDER BY created_at DESC LIMIT 30",
+            (user_id,)
+        )
+        existing_titles = [r['titre'] for r in cur_ctx.fetchall()]
+        db_ctx.close()
+
+        # 3) Récupération pages : soit toute la search, soit DB précise
+        if database_id:
+            search_resp = http_requests.post(
+                f"https://api.notion.com/v1/databases/{database_id}/query",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Notion-Version": "2022-06-28",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "sorts": [{"timestamp": "last_edited_time", "direction": "descending"}],
+                    "page_size": 12,
+                },
+                timeout=15
+            )
+        else:
+            search_resp = http_requests.post(
+                "https://api.notion.com/v1/search",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Notion-Version": "2022-06-28",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "filter": {"value": "page", "property": "object"},
+                    "sort": {"direction": "descending", "timestamp": "last_edited_time"},
+                    "page_size": 12
+                },
+                timeout=15
+            )
+        if search_resp.status_code != 200:
+            return jsonify({"taches": [], "connected": True, "erreur": f"Notion API {search_resp.status_code}"}), 200
+        pages = search_resp.json().get("results", [])
         if not pages:
             return jsonify({"taches": [], "connected": True, "nb_pages": 0})
-        pages_text = []
-        for page in pages[:8]:
-            title = ""
-            props = page.get("properties", {})
-            for prop_val in props.values():
-                if prop_val.get("type") == "title":
-                    titles = prop_val.get("title", [])
-                    if titles:
-                        title = titles[0].get("plain_text", "")[:80]
-                        break
-            if not title:
-                title = "(Sans titre)"
-            last_edit = page.get("last_edited_time", "")[:10]
-            pages_text.append(f"Page: {title} (modifiée: {last_edit})")
-        pages_block = "\n".join(pages_text)
-        prompt = f"""Voici {len(pages_text)} pages Notion récentes de l'utilisateur. Identifie celles qui suggèrent des VRAIES tâches à faire (projets en cours, todos, action items). Ignore les pages purement informatives.
+
+        # 4) Pour chaque page : extraire titre, blocs to_do explicites, contenu texte
+        page_payloads = []  # liste de dicts pour l'IA
+        direct_todos = []   # to_do explicites convertis directement en candidats
+        for idx, page in enumerate(pages[:10]):
+            page_id = page.get("id")
+            page_url = page.get("url") or f"https://www.notion.so/{page_id.replace('-', '') if page_id else ''}"
+            title = _notion_page_title(page)
+            blocks = _notion_fetch_blocks(page_id, token, max_blocks=40)
+            explicit_todos, text_content = _notion_blocks_summary(blocks)
+            # Filter explicit_todos déjà importés
+            explicit_todos = [t for t in explicit_todos if t["block_id"] not in imported_blocks]
+            # Page entière déjà importée (level page) : on n'envoie pas son contenu à l'IA,
+            # mais on garde les to_do non cochés qui n'auraient pas encore été importés.
+            page_already_imported = page_id in imported_pages
+            for t in explicit_todos:
+                direct_todos.append({
+                    "titre": t["text"],
+                    "priorite": "moyenne",
+                    "duree_min": 20,
+                    "contexte": title,
+                    "notion_page_id": page_id,
+                    "notion_block_id": t["block_id"],
+                    "notion_page_url": page_url,
+                })
+            if not page_already_imported and text_content:
+                page_payloads.append({
+                    "index": idx,
+                    "title": title,
+                    "url": page_url,
+                    "page_id": page_id,
+                    "content": text_content,
+                })
+
+        # 5) Si pages avec contenu → IA pour extraire l'implicite
+        ia_taches = []
+        if page_payloads:
+            existing_block = (
+                "\n".join(f"- {t}" for t in existing_titles) if existing_titles
+                else "(aucune tâche en cours)"
+            )
+            pages_block = "\n---\n".join(
+                f"[PAGE_{p['index']}] Titre: {p['title']}\nContenu:\n{p['content']}"
+                for p in page_payloads
+            )
+            prompt = f"""Analyse ces {len(page_payloads)} pages Notion et extrais les VRAIES action items implicites du contenu textuel (pas les to-do explicites, déjà extraits séparément). Ignore les notes purement informatives, les références, les minutes de réunion sans suite.
+
+TÂCHES DÉJÀ EXISTANTES (à NE PAS reproposer même reformulées) :
+{existing_block}
 
 PAGES:
 {pages_block}
 
-Réponds UNIQUEMENT en JSON: {{"taches": [{{"titre": "action concrète", "priorite": "haute|moyenne|basse", "duree_min": 30, "contexte": "titre page source"}}]}}
+Réponds UNIQUEMENT en JSON: {{"taches": [{{"titre": "action concrète courte", "priorite": "haute|moyenne|basse", "duree_min": 30, "page_index": 0}}]}}
 
 Règles:
-- Maximum 5 tâches
-- titre = action verbale ("Avancer sur X", "Finaliser doc Y")
-- Si aucune vraie tâche actionable, retourne {{"taches": []}}"""
-        response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1200, temperature=0.3
-        )
-        contenu = response.choices[0].message.content.strip()
-        if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
-        elif '```' in contenu: contenu = contenu.split('```')[1].split('```')[0].strip()
-        data = json.loads(contenu)
-        return jsonify({"taches": data.get('taches', []), "connected": True, "nb_pages": len(pages)})
+- Maximum 4 tâches (les plus importantes implicitement actionnables)
+- titre = verbe d'action ("Finaliser X", "Préparer Y", "Répondre à Z")
+- IMPORTANT : ne propose RIEN si l'action est déjà couverte par une tâche existante
+- page_index = indice de la page source (0, 1, 2...)
+- Si aucune nouvelle action implicite, retourne {{"taches": []}}"""
+            response = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1200, temperature=0.3
+            )
+            contenu = response.choices[0].message.content.strip()
+            if '```json' in contenu: contenu = contenu.split('```json')[1].split('```')[0].strip()
+            elif '```' in contenu: contenu = contenu.split('```')[1].split('```')[0].strip()
+            try:
+                data = json.loads(contenu)
+                for t in data.get('taches', []):
+                    p_idx = t.pop('page_index', None)
+                    if p_idx is None or p_idx < 0 or p_idx >= len(page_payloads):
+                        continue
+                    src_page = page_payloads[p_idx]
+                    t['notion_page_id'] = src_page['page_id']
+                    t['notion_page_url'] = src_page['url']
+                    t['contexte'] = src_page['title']
+                    ia_taches.append(t)
+            except Exception as _e:
+                print(f"[Notion IA] parse JSON failed: {_e}", flush=True)
+
+        # 6) Fusion : to_do explicites d'abord (priorité haute confiance), puis IA
+        # Limite globale 8 suggestions pour ne pas noyer l'utilisateur.
+        merged = (direct_todos + ia_taches)[:8]
+        return jsonify({
+            "taches": merged,
+            "connected": True,
+            "nb_pages": len(pages),
+            "nb_direct_todos": len(direct_todos),
+            "nb_ia": len(ia_taches),
+        })
     except Exception as e:
         return jsonify({"taches": [], "connected": False, "erreur": str(e)[:200]}), 200
 
 @app.route('/integrations/notion/status/<int:user_id>', methods=['GET'])
 def notion_status(user_id):
     return jsonify({"connected": get_notion_token(user_id) is not None})
+
+@app.route('/integrations/notion/databases/<int:user_id>', methods=['GET'])
+def notion_databases(user_id):
+    """Liste les databases Notion accessibles pour permettre le filtre côté UI."""
+    token = get_notion_token(user_id)
+    if not token:
+        return jsonify({"databases": [], "connected": False})
+    try:
+        resp = http_requests.post(
+            "https://api.notion.com/v1/search",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Notion-Version": "2022-06-28",
+                "Content-Type": "application/json",
+            },
+            json={
+                "filter": {"value": "database", "property": "object"},
+                "sort": {"direction": "descending", "timestamp": "last_edited_time"},
+                "page_size": 25,
+            },
+            timeout=10
+        )
+        if resp.status_code != 200:
+            return jsonify({"databases": [], "connected": True, "erreur": f"Notion API {resp.status_code}"}), 200
+        dbs = []
+        for d in resp.json().get("results", []):
+            title = "".join(t.get("plain_text", "") for t in (d.get("title") or []))[:80] or "(Sans titre)"
+            dbs.append({
+                "id": d.get("id"),
+                "title": title,
+                "url": d.get("url"),
+            })
+        return jsonify({"databases": dbs, "connected": True})
+    except Exception as e:
+        return jsonify({"databases": [], "connected": False, "erreur": str(e)[:200]}), 200
 
 @app.route('/auth/slack/oauth')
 def auth_slack_oauth():

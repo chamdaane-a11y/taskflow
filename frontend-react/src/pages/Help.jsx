@@ -8,7 +8,7 @@ import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../component
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
 import { useSidebarUser } from '../components/useSidebarUser'
-import { GoogleCalendarLogo, GoogleDriveLogo, GmailLogo } from '../components/BrandLogos'
+import { GoogleCalendarLogo, GoogleDriveLogo, GmailLogo, NotionLogo } from '../components/BrandLogos'
 import {
   Search, ArrowUpRight, Menu as MenuIcon, X,
   Rocket, CheckSquare, Calendar, Timer, Bot, Sunrise,
@@ -998,7 +998,7 @@ export default function Help() {
                 </div>
               </DemoFrame>
               <P>
-                <strong>3 sources visuellement reconnaissables</strong> :
+                <strong>4 sources visuellement reconnaissables</strong> :
               </P>
               <div style={{
                 display: 'flex', gap: 16, flexWrap: 'wrap',
@@ -1013,6 +1013,9 @@ export default function Help() {
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <GoogleCalendarLogo size={14} /> Calendar (event importé)
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <NotionLogo size={14} /> Notion (page · sync inverse pour les to-do)
                 </span>
               </div>
               <P>
@@ -1286,9 +1289,47 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
 
               <H3 id="integ-notion">Notion</H3>
               <P>
-                Synchronise une base de données Notion (ex: ton kanban de tâches Notion) avec GetShift.
-                Mode lecture par défaut, sync écriture activable dans Réglages → Intégrations → Notion.
+                Intégration en deux temps — <strong>lecture intelligente</strong> + <strong>sync inverse</strong>{' '}
+                des cases cochées. Connecte via Réglages → Intégrations → Notion (OAuth officiel).
               </P>
+              <P>
+                <strong>1. Extraction</strong> (depuis Tomorrow Builder) — GetShift lit tes pages les plus
+                récentes et en extrait deux types de candidats :
+              </P>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '8px 0 14px' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'rgba(34,197,94,0.18)', color: '#16a34a', flexShrink: 0 }}>✓ TO-DO</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    Les <strong>cases à cocher Notion non cochées</strong> sont importées telles quelles.
+                    Précision quasi-parfaite. Bonus : quand tu termines la tâche dans GetShift, la case
+                    Notion est <strong>cochée automatiquement</strong>.
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: 'rgba(15,23,42,0.05)', border: '1px solid var(--border-subtle)', borderRadius: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'rgba(15,23,42,0.1)', color: 'var(--text-secondary)', flexShrink: 0 }}>IA</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    L'IA lit aussi les <strong>paragraphes, titres et listes</strong> pour détecter
+                    des actions implicites ("Préparer le doc X", "Répondre à Y"). Pas de sync inverse —
+                    on importe juste comme nouvelle tâche.
+                  </span>
+                </div>
+              </div>
+              <P>
+                <strong>2. Filtre source</strong> — par défaut, on scanne les pages éditées récemment dans
+                tout ton workspace. Tu peux restreindre à <strong>une seule base de données Notion</strong>{' '}
+                (ex: ta DB "Todo" ou "Project tasks") via le dropdown dans Tomorrow Builder. Le choix est
+                mémorisé.
+              </P>
+              <P>
+                <strong>3. Dédup</strong> — un to-do importé ne sera plus jamais re-proposé, même si tu
+                relances le scan. Idem pour les actions implicites au niveau page. Si tu décoches la case
+                dans GetShift, la case Notion est <strong>dé-cochée en retour</strong>.
+              </P>
+              <Callout kind="info">
+                <strong>Permissions Notion</strong> — au moment de l'OAuth, Notion te demande quelles pages
+                tu autorises à partager avec GetShift. Choisis ton workspace de travail, ou une sélection
+                de pages/databases précises si tu veux limiter le scope.
+              </Callout>
 
               <H3 id="integ-slack">Slack</H3>
               <P>

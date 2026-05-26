@@ -48,7 +48,9 @@ function ProgressBar({ value, color, height = 6 }) {
 }
 
 // ---- Bloc générique source externe (Gmail/Notion/etc) avec extraction IA ----
-function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onExtract, onImport, scanLabel, onActiver }) {
+// headerExtra (optionnel) : ReactNode affiché sous le header (ex: dropdown DB Notion)
+// getTaskBadge (optionnel) : (task) => ReactNode — petit badge à côté du titre
+function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onExtract, onImport, scanLabel, onActiver, headerExtra, getTaskBadge }) {
   return (
     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -67,6 +69,9 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
         </div>
         {connected && <CheckCircle size={14} color={color} />}
       </div>
+      {connected && headerExtra && (
+        <div style={{ marginBottom: 10 }}>{headerExtra}</div>
+      )}
       {!connected ? (
         <motion.button onClick={onActiver}
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -86,10 +91,14 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
             <div style={{ marginTop: 10 }}>
               {tasks.map((t, i) => {
                 const status = importingState[i]
+                const badge = getTaskBadge ? getTaskBadge(t) : null
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{t.titre}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ wordBreak: 'break-word' }}>{t.titre}</span>
+                        {badge}
+                      </div>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ padding: '1px 6px', borderRadius: 4, background: t.priorite === 'haute' ? 'rgba(239,68,68,0.12)' : t.priorite === 'basse' ? 'rgba(100,116,139,0.12)' : 'rgba(234,179,8,0.12)', color: t.priorite === 'haute' ? '#ef4444' : t.priorite === 'basse' ? '#64748b' : '#eab308', fontWeight: 600 }}>{t.priorite || 'moyenne'}</span>
                         <span>{t.duree_min || 30} min</span>
@@ -866,6 +875,11 @@ export default function TomorrowBuilder() {
   const [notionExtracting, setNotionExtracting] = useState(false)
   const [notionNbPages, setNotionNbPages] = useState(0)
   const [notionImporting, setNotionImporting] = useState({})
+  const [notionDatabases, setNotionDatabases] = useState([])
+  const [notionDbId, setNotionDbId] = useState(() => {
+    try { return localStorage.getItem('notion_db_id') || '' } catch { return '' }
+  })
+  const [notionStats, setNotionStats] = useState({ direct: 0, ia: 0 })
   const [driveConnected, setDriveConnected] = useState(false)
   const [driveConnecting, setDriveConnecting] = useState(false)
   const [driveDocs, setDriveDocs] = useState([])
@@ -959,6 +973,8 @@ export default function TomorrowBuilder() {
     chargerGmailStatus()
     chargerNotionStatus()
     chargerDrive()
+    // Charger les databases Notion (silencieux si pas connecté)
+    chargerNotionDatabases()
     axios.get(`${API}/ia/energie-courbe/${user.id}`)
       .then(r => setEnergieCourbe(r.data))
       .catch(() => {})
@@ -1108,13 +1124,26 @@ export default function TomorrowBuilder() {
     }, 800)
   }
 
+  const chargerNotionDatabases = async () => {
+    try {
+      const res = await axios.get(`${API}/integrations/notion/databases/${user.id}`)
+      setNotionDatabases(res.data.databases || [])
+    } catch { setNotionDatabases([]) }
+  }
+
   const extraireNotionTasks = async () => {
     setNotionExtracting(true)
     setNotionTasks([])
     try {
-      const res = await axios.get(`${API}/integrations/notion/extract-tasks/${user.id}`)
+      const url = `${API}/integrations/notion/extract-tasks/${user.id}` +
+        (notionDbId ? `?database_id=${encodeURIComponent(notionDbId)}` : '')
+      const res = await axios.get(url)
       setNotionTasks(res.data.taches || [])
       setNotionNbPages(res.data.nb_pages || 0)
+      setNotionStats({
+        direct: res.data.nb_direct_todos || 0,
+        ia: res.data.nb_ia || 0,
+      })
     } catch (e) {
       setErreur('Erreur extraction Notion')
     }
@@ -1129,7 +1158,10 @@ export default function TomorrowBuilder() {
         user_id: user.id,
         titre: tache.titre,
         priorite: tache.priorite || 'moyenne',
-        deadline: demainDate
+        deadline: demainDate,
+        source_url: tache.notion_page_url,
+        notion_page_id: tache.notion_page_id,
+        notion_block_id: tache.notion_block_id || null,
       })
       setNotionImporting(prev => ({ ...prev, [idx]: 'done' }))
     } catch (e) {
@@ -1642,6 +1674,52 @@ export default function TomorrowBuilder() {
                       importingState={notionImporting}
                       onActiver={() => {}}
                       onExtract={extraireNotionTasks} onImport={importerNotionTask}
+                      headerExtra={notionDatabases.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <label htmlFor="notion-db-select" style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                            Source
+                          </label>
+                          <select
+                            id="notion-db-select"
+                            value={notionDbId}
+                            onChange={e => {
+                              setNotionDbId(e.target.value)
+                              try { localStorage.setItem('notion_db_id', e.target.value) } catch {}
+                            }}
+                            style={{
+                              flex: 1, minWidth: 120,
+                              padding: '6px 10px',
+                              fontSize: 12,
+                              background: 'var(--bg-base)',
+                              border: '1px solid var(--border-subtle)',
+                              borderRadius: 8,
+                              color: 'var(--text-primary)',
+                              cursor: 'pointer',
+                            }}>
+                            <option value="">Toutes les pages récentes</option>
+                            {notionDatabases.map(db => (
+                              <option key={db.id} value={db.id}>{db.title}</option>
+                            ))}
+                          </select>
+                          {(notionStats.direct > 0 || notionStats.ia > 0) && (
+                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', width: '100%', marginTop: 4 }}>
+                              {notionStats.direct > 0 && <><strong style={{ color: '#22c55e' }}>{notionStats.direct}</strong> to-do{notionStats.direct > 1 ? 's' : ''} explicite{notionStats.direct > 1 ? 's' : ''}</>}
+                              {notionStats.direct > 0 && notionStats.ia > 0 && ' · '}
+                              {notionStats.ia > 0 && <><strong style={{ color: '#0F172A' }}>{notionStats.ia}</strong> détecté{notionStats.ia > 1 ? 's' : ''} par IA</>}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      getTaskBadge={(t) => t.notion_block_id
+                        ? <span title="To-do explicite Notion — sera coché automatiquement quand tu termines la tâche"
+                            style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(34,197,94,0.14)', color: '#16a34a', whiteSpace: 'nowrap' }}>
+                            ✓ TO-DO
+                          </span>
+                        : <span title="Action implicite détectée par l'IA dans le contenu"
+                            style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(15,23,42,0.08)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            IA
+                          </span>
+                      }
                     />
                   )}
 

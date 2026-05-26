@@ -15,7 +15,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Link2, Sunset, ArrowRight, TrendingUp,
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
-import { GoogleCalendarLogo, GoogleDriveLogo, GmailLogo } from '../components/BrandLogos'
+import { GoogleCalendarLogo, GoogleDriveLogo, GmailLogo, NotionLogo } from '../components/BrandLogos'
 import ExportModal from './ExportModal'
 import Onboarding from './Onboarding'
 import { useDashboard } from './useDashboard'
@@ -570,6 +570,9 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
             )}
             {tache.source_url && tache.source_url.includes('drive.google.com') && (
               <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir le fichier Drive" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={11} /></a>
+            )}
+            {tache.source_url && tache.source_url.includes('notion.so') && (
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><NotionLogo size={11} /></a>
             )}
             {tache.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}</span>}
             {!tache.terminee && !isBloquee && <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
@@ -2893,6 +2896,9 @@ export default function Dashboard() {
                           )}
                           {tache.source_url && tache.source_url.includes('drive.google.com') && (
                             <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir le fichier Drive" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={12} /></a>
+                          )}
+                          {tache.source_url && tache.source_url.includes('notion.so') && (
+                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><NotionLogo size={12} /></a>
                           )}
                           {tache.deadline && (() => {
                             const lbl = labelDate(tache.deadline)
