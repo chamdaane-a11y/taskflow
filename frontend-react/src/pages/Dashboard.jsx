@@ -560,6 +560,17 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: pBg(tache.priorite), color: pColor(tache.priorite), fontWeight: 600 }}>{tache.priorite}</span>
+            {tache.gcal_imported_event_id && (
+              tache.source_url
+                ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={11} /></a>
+                : <span style={{ display: 'flex', alignItems: 'center', lineHeight: 0 }}><GoogleCalendarLogo size={11} /></span>
+            )}
+            {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={11} /></a>
+            )}
+            {tache.source_url && tache.source_url.includes('drive.google.com') && (
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={11} /></a>
+            )}
             {tache.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}</span>}
             {!tache.terminee && !isBloquee && <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
             {isBloquee && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: 'rgba(224,92,92,0.12)', color: '#e05c5c', fontWeight: 600 }}>Bloquée</span>}
