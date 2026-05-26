@@ -929,8 +929,8 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
 
   if (!message && !loading) return null
 
-  // Couleur par persona
-  const personaColor = styleId === 'motivateur' ? '#f97316' : styleId === 'analytique' ? '#3b82f6' : '#ec4899'
+  // Couleur par persona — palette GRAPHITE & EMBER
+  const personaColor = styleId === 'motivateur' ? 'var(--ember)' : styleId === 'analytique' ? 'var(--text-secondary)' : 'var(--ember-hover)'
   const personaIcon = styleId === 'motivateur' ? Flame : styleId === 'analytique' ? BarChart : Heart
 
   const PersonaIcon = personaIcon
@@ -1153,8 +1153,6 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
           </div>
         </div>
 
-        {/* Footer DNA insight — mobile, discret */}
-        <DnaInsightFooter d={d} T={T} isMobile={true} />
       </motion.div>
     )
   }
@@ -1264,8 +1262,6 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
         </motion.div>
       </div>
 
-      {/* Footer DNA insight — discret, n'apparaît que si analyses disponibles */}
-      <DnaInsightFooter d={d} T={T} isMobile={false} />
     </motion.div>
   )
 })
@@ -1475,134 +1471,33 @@ const GoalWidget = memo(function GoalWidget({ d, T, isMobile, navigate }) {
 
   if (!loaded || objectifs.length === 0) return null
 
-  const pColor = (pct) => pct >= 70 ? '#4caf82' : pct >= 30 ? '#e08a3c' : 'var(--ember)'
-  const niveauColor = (n) => n === 'expert' ? '#e05c5c' : n === 'intermédiaire' ? '#e08a3c' : '#4caf82'
-  const urgenceInfo = (j) => {
-    if (j === null || j === undefined) return null
-    if (j < 0) return { label: `${Math.abs(j)}j de retard`, color: '#e05c5c' }
-    if (j === 0) return { label: "Aujourd'hui !", color: '#e05c5c' }
-    if (j <= 7) return { label: `J-${j}`, color: '#e08a3c' }
-    if (j <= 14) return { label: `J-${j}`, color: 'var(--text-secondary)' }
-    return null
-  }
+  const pc = (pct) => pct >= 70 ? '#4caf82' : pct >= 30 ? '#e08a3c' : 'var(--ember)'
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 20 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Target size={14} color="var(--ember)" strokeWidth={2.5} />
-          </div>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Mes objectifs</span>
-          <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 700 }}>
-            {objectifs.length}
-          </span>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Target size={13} color="var(--ember)" strokeWidth={2.5} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Objectifs</span>
+          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 700 }}>{objectifs.length}</span>
         </div>
         <motion.button onClick={() => navigate('/goal')} whileHover={{ x: 2 }}
-          style={{ fontSize: 12, color: 'var(--ember)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-          Voir tout <ChevronRight size={13} />
+          style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}>
+          Tout voir <ChevronRight size={11} />
         </motion.button>
       </div>
-
-      {/* Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
-        {objectifs.map(obj => {
-          const pct = obj.progression
-          const pc = pColor(pct)
-          const urg = urgenceInfo(obj.jours_restants)
-          const plan = replanningData[obj.id]
-          const isReplanning = replanningLoading && replanningId === obj.id
-
-          return (
-            <div key={obj.id} style={{
-              background: 'var(--surface-1)',
-              border: `1px solid ${obj.needs_replanning ? 'rgba(224,92,92,0.25)' : 'var(--border-subtle)'}`,
-              borderRadius: 14, padding: '14px 16px', position: 'relative', overflow: 'hidden',
-            }}>
-              {/* Strip urgence */}
-              {urg && (
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2.5, background: urg.color, borderRadius: '14px 14px 0 0' }} />
-              )}
-
-              {/* Titre + badge */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {obj.titre}
-                  </div>
-                  <span style={{ fontSize: 9.5, color: niveauColor(obj.niveau), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    {obj.niveau || 'intermédiaire'}
-                  </span>
-                </div>
-                {urg && (
-                  <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: `${urg.color}18`, color: urg.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {urg.label}
-                  </span>
-                )}
-              </div>
-
-              {/* Barre de progression */}
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, fontWeight: 600 }}>
-                  <span>{obj.taches_done}/{obj.taches_total} tâches</span>
-                  <span style={{ color: pc, fontWeight: 700 }}>{pct}%</span>
-                </div>
-                <div style={{ height: 5, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
-                  <motion.div
-                    initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    style={{ height: '100%', background: `linear-gradient(90deg, ${pc}, ${pc}bb)`, borderRadius: 99 }} />
-                </div>
-              </div>
-
-              {/* Prochaine étape */}
-              {obj.prochaine_etape && (
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 5, lineHeight: 1.4 }}>
-                  <ChevronRight size={11} strokeWidth={2.5} color="var(--ember)" style={{ marginTop: 1, flexShrink: 0 }} />
-                  <span>{obj.prochaine_etape}</span>
-                </div>
-              )}
-
-              {/* Bouton replanning */}
-              {obj.needs_replanning && !plan && (
-                <motion.button
-                  onClick={() => lancerReplanning(obj.id)}
-                  disabled={isReplanning}
-                  whileHover={isReplanning ? {} : { scale: 1.02 }} whileTap={isReplanning ? {} : { scale: 0.98 }}
-                  style={{ width: '100%', padding: '7px 10px', background: 'rgba(224,92,92,0.09)', border: '1px solid rgba(224,92,92,0.22)', borderRadius: 9, color: '#e05c5c', fontSize: 11, fontWeight: 700, cursor: isReplanning ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  {isReplanning
-                    ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: 14 }}>↻</motion.span> Replanning en cours…</>
-                    : <><AlertTriangle size={12} strokeWidth={2.5} /> {obj.taches_en_retard} en retard — Replanning IA</>
-                  }
-                </motion.button>
-              )}
-
-              {/* Résultat replanning */}
-              {plan && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  style={{ marginTop: 10, padding: '10px 12px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 10 }}>
-                  {plan.analyse && (
-                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 8, fontStyle: 'italic', margin: '0 0 8px' }}>
-                      {plan.analyse}
-                    </p>
-                  )}
-                  {(plan.jalons_restants || []).map((j, i) => (
-                    <div key={i} style={{ fontSize: 10.5, color: 'var(--text-secondary)', marginBottom: 3 }}>
-                      <span style={{ fontWeight: 700, color: 'var(--ember)' }}>S{j.semaine} — {j.titre} :</span>{' '}
-                      {(j.taches || []).join(', ')}
-                    </div>
-                  ))}
-                  {plan.conseil && (
-                    <div style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
-                      💡 {plan.conseil}
-                    </div>
-                  )}
-                </motion.div>
-              )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {objectifs.slice(0, 3).map(obj => (
+          <div key={obj.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{obj.titre}</span>
+            <div style={{ width: 60, height: 4, background: 'var(--surface-2)', borderRadius: 99, flexShrink: 0, overflow: 'hidden' }}>
+              <motion.div initial={{ width: 0 }} animate={{ width: `${obj.progression}%` }} transition={{ duration: 0.6, ease: 'easeOut' }}
+                style={{ height: '100%', background: pc(obj.progression), borderRadius: 99 }} />
             </div>
-          )
-        })}
+            <span style={{ fontSize: 10, color: pc(obj.progression), fontWeight: 700, flexShrink: 0, minWidth: 28, textAlign: 'right' }}>{obj.progression}%</span>
+          </div>
+        ))}
       </div>
     </motion.div>
   )
@@ -2372,6 +2267,13 @@ export default function Dashboard() {
   useEffect(() => { if (isMobile) setSidebarOpen(d.showSidebar) }, [d.showSidebar, isMobile])
 
   const [showBottomSheet, setShowBottomSheet] = useState(false)
+  const [statsVisible, setStatsVisible] = useState(() => {
+    try { return localStorage.getItem('stats_hud_visible') === 'true' } catch { return false }
+  })
+  const toggleStats = () => {
+    const next = !statsVisible; setStatsVisible(next)
+    try { localStorage.setItem('stats_hud_visible', String(next)) } catch {}
+  }
 
   // ── Import automatique GCal → tâches (une fois par jour par session) ──
   const [gcalImportNotif, setGcalImportNotif] = useState(null) // null | {count, tasks}
@@ -2677,8 +2579,22 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
 
-          {/* Stats HUD — Niveau / Streak / Points semaine / Réussite (caché si nouveau user) */}
-          {!isNewUser && <StatsHUD d={d} T={T} isMobile={isMobile} />}
+          {/* Stats HUD — toggle discret */}
+          {!isNewUser && (
+            <>
+              <button onClick={toggleStats} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', marginBottom: statsVisible ? 8 : 16, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                <ChevronDown size={12} strokeWidth={2.5} style={{ transform: statsVisible ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                Statistiques
+              </button>
+              <AnimatePresence>
+                {statsVisible && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                    <StatsHUD d={d} T={T} isMobile={isMobile} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
 
           {/* Prochain badge à débloquer — motivation forward-looking */}
           {!isNewUser && <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />}
