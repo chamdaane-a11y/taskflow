@@ -1499,7 +1499,41 @@ def run_migrations():
         )""")
         print("[Migrations] pending_invitations ✅")
 
-        db.commit()
+        # Cleanup doublons GCal sync-loop (2026-05-27)
+        # Avant le fix dédup `google_event_id` dans _do_gcal_import, chaque push d'une tâche
+        # vers GCal déclenchait le webhook → re-import comme nouvelle tâche.
+        # Critère zéro faux-positif : on supprime t1 (la dup) uniquement si elle pointe via
+        # gcal_imported_event_id vers l'event créé par t2 (google_event_id), et seulement si
+        # la dup n'a pas été touchée par l'user (pas terminée, pas focus, pas catégorisée).
+        curseur.execute("""
+            SELECT COUNT(*) FROM taches t1
+            INNER JOIN taches t2
+              ON t1.user_id = t2.user_id
+             AND t1.id != t2.id
+             AND t2.google_event_id = t1.gcal_imported_event_id
+            WHERE t1.gcal_imported_event_id IS NOT NULL
+              AND t1.terminee = 0
+              AND t1.focus_date IS NULL
+              AND t1.categorie_id IS NULL
+        """)
+        nb_dup = curseur.fetchone()[0]
+        if nb_dup > 0:
+            # Note : updated_at sera touché par ON UPDATE CURRENT_TIMESTAMP, mais ici on
+            # DELETE — pas d'effet de bord analytics, contrairement au backfill du 18 mai.
+            curseur.execute("""
+                DELETE t1 FROM taches t1
+                INNER JOIN taches t2
+                  ON t1.user_id = t2.user_id
+                 AND t1.id != t2.id
+                 AND t2.google_event_id = t1.gcal_imported_event_id
+                WHERE t1.gcal_imported_event_id IS NOT NULL
+                  AND t1.terminee = 0
+                  AND t1.focus_date IS NULL
+                  AND t1.categorie_id IS NULL
+            """)
+            print(f"[Migrations] Cleanup doublons GCal sync-loop : {nb_dup} tâches supprimées ✅")
+            db.commit()
+
         db.close()
     except Exception as e:
         print(f"[Migrations] erreur : {e}")
@@ -6320,8 +6354,18 @@ def _do_gcal_import(user_id):
         return {'created': 0, 'skipped': 0}
     db = connecter()
     c = db.cursor(dictionary=True)
-    c.execute("SELECT gcal_imported_event_id FROM taches WHERE user_id=%s AND gcal_imported_event_id IS NOT NULL", (user_id,))
-    already = {row['gcal_imported_event_id'] for row in c.fetchall()}
+    # Dédup anti sync-loop : un event peut être déjà connu de 2 façons.
+    # - gcal_imported_event_id : on l'a importé depuis GCal précédemment
+    # - google_event_id        : on l'a POUSSÉ vers GCal (sync inverse) → le webhook re-fire
+    # Sans le 2e cas, on re-crée une tâche en doublon à chaque sync inverse.
+    c.execute("""
+        SELECT gcal_imported_event_id AS eid FROM taches
+         WHERE user_id=%s AND gcal_imported_event_id IS NOT NULL
+        UNION
+        SELECT google_event_id AS eid FROM taches
+         WHERE user_id=%s AND google_event_id IS NOT NULL
+    """, (user_id, user_id))
+    already = {row['eid'] for row in c.fetchall()}
     created = 0
     skipped = 0
     for ev in events:
@@ -6468,9 +6512,16 @@ def gcal_import_events(user_id):
     db = connecter()
     c  = db.cursor(dictionary=True)
 
-    # Charger les event_ids déjà importés pour cet user (évite N requêtes)
-    c.execute("SELECT gcal_imported_event_id FROM taches WHERE user_id=%s AND gcal_imported_event_id IS NOT NULL", (user_id,))
-    already = {row['gcal_imported_event_id'] for row in c.fetchall()}
+    # Charger les event_ids déjà connus (import ou sync inverse) pour éviter le sync-loop.
+    # Si on ne check pas google_event_id, une tâche poussée vers GCal est re-importée comme doublon.
+    c.execute("""
+        SELECT gcal_imported_event_id AS eid FROM taches
+         WHERE user_id=%s AND gcal_imported_event_id IS NOT NULL
+        UNION
+        SELECT google_event_id AS eid FROM taches
+         WHERE user_id=%s AND google_event_id IS NOT NULL
+    """, (user_id, user_id))
+    already = {row['eid'] for row in c.fetchall()}
 
     created_tasks = []
     skipped = 0
@@ -8651,9 +8702,30 @@ def goal_reverse_importer():
     objectif_id = None
     try:
         conn = connecter()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         _ensure_objectifs_schema(cursor)
+        # Idempotence : si on a déjà créé cet objectif récemment (double-clic, retry réseau,
+        # React StrictMode), on renvoie l'existant sans réinsérer. La paire (user, titre, deadline)
+        # est un identifiant naturel suffisant : il faudrait délibérément créer 2 objectifs
+        # strictement identiques pour entrer en collision, ce qui n'a pas de sens fonctionnel.
         if objectif_titre and objectif_deadline:
+            cursor.execute(
+                """SELECT id FROM objectifs
+                    WHERE user_id=%s AND titre=%s AND deadline=%s
+                    ORDER BY cree_le DESC LIMIT 1""",
+                (user_id, objectif_titre[:255], objectif_deadline)
+            )
+            existing = cursor.fetchone()
+            if existing:
+                cursor.execute("SELECT id FROM taches WHERE objectif_id=%s", (existing['id'],))
+                existing_ids = [r['id'] for r in cursor.fetchall()]
+                cursor.close(); conn.close()
+                return jsonify({
+                    "message": f"Objectif déjà importé ({len(existing_ids)} tâches existantes)",
+                    "ids": existing_ids,
+                    "objectif_id": existing['id'],
+                    "already_exists": True,
+                })
             cursor.execute("""INSERT INTO objectifs
                 (user_id, titre, deadline, niveau, duree_semaines, score_faisabilite,
                  conseil_global, risques_json, jalons_json, coach_style)
