@@ -481,7 +481,7 @@ export default function Landing() {
 
       {/* ── NAV ─────────────────────────────────────────────────────────────── */}
       <motion.nav initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 60, padding: '0 clamp(20px,5vw,80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: scrolled ? 'var(--bg-overlay)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none', WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none', borderBottom: scrolled ? '1px solid var(--border-subtle)' : 'none', transition: 'background 0.3s, border-color 0.3s' }}>
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 'calc(60px + env(safe-area-inset-top))', paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'clamp(20px,5vw,80px)', paddingRight: 'clamp(20px,5vw,80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: scrolled ? 'var(--bg-overlay)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none', WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none', borderBottom: scrolled ? '1px solid var(--border-subtle)' : 'none', transition: 'background 0.3s, border-color 0.3s' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <GetShiftMark size={30} />
           <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px' }}>GetShift</span>
@@ -507,7 +507,7 @@ export default function Landing() {
 
       {/* ── HERO ────────────────────────────────────────────────────────────── */}
       <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(100px,14vh,140px) clamp(20px,5vw,80px) 60px', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', transform: 'translateZ(0)' }}>
           <div style={{ position: 'absolute', width: 900, height: 900, borderRadius: '50%', background: 'radial-gradient(circle,var(--ember),transparent)', opacity: 0.035, top: '40%', left: '50%', transform: 'translate(-50%,-60%)' }} />
         </div>
 
