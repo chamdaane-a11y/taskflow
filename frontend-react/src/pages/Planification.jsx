@@ -56,6 +56,7 @@ export default function Planification() {
   const { T } = useTheme()
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const user = JSON.parse(localStorage.getItem('user'))
 
   // Sidebar toggle persistant (clé globale, synchronisée entre toutes les pages)
@@ -258,6 +259,7 @@ export default function Planification() {
   const GANTT_DAY_W   = isMobile ? 26 : 36
   const GANTT_LABEL_W = isMobile ? 130 : 220
   const mainMargin = isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)
+  const isNarrow = isMobile || isTablet
 
   // ── Load data ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -713,7 +715,7 @@ export default function Planification() {
       <motion.main
         animate={{ marginLeft: mainMargin }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden' }}>
 
         {/* ═══ STATIC TOP — stats + header toujours visibles, ne scroll jamais ═══ */}
         <div style={{
@@ -816,7 +818,7 @@ export default function Planification() {
         )}
 
         {/* Stats — seulement en vue Liste */}
-        {vue === 'liste' && <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 0 }}>
+        {vue === 'liste' && <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 6 : isTablet ? 8 : 12, marginBottom: 0 }}>
           {stats.map((s, i) => {
             const Icon = s.Icon
             return (
@@ -879,9 +881,12 @@ export default function Planification() {
           overflowY: isCalView ? 'hidden' : 'auto',
           display: 'flex',
           flexDirection: 'column',
+          overflowX: 'hidden',
           padding: isMobile
-            ? `0 14px 72px`
-            : `0 clamp(16px,3vw,32px) clamp(10px,2vw,24px)`,
+            ? `0 14px 80px`
+            : isTablet
+              ? `0 20px 32px`
+              : `0 clamp(16px,3vw,32px) clamp(10px,2vw,24px)`,
         }}>
 
         {/* ─── Bloc "Aujourd'hui" — masqué en vue calendrier (visible sur la grille) ─── */}

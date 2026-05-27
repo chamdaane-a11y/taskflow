@@ -324,6 +324,7 @@ export default function Profile() {
   const navigate = useNavigate()
   const { theme, T } = useTheme()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
   })
@@ -573,7 +574,7 @@ export default function Profile() {
     <div style={{ display: 'flex', minHeight: '100vh', background: bg, fontFamily: "var(--font-ui)", color: text, overflowX: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        .pf-input { width: 100%; padding: 13px 16px; border-radius: 10px; font-size: 15px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+        .pf-input { width: 100%; padding: 13px 16px; border-radius: 10px; font-size: 16px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
         @media (max-width: 640px) {
           .pf-hero { flex-direction: column !important; text-align: center !important; align-items: center !important; }
           .pf-stats { justify-content: center !important; }

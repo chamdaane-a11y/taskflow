@@ -80,7 +80,7 @@ function RegisterInner() {
       <style>{`
         * { box-sizing: border-box; }
         .ember-text { background: linear-gradient(135deg, var(--ember), var(--ember-hover)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .tf-input { width: 100%; padding: 13px 16px; background: var(--surface-1); border: 1.5px solid var(--border-default); border-radius: 10px; color: var(--text-primary); font-size: 15px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+        .tf-input { width: 100%; padding: 13px 16px; background: var(--surface-1); border: 1.5px solid var(--border-default); border-radius: 10px; color: var(--text-primary); font-size: 16px; font-family: var(--font-ui); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
         .tf-input:focus { border-color: var(--ember); box-shadow: 0 0 0 3px var(--ember-soft); }
         .tf-input::placeholder { color: var(--text-tertiary); }
         .tf-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; }

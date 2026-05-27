@@ -544,14 +544,14 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
       <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: pColor(tache.priorite), borderRadius: '14px 0 0 14px' }} />
       <div style={{ padding: '12px 12px 12px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
         {isBloquee ? (
-          <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid rgba(224,92,92,0.4)', background: 'rgba(224,92,92,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <IconLock size={10} color="#e05c5c" />
+          <div style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid rgba(224,92,92,0.4)', background: 'rgba(224,92,92,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconLock size={13} color="#e05c5c" />
           </div>
         ) : (
-          <motion.button style={{ width: 36, height: 36, borderRadius: '50%', border: `2px solid ${tache.terminee ? '#4caf82' : 'var(--border-subtle)'}`, background: tache.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          <motion.button style={{ width: 44, height: 44, borderRadius: '50%', border: `2px solid ${tache.terminee ? '#4caf82' : 'var(--border-subtle)'}`, background: tache.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={() => d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)}
             whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            {tache.terminee && <CheckSquare size={14} color="white" strokeWidth={3} />}
+            {tache.terminee && <CheckSquare size={16} color="white" strokeWidth={3} />}
           </motion.button>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -559,30 +559,30 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
             {tache.titre}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: pBg(tache.priorite), color: pColor(tache.priorite), fontWeight: 600 }}>{tache.priorite}</span>
+            <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 99, background: pBg(tache.priorite), color: pColor(tache.priorite), fontWeight: 600 }}>{tache.priorite}</span>
             {tache.gcal_imported_event_id && (
               tache.source_url
-                ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Calendar" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={11} /></a>
-                : <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7 }}><GoogleCalendarLogo size={11} /></span>
+                ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Calendar" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleCalendarLogo size={13} /></a>
+                : <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7, minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleCalendarLogo size={13} /></span>
             )}
             {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir l'email d'origine" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={11} /></a>
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir l'email d'origine" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GmailLogo size={13} /></a>
             )}
             {tache.source_url && tache.source_url.includes('drive.google.com') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir le fichier Drive" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={11} /></a>
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir le fichier Drive" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleDriveLogo size={13} /></a>
             )}
             {tache.source_url && tache.source_url.includes('notion.so') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><NotionLogo size={11} /></a>
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><NotionLogo size={13} /></a>
             )}
-            {tache.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}</span>}
-            {!tache.terminee && !isBloquee && <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
-            {isBloquee && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: 'rgba(224,92,92,0.12)', color: '#e05c5c', fontWeight: 600 }}>Bloquée</span>}
+            {tache.deadline && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}</span>}
+            {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
+            {isBloquee && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 99, background: 'rgba(224,92,92,0.12)', color: '#e05c5c', fontWeight: 600 }}>Bloquée</span>}
           </div>
         </div>
         <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
-          <motion.button style={{ width: 32, height: 32, borderRadius: 8, background: menuOpen ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${menuOpen ? 'var(--ember)' : 'transparent'}`, color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          <motion.button style={{ width: 44, height: 44, borderRadius: 8, background: menuOpen ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${menuOpen ? 'var(--ember)' : 'transparent'}`, color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={() => setMenuOpen(!menuOpen)} whileTap={{ scale: 0.9 }}>
-            <MoreHorizontal size={16} />
+            <MoreHorizontal size={18} />
           </motion.button>
           <AnimatePresence>
             {menuOpen && (

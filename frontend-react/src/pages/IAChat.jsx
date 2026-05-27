@@ -459,6 +459,7 @@ export default function IAChat() {
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
 
   // ── Init ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -991,7 +992,7 @@ export default function IAChat() {
         </AnimatePresence>
 
         {/* ── MESSAGES ─────────────────────────────────────────────── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(20px,4vw,36px)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(20px,4vw,36px)', display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1200, width: '100%', alignSelf: 'center', boxSizing: 'border-box' }}>
 
           {/* État vide — accueil avec persona Coach + suggestions perso */}
           {messages.length === 0 && (

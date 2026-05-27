@@ -28,6 +28,7 @@ export default function Settings() {
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const isTiny   = useMediaQuery('(max-width: 400px)')
   const user = JSON.parse(localStorage.getItem('user'))
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
@@ -378,7 +379,7 @@ export default function Settings() {
   const INPUT_STYLE = {
     width: '100%', padding: '10px 14px',
     background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
-    borderRadius: 10, color: 'var(--text-primary)', fontSize: 13,
+    borderRadius: 10, color: 'var(--text-primary)', fontSize: 16,
     outline: 'none', boxSizing: 'border-box',
     fontFamily: 'var(--font-ui)',
   }
@@ -1061,7 +1062,7 @@ export default function Settings() {
 
         {/* ── SIDEBAR SETTINGS ── */}
         {!isMobile && (
-          <aside style={{ width: 260, background: 'var(--surface-1)', borderRight: '1px solid var(--border-subtle)', padding: '24px 16px', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', flexShrink: 0 }}>
+          <aside style={{ width: isTablet ? 200 : 260, background: 'var(--surface-1)', borderRight: '1px solid var(--border-subtle)', padding: isTablet ? '24px 10px' : '24px 16px', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', flexShrink: 0 }}>
             {/* Back */}
             <motion.button
               onClick={() => navigate('/dashboard')}
@@ -1098,7 +1099,7 @@ export default function Settings() {
         )}
 
         {/* ── CONTENU PRINCIPAL ── */}
-        <main style={{ flex: 1, padding: isMobile ? '16px' : '40px 48px', maxWidth: 720, minWidth: 0, paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : undefined }}>
+        <main style={{ flex: 1, padding: isMobile ? '16px' : isTablet ? '24px 24px' : '40px 48px', maxWidth: 720, minWidth: 0, paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : undefined }}>
 
           {/* Header mobile */}
           {isMobile && (

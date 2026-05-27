@@ -833,6 +833,7 @@ function EnergySliderCheckin({ value, onChange, T }) {
 export default function TomorrowBuilder() {
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1100px)')
   const { user, niveau, points, streak, niveauActuel, pctNiveau } = useSidebarUser()
   const theme = localStorage.getItem('theme') || 'light'
   const T = themes[theme]
@@ -1331,7 +1332,7 @@ export default function TomorrowBuilder() {
         </motion.button>
       </div>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '20px 16px' : '32px 32px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '20px 16px' : isTablet ? '24px 20px' : '32px 32px' }}>
 
         {/* ERREUR */}
         <AnimatePresence>
