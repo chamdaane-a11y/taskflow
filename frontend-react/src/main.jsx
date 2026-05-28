@@ -23,17 +23,23 @@ axios.interceptors.request.use(config => {
   return config
 })
 
-// Enregistrement SW dès le démarrage — toutes les pages bénéficient du cache offline
-// et des push notifications, pas seulement celles qui chargent useDashboard.
 if ('serviceWorker' in navigator) {
+  // Le SW envoie SW_UPDATED après activate+claim → on recharge la page
+  // pour charger les nouveaux chunks JS (les anciens hashes n'existent plus sur CDN)
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'SW_UPDATED') {
+      window.location.reload()
+    }
+  })
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/taskflow/sw.js').then(reg => {
-      // Quand un nouveau SW est prêt, notifier l'UI pour proposer un rechargement
       reg.addEventListener('updatefound', () => {
         const next = reg.installing
         next.addEventListener('statechange', () => {
           if (next.state === 'installed' && navigator.serviceWorker.controller) {
-            window.dispatchEvent(new CustomEvent('sw-update-ready'))
+            // Fallback : si le message postMessage n'est pas encore arrivé
+            window.location.reload()
           }
         })
       })

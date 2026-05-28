@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getshift-v24'
+const CACHE_NAME = 'getshift-v25'
 const STATIC_ASSETS = [
   '/taskflow/',
   '/taskflow/index.html',
@@ -15,11 +15,16 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(clients => clients.forEach(client => {
+        // Force un rechargement de toutes les pages ouvertes après activation
+        // du nouveau SW — élimine les JS hashés stale qui n'existent plus sur CDN
+        client.postMessage({ type: 'SW_UPDATED' })
+      }))
   )
-  self.clients.claim()
 })
 
 self.addEventListener('fetch', (e) => {
