@@ -2645,17 +2645,6 @@ export default function Collaboration() {
               )}
             </div>
 
-            {/* Barre stats */}
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-              {COLONNES.map((col, i) => (
-                <div key={col.id} style={{ flex: 1, padding: '9px 18px', borderRight: i < COLONNES.length - 1 ? '1px solid var(--border-subtle)' : 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: col.couleur }} />
-                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{col.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: col.couleur, marginLeft: 'auto' }}>{tachesCol(col.id).length}</span>
-                </div>
-              ))}
-            </div>
-
             {/* KANBAN avec DnD */}
             <DndContext sensors={sensors} collisionDetection={closestCenter}
               onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
