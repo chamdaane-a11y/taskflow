@@ -3,20 +3,182 @@
 // ══════════════════════════════════════════════════════════════════════
 import { useRef, useState, useCallback, useMemo, memo, useEffect, useLayoutEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, X, CheckCircle2, Trash2, Clock, Flag, Calendar } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import TimeBlock from './TimeBlock'
 import {
   DAY_START, DAY_END, COL_HEIGHT, PX_PER_MIN,
   pxToMins, minsToPx, minsToTime, timeToMins, clampMins,
-  resolveCollisions, detectConflicts, SNAP_MINS, getWeekDays, getSingleDay
+  resolveCollisions, detectConflicts, SNAP_MINS, getWeekDays, getSingleDay,
+  pColor, pBg
 } from './calendarUtils'
+
+// ── EventPopup — Google Calendar-style detail popover ────────────────────────
+const PRIO_LABEL = { haute: 'Haute', moyenne: 'Moyenne', basse: 'Basse' }
+
+const EventPopup = memo(function EventPopup({ selected, onClose, onComplete, onRemove, isMobile }) {
+  const popupRef = useRef(null)
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  useEffect(() => {
+    const onDown = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) onClose()
+    }
+    setTimeout(() => {
+      document.addEventListener('mousedown', onDown)
+      document.addEventListener('touchstart', onDown)
+    }, 0)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('touchstart', onDown)
+    }
+  }, [onClose])
+
+  if (!selected) return null
+  const { entry, gcal, rect } = selected
+
+  // Position the popup: right of block, or left if near right edge, fixed to viewport
+  const popupW = isMobile ? Math.min(window.innerWidth - 32, 300) : 280
+  const popupH = 220
+  let left = rect.right + 8
+  if (left + popupW > window.innerWidth - 12) left = rect.left - popupW - 8
+  if (left < 12) left = 12
+  let top = rect.top
+  if (top + popupH > window.innerHeight - 12) top = window.innerHeight - popupH - 12
+  if (top < 60) top = 60
+
+  if (gcal) {
+    // GCal event — read-only popup
+    const dur = timeToMins(gcal.heure_fin) - timeToMins(gcal.heure_debut)
+    return (
+      <motion.div
+        ref={popupRef}
+        initial={{ opacity: 0, scale: 0.93, y: -4 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93, y: -4 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          position: 'fixed', top, left, width: popupW, zIndex: 9999,
+          background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
+          borderRadius: 14, boxShadow: '0 16px 48px rgba(0,0,0,0.28)',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ background: '#1A73E8', padding: '12px 14px 10px', position: 'relative' }}>
+          <button onClick={onClose} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+            <X size={13} />
+          </button>
+          <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.7)', letterSpacing: 1, marginBottom: 4 }}>GOOGLE CALENDAR</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.3, paddingRight: 30 }}>{gcal.titre}</div>
+        </div>
+        <div style={{ padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Clock size={13} color="var(--text-secondary)" />
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{gcal.heure_debut} – {gcal.heure_fin}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 4 }}>{dur}min</span>
+          </div>
+          {gcal.description && (
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{gcal.description}</div>
+          )}
+        </div>
+      </motion.div>
+    )
+  }
+
+  // Task block popup
+  const color = pColor(entry.priorite)
+  const pts = entry.priorite === 'haute' ? 30 : entry.priorite === 'moyenne' ? 20 : 10
+  const dur = entry.endMins - entry.startMins
+  const labelDate = (d) => {
+    if (!d) return null
+    const dt = new Date(d)
+    if (isNaN(dt)) return null
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  }
+
+  return (
+    <motion.div
+      ref={popupRef}
+      initial={{ opacity: 0, scale: 0.93, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.93, y: -4 }}
+      transition={{ duration: 0.15 }}
+      style={{
+        position: 'fixed', top, left, width: popupW, zIndex: 9999,
+        background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
+        borderRadius: 14, boxShadow: '0 16px 48px rgba(0,0,0,0.28)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header */}
+      <div style={{ background: `${color}18`, borderBottom: `1px solid ${color}30`, padding: '12px 14px 10px', position: 'relative' }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: color, borderRadius: '14px 0 0 0' }} />
+        <button onClick={onClose} style={{ position: 'absolute', top: 8, right: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+          <X size={13} />
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, paddingLeft: 8 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color, background: `${color}20`, padding: '2px 7px', borderRadius: 99 }}>
+            {PRIO_LABEL[entry.priorite] || 'Basse'}
+          </span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ember)', background: 'var(--ember-soft)', padding: '2px 7px', borderRadius: 99 }}>
+            +{pts} pts
+          </span>
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, paddingLeft: 8, paddingRight: 30 }}>
+          {entry.titre}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '12px 14px 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <Clock size={13} color="var(--text-secondary)" />
+          <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
+            {minsToTime(entry.startMins)} – {minsToTime(entry.endMins)}
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{dur}min</span>
+        </div>
+        {entry.deadline && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Calendar size={13} color="var(--text-secondary)" />
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Échéance {labelDate(entry.deadline)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 8, padding: '0 14px 12px' }}>
+        <motion.button
+          onClick={() => { onComplete?.(entry.tache_id); onClose() }}
+          whileTap={{ scale: 0.96 }}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', background: 'var(--ember-soft)', border: '1px solid var(--ember-soft)', borderRadius: 9, color: 'var(--ember)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          <CheckCircle2 size={13} strokeWidth={2.2} />
+          Terminer
+        </motion.button>
+        <motion.button
+          onClick={() => { onRemove?.(entry.id); onClose() }}
+          whileTap={{ scale: 0.96 }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--border-default)', borderRadius: 9, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+          <Trash2 size={13} />
+          Retirer
+        </motion.button>
+      </div>
+    </motion.div>
+  )
+})
 
 const CalendarGrid = memo(function CalendarGrid({
   planification, taches, T,
   semaineOffset, onOffsetChange,
   onDrop, onMove, onResize, onResizeEnd,
   onQuickSchedule,
+  onBlockComplete,
+  onBlockRemove,
   daysToShow = 7,
   heuresDispo = 8,
   gcalEvents = [],
@@ -27,6 +189,7 @@ const CalendarGrid = memo(function CalendarGrid({
   const [dragOver, setDragOver]   = useState(null)
   const [dragging, setDragging]   = useState(null)
   const [chipDrag, setChipDrag]   = useState(null)
+  const [selectedBlock, setSelectedBlock] = useState(null)
 
   const jours = useMemo(
     () => daysToShow === 1 ? getSingleDay(semaineOffset) : getWeekDays(semaineOffset),
@@ -145,6 +308,17 @@ const CalendarGrid = memo(function CalendarGrid({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: isMobile ? 10 : 12 }}>
+      <AnimatePresence>
+        {selectedBlock && (
+          <EventPopup
+            selected={selectedBlock}
+            onClose={() => setSelectedBlock(null)}
+            onComplete={onBlockComplete}
+            onRemove={onBlockRemove}
+            isMobile={isMobile}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Navigation bar ──────────────────────────────────────────── */}
       <div style={{
@@ -578,7 +752,7 @@ const CalendarGrid = memo(function CalendarGrid({
                       </div>
                     )}
 
-                    {/* Google Calendar event overlays (non-draggable) */}
+                    {/* Google Calendar event overlays — cliquables */}
                     {gcalEvents
                       .filter(ev => (ev.start?.substring(0, 10) || '') === jour.date)
                       .map(ev => {
@@ -590,7 +764,7 @@ const CalendarGrid = memo(function CalendarGrid({
                         return (
                           <div
                             key={ev.event_id}
-                            title={`${ev.titre} (${ev.heure_debut}–${ev.heure_fin})`}
+                            onClick={(e) => setSelectedBlock({ gcal: ev, rect: e.currentTarget.getBoundingClientRect() })}
                             style={{
                               position: 'absolute',
                               top, left: 3, right: 3, height,
@@ -598,7 +772,7 @@ const CalendarGrid = memo(function CalendarGrid({
                               border: '1px dashed rgba(100,116,139,0.45)',
                               borderRadius: 7,
                               zIndex: 3,
-                              pointerEvents: 'none',
+                              cursor: 'pointer',
                               overflow: 'hidden',
                               display: 'flex', alignItems: 'flex-start',
                               padding: '3px 5px',
@@ -641,6 +815,7 @@ const CalendarGrid = memo(function CalendarGrid({
                           onDragStart={e => setDragging(e)}
                           onResize={(id, newEnd) => onResize?.({ entryId: id, newEndMins: newEnd })}
                           onResizeEnd={(id, newEnd) => onResizeEnd?.({ entryId: id, newEndMins: newEnd })}
+                          onClick={(e, rect) => setSelectedBlock({ entry: e, rect })}
                         />
                       )
                     })}

@@ -25,12 +25,13 @@ import {
  */
 const TimeBlock = memo(function TimeBlock({
   entry, colIndex, numCols, colWidth, T,
-  onDragStart, onResize, onResizeEnd, ghost = false,
+  onDragStart, onResize, onResizeEnd, onClick, ghost = false,
   conflicts = [],
 }) {
   const resizeRef   = useRef(null)
   const startYRef   = useRef(0)
   const startEndRef = useRef(0)
+  const wasDragRef  = useRef(false)
   const [resizing, setResizing] = useState(false)
   const [previewEnd, setPreviewEnd] = useState(entry.endMins)
 
@@ -89,11 +90,16 @@ const TimeBlock = memo(function TimeBlock({
       draggable={!resizing}
       onDragStart={(e) => {
         if (resizing) { e.preventDefault(); return }
-        // Store entry data in drag event
+        wasDragRef.current = true
         e.dataTransfer.setData('entryId', String(entry.id))
         e.dataTransfer.setData('offsetMins', String(entry.startMins))
         e.dataTransfer.effectAllowed = 'move'
         onDragStart?.(entry)
+      }}
+      onDragEnd={() => { setTimeout(() => { wasDragRef.current = false }, 50) }}
+      onClick={(e) => {
+        if (resizing || wasDragRef.current) return
+        onClick?.(entry, e.currentTarget.getBoundingClientRect())
       }}
       style={{
         position:   'absolute',

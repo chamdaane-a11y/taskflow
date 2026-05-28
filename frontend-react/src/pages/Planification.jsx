@@ -596,6 +596,12 @@ export default function Planification() {
     catch { setTaches(prev) }
   }, [taches])
 
+  const retirerDuCalendrier = useCallback(async (entryId) => {
+    setPlanification(cur => cur.filter(e => e.id !== entryId))
+    try { await axios.delete(`${API}/planification/${entryId}`) }
+    catch { /* rollback non critique */ }
+  }, [])
+
   // ── Month data ─────────────────────────────────────────────────────
   const { days: monthDays, monthLabel } = useMemo(
     () => getMonthDays(semaineOffset),
@@ -1172,6 +1178,8 @@ export default function Planification() {
                 onResize={handleResize}
                 onResizeEnd={handleResizeEnd}
                 onQuickSchedule={quickSchedule}
+                onBlockComplete={terminerTache}
+                onBlockRemove={retirerDuCalendrier}
                 daysToShow={1}
                 heuresDispo={heuresDispo}
                 gcalEvents={gcalWeekEvents}
@@ -1193,6 +1201,8 @@ export default function Planification() {
                 onResize={handleResize}
                 onResizeEnd={handleResizeEnd}
                 onQuickSchedule={quickSchedule}
+                onBlockComplete={terminerTache}
+                onBlockRemove={retirerDuCalendrier}
                 daysToShow={7}
                 heuresDispo={heuresDispo}
                 gcalEvents={gcalWeekEvents}
