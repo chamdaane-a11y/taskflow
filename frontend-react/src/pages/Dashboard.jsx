@@ -1528,7 +1528,9 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
 
   useEffect(() => {
     const h = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false) }
-    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
+    document.addEventListener('mousedown', h)
+    document.addEventListener('touchstart', h)
+    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('touchstart', h) }
   }, [])
 
   const tachesCandidates = (d.taches || []).filter(t =>
@@ -1572,48 +1574,46 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
         </div>
       </div>
 
-      {/* Empty state — aucun focus */}
-      {focused.length === 0 && !isMobile && (
-        <div style={{ textAlign: 'center', padding: '14px 6px 6px' }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4, fontWeight: 500 }}>Choisis tes 3 priorités du jour</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', opacity: 0.75, marginBottom: 12 }}>Tu n'as pas besoin d'en faire plus.</div>
+      {/* Empty state */}
+      {focused.length === 0 && (
+        <div style={{ textAlign: isMobile ? 'left' : 'center', padding: isMobile ? '0 0 6px' : '14px 6px 6px' }}>
+          <div style={{ fontSize: isMobile ? 12 : 13, color: 'var(--text-secondary)', marginBottom: isMobile ? 2 : 4, fontWeight: 500 }}>Choisis tes 3 priorités du jour</div>
+          {!isMobile && <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', opacity: 0.75, marginBottom: 12 }}>Tu n'as pas besoin d'en faire plus.</div>}
         </div>
       )}
 
       {/* Slots */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 5 : 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 6 : 10 }}>
         {slots.map(i => {
           const t = focused[i]
+          const slotLabel = ['1ère priorité', '2ème priorité', '3ème priorité'][i]
           if (!t) {
-            const isFirst = focused.length === 0 && i === 0
-            // Mobile : ne montrer qu'un seul slot vide (le premier) pour économiser l'espace
-            if (isMobile && !isFirst && focused.length === 0) return null
             return (
               <motion.button
                 key={`empty-${i}`}
                 onClick={() => setPickerOpen(true)}
-                whileHover={{ borderColor: `var(--ember-soft)`, background: 'var(--ember-soft)' }}
+                whileHover={{ borderColor: 'var(--ember)', background: 'var(--ember-soft)' }}
                 whileTap={{ scale: 0.98 }}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: isMobile ? '8px 10px' : '18px 12px',
+                  display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'flex-start' : 'center', gap: 8,
+                  padding: isMobile ? '0 14px' : '18px 12px',
                   background: 'transparent',
                   border: '1.5px dashed var(--border-subtle)',
                   borderRadius: isMobile ? 10 : 12,
                   color: 'var(--text-secondary)',
-                  fontSize: isMobile ? 11.5 : 12,
+                  fontSize: isMobile ? 13 : 12,
                   fontWeight: 500,
                   cursor: 'pointer',
-                  minHeight: isMobile ? 36 : 70,
+                  minHeight: isMobile ? 44 : 70,
+                  width: '100%',
                 }}>
-                <Plus size={isMobile ? 12 : 14} strokeWidth={2} />
-                {isMobile ? (isFirst ? 'Choisir ma 1ère tâche' : 'Épingler') : (isFirst ? 'Choisir ma première tâche' : 'Épingler une tâche')}
+                <Plus size={14} strokeWidth={2} />
+                {isMobile ? slotLabel : (i === 0 ? 'Choisir ma première tâche' : 'Épingler une tâche')}
               </motion.button>
             )
           }
-          const pts = t.priorite === 'haute' ? 30 : t.priorite === 'moyenne' ? 20 : 10
 
-          // ── Mobile : compact 1-line row ────────────────────────────
+          // ── Mobile : row avec touch targets corrects ───────────────
           if (isMobile) {
             return (
               <motion.div
@@ -1624,16 +1624,16 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                   background: 'var(--surface-2)',
                   border: `1px solid ${pColor(t.priorite)}30`,
                   borderRadius: 10,
-                  padding: '7px 8px 7px 12px',
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  minHeight: 38,
+                  padding: '0 6px 0 14px',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  minHeight: 48,
                 }}>
-                <div style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, background: pColor(t.priorite), borderRadius: 99 }} />
-                <span style={{ flex: 1, fontSize: 12.5, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, background: pColor(t.priorite), borderRadius: 99 }} />
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                   {t.titre}
                 </span>
                 {t.deadline && (
-                  <span style={{ fontSize: 10, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>
                     {labelDate(t.deadline)}
                   </span>
                 )}
@@ -1641,15 +1641,15 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                   onClick={() => d.toggleTache(t.id, t.terminee, t.priorite, t.bloquee)}
                   whileTap={{ scale: 0.9 }}
                   title="Terminer"
-                  style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <CheckCircle2 size={13} strokeWidth={2.2} />
+                  style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CheckCircle2 size={15} strokeWidth={2.2} />
                 </motion.button>
                 <motion.button
                   onClick={() => d.togglerFocus(t.id, true)}
                   whileTap={{ scale: 0.9 }}
                   title="Désépingler"
-                  style={{ width: 22, height: 22, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <X size={12} strokeWidth={2} />
+                  style={{ width: 36, height: 36, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <X size={14} strokeWidth={2} />
                 </motion.button>
               </motion.div>
             )
