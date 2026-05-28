@@ -7,14 +7,11 @@
 
 html {
   background: var(--bg-base);
-  overflow-x: hidden;
-  max-width: 100%;
 }
 
 body {
   margin: 0;
   overflow-x: hidden;
-  max-width: 100%;
   font-family: var(--font-ui);
   font-feature-settings: 'cv11', 'ss01', 'ss03';  /* Geist features pour caractères distinctifs */
   font-synthesis: none;
