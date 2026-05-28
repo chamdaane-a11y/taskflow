@@ -10533,21 +10533,36 @@ def route_expand_abreviations():
 # ============================================
 # BACKUP AUTOMATIQUE QUOTIDIEN — MINUIT
 
+def _val_sql(val):
+    """Sérialise une valeur Python en littéral SQL safe."""
+    if val is None:
+        return "NULL"
+    if isinstance(val, bool):
+        return "1" if val else "0"
+    if isinstance(val, (int, float)):
+        return str(val)
+    if isinstance(val, datetime):
+        return f"'{val.strftime('%Y-%m-%d %H:%M:%S')}'"
+    if hasattr(val, 'strftime'):
+        return f"'{val.strftime('%Y-%m-%d')}'"
+    escaped = str(val).replace("\\", "\\\\").replace("'", "\\'")
+    return f"'{escaped}'"
+
 def job_backup_quotidien():
     """
-    Backup quotidien à minuit :
-    1. Dump SQL complet de toutes les tables
-    2. Stockage dans la table backups (Aiven)
-    3. Envoi par email à l'admin
+    Backup quotidien à minuit — version mémoire-efficiente :
+    - Écrit ligne par ligne dans /tmp (pas d'accumulation en RAM)
+    - fetchmany(500) pour éviter de charger toute la table d'un coup
+    - Email : stats seulement (pas de pièce jointe → pas de base64 en RAM)
     """
     debut = datetime.now()
+    tmp_path = '/tmp/gs_backup.sql'
     print(f"[Backup] Démarrage à {debut.strftime('%Y-%m-%d %H:%M:%S')}")
 
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
 
-        # ── Créer la table de stockage des backups si elle n'existe pas ──
         curseur.execute("""
             CREATE TABLE IF NOT EXISTS backups_log (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -10572,118 +10587,92 @@ def job_backup_quotidien():
         """)
         db.commit()
 
-        # ── Récupérer la liste de toutes les tables ──
         curseur.execute("SHOW TABLES")
         tables = [list(row.values())[0] for row in curseur.fetchall()]
-
-        # Tables à exclure du backup (optionnel)
-        tables_exclure = ['backups_data']  # éviter backup récursif
+        # Exclure les tables volumineuses non critiques et le backup récursif
+        tables_exclure = {'backups_data', 'ia_messages'}
         tables = [t for t in tables if t not in tables_exclure]
 
-        dump_lines = []
         nb_lignes_total = 0
 
-        dump_lines.append(f"-- GetShift Database Backup")
-        dump_lines.append(f"-- Date : {debut.strftime('%Y-%m-%d %H:%M:%S')}")
-        dump_lines.append(f"-- Tables : {len(tables)}")
-        dump_lines.append(f"-- ============================================")
-        dump_lines.append("")
-        dump_lines.append("SET FOREIGN_KEY_CHECKS=0;")
-        dump_lines.append("")
+        # ── Écriture streaming vers /tmp — zéro accumulation en RAM ──
+        with open(tmp_path, 'w', encoding='utf-8') as f:
+            f.write(f"-- GetShift Database Backup\n")
+            f.write(f"-- Date : {debut.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"-- Tables : {len(tables)}\n")
+            f.write("SET FOREIGN_KEY_CHECKS=0;\n\n")
 
-        for table in tables:
-            try:
-                # Structure de la table
-                curseur.execute(f"SHOW CREATE TABLE `{table}`")
-                create_result = curseur.fetchone()
-                create_sql = list(create_result.values())[1]
+            for table in tables:
+                try:
+                    curseur.execute(f"SHOW CREATE TABLE `{table}`")
+                    create_result = curseur.fetchone()
+                    create_sql = list(create_result.values())[1]
+                    f.write(f"-- Table : {table}\n")
+                    f.write(f"DROP TABLE IF EXISTS `{table}`;\n")
+                    f.write(f"{create_sql};\n\n")
 
-                dump_lines.append(f"-- Table : {table}")
-                dump_lines.append(f"DROP TABLE IF EXISTS `{table}`;")
-                dump_lines.append(f"{create_sql};")
-                dump_lines.append("")
+                    curseur.execute(f"SELECT * FROM `{table}`")
+                    batch = curseur.fetchmany(500)
+                    while batch:
+                        nb_lignes_total += len(batch)
+                        colonnes = list(batch[0].keys())
+                        cols_str = ", ".join(f"`{c}`" for c in colonnes)
+                        for row in batch:
+                            vals_str = ", ".join(_val_sql(v) for v in row.values())
+                            f.write(f"INSERT INTO `{table}` ({cols_str}) VALUES ({vals_str});\n")
+                        batch = curseur.fetchmany(500)
+                    f.write("\n")
+                except Exception as e:
+                    f.write(f"-- ERREUR table {table}: {e}\n\n")
 
-                # Données
-                curseur.execute(f"SELECT * FROM `{table}`")
-                rows = curseur.fetchall()
-                nb_lignes_total += len(rows)
+            f.write("SET FOREIGN_KEY_CHECKS=1;\n")
+            f.write(f"-- Fin — {nb_lignes_total} lignes exportées\n")
 
-                if rows:
-                    colonnes = list(rows[0].keys())
-                    cols_str = ", ".join(f"`{c}`" for c in colonnes)
+        # Lire le fichier une seule fois pour le stocker en DB, puis libérer
+        with open(tmp_path, 'r', encoding='utf-8') as f:
+            contenu_sql = f.read()
 
-                    for row in rows:
-                        vals = []
-                        for val in row.values():
-                            if val is None:
-                                vals.append("NULL")
-                            elif isinstance(val, (int, float)):
-                                vals.append(str(val))
-                            elif isinstance(val, datetime):
-                                vals.append(f"'{val.strftime('%Y-%m-%d %H:%M:%S')}'")
-                            elif hasattr(val, 'strftime'):
-                                vals.append(f"'{val.strftime('%Y-%m-%d')}'")
-                            else:
-                                # Échapper les quotes
-                                escaped = str(val).replace("\\", "\\\\").replace("'", "\\'")
-                                vals.append(f"'{escaped}'")
-                        vals_str = ", ".join(vals)
-                        dump_lines.append(f"INSERT INTO `{table}` ({cols_str}) VALUES ({vals_str});")
-
-                dump_lines.append("")
-
-            except Exception as e:
-                dump_lines.append(f"-- ERREUR table {table}: {e}")
-                dump_lines.append("")
-
-        dump_lines.append("SET FOREIGN_KEY_CHECKS=1;")
-        dump_lines.append("")
-        dump_lines.append(f"-- Fin du backup — {nb_lignes_total} lignes exportées")
-
-        contenu_sql = "\n".join(dump_lines)
         taille_ko = len(contenu_sql.encode('utf-8')) // 1024
         duree = (datetime.now() - debut).total_seconds()
         nom_backup = f"getshift_backup_{debut.strftime('%Y%m%d_%H%M%S')}.sql"
 
-        # ── Stocker dans Aiven (backups_log + backups_data) ──
         curseur.execute("""
             INSERT INTO backups_log (nom, taille_ko, nb_tables, nb_lignes_total, statut, duree_secondes)
             VALUES (%s, %s, %s, %s, 'succes', %s)
         """, (nom_backup, taille_ko, len(tables), nb_lignes_total, round(duree, 2)))
         backup_id = curseur.lastrowid
-
         curseur.execute("""
-            INSERT INTO backups_data (backup_log_id, contenu)
-            VALUES (%s, %s)
+            INSERT INTO backups_data (backup_log_id, contenu) VALUES (%s, %s)
         """, (backup_id, contenu_sql))
         db.commit()
 
-        # Garder seulement les 7 derniers backups dans Aiven (éviter surcharge)
+        # Libérer la string avant le cleanup (évite de tenir 2 copies en même temps)
+        del contenu_sql
+
         curseur.execute("""
             DELETE bd FROM backups_data bd
             JOIN backups_log bl ON bd.backup_log_id = bl.id
             WHERE bl.id NOT IN (
-                SELECT id FROM (
-                    SELECT id FROM backups_log ORDER BY cree_le DESC LIMIT 7
-                ) AS recent
+                SELECT id FROM (SELECT id FROM backups_log ORDER BY cree_le DESC LIMIT 7) AS r
             )
         """)
         curseur.execute("""
             DELETE FROM backups_log
             WHERE id NOT IN (
-                SELECT id FROM (
-                    SELECT id FROM backups_log ORDER BY cree_le DESC LIMIT 7
-                ) AS recent
+                SELECT id FROM (SELECT id FROM backups_log ORDER BY cree_le DESC LIMIT 7) AS r
             )
         """)
         db.commit()
         curseur.close()
         db.close()
 
-        print(f"[Backup] Stocké dans Aiven — {taille_ko} Ko, {nb_lignes_total} lignes, {len(tables)} tables")
+        try:
+            import os as _os; _os.remove(tmp_path)
+        except Exception:
+            pass
 
-        # ── Envoyer par email ──
-        _envoyer_backup_email(nom_backup, contenu_sql, taille_ko, nb_lignes_total, len(tables), round(duree, 2))
+        print(f"[Backup] OK — {taille_ko} Ko, {nb_lignes_total} lignes, {len(tables)} tables, {round(duree,1)}s")
+        _envoyer_backup_email(nom_backup, taille_ko, nb_lignes_total, len(tables), round(duree, 2))
 
     except Exception as e:
         import traceback
@@ -10704,75 +10693,66 @@ def job_backup_quotidien():
             pass
 
 
-def _envoyer_backup_email(nom, contenu_sql, taille_ko, nb_lignes, nb_tables, duree):
-    """Envoie le backup par email avec le fichier SQL en pièce jointe (via Brevo)."""
+def _envoyer_backup_email(nom, taille_ko, nb_lignes, nb_tables, duree):
+    """Envoie un email de confirmation de backup (stats uniquement, pas de pièce jointe)."""
     try:
-        import base64
-
         date_str = datetime.now().strftime('%d/%m/%Y à %H:%M')
 
-        # HTML du corps
         html = f"""
-        <div style="font-family:Arial;max-width:540px;margin:auto;background:#0c0c12;color:#f0f0f5;padding:0;border-radius:20px;overflow:hidden;border:1px solid #ffffff0f;">
-            <div style="background:linear-gradient(135deg,#6c63ff,#a855f7);padding:28px 36px;">
-                <span style="font-size:20px;font-weight:800;color:white;">GetShift</span>
-                <span style="float:right;font-size:11px;color:rgba(255,255,255,0.7);font-weight:500;letter-spacing:1px;">BACKUP QUOTIDIEN</span>
+        <div style="font-family:Arial;max-width:540px;margin:auto;background:#111118;color:#e8e8f0;padding:0;border-radius:16px;overflow:hidden;border:1px solid #2a2a3a;">
+            <div style="background:#1a1a24;padding:24px 32px;border-bottom:1px solid #2a2a3a;">
+                <span style="font-size:18px;font-weight:800;color:#e8e8f0;letter-spacing:-0.5px;">GetShift</span>
+                <span style="float:right;font-size:10px;color:#6b6b80;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Backup quotidien</span>
             </div>
-            <div style="padding:36px;">
-                <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#fff;">Backup réussi</h2>
-                <p style="margin:0 0 24px;font-size:13px;color:#8888a8;">{date_str}</p>
+            <div style="padding:32px;">
+                <h2 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#e8e8f0;">Backup réussi</h2>
+                <p style="margin:0 0 24px;font-size:13px;color:#6b6b80;">{date_str}</p>
 
-                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-collapse:separate;border-spacing:6px;">
                     <tr>
-                        <td style="padding:0 5px 0 0;" width="25%">
-                            <div style="background:#0f0f18;border:1px solid #6c63ff22;border-radius:12px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:800;color:#6c63ff;">{nb_tables}</div>
-                                <div style="font-size:10px;color:#8888a8;margin-top:2px;">Tables</div>
+                        <td width="25%">
+                            <div style="background:#1a1a24;border:1px solid #2a2a3a;border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:22px;font-weight:800;color:#e8e8f0;">{nb_tables}</div>
+                                <div style="font-size:10px;color:#6b6b80;margin-top:2px;text-transform:uppercase;letter-spacing:0.8px;">Tables</div>
                             </div>
                         </td>
-                        <td style="padding:0 5px;" width="25%">
-                            <div style="background:#0f0f18;border:1px solid #4caf8222;border-radius:12px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:800;color:#4caf82;">{nb_lignes}</div>
-                                <div style="font-size:10px;color:#8888a8;margin-top:2px;">Lignes</div>
+                        <td width="25%">
+                            <div style="background:#1a1a24;border:1px solid #2a2a3a;border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:22px;font-weight:800;color:#e8e8f0;">{nb_lignes}</div>
+                                <div style="font-size:10px;color:#6b6b80;margin-top:2px;text-transform:uppercase;letter-spacing:0.8px;">Lignes</div>
                             </div>
                         </td>
-                        <td style="padding:0 5px;" width="25%">
-                            <div style="background:#0f0f18;border:1px solid #e08a3c22;border-radius:12px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:800;color:#e08a3c;">{taille_ko}</div>
-                                <div style="font-size:10px;color:#8888a8;margin-top:2px;">Ko</div>
+                        <td width="25%">
+                            <div style="background:#1a1a24;border:1px solid #E07A3E33;border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:22px;font-weight:800;color:#E07A3E;">{taille_ko}</div>
+                                <div style="font-size:10px;color:#6b6b80;margin-top:2px;text-transform:uppercase;letter-spacing:0.8px;">Ko</div>
                             </div>
                         </td>
-                        <td style="padding:0 0 0 5px;" width="25%">
-                            <div style="background:#0f0f18;border:1px solid #a855f722;border-radius:12px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:800;color:#a855f7;">{duree}s</div>
-                                <div style="font-size:10px;color:#8888a8;margin-top:2px;">Durée</div>
+                        <td width="25%">
+                            <div style="background:#1a1a24;border:1px solid #2a2a3a;border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:22px;font-weight:800;color:#e8e8f0;">{duree}s</div>
+                                <div style="font-size:10px;color:#6b6b80;margin-top:2px;text-transform:uppercase;letter-spacing:0.8px;">Durée</div>
                             </div>
                         </td>
                     </tr>
                 </table>
 
-                <div style="background:#0f0f18;border:1px solid #ffffff0a;border-radius:12px;padding:16px;margin-bottom:20px;">
-                    <div style="font-size:11px;color:#8888a8;margin-bottom:6px;font-weight:600;">FICHIER</div>
+                <div style="background:#1a1a24;border:1px solid #2a2a3a;border-radius:10px;padding:14px;margin-bottom:20px;">
+                    <div style="font-size:10px;color:#6b6b80;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Fichier</div>
                     <div style="font-size:13px;color:#e8e8f0;font-family:monospace;">{nom}</div>
-                    <div style="font-size:11px;color:#44445a;margin-top:4px;">Le fichier SQL complet est en pièce jointe.</div>
+                    <div style="font-size:11px;color:#44445a;margin-top:4px;">Stocké dans Aiven — 7 derniers conservés.</div>
                 </div>
 
-                <div style="font-size:12px;color:#44445a;border-top:1px solid #ffffff08;padding-top:16px;">
-                    Backup stocké dans Aiven (7 derniers conservés) + envoyé par email.<br>
+                <div style="font-size:12px;color:#44445a;border-top:1px solid #2a2a3a;padding-top:16px;">
                     Prochain backup : demain à minuit.
                 </div>
             </div>
         </div>"""
 
-        # Pièce jointe SQL (encodée en base64)
-        sql_bytes = contenu_sql.encode('utf-8')
-        encoded = base64.b64encode(sql_bytes).decode()
-
         ok = envoyer_email(
             'chamdaane@gmail.com',
-            f"Backup GetShift — {datetime.now().strftime('%d/%m/%Y')} ✅",
+            f"Backup GetShift — {datetime.now().strftime('%d/%m/%Y')}",
             html,
-            attachment={'name': nom, 'content_b64': encoded},
         )
         if ok:
             print(f"[Backup] Email envoyé à chamdaane@gmail.com ({taille_ko} Ko)")
