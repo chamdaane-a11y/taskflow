@@ -93,7 +93,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-23-emails-real-logo-v11'
+APP_BUILD_MARKER = '2026-05-28-pool-backup-fix-v12'
 
 # ============================================
 # HELPERS EMAIL & SLACK
