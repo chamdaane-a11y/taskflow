@@ -63,23 +63,30 @@ export function FloatingLogo({ sidebarOpen, isMobile, onClick, T }) {
 
 export function SidebarToggle({ sidebarOpen, isMobile, onClick, T }) {
   return (
-    <motion.button
-      onClick={onClick}
-      animate={{ left: !isMobile && sidebarOpen ? SIDEBAR_W + 12 : 12 }}
-      transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-      style={{
-        position: 'fixed', top: 14, zIndex: 200,
-        width: 36, height: 36, borderRadius: 'var(--radius-base)',
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border-subtle)',
-        color: 'var(--text-secondary)',
-        cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-      whileHover={{ color: 'var(--ember)', borderColor: 'var(--ember)' }}>
-      {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-    </motion.button>
+    <AnimatePresence>
+      {!sidebarOpen && (
+        <motion.button
+          key="hamburger"
+          onClick={onClick}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.15 }}
+          style={{
+            position: 'fixed', top: 14, left: 12, zIndex: 200,
+            width: 36, height: 36, borderRadius: 'var(--radius-base)',
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+          whileHover={{ color: 'var(--ember)', borderColor: 'var(--ember)' }}>
+          <PanelLeftOpen size={16} />
+        </motion.button>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -237,13 +244,11 @@ export default function AppSidebar({
             <GetShiftMark size={32} />
             <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>GetShift</span>
           </div>
-          {!isMobile && (
-            <motion.button onClick={toggleSidebar}
-              style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-              whileHover={{ color: 'var(--ember)', borderColor: 'var(--ember)' }}>
-              <PanelLeftClose size={14} />
-            </motion.button>
-          )}
+          <motion.button onClick={toggleSidebar}
+            style={{ width: isMobile ? 32 : 28, height: isMobile ? 32 : 28, borderRadius: 7, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            whileHover={{ color: 'var(--ember)', borderColor: 'var(--ember)' }}>
+            <PanelLeftClose size={isMobile ? 16 : 14} />
+          </motion.button>
         </div>
 
         {/* Nav label */}

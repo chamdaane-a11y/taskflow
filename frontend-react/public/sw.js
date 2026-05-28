@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getshift-v23'
+const CACHE_NAME = 'getshift-v24'
 const STATIC_ASSETS = [
   '/taskflow/',
   '/taskflow/index.html',
@@ -74,6 +74,8 @@ self.addEventListener('fetch', (e) => {
         if (e.request.mode === 'navigate') {
           return caches.match('/taskflow/index.html')
         }
+        // Retourner une Response valide — undefined ferait TypeError dans respondWith
+        return new Response('', { status: 503, statusText: 'Offline' })
       })
     })
   )
