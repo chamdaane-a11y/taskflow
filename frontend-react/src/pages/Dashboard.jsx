@@ -555,7 +555,7 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
           </motion.button>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: tache.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: tache.terminee ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 13.5, fontWeight: 500, color: tache.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: tache.terminee ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.35 }}>
             {tache.titre}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1709,14 +1709,69 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
         })}
       </div>
 
-      {/* Picker dropdown */}
+      {/* Picker — bottom sheet sur mobile, dropdown sur desktop */}
       <AnimatePresence>
-        {pickerOpen && (
+        {pickerOpen && isMobile && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setPickerOpen(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.45)' }} />
+            <motion.div
+              ref={pickerRef}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+              style={{
+                position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
+                background: 'var(--surface-1)', borderRadius: '20px 20px 0 0',
+                border: '1px solid var(--border-subtle)', borderBottom: 'none',
+                maxHeight: '70vh', display: 'flex', flexDirection: 'column',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
+              }}>
+              <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                <div style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--border-subtle)', margin: '0 auto 10px' }} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Choisir une tâche focus</div>
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                {limitAtteinte ? (
+                  <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>
+                    Limite de 3 tâches atteinte — désépingles-en une avant.
+                  </div>
+                ) : tachesCandidates.length === 0 ? (
+                  <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>
+                    Aucune tâche disponible. Crée-en une d'abord.
+                  </div>
+                ) : (
+                  tachesCandidates.slice(0, 30).map(t => (
+                    <button key={t.id}
+                      onClick={() => epingler(t.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                        padding: '14px 16px', background: 'transparent', border: 'none',
+                        borderBottom: `1px solid var(--border-subtle)`,
+                        color: 'var(--text-primary)', fontSize: 14, cursor: 'pointer', textAlign: 'left',
+                        minHeight: 52,
+                      }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: pColor(t.priorite), flexShrink: 0 }} />
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
+                      {t.deadline && (
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                          {labelDate(t.deadline)}
+                        </span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+        {pickerOpen && !isMobile && (
           <motion.div
             ref={pickerRef}
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
             style={{
-              position: 'absolute', top: '100%', left: isMobile ? 12 : 22, right: isMobile ? 12 : 22, marginTop: 6,
+              position: 'absolute', top: '100%', left: 22, right: 22, marginTop: 6,
               zIndex: 300, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12,
               boxShadow: '0 12px 32px rgba(0,0,0,0.25)', overflow: 'hidden', maxHeight: 320, overflowY: 'auto',
             }}>
