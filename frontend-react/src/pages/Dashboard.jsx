@@ -1586,6 +1586,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 6 : 10 }}>
         {slots.map(i => {
           const t = focused[i]
+          const pts = t ? (t.priorite === 'haute' ? 30 : t.priorite === 'moyenne' ? 20 : 10) : 0
           const slotLabel = ['1ère priorité', '2ème priorité', '3ème priorité'][i]
           if (!t) {
             return (
