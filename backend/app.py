@@ -9172,22 +9172,63 @@ def charger_memoire(user_id: int) -> dict:
         return {}
 
 def extraire_et_sauvegarder_memoire(user_id: int, message: str, reponse: str):
-    observations = []
-    message_lower = message.lower()
-    if any(w in message_lower for w in ["je préfère", "j'aime", "j'utilise", "mon outil"]):
-        observations.append({"categorie": "preferences", "cle": f"pref_{len(message_lower)%100}", "valeur": message[:200]})
-    if any(w in message_lower for w in ['matin', 'soir', 'nuit', 'midi', 'après-midi']):
-        observations.append({"categorie": "habitudes", "cle": "horaires", "valeur": message[:200]})
-    for mot in ['développeur', 'étudiant', 'manager', 'freelance', 'entrepreneur', 'ingénieur', 'designer']:
-        if mot in message_lower:
-            observations.append({"categorie": "profil", "cle": "metier", "valeur": mot}); break
-    if any(w in message_lower for w in ['objectif', 'je veux', 'je dois', 'mon projet']):
-        observations.append({"categorie": "objectifs", "cle": f"obj_{len(message)%50}", "valeur": message[:250]})
-    for sujet in ['productivité', 'organisation', 'motivation', 'procrastination', 'stress', 'apprentissage']:
-        if sujet in message_lower:
-            observations.append({"categorie": "sujets", "cle": sujet, "valeur": f"mentionne: {sujet}"})
-    if observations:
-        threading.Thread(target=sauvegarder_memoire, args=(user_id, observations), daemon=True).start()
+    """Extrait les faits durables sur l'utilisateur via LLM (llama-3.1-8b-instant).
+    Appelée en thread daemon → n'impacte pas la latence de la réponse principale.
+    """
+    try:
+        prompt = f"""Analyse cet échange et extrais UNIQUEMENT les informations factuelles et durables sur l'utilisateur (pas sur les tâches ponctuelles).
+Réponds en JSON valide : liste d'objets ou liste vide [].
+
+Catégories autorisées : profil | preferences | habitudes | objectifs | contexte
+
+Format : [{{"categorie": "...", "cle": "identifiant_court", "valeur": "fait concis < 200 chars"}}]
+
+Règles :
+- Max 4 observations par échange
+- cle = identifiant stable (ex: "metier", "horaire_travail", "outil_favori", "projet_principal")
+- valeur = fait concis, jamais une copie brute du message
+- Ignore les demandes ponctuelles (créer une tâche, résumer, chercher...)
+- Si rien de durable, renvoie []
+
+Message : {message[:350]}
+Réponse : {reponse[:150]}
+
+JSON uniquement :"""
+
+        completion = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0.1,
+        )
+        raw = (completion.choices[0].message.content or '').strip()
+
+        import re as _re
+        match = _re.search(r'\[.*?\]', raw, _re.DOTALL)
+        if not match:
+            return
+        observations_raw = json.loads(match.group())
+        if not isinstance(observations_raw, list):
+            return
+
+        valid_cats = {'profil', 'preferences', 'habitudes', 'objectifs', 'contexte'}
+        observations = []
+        for o in observations_raw[:4]:
+            if not isinstance(o, dict):
+                continue
+            cat = o.get('categorie', 'contexte')
+            if cat not in valid_cats:
+                cat = 'contexte'
+            cle = str(o.get('cle', 'info'))[:100].strip()
+            valeur = str(o.get('valeur', ''))[:250].strip()
+            if cle and valeur:
+                observations.append({"categorie": cat, "cle": cle, "valeur": valeur})
+
+        if observations:
+            sauvegarder_memoire(user_id, observations)
+
+    except Exception as e:
+        print(f"[Mémoire] Extraction LLM échouée: {e}")
 
 def formater_memoire_pour_prompt(memoire: dict) -> str:
     if not memoire: return ""
