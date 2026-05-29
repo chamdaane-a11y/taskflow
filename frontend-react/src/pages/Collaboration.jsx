@@ -280,7 +280,8 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
     if (!assignOpen) return
     const close = (e) => { if (popRef.current && !popRef.current.contains(e.target)) setAssignOpen(false) }
     document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
+    document.addEventListener('touchstart', close)
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('touchstart', close) }
   }, [assignOpen])
 
   return (
@@ -321,7 +322,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-          {/* Checkbox terminer/ré-ouvrir/valider */}
+          {/* Checkbox — zone de tap 44×44 autour du cercle visuel 18px */}
           <motion.button
             onClick={e => { e.stopPropagation(); onToggleFait?.(tache) }}
             onMouseEnter={() => setCheckHover(true)}
@@ -329,29 +330,32 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
             whileTap={{ scale: 0.85 }}
             title={checkTitle}
             style={{
+              width: 44, height: 44, borderRadius: 8,
+              background: 'transparent', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, cursor: 'pointer', padding: 0, marginLeft: -13, marginTop: -13,
+            }}>
+            <div style={{
               width: 18, height: 18, borderRadius: '50%',
               border: `1.8px solid ${(isDone || isEnValidation) ? checkColor : (checkHover ? '#4caf82' : 'var(--border-subtle)')}`,
               background: isDone ? checkColor : isEnValidation ? `${checkColor}22` : (checkHover ? '#4caf8215' : 'transparent'),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, marginTop: 1, cursor: 'pointer', padding: 0,
-              transition: 'all 0.15s',
+              transition: 'all 0.15s', flexShrink: 0,
             }}>
-            {isEnValidation ? (
-              <motion.div
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
-                <Check size={11} color={checkColor} strokeWidth={3.5} />
-              </motion.div>
-            ) : (isDone || checkHover) && (
-              <motion.div
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
-                <Check size={11} color={isDone ? '#fff' : '#4caf82'} strokeWidth={3.5} />
-              </motion.div>
-            )}
+              {isEnValidation ? (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+                  <Check size={11} color={checkColor} strokeWidth={3.5} />
+                </motion.div>
+              ) : (isDone || checkHover) && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+                  <Check size={11} color={isDone ? '#fff' : '#4caf82'} strokeWidth={3.5} />
+                </motion.div>
+              )}
+            </div>
           </motion.button>
-          <div {...listeners} style={{ cursor: 'grab', flexShrink: 0, color: 'var(--text-secondary)', paddingTop: 3 }} onClick={e => e.stopPropagation()}>
-            <GripVertical size={12} />
+          {/* Drag handle — zone 36×36 */}
+          <div {...listeners} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', flexShrink: 0, color: 'var(--text-secondary)', marginLeft: -10, marginTop: -9 }} onClick={e => e.stopPropagation()}>
+            <GripVertical size={14} />
           </div>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITE_COLOR[tache.priorite], flexShrink: 0, marginTop: 5 }} />
           <p style={{
@@ -359,9 +363,10 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
             color: isDone ? 'var(--text-secondary)' : 'var(--text-primary)',
             textDecoration: isDone ? 'line-through' : 'none',
           }}>{tache.titre}</p>
-          <motion.button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 2, flexShrink: 0 }}
-            onClick={e => { e.stopPropagation(); onModifier(tache) }} whileHover={{ color: 'var(--ember)' }}>
-            <MoreHorizontal size={14} />
+          {/* MoreHorizontal — zone 36×36 */}
+          <motion.button style={{ width: 36, height: 36, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: 7, marginRight: -6 }}
+            onClick={e => { e.stopPropagation(); onModifier(tache) }} whileHover={{ color: 'var(--ember)', background: 'var(--ember-soft)' }}>
+            <MoreHorizontal size={16} />
           </motion.button>
         </div>
 
@@ -433,17 +438,17 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
                   : (assignee ? `Assigné à ${assignee.nom} — admin requis pour modifier` : 'Non assigné — admin requis pour assigner')
               }
               style={{
-                width: 22, height: 22, borderRadius: 7,
+                width: 36, height: 36, borderRadius: 9,
                 background: assignee ? 'var(--ember-soft)' : 'transparent',
-                border: assignee ? 'none' : '1px dashed var(--border-subtle)',
+                border: assignee ? `1px solid var(--ember-ring)` : '1px dashed var(--border-subtle)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 10, fontWeight: 700,
+                fontSize: 11, fontWeight: 700,
                 color: assignee ? 'var(--ember)' : 'var(--text-secondary)',
                 cursor: isAdmin ? 'pointer' : 'default',
                 flexShrink: 0,
                 opacity: isAdmin ? 1 : 0.85,
               }}>
-              {assignee ? assignee.nom.charAt(0).toUpperCase() : <Plus size={10} />}
+              {assignee ? assignee.nom.charAt(0).toUpperCase() : <Plus size={12} />}
             </motion.button>
             {tache.deadline && (
               <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -723,25 +728,34 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
                   <motion.div key={s.id}
                     initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'var(--surface-2)', borderRadius: 8 }}>
+                    {/* Checkbox sous-tâche — zone 40×40 autour du cercle 16px */}
                     <button
                       onClick={() => toggleST(s.id)}
                       style={{
+                        width: 40, height: 40, borderRadius: 8,
+                        background: 'transparent', border: 'none',
+                        cursor: 'pointer', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                        margin: '-8px -4px -8px -8px',
+                      }}>
+                      <div style={{
                         width: 16, height: 16, borderRadius: '50%',
                         border: `1.8px solid ${s.terminee ? '#4caf82' : 'var(--border-subtle)'}`,
                         background: s.terminee ? '#4caf82' : 'transparent',
-                        cursor: 'pointer', flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                      {s.terminee ? <Check size={10} color="#fff" strokeWidth={3.5} /> : null}
+                        {s.terminee ? <Check size={10} color="#fff" strokeWidth={3.5} /> : null}
+                      </div>
                     </button>
                     <span style={{ flex: 1, fontSize: 12.5, color: s.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: s.terminee ? 'line-through' : 'none', lineHeight: 1.4, wordBreak: 'break-word' }}>
                       {s.titre}
                     </span>
+                    {/* Bouton supprimer — zone 40×40 */}
                     <button
                       onClick={() => supprimerST(s.id)}
                       title="Supprimer"
-                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 2, flexShrink: 0, opacity: 0.6 }}>
-                      <X size={12} />
+                      style={{ width: 40, height: 40, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: 0.6, borderRadius: 8, margin: '-8px -8px -8px 0' }}>
+                      <X size={14} />
                     </button>
                   </motion.div>
                 ))}
@@ -1902,7 +1916,8 @@ export default function Collaboration() {
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+    return () => { document.removeEventListener('mousedown', handleClickOutside); document.removeEventListener('touchstart', handleClickOutside) }
   }, [])
 
   useEffect(() => {
