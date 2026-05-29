@@ -1284,7 +1284,8 @@ export default function Analytics() {
   ]
 
   const tabs = [
-    { id: 'overview',  label: 'Vue d\'ensemble', icon: Activity  },
+    { id: 'overview',  label: 'Graphes',         icon: Activity  },
+    { id: 'stats',     label: 'Statistiques',    icon: Target    },
     { id: 'insights',  label: 'Insights IA',     icon: Brain     },
     { id: 'heatmap',   label: 'Heatmap',         icon: Flame     },
   ]
@@ -1628,34 +1629,9 @@ export default function Analytics() {
 
         <AnimatePresence mode="wait">
 
-          {/* ── TAB: OVERVIEW ── */}
+          {/* ── TAB: OVERVIEW — graphes uniquement ── */}
           {activeTab === 'overview' && (
             <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-
-              {/* Trajectory Card */}
-              <TrajectoryCard stats={stats} T={T} loading={loading} isMobile={isMobile} />
-
-              {/* KPI Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : isTablet ? 3 : 4}, 1fr)`, gap: 14, marginBottom: 24 }}>
-                <KPICard icon={Target}     label="Taux de complétion"    value={loading ? '—' : `${stats?.taux || 0}%`}           sub={`${data?.terminees || 0}/${data?.total || 0} tâches`} color="var(--ember)"  delta={stats?.wow}   loading={loading} />
-                <KPICard icon={Zap}        label="Vélocité"               value={loading ? '—' : `${stats?.velocity || 0}/j`}       sub="Tâches/jour actif"                                    color="#4caf82"   delta={undefined}    loading={loading} />
-                <KPICard icon={Award}      label="Score de focus"          value={loading ? '—' : `${stats?.focusScore || 0}/100`}  sub="Priorité haute vs vanité"                             color="#e08a3c"   delta={undefined}    loading={loading} />
-                <KPICard icon={Flame}      label="Série active"            value={loading ? '—' : `${stats?.streak || 0}j`}         sub={stats?.chronotype || '—'}                             color="#a855f7"   delta={undefined}    loading={loading} />
-              </div>
-
-              {/* WoW banner */}
-              {!loading && stats?.wow !== 0 && (
-                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', borderRadius: 10, marginBottom: 20, background: stats.wow > 0 ? '#4caf8212' : '#e05c5c12', border: `1px solid ${stats.wow > 0 ? '#4caf8230' : '#e05c5c30'}` }}>
-                  {stats.wow > 0 ? <TrendingUp size={16} color="#4caf82" /> : <TrendingDown size={16} color="#e05c5c" />}
-                  <span style={{ fontSize: 13, color: stats.wow > 0 ? '#4caf82' : '#e05c5c', fontWeight: 600 }}>
-                    {stats.wow > 0 ? '+' : ''}{stats.wow}% vs période précédente
-                  </span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    — {stats.total} tâches cette période vs {stats.totalPrev} la précédente
-                  </span>
-                </motion.div>
-              )}
 
               {(() => {
                 // ── Cartes graphes définies une fois, rendues différemment mobile/desktop ──
@@ -1753,6 +1729,40 @@ export default function Analytics() {
                   </div>
                 )
               })()}
+            </motion.div>
+          )}
+
+          {/* ── TAB: STATS — KPI cards + trajectory ── */}
+          {activeTab === 'stats' && (
+            <motion.div key="stats" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+
+              {/* Trajectory Card */}
+              <TrajectoryCard stats={stats} T={T} loading={loading} isMobile={isMobile} />
+
+              {/* KPI Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : isTablet ? 3 : 4}, 1fr)`, gap: 14, marginBottom: 24 }}>
+                <KPICard icon={Target}  label="Taux de complétion"  value={loading ? '—' : `${stats?.taux || 0}%`}          sub={`${data?.terminees || 0}/${data?.total || 0} tâches`} color="var(--ember)" delta={stats?.wow}  loading={loading} />
+                <KPICard icon={Zap}     label="Vélocité"             value={loading ? '—' : `${stats?.velocity || 0}/j`}      sub="Tâches/jour actif"                                    color="#4caf82"      delta={undefined}   loading={loading} />
+                <KPICard icon={Award}   label="Score de focus"       value={loading ? '—' : `${stats?.focusScore || 0}/100`}  sub="Priorité haute vs vanité"                             color="#e08a3c"      delta={undefined}   loading={loading} />
+                <KPICard icon={Flame}   label="Série active"         value={loading ? '—' : `${stats?.streak || 0}j`}         sub={stats?.chronotype || '—'}                             color="#a855f7"      delta={undefined}   loading={loading} />
+              </div>
+
+              {/* WoW banner */}
+              {!loading && stats?.wow !== 0 && (
+                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', borderRadius: 10, marginBottom: 20, background: stats.wow > 0 ? '#4caf8212' : '#e05c5c12', border: `1px solid ${stats.wow > 0 ? '#4caf8230' : '#e05c5c30'}`, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+                  {stats.wow > 0 ? <TrendingUp size={16} color="#4caf82" /> : <TrendingDown size={16} color="#e05c5c" />}
+                  <span style={{ fontSize: 13, color: stats.wow > 0 ? '#4caf82' : '#e05c5c', fontWeight: 600 }}>
+                    {stats.wow > 0 ? '+' : ''}{stats.wow}% vs période précédente
+                  </span>
+                  {!isMobile && (
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      — {stats.total} tâches cette période vs {stats.totalPrev} la précédente
+                    </span>
+                  )}
+                </motion.div>
+              )}
+
             </motion.div>
           )}
 
