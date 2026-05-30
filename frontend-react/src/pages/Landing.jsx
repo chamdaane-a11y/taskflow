@@ -50,18 +50,19 @@ function BrowserFrame({ children, style = {} }) {
 
 // ── Mockup Dashboard ─────────────────────────────────────────────────────────
 function DashboardMockup() {
+  const { t } = useTranslation()
   const tasks = [
-    { titre: 'Réviser algo — chapitre 4', prio: 'haute', done: true, dead: "Aujourd'hui", },
-    { titre: 'Rapport hebdo équipe Notion', prio: 'moyenne', done: false, dead: 'Demain', },
-    { titre: 'Préparer présentation client', prio: 'haute', done: false, dead: '26 mai', },
+    { titre: t('mock.t1'), prio: 'haute', done: true, dead: t('common.today'), },
+    { titre: t('mock.t2'), prio: 'moyenne', done: false, dead: t('common.tomorrow'), },
+    { titre: t('mock.t3'), prio: 'haute', done: false, dead: '26 mai', },
   ]
   const prioColor = { haute: 'var(--danger)', moyenne: 'var(--warning)', basse: 'var(--success)' }
   const navItems = [
-    { label: 'Dashboard', icon: Home, active: true },
-    { label: 'Planification', icon: Calendar, active: false },
-    { label: 'IA Coach', icon: Brain, active: false },
-    { label: 'Analytics', icon: BarChart2, active: false },
-    { label: 'Collaboration', icon: Users, active: false },
+    { label: t('nav.dashboard'), icon: Home, active: true },
+    { label: t('nav.planning'), icon: Calendar, active: false },
+    { label: t('nav.ai'), icon: Brain, active: false },
+    { label: t('nav.analytics'), icon: BarChart2, active: false },
+    { label: t('nav.collaboration'), icon: Users, active: false },
   ]
   return (
     <div style={{ display: 'flex', height: 340, fontSize: 11, fontFamily: 'var(--font-ui)', overflow: 'hidden' }}>
@@ -88,7 +89,7 @@ function DashboardMockup() {
         {/* Niveau */}
         <div style={{ padding: '8px 7px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--ember)' }}>Niv.4 · Discipliné</span>
+            <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--ember)' }}>{t('mock.level_short')}</span>
             <span style={{ fontSize: 8, color: 'var(--warning)' }}>🔥12j</span>
           </div>
           <div style={{ height: 3, background: 'var(--surface-3)', borderRadius: 99 }}>
@@ -100,14 +101,14 @@ function DashboardMockup() {
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '12px 14px 0', flexShrink: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>Bonjour, Ahmed 👋</div>
-          <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginBottom: 10 }}>Dimanche 24 mai · 3 tâches haute priorité</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>{t('mock.greeting')}</div>
+          <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginBottom: 10 }}>{t('mock.dash_subtitle')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, marginBottom: 10 }}>
             {[
-              { l: '🔥 Streak', v: '12j', c: 'var(--warning)' },
-              { l: '⭐ Points', v: '620', c: 'var(--ember)' },
-              { l: '✓ Tâches', v: '5/8', c: 'var(--success)' },
-              { l: '🎯 Focus', v: '82%', c: 'var(--info)' },
+              { l: t('mock.s_streak'), v: '12j', c: 'var(--warning)' },
+              { l: t('mock.s_points'), v: '620', c: 'var(--ember)' },
+              { l: t('mock.s_tasks'), v: '5/8', c: 'var(--success)' },
+              { l: t('mock.s_focus'), v: '82%', c: 'var(--info)' },
             ].map(s => (
               <div key={s.l} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 7, padding: '6px 7px' }}>
                 <div style={{ fontSize: 7.5, color: 'var(--text-tertiary)', marginBottom: 1 }}>{s.l}</div>
@@ -117,7 +118,7 @@ function DashboardMockup() {
           </div>
         </div>
         <div style={{ padding: '0 14px', flex: 1, overflow: 'hidden' }}>
-          <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 5 }}>Tâches du jour</div>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 5 }}>{t('mock.today_tasks')}</div>
           {tasks.map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 8px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 7, marginBottom: 4, opacity: t.done ? 0.55 : 1 }}>
               <div style={{ width: 13, height: 13, borderRadius: 4, border: `2px solid ${t.done ? 'var(--success)' : 'var(--border-default)'}`, background: t.done ? 'var(--success)' : 'transparent', flexShrink: 0 }} />
@@ -132,8 +133,8 @@ function DashboardMockup() {
         <div style={{ margin: '4px 14px 12px', padding: '7px 9px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 8, display: 'flex', alignItems: 'flex-start', gap: 7 }}>
           <Sparkles size={11} color="var(--ember)" style={{ flexShrink: 0, marginTop: 1 }} />
           <div>
-            <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--ember)', marginBottom: 1 }}>Coach IA</div>
-            <div style={{ fontSize: 8.5, color: 'var(--ember)', opacity: 0.85, lineHeight: 1.4 }}>"Tu es en train de crusher — garde le rythme sur la présentation. Streak record en vue !"</div>
+            <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--ember)', marginBottom: 1 }}>{t('mock.coach_ia')}</div>
+            <div style={{ fontSize: 8.5, color: 'var(--ember)', opacity: 0.85, lineHeight: 1.4 }}>{t('mock.coach_msg')}</div>
           </div>
         </div>
       </div>
@@ -143,6 +144,7 @@ function DashboardMockup() {
 
 // ── Mockup Analytics ─────────────────────────────────────────────────────────
 function AnalyticsMockup() {
+  const { t } = useTranslation()
   const dataPoints = [6, 10, 7, 14, 9, 12, 8, 16, 11, 18, 13, 20]
   const W = 300, H = 72
   const max = Math.max(...dataPoints)
@@ -159,8 +161,8 @@ function AnalyticsMockup() {
     <div style={{ padding: '14px 16px', height: 260, fontFamily: 'var(--font-ui)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>Courbe de croissance</div>
-          <div style={{ fontSize: 8.5, color: 'var(--success)', fontWeight: 600 }}>↑ +23 % vs période précédente · 🔥 12j</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>{t('mock.growth_curve')}</div>
+          <div style={{ fontSize: 8.5, color: 'var(--success)', fontWeight: 600 }}>{t('mock.growth_delta')}</div>
         </div>
         <div style={{ display: 'flex', gap: 3 }}>
           {['7j', '30j', '90j'].map((p, i) => (
@@ -181,9 +183,9 @@ function AnalyticsMockup() {
       </svg>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 10 }}>
         {[
-          { l: 'Focus Score', v: '82/100', c: 'var(--success)', s: '+5 cette sem.' },
-          { l: 'Chronotype', v: 'Matinal', c: 'var(--info)', s: 'Pic : 9h–11h' },
-          { l: 'Vélocité', v: '4.2 t/j', c: 'var(--ember)', s: 'record : 7' },
+          { l: t('mock.focus_score'), v: '82/100', c: 'var(--success)', s: t('mock.plus5') },
+          { l: t('mock.chronotype'), v: t('mock.morning'), c: 'var(--info)', s: t('mock.peak') },
+          { l: t('mock.velocity'), v: '4.2 t/j', c: 'var(--ember)', s: t('mock.record7') },
         ].map(s => (
           <div key={s.l} style={{ padding: '6px 8px', background: 'var(--surface-2)', borderRadius: 7, border: '1px solid var(--border-subtle)' }}>
             <div style={{ fontSize: 7.5, color: 'var(--text-tertiary)', marginBottom: 1 }}>{s.l}</div>
@@ -193,7 +195,7 @@ function AnalyticsMockup() {
         ))}
       </div>
       <div>
-        <div style={{ fontSize: 7.5, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>Productivité par heure</div>
+        <div style={{ fontSize: 7.5, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>{t('mock.prod_per_hour')}</div>
         <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 28 }}>
           {chronoBars.map((v, i) => (
             <div key={i} style={{ flex: 1, background: (i >= 3 && i <= 5) ? 'var(--ember)' : 'var(--ember-soft)', borderRadius: '2px 2px 0 0', height: `${(v / chronoMax) * 26}px`, minWidth: 1 }} />
@@ -209,26 +211,27 @@ function AnalyticsMockup() {
 
 // ── Mockup Planification / Collab ─────────────────────────────────────────────
 function PlanMockup() {
+  const { t } = useTranslation()
   const cols = [
     {
-      titre: 'À faire', color: 'var(--info)',
+      titre: t('common.todo'), color: 'var(--info)',
       tasks: [
-        { t: 'Setup Google Drive sync', p: 'haute', d: 'Aujourd\'hui' },
-        { t: 'Finir rapport Q2', p: 'moyenne', d: '25 mai' },
+        { t: t('mock.p1'), p: 'haute', d: t('common.today') },
+        { t: t('mock.p2'), p: 'moyenne', d: '25 mai' },
       ],
     },
     {
-      titre: 'En cours', color: 'var(--warning)',
+      titre: t('common.in_progress'), color: 'var(--warning)',
       tasks: [
-        { t: 'Préparer slides client', p: 'haute', d: 'Demain' },
-        { t: 'Sync équipe Notion', p: 'basse', d: '27 mai' },
+        { t: t('mock.p3'), p: 'haute', d: t('common.tomorrow') },
+        { t: t('mock.p4'), p: 'basse', d: '27 mai' },
       ],
     },
     {
-      titre: 'Terminé', color: 'var(--success)',
+      titre: t('common.completed'), color: 'var(--success)',
       tasks: [
-        { t: 'Review code PR #42', p: 'haute', d: '' },
-        { t: 'Rapport hebdo envoyé', p: 'moyenne', d: '' },
+        { t: t('mock.p5'), p: 'haute', d: '' },
+        { t: t('mock.p6'), p: 'moyenne', d: '' },
       ],
     },
   ]
@@ -237,8 +240,8 @@ function PlanMockup() {
     <div style={{ padding: '14px', height: 250, fontFamily: 'var(--font-ui)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>Sprint actuel — Équipe Dev</div>
-          <div style={{ fontSize: 8.5, color: 'var(--text-secondary)' }}>4 membres actifs · synchro Notion</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>{t('mock.sprint')}</div>
+          <div style={{ fontSize: 8.5, color: 'var(--text-secondary)' }}>{t('mock.members_active')}</div>
         </div>
         <div style={{ display: 'flex', gap: -6 }}>
           {['#e8b4a2', '#a2c4e8', '#b4e8a2', '#e8a2d4'].map((c, i) => (
@@ -267,7 +270,7 @@ function PlanMockup() {
       </div>
       <div style={{ marginTop: 8, padding: '6px 9px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 7, display: 'flex', gap: 6, alignItems: 'center' }}>
         <Brain size={10} color="var(--ember)" />
-        <span style={{ fontSize: 8.5, color: 'var(--ember)', fontWeight: 500 }}>TomorrowBuilder — plan IA généré : 6 tâches, 3h estimées pour demain</span>
+        <span style={{ fontSize: 8.5, color: 'var(--ember)', fontWeight: 500 }}>{t('mock.tb_line')}</span>
       </div>
     </div>
   )
@@ -275,12 +278,13 @@ function PlanMockup() {
 
 // ── Mockup iPhone ─────────────────────────────────────────────────────────────
 function IPhoneMockup({ size = 'normal' }) {
+  const { t } = useTranslation()
   const w = size === 'small' ? 170 : 220
   const h = size === 'small' ? 340 : 440
   const scale = size === 'small' ? 0.77 : 1
   const messages = [
-    { role: 'user', text: "J'ai 5 tâches en retard, aide-moi à prioriser" },
-    { role: 'ai', text: "Je vois ton historique. Ta vélocité est de 4.2 t/j. Commence par « Préparer slides client » — deadline demain, impact fort.", tool: 'Context chargé · GCal synchro' },
+    { role: 'user', text: t('mock.chat_user') },
+    { role: 'ai', text: t('mock.chat_ai'), tool: t('mock.chat_tool') },
   ]
   const navItems = [
     { icon: Home, active: true },
@@ -303,8 +307,8 @@ function IPhoneMockup({ size = 'normal' }) {
           <Brain size={13 * scale} color="var(--ember)" />
         </div>
         <div>
-          <div style={{ fontSize: 11 * scale, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>IA Coach</div>
-          <div style={{ fontSize: 8 * scale, color: 'var(--success)' }}>● En ligne · contexte chargé</div>
+          <div style={{ fontSize: 11 * scale, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{t('nav.ai')}</div>
+          <div style={{ fontSize: 8 * scale, color: 'var(--success)' }}>{t('mock.online')}</div>
         </div>
       </div>
       {/* Chat */}
