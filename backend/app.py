@@ -75,7 +75,7 @@ app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_COOKIE_SECURE'] = True
 app.config['JWT_COOKIE_SAMESITE'] = 'None'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
-app.config['JWT_COOKIE_CSRF_PROTECT'] = True
+app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # TODO: réactiver après debug cookie csrf_access_token
 jwt = JWTManager(app)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
