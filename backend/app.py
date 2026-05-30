@@ -6033,7 +6033,9 @@ def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href):
 </p>
 {_email_cta_btn(cta_label, cta_href)}
 """
-    return _email_wrapper(f"Bonjour {nom},", contenu)
+    t = EMAIL_TOKENS
+    salut = f'<p style="margin:0 0 20px;font-size:14px;color:{t["text_2"]};">Bonjour {nom},</p>'
+    return _base_email(salut + contenu, "Améliorations GetShift")
 
 @app.route('/email/broadcast', methods=['POST'])
 def broadcast_email():
