@@ -6,3 +6,7 @@ frontend-react/dist/
 .env
 *.env
 backend/.env
+
+# Secrets — ne jamais committer (clés VAPID, certs, etc.)
+*.pem
+backend/vapid_new_keys.txt
