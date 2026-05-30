@@ -30,7 +30,7 @@ jobs:
       - name: Trigger weekly email report
         run: |
           echo "Triggering /email/resume-hebdo…"
-          RESPONSE=$(curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/email/resume-hebdo)
+          RESPONSE=$(curl -sf -X POST  -H "Authorization: Bearer ${{ secrets.JOB_SECRET }}" --max-time 60 https://getshift-backend.onrender.com/email/resume-hebdo)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "déclenchés"; then
             echo "✓ Weekly reports successfully triggered"
