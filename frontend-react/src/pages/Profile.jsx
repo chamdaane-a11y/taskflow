@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
@@ -66,7 +67,7 @@ function dateRelative(iso) {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return ''
     const diff = (Date.now() - d.getTime()) / 1000
-    if (diff < 60) return "À l'instant"
+    if (diff < 60) return t('profile.just_now')
     if (diff < 3600) { const m = Math.floor(diff / 60); return `il y a ${m} min` }
     if (diff < 86400) { const h = Math.floor(diff / 3600); return `il y a ${h}h` }
     if (diff < 604800) { const j = Math.floor(diff / 86400); return `il y a ${j}j` }
@@ -78,6 +79,7 @@ function dateRelative(iso) {
 
 // Section Timeline — historique chronologique
 function TimelineSection({ T, cardBg, cardBorder, isLight, text, text2, accent, bg3, events }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   if (!events || events.length === 0) return null
 
@@ -156,7 +158,7 @@ function TimelineSection({ T, cardBg, cardBorder, isLight, text, text2, accent, 
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: text, fontFamily: "var(--font-ui)" }}>Mon parcours</h3>
-          <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{events.length} événement{events.length > 1 ? 's' : ''} dans ton historique</p>
+          <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{t('profile.events', { count: events.length })}</p>
         </div>
       </div>
 
@@ -177,6 +179,7 @@ function TimelineSection({ T, cardBg, cardBorder, isLight, text, text2, accent, 
 
 // Composant Showcase — vitrine des badges débloqués + prochain à débloquer
 function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, bg3, badges, points, streak, nbTerminees, navigate }) {
+  const { t } = useTranslation()
   // Hydrate les badges avec leur config (tier, categorie)
   const obtenusFull = (badges || [])
     .filter(b => b.obtenu)
@@ -215,7 +218,7 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
           <div style={{ minWidth: 0 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: text, fontFamily: "var(--font-ui)" }}>Mes badges</h3>
             <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>
-              <span style={{ color: accent, fontWeight: 700 }}>{nbObtenus}</span> / {total} débloqués · {pct}%
+              <span style={{ color: accent, fontWeight: 700 }}>{nbObtenus}</span> / {total} {t('profile.unlocked')} · {pct}%
             </p>
           </div>
         </div>
@@ -266,12 +269,12 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
       ) : (
         /* Empty state — encourager */
         <div style={{ padding: '20px 16px', textAlign: 'center', border: `1.5px dashed ${cardBorder}`, borderRadius: 12, marginBottom: prochain ? 20 : 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: text, marginBottom: 4 }}>Aucun badge encore</div>
-          <div style={{ fontSize: 11, color: text2 }}>Termine une tâche pour débloquer ton premier badge 🎯</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: text, marginBottom: 4 }}>{t('profile.no_badge_yet')}</div>
+          <div style={{ fontSize: 11, color: text2 }}>{t('profile.first_badge_hint')}</div>
         </div>
       )}
 
-      {/* Prochain badge à débloquer */}
+      {/* {t('profile.next_badge')} */}
       {prochain && ProchainIcon && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
@@ -321,6 +324,7 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
 }
 
 export default function Profile() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { theme, T } = useTheme()
   const isMobile = useMediaQuery('(max-width: 768px)')
@@ -413,7 +417,7 @@ export default function Profile() {
     try {
       await axios.delete(`${API}/users/${user.id}/sessions/${sessionId}`, { withCredentials: true })
       setSessions(prev => prev.filter(s => s.id !== sessionId))
-    } catch { showMessage('Erreur lors de la déconnexion', 'erreur') }
+    } catch { showMessage(t('profile.err_logout'), 'erreur') }
     setDeletingSession(null)
   }
 
@@ -425,7 +429,7 @@ export default function Profile() {
       await axios.post(`${API}/users/${user.id}/email-change/request`,
         { new_email: newEmail.trim(), password: emailModalPwd },
         { withCredentials: true })
-      showMessage('Email de confirmation envoyé à ta nouvelle adresse')
+      showMessage(t('profile.email_conf_sent'))
       const updated = { ...user, email_change_new: newEmail.trim() }
       setUser(updated); localStorage.setItem('user', JSON.stringify(updated))
       setEmailModalOpen(false); setNewEmail(''); setEmailModalPwd(''); setShowEmailPwd(false)
@@ -445,7 +449,7 @@ export default function Profile() {
       a.download = `getshift-export-${user.id}-${new Date().toISOString().slice(0,10)}.json`
       document.body.appendChild(a); a.click(); a.remove()
       window.URL.revokeObjectURL(url)
-      showMessage('Export téléchargé')
+      showMessage(t('profile.export_done'))
     } catch { showMessage('Erreur lors de l\'export', 'erreur') }
     setExporting(false)
   }
@@ -473,7 +477,7 @@ export default function Profile() {
       await axios.post(`${API}/users/${user.id}/email-change/cancel`, {}, { withCredentials: true })
       const updated = { ...user, email_change_new: null }
       setUser(updated); localStorage.setItem('user', JSON.stringify(updated))
-      showMessage('Changement annulé')
+      showMessage(t('profile.change_cancelled'))
     } catch { showMessage('Erreur', 'erreur') }
     setLoading(false)
   }
@@ -483,7 +487,7 @@ export default function Profile() {
     try {
       await axios.delete(`${API}/users/${user.id}/sessions/others`, { withCredentials: true })
       setSessions(prev => prev.filter(s => s.is_current))
-      showMessage('Autres sessions déconnectées')
+      showMessage(t('profile.other_sessions_out'))
     } catch { showMessage('Erreur', 'erreur') }
     setDeletingSession(null)
   }
@@ -494,25 +498,25 @@ export default function Profile() {
   }
 
   const modifierNom = async () => {
-    if (!nom.trim()) { showMessage('Le nom ne peut pas être vide', 'erreur'); return }
+    if (!nom.trim()) { showMessage(t('profile.name_empty'), 'erreur'); return }
     setLoading(true)
     try {
       await axios.put(`${API}/users/${user.id}/nom`, { nom }, { withCredentials: true })
       const updated = { ...user, nom }
       setUser(updated); localStorage.setItem('user', JSON.stringify(updated))
-      showMessage('Nom modifié avec succès')
+      showMessage(t('profile.name_changed'))
     } catch (e) { showMessage(e.response?.data?.erreur || 'Erreur', 'erreur') }
     setLoading(false)
   }
 
   const modifierPassword = async () => {
     if (!ancienPwd || !newPwd || !confirmPwd) { showMessage('Remplis tous les champs', 'erreur'); return }
-    if (newPwd !== confirmPwd) { showMessage('Les mots de passe ne correspondent pas', 'erreur'); return }
-    if (newPwd.length < 8) { showMessage('Minimum 8 caractères', 'erreur'); return }
+    if (newPwd !== confirmPwd) { showMessage(t('profile.pwd_mismatch'), 'erreur'); return }
+    if (newPwd.length < 8) { showMessage(t('profile.min_8'), 'erreur'); return }
     setLoading(true)
     try {
       await axios.put(`${API}/users/${user.id}/password`, { ancien_password: ancienPwd, nouveau_password: newPwd }, { withCredentials: true })
-      showMessage('Mot de passe modifié')
+      showMessage(t('profile.pwd_changed'))
       setAncienPwd(''); setNewPwd(''); setConfirmPwd('')
     } catch (e) { showMessage(e.response?.data?.erreur || 'Erreur', 'erreur') }
     setLoading(false)
@@ -558,10 +562,10 @@ export default function Profile() {
   const confirmBad = confirmPwd.length > 0 && confirmPwd !== newPwd
 
   const secuItems = [
-    { label: 'Email vérifié', Icon: Mail,        ok: !!user.email_verifie, sub: user.email_verifie ? 'Adresse confirmée' : 'Vérifie ta boîte' },
-    { label: 'Google lié',    Icon: ShieldCheck, ok: !!user.google_id,     sub: user.google_id ? 'Connexion active' : 'Non connecté' },
-    { label: 'Mot de passe',  Icon: Lock,        ok: true,                  sub: user.google_id ? 'Via Google' : 'Défini' },
-    { label: '2FA',           Icon: Smartphone,  ok: false,                 sub: 'Bientôt', soon: true },
+    { label: t('profile.h_email_verified'), Icon: Mail, ok: !!user.email_verifie, sub: user.email_verifie ? t('profile.h_addr_confirmed') : t('profile.h_check_inbox') },
+    { label: t('profile.h_google_linked'), Icon: ShieldCheck, ok: !!user.google_id, sub: user.google_id ? t('profile.h_conn_active') : t('profile.h_not_connected') },
+    { label: t('profile.h_password'), Icon: Lock, ok: true, sub: user.google_id ? t('profile.h_via_google') : t('profile.h_defined') },
+    { label: '2FA', Icon: Smartphone, ok: false, sub: t('profile.soon'), soon: true },
   ]
   const secuScore = secuItems.filter(c => !c.soon && c.ok).length
   const secuMax   = secuItems.filter(c => !c.soon).length
@@ -682,8 +686,8 @@ export default function Profile() {
                     <AlertTriangle size={16} color="#ef4444" />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Supprimer mon compte</h3>
-                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Cette action est irréversible</p>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>{t('profile.delete_account')}</h3>
+                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{t('profile.irreversible')}</p>
                   </div>
                 </div>
                 <button type="button" onClick={() => !deleting && setDeleteModalOpen(false)}
@@ -694,7 +698,7 @@ export default function Profile() {
 
               <div style={{ background: '#ef444410', border: '1px solid #ef444430', borderRadius: 11, padding: '12px 14px', marginBottom: 18 }}>
                 <div style={{ fontSize: 12, color: text, lineHeight: 1.6 }}>
-                  Toutes tes données seront <strong>définitivement</strong> supprimées : tâches, badges ({badgesData.nb_obtenus}), historique IA, intégrations, niveau {user.niveau || 1}, {user.points || 0} points. Aucune récupération possible.
+                  {t('profile.delete_modal', { badges: badgesData.nb_obtenus, niveau: user.niveau || 1, points: user.points || 0 })}
                 </div>
               </div>
 
@@ -726,7 +730,7 @@ export default function Profile() {
                 </button>
                 <motion.button onClick={supprimerCompte} disabled={deleting || deleteConfirm !== 'SUPPRIMER' || (!user.google_id && !deletePwd)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                   style={{ padding: '11px 22px', background: '#ef4444', border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: deleting ? 'wait' : 'pointer', opacity: (deleteConfirm !== 'SUPPRIMER' || (!user.google_id && !deletePwd)) ? 0.5 : 1 }}>
-                  {deleting ? 'Suppression...' : 'Supprimer définitivement'}
+                  {deleting ? t('profile.deleting') : t('profile.delete_perma')}
                 </motion.button>
               </div>
             </motion.div>
@@ -825,14 +829,14 @@ export default function Profile() {
           {/* KPIs — 6 cards (Points / Niveau / Tâches / Streak / Badges / Freeze) */}
           <div className="pf-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
             {[
-              { label: 'Points',  val: pointsActuels,                                         color: accent,                Icon: Zap },
-              { label: 'Niveau',  val: user.niveau || 1,                                      color: niveauInfo.couleur,    Icon: NiveauIcon },
-              { label: 'Tâches',  val: user.taches_count || 0,                                color: 'var(--success)',             Icon: CheckCircle2 },
-              { label: 'Streak',  val: `${user.streak || 0}j`,                                color: '#f97316',             Icon: Flame },
-              { label: 'Badges',  val: `${badgesData.nb_obtenus}/${badgesData.nb_total}`,    color: '#a78bfa',             Icon: Award },
+              { label: t('profile.kpi_points'),  val: pointsActuels,                                         color: accent,                Icon: Zap },
+              { label: t('profile.kpi_level'),  val: user.niveau || 1,                                      color: niveauInfo.couleur,    Icon: NiveauIcon },
+              { label: t('profile.kpi_tasks'),  val: user.taches_count || 0,                                color: 'var(--success)',             Icon: CheckCircle2 },
+              { label: t('profile.kpi_streak'),  val: `${user.streak || 0}j`,                                color: '#f97316',             Icon: Flame },
+              { label: t('profile.kpi_badges'),  val: `${badgesData.nb_obtenus}/${badgesData.nb_total}`,    color: '#a78bfa',             Icon: Award },
               {
-                label: 'Streak Freeze',
-                val: badgesData.streak_freeze_disponible ? 'Dispo' : 'Utilisé',
+                label: t('profile.kpi_freeze'),
+                val: badgesData.streak_freeze_disponible ? t('profile.freeze_avail') : t('profile.freeze_used'),
                 color: badgesData.streak_freeze_disponible ? '#5fb4d6' : text2,
                 Icon: Snowflake,
               },
@@ -867,8 +871,8 @@ export default function Profile() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
           className="pf-tabs" style={{ display: 'flex', gap: 4, background: isLight ? '#f1f5f9' : bg2, borderRadius: 14, padding: 4, marginBottom: 20, border: `1px solid ${cardBorder}` }}>
           {[
-            { id: 'profil',   label: 'Profil',     icon: <User size={14} /> },
-            { id: 'securite', label: 'Sécurité',   icon: <Lock size={14} /> },
+            { id: 'profil',   label: t('profile.tab_profile'),     icon: <User size={14} /> },
+            { id: 'securite', label: t('profile.tab_security'),   icon: <Lock size={14} /> },
           ].map(o => (
             <button key={o.id} onClick={() => setOnglet(o.id)}
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 16px', background: onglet === o.id ? (isLight ? 'white' : 'rgba(255,255,255,0.08)') : 'transparent', border: `1px solid ${onglet === o.id ? cardBorder : 'transparent'}`, borderRadius: 10, color: onglet === o.id ? text : text2, fontSize: 13, fontWeight: onglet === o.id ? 600 : 500, cursor: 'pointer', fontFamily: "var(--font-ui)", boxShadow: onglet === o.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
@@ -888,13 +892,13 @@ export default function Profile() {
                   <Edit3 size={16} color={accent} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Modifier mes informations</h3>
-                  <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Mettez à jour votre nom d'affichage</p>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>{t('profile.edit_info')}</h3>
+                  <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{t('profile.update_name')}</p>
                 </div>
               </div>
               <div style={{ marginBottom: 18 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text2, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>Nom complet</label>
-                <input className="pf-input" value={nom} onChange={e => setNom(e.target.value)} placeholder="Votre nom"
+                <input className="pf-input" value={nom} onChange={e => setNom(e.target.value)} placeholder={t('profile.name_ph')}
                   onKeyDown={e => e.key === 'Enter' && modifierNom()}
                   style={{ background: inputBg, border: `1.5px solid ${nom !== user.nom ? accent : inputBorder}`, color: text }} />
               </div>
@@ -911,13 +915,13 @@ export default function Profile() {
                   )}
                 </div>
                 {user.google_id ? (
-                  <p style={{ fontSize: 11, color: text2, marginTop: 6 }}>Email géré par Google — change-le côté Google si besoin.</p>
+                  <p style={{ fontSize: 11, color: text2, marginTop: 6 }}>{t('profile.email_google_managed')}</p>
                 ) : user.email_change_new ? (
                   <div style={{ marginTop: 10, padding: '10px 14px', background: '#f9731610', border: '1px solid #f9731640', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Clock size={14} color="#f97316" style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: text }}>Changement en attente</div>
-                      <div style={{ fontSize: 11, color: text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Confirme via le lien envoyé à <strong>{user.email_change_new}</strong></div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: text }}>{t('profile.change_pending')}</div>
+                      <div style={{ fontSize: 11, color: text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('profile.confirm_via_link')} <strong>{user.email_change_new}</strong></div>
                     </div>
                     <button type="button" onClick={annulerChangementEmail}
                       style={{ padding: '5px 10px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 7, color: text2, fontSize: 11, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}>
@@ -925,12 +929,12 @@ export default function Profile() {
                     </button>
                   </div>
                 ) : (
-                  <p style={{ fontSize: 11, color: text2, marginTop: 6 }}>On t'enverra un lien de confirmation à ta nouvelle adresse.</p>
+                  <p style={{ fontSize: 11, color: text2, marginTop: 6 }}>{t('profile.send_conf_link')}</p>
                 )}
               </div>
               <motion.button onClick={modifierNom} disabled={loading || nom === user.nom} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 style={{ padding: '13px 28px', background: nom !== user.nom ? `linear-gradient(135deg, ${accent}, var(--success))` : (isLight ? '#f1f5f9' : bg3), border: 'none', borderRadius: 11, color: nom !== user.nom ? 'white' : text2, fontWeight: 700, fontSize: 14, cursor: nom !== user.nom ? 'pointer' : 'not-allowed', fontFamily: "var(--font-ui)", boxShadow: nom !== user.nom ? `0 8px 24px ${accent}33` : 'none', transition: 'all 0.2s' }}>
-                {loading ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
+                {loading ? t('profile.saving') : t('profile.save_changes')}
               </motion.button>
             </motion.div>
           )}
@@ -946,8 +950,8 @@ export default function Profile() {
                     <ShieldCheck size={16} color={secuColor} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Santé du compte</h3>
-                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{secuScore}/{secuMax} critères remplis</p>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>{t('profile.account_health')}</h3>
+                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{secuScore}/{secuMax} {t('profile.criteria_met')}</p>
                   </div>
                   <div style={{ padding: '4px 12px', borderRadius: 99, background: `${secuColor}18`, border: `1px solid ${secuColor}40`, fontSize: 13, fontWeight: 800, color: secuColor }}>
                     {secuPct}%
@@ -979,8 +983,8 @@ export default function Profile() {
                 <div style={{ display: 'flex', gap: 12, padding: '16px', background: isLight ? '#f0f9ff' : `${accent}0d`, border: `1px solid ${accent}30`, borderRadius: 12 }}>
                   <ShieldCheck size={18} color={accent} style={{ flexShrink: 0, marginTop: 2 }} />
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: text, marginBottom: 4 }}>Connexion via Google</div>
-                    <div style={{ fontSize: 12, color: text2, lineHeight: 1.6 }}>Ton compte est géré par Google. Pour définir un mot de passe local, utilise le lien <strong>« Mot de passe oublié »</strong> sur la page de connexion.</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: text, marginBottom: 4 }}>{t('profile.conn_via_google')}</div>
+                    <div style={{ fontSize: 12, color: text2, lineHeight: 1.6 }}>{t('profile.google_pwd_help')}</div>
                   </div>
                 </div>
               ) : (
@@ -990,15 +994,15 @@ export default function Profile() {
                       <Lock size={16} color="#C9A84C" />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Changer le mot de passe</h3>
-                      <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Gardez votre compte sécurisé</p>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>{t('profile.change_pwd')}</h3>
+                      <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{t('profile.keep_secure')}</p>
                     </div>
                   </div>
 
                   {[
-                    { label: 'Mot de passe actuel',               val: ancienPwd,  set: setAncienPwd,  ph: 'Votre mot de passe actuel', idx: 0 },
-                    { label: 'Nouveau mot de passe',              val: newPwd,     set: setNewPwd,     ph: 'Min. 8 caractères',         idx: 1 },
-                    { label: 'Confirmer le nouveau mot de passe', val: confirmPwd, set: setConfirmPwd, ph: 'Répétez',                   idx: 2 },
+                    { label: t('profile.cur_pwd'), val: ancienPwd, set: setAncienPwd, ph: t('profile.cur_pwd_ph'), idx: 0 },
+                    { label: t('profile.new_pwd'), val: newPwd, set: setNewPwd, ph: t('profile.new_pwd_ph'), idx: 1 },
+                    { label: t('profile.confirm_new_pwd'), val: confirmPwd, set: setConfirmPwd, ph: t('profile.repeat_ph'), idx: 2 },
                   ].map((f) => {
                     const isConfirm   = f.idx === 2
                     const borderColor = isConfirm && confirmBad ? '#ef4444'
@@ -1016,7 +1020,7 @@ export default function Profile() {
                             {showPwd[f.idx] ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
-                        {isConfirm && confirmBad && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 5, fontWeight: 500 }}>Les mots de passe ne correspondent pas</p>}
+                        {isConfirm && confirmBad && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 5, fontWeight: 500 }}>{t('profile.pwd_mismatch')}</p>}
                         {isConfirm && confirmOk  && <p style={{ fontSize: 11, color: 'var(--success)', marginTop: 5, fontWeight: 500 }}>✓ Les mots de passe correspondent</p>}
                       </div>
                     )
@@ -1034,10 +1038,10 @@ export default function Profile() {
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                         {[
-                          { label: '8 caractères min',   ok: pwdChecks.len     },
-                          { label: 'Majuscule (A-Z)',     ok: pwdChecks.upper   },
-                          { label: 'Chiffre (0-9)',       ok: pwdChecks.digit   },
-                          { label: 'Caractère spécial',  ok: pwdChecks.special },
+                          { label: t('profile.chk_len'), ok: pwdChecks.len },
+                          { label: t('profile.chk_upper'), ok: pwdChecks.upper },
+                          { label: t('profile.chk_digit'), ok: pwdChecks.digit },
+                          { label: t('profile.chk_special'), ok: pwdChecks.special },
                         ].map((c, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                             <div style={{ width: 15, height: 15, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.ok ? 'var(--success-soft)' : (isLight ? '#f1f5f9' : 'rgba(255,255,255,0.05)'), border: `1.5px solid ${c.ok ? 'var(--success)' : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)')}`, transition: 'all 0.15s' }}>
@@ -1064,13 +1068,13 @@ export default function Profile() {
                   <Monitor size={16} color={accent} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Sessions actives</h3>
-                  <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Appareils connectés à ton compte</p>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>{t('profile.sessions_active')}</h3>
+                  <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{t('profile.devices_connected')}</p>
                 </div>
                 {sessions.filter(s => !s.is_current).length > 0 && (
                   <motion.button onClick={deconnecterAutres} disabled={deletingSession === 'others'} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'transparent', border: `1px solid #ef444440`, borderRadius: 9, color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    <LogOut size={13} /> Déconnecter tout
+                    <LogOut size={13} /> {t('profile.logout_all')}
                   </motion.button>
                 )}
               </div>
@@ -1082,7 +1086,7 @@ export default function Profile() {
                 </div>
               ) : sessions.length === 0 ? (
                 <div style={{ padding: '16px', textAlign: 'center', border: `1.5px dashed ${cardBorder}`, borderRadius: 12, fontSize: 13, color: text2 }}>
-                  Aucune session enregistrée
+                  {t('profile.no_session')}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1108,7 +1112,7 @@ export default function Profile() {
                         {!s.is_current && (
                           <motion.button onClick={() => deconnecterSession(s.id)} disabled={deletingSession === s.id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                             style={{ padding: '6px 12px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 8, color: text2, fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}>
-                            {deletingSession === s.id ? '...' : 'Déconnecter'}
+                            {deletingSession === s.id ? '...' : t('profile.logout')}
                           </motion.button>
                         )}
                       </motion.div>
@@ -1125,8 +1129,8 @@ export default function Profile() {
                     <AlertTriangle size={16} color="#ef4444" />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>Zone danger</h3>
-                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>Actions irréversibles sur ton compte</p>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: text }}>{t('profile.danger_zone')}</h3>
+                    <p style={{ fontSize: 12, color: text2, marginTop: 2 }}>{t('profile.irreversible_actions')}</p>
                   </div>
                 </div>
 
@@ -1137,12 +1141,12 @@ export default function Profile() {
                       <Download size={15} color={accent} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: text }}>Exporter mes données</div>
-                      <div style={{ fontSize: 11, color: text2 }}>Télécharge un JSON avec ton profil, tâches, badges, etc.</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: text }}>{t('profile.export_data')}</div>
+                      <div style={{ fontSize: 11, color: text2 }}>{t('profile.export_desc')}</div>
                     </div>
                     <motion.button onClick={exporterDonnees} disabled={exporting} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                       style={{ padding: '8px 14px', background: `${accent}18`, border: `1px solid ${accent}40`, borderRadius: 9, color: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-                      {exporting ? 'Export...' : 'Exporter'}
+                      {exporting ? t('profile.exporting') : t('profile.export_btn')}
                     </motion.button>
                   </div>
 
@@ -1152,8 +1156,8 @@ export default function Profile() {
                       <Trash2 size={15} color="#ef4444" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: text }}>Supprimer mon compte</div>
-                      <div style={{ fontSize: 11, color: text2 }}>Suppression définitive : profil, tâches, badges, historique.</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: text }}>{t('profile.delete_account')}</div>
+                      <div style={{ fontSize: 11, color: text2 }}>{t('profile.delete_desc')}</div>
                     </div>
                     <motion.button onClick={() => setDeleteModalOpen(true)} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                       style={{ padding: '8px 14px', background: '#ef444418', border: '1px solid #ef444440', borderRadius: 9, color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
@@ -1175,7 +1179,7 @@ export default function Profile() {
           <div style={{ width: 22, height: 22, borderRadius: 6, background: `linear-gradient(135deg, ${accent}, ${T?.accent2 || 'var(--ember-hover)'})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Layers size={11} color="white" strokeWidth={2.5} />
           </div>
-          <span style={{ fontSize: 12, color: text2, fontWeight: 500 }}>GetShift · Votre productivité augmentée</span>
+          <span style={{ fontSize: 12, color: text2, fontWeight: 500 }}>{t('profile.tagline')}</span>
         </motion.div>
 
       </div>
