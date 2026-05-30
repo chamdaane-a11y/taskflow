@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -43,7 +44,7 @@ const labelDate = (deadline) => {
   const tm = [tom.getFullYear(), tom.getMonth() + 1, tom.getDate()]
   if (y === t[0] && m === t[1] && d === t[2]) return "Aujourd'hui"
   if (y === tm[0] && m === tm[1] && d === tm[2]) return 'Demain'
-  return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  return new Date(y, m - 1, d).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })
 }
 
 const PRIORITES = [
@@ -153,6 +154,7 @@ const PrioriteSelect = memo(function PrioriteSelect({ value, onChange, T }) {
 
 // ── SousTaches ─────────────────────────────────────────────────────────────────
 const SousTaches = memo(function SousTaches({ tache, T }) {
+  const { t } = useTranslation()
   const [sousTaches, setSousTaches] = React.useState([])
   const [nouvelle, setNouvelle] = React.useState('')
   const [loading, setLoading] = React.useState(false)
@@ -196,7 +198,7 @@ const SousTaches = memo(function SousTaches({ tache, T }) {
       {ajoutVisible ? (
         <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
           <input style={{ flex: 1, padding: '5px 10px', background: 'var(--surface-2)', border: `1px solid var(--ember-soft)`, borderRadius: 8, color: 'var(--text-primary)', fontSize: 12, outline: 'none' }}
-            placeholder="Nouvelle sous-tâche..." value={nouvelle} onChange={e => setNouvelle(e.target.value)}
+            placeholder={t('dashboard.new_subtask_ph')} value={nouvelle} onChange={e => setNouvelle(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') ajouter(); if (e.key === 'Escape') setAjoutVisible(false) }} autoFocus />
           <button style={{ padding: '5px 10px', background: 'var(--ember)', border: 'none', borderRadius: 8, color: 'var(--bg-base)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }} onClick={ajouter}>{loading ? '...' : 'OK'}</button>
           <button style={{ padding: '5px 8px', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }} onClick={() => { setAjoutVisible(false); setNouvelle('') }}>✕</button>
@@ -221,6 +223,7 @@ const CoachIcon = ({ style, size = 16 }) => {
 
 // ── SmartTaskInput — Input intelligent avec parsing langage naturel ───────────
 const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact = false }) {
+  const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [parsed, setParsed] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -297,7 +300,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
           onKeyDown={e => {
             if (e.key === 'Enter') creer()
           }}
-          placeholder="Finir le rapport demain 15h haute..."
+          placeholder={t('dashboard.smart_input_ph')}
           className="smart-task-input-field"
           style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
         />
@@ -472,6 +475,7 @@ const MobileActionBar = ({ d, T, onOpenTemplates, onOpenExport }) => (
 
 // ── BottomSheetAjout ──────────────────────────────────────────────────────────
 const BottomSheetAjout = memo(function BottomSheetAjout({ open, onClose, d, T }) {
+  const { t } = useTranslation()
   return (
     <AnimatePresence>
       {open && (
@@ -502,9 +506,9 @@ const BottomSheetAjout = memo(function BottomSheetAjout({ open, onClose, d, T })
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input style={{ flex: 1, padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
-                  placeholder="Ex: Apprendre React..." value={d.objectif} onChange={e => d.setObjectif(e.target.value)} onKeyDown={e => e.key === 'Enter' && d.genererTaches()} />
+                  placeholder={t('dashboard.ex_learn_react')} value={d.objectif} onChange={e => d.setObjectif(e.target.value)} onKeyDown={e => e.key === 'Enter' && d.genererTaches()} />
                 <motion.button style={{ padding: '10px 14px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 10, color: 'var(--ember)', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  onClick={d.genererTaches} whileTap={{ scale: 0.97 }}>Générer</motion.button>
+                  onClick={d.genererTaches} whileTap={{ scale: 0.97 }}>{t('dashboard.generate')}</motion.button>
               </div>
             </div>
           </motion.div>
@@ -516,6 +520,7 @@ const BottomSheetAjout = memo(function BottomSheetAjout({ open, onClose, d, T })
 
 // ── CarteTacheMobile ──────────────────────────────────────────────────────────
 const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, pBg }) {
+  const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [expandMode, setExpandMode] = useState(null)
@@ -562,21 +567,21 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
             <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 99, background: pBg(tache.priorite), color: pColor(tache.priorite), fontWeight: 600 }}>{tache.priorite}</span>
             {tache.gcal_imported_event_id && (
               tache.source_url
-                ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Calendar" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleCalendarLogo size={13} /></a>
-                : <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7, minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleCalendarLogo size={13} /></span>
+                ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_in_gcal')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleCalendarLogo size={13} /></a>
+                : <span title={t('task.from_gcal')} style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7, minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleCalendarLogo size={13} /></span>
             )}
             {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir l'email d'origine" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GmailLogo size={13} /></a>
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_email')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GmailLogo size={13} /></a>
             )}
             {tache.source_url && tache.source_url.includes('drive.google.com') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir le fichier Drive" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleDriveLogo size={13} /></a>
+              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_drive_file')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleDriveLogo size={13} /></a>
             )}
             {tache.source_url && tache.source_url.includes('notion.so') && (
               <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><NotionLogo size={13} /></a>
             )}
             {tache.deadline && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}</span>}
             {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
-            {isBloquee && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 99, background: 'rgba(224,92,92,0.12)', color: '#e05c5c', fontWeight: 600 }}>Bloquée</span>}
+            {isBloquee && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 99, background: 'rgba(224,92,92,0.12)', color: '#e05c5c', fontWeight: 600 }}>{t('dashboard.blocked')}</span>}
           </div>
         </div>
         <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
@@ -642,6 +647,7 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
 const STARTER_TEMPLATE_SLUGS = ['etude', 'projet', 'voyage', 'sante', 'productivite', 'apprentissage']
 
 const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, navigate }) {
+  const { t } = useTranslation()
   const prenom = d.user?.nom?.split(' ')[0] || ''
   const accent = 'var(--ember)'
   const accent2 = 'var(--ember-hover)' || accent
@@ -741,8 +747,8 @@ const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, na
               <Plus size={18} color={accent} strokeWidth={2.5} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 1 }}>Crée ta 1ère tâche</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>En langage naturel · 10 sec</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 1 }}>{t('dashboard.create_first_task')}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('dashboard.natural_language_10s')}</div>
             </div>
             <ChevronRight size={14} color="var(--text-secondary)" />
           </motion.button>
@@ -772,7 +778,7 @@ const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, na
               <BookOpen size={18} color="#a855f7" strokeWidth={2.5} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 1 }}>Choisis un template</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 1 }}>{t('dashboard.choose_template')}</div>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>25 modèles prêts à l'emploi</div>
             </div>
             <ChevronRight size={14} color="var(--text-secondary)" />
@@ -803,8 +809,8 @@ const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, na
               <Flag size={18} color="#ec4899" strokeWidth={2.5} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 1 }}>Définis un objectif</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>L'IA te crée le plan d'action</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 1 }}>{t('dashboard.define_goal')}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('dashboard.ai_creates_plan')}</div>
             </div>
             <ChevronRight size={14} color="var(--text-secondary)" />
           </motion.button>
@@ -816,6 +822,7 @@ const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, na
 
 // ── StarterTemplates — Carousel des templates phares pour démarrer ──────────
 const StarterTemplates = memo(function StarterTemplates({ d, T, isMobile }) {
+  const { t } = useTranslation()
   const templates = (d.templates || [])
     .filter(t => STARTER_TEMPLATE_SLUGS.includes(t.categorie))
     .slice(0, 6)
@@ -832,7 +839,7 @@ const StarterTemplates = memo(function StarterTemplates({ d, T, isMobile }) {
           <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
             🚀 Démarre en 1 clic
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>Templates populaires pré-remplis</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>{t('dashboard.popular_templates')}</div>
         </div>
         <motion.button
           onClick={() => d.setShowTemplates?.(true)}
@@ -909,6 +916,7 @@ const COACH_WELCOME_MESSAGES = {
 }
 
 const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNewUser }) {
+  const { t } = useTranslation()
   const cdm = d.coachDailyMessage
   const loading = d.coachDailyLoading
 
@@ -988,7 +996,7 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
             onClick={dismiss}
             whileTap={{ scale: 0.9 }}
             whileHover={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            title="Masquer pour aujourd'hui"
+            title={t('dashboard.hide_today')}
             style={{
               position: 'absolute', top: -4, right: -4,
               width: 24, height: 24, borderRadius: 7,
@@ -1048,7 +1056,7 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
               <motion.button
                 onClick={refreshMessage}
                 whileTap={{ scale: 0.96, rotate: 180 }}
-                title="Régénérer le message"
+                title={t('dashboard.regen_message')}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   padding: '5px 9px',
@@ -1072,6 +1080,7 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
 
 // ── StatsHUD — Niveau / Streak / Points semaine / Conseil IA ─────────────────
 const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
+  const { t } = useTranslation()
   const stats = d.dashboardStats
   // Pas de skeleton — on utilise les données déjà disponibles en fallback,
   // puis on enrichit dès que /dashboard/stats arrive.
@@ -1149,7 +1158,7 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
           }}>
             <TrendingUp size={13} color={pointsColor} strokeWidth={2.2} />
             <div style={{ fontSize: 15, fontWeight: 800, color: pointsColor, lineHeight: 1.1, marginTop: 2 }}>{pointsSemaine}</div>
-            <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>cette sem.</div>
+            <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>{t('dashboard.this_week_short')}</div>
           </div>
           {/* Tâches : terminées / total */}
           <div style={{
@@ -1199,12 +1208,12 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: niveauColor, lineHeight: 1 }}>{points}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>points</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{t('common.points')}</div>
             </div>
           </div>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-secondary)', marginBottom: 4, fontWeight: 600 }}>
-              <span>Progression</span>
+              <span>{t('dashboard.progression')}</span>
               <span style={{ color: niveauColor }}>{progres}% {pointsToNext > 0 ? `· ${pointsToNext} pts pour ↑` : '· max'}</span>
             </div>
             <div style={{ height: 7, background: 'var(--surface-1)', borderRadius: 99, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
@@ -1224,7 +1233,7 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Flame size={16} color={streakColor} strokeWidth={2.2} fill={streakActive ? streakColor : 'none'} />
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Streak</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('dashboard.streak')}</span>
           </div>
           <div>
             <div style={{ fontSize: 32, fontWeight: 800, color: streakColor, letterSpacing: '-1px', lineHeight: 1 }}>{streak}</div>
@@ -1242,15 +1251,15 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <TrendingUp size={16} color={pointsColor} strokeWidth={2.2} />
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Cette semaine</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('common.this_week')}</span>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
               <span style={{ fontSize: 28, fontWeight: 800, color: pointsColor, letterSpacing: '-0.5px', lineHeight: 1 }}>{pointsSemaine}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>pts</span>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('dashboard.pts')}</span>
             </div>
             <div style={{ fontSize: 11, color: deltaColor, marginTop: 4, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-              {deltaPositive ? '↑' : '↓'} {Math.abs(deltaSemaine)}% <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>vs sem. dern.</span>
+              {deltaPositive ? '↑' : '↓'} {Math.abs(deltaSemaine)}% <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{t('dashboard.vs_last_week')}</span>
             </div>
           </div>
         </motion.div>
@@ -1263,7 +1272,7 @@ const StatsHUD = memo(function StatsHUD({ d, T, isMobile }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircle2 size={16} color="#4caf82" strokeWidth={2.2} />
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tâches</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('dashboard.tasks')}</span>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
@@ -1293,6 +1302,7 @@ const CATEGORIE_DNA_LABELS = {
 }
 
 const DnaInsightFooter = memo(function DnaInsightFooter({ d, T, isMobile }) {
+  const { t } = useTranslation()
   const dna = d.dnaInsights
   if (!dna || (dna.total_analyses || 0) < 2) return null
   const score = dna.score_global || 0
@@ -1309,7 +1319,7 @@ const DnaInsightFooter = memo(function DnaInsightFooter({ d, T, isMobile }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: isMobile ? 10.5 : 11.5, color: 'var(--text-secondary)', fontWeight: 600 }}>
         <Sparkles size={11} color="var(--ember)" strokeWidth={2.4} />
-        <span>Task DNA</span>
+        <span>{t('dashboard.task_dna')}</span>
         <span style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>·</span>
         <span>Score moyen : <strong style={{ color: scoreColor }}>{score}/100</strong></span>
         {topCatLabel && (
@@ -1328,6 +1338,7 @@ const DnaInsightFooter = memo(function DnaInsightFooter({ d, T, isMobile }) {
 // Apparaît uniquement après 17h ET si tâches actives > 0. Dismissible per day.
 // Position: fixed en bas — toujours visible sans scroll.
 const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, navigate, mainMarginL = 0 }) {
+  const { t } = useTranslation()
   const hour = new Date().getHours()
   const tachesActives = d.dashboardStats?.taches_actives ?? d.statsTaches?.enCours ?? 0
 
@@ -1421,7 +1432,7 @@ const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, na
         <motion.button
           onClick={dismiss}
           whileTap={{ scale: 0.9 }}
-          title="Masquer pour aujourd'hui"
+          title={t('dashboard.hide_today')}
           style={{
             width: 28, height: 28, borderRadius: 8,
             background: 'rgba(0,0,0,0.18)',
@@ -1458,6 +1469,7 @@ const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, na
 
 // ── GoalWidget — objectifs en cours avec progress ────────────────────────────
 const GoalWidget = memo(function GoalWidget({ d, T, isMobile, navigate }) {
+  const { t } = useTranslation()
   const [objectifs, setObjectifs] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [replanningId, setReplanningId] = useState(null)
@@ -1493,7 +1505,7 @@ const GoalWidget = memo(function GoalWidget({ d, T, isMobile, navigate }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Target size={13} color="var(--ember)" strokeWidth={2.5} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Objectifs</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>{t('dashboard.goals')}</span>
           <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 700 }}>{objectifs.length}</span>
         </div>
         <motion.button onClick={() => navigate('/goal')} whileHover={{ x: 2 }}
@@ -1519,12 +1531,13 @@ const GoalWidget = memo(function GoalWidget({ d, T, isMobile, navigate }) {
 
 // ── FocusDuJour — 3 priorités de la journée ──────────────────────────────────
 const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
+  const { t } = useTranslation()
   const [pickerOpen, setPickerOpen] = useState(false)
   const pickerRef = useRef(null)
   const focused = d.tachesFocus || []
   const slots = [0, 1, 2]
   const limitAtteinte = focused.length >= 3
-  const dateTitre = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const dateTitre = new Date().toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })
 
   useEffect(() => {
     const h = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false) }
@@ -1563,7 +1576,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
             <Target size={isMobile ? 13 : 16} color="var(--ember)" strokeWidth={2.2} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>Focus du jour</div>
+            <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>{t('task.focus')}</div>
             {!isMobile && (
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1, textTransform: 'capitalize' }}>{dateTitre}</div>
             )}
@@ -1577,8 +1590,8 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
       {/* Empty state */}
       {focused.length === 0 && (
         <div style={{ textAlign: isMobile ? 'left' : 'center', padding: isMobile ? '0 0 6px' : '14px 6px 6px' }}>
-          <div style={{ fontSize: isMobile ? 12 : 13, color: 'var(--text-secondary)', marginBottom: isMobile ? 2 : 4, fontWeight: 500 }}>Choisis tes 3 priorités du jour</div>
-          {!isMobile && <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', opacity: 0.75, marginBottom: 12 }}>Tu n'as pas besoin d'en faire plus.</div>}
+          <div style={{ fontSize: isMobile ? 12 : 13, color: 'var(--text-secondary)', marginBottom: isMobile ? 2 : 4, fontWeight: 500 }}>{t('dashboard.focus_subtitle')}</div>
+          {!isMobile && <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', opacity: 0.75, marginBottom: 12 }}>{t('dashboard.focus_hint')}</div>}
         </div>
       )}
 
@@ -1641,14 +1654,14 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                 <motion.button
                   onClick={() => d.toggleTache(t.id, t.terminee, t.priorite, t.bloquee)}
                   whileTap={{ scale: 0.9 }}
-                  title="Terminer"
+                  title={t('dashboard.complete')}
                   style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <CheckCircle2 size={15} strokeWidth={2.2} />
                 </motion.button>
                 <motion.button
                   onClick={() => d.togglerFocus(t.id, true)}
                   whileTap={{ scale: 0.9 }}
-                  title="Désépingler"
+                  title={t('dashboard.unpin')}
                   style={{ width: 36, height: 36, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <X size={14} strokeWidth={2} />
                 </motion.button>
@@ -1689,7 +1702,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                 <motion.button
                   onClick={() => d.togglerFocus(t.id, true)}
                   whileHover={{ background: 'rgba(224,92,92,0.12)', color: '#e05c5c' }} whileTap={{ scale: 0.9 }}
-                  title="Désépingler"
+                  title={t('dashboard.unpin')}
                   style={{ width: 22, height: 22, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <X size={13} strokeWidth={2} />
                 </motion.button>
@@ -1731,7 +1744,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
               }}>
               <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--border-subtle)', margin: '0 auto 10px' }} />
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Choisir une tâche focus</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{t('dashboard.choose_focus_task')}</div>
               </div>
               <div style={{ overflowY: 'auto', flex: 1, paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 {limitAtteinte ? (
@@ -1815,6 +1828,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
 
 // ── TaskDNAPopup — Analyse IA d'une tâche avant création ────────────────────
 const TaskDNAPopup = memo(function TaskDNAPopup({ d, T, isMobile }) {
+  const { t } = useTranslation()
   if (!d.showDnaPopup || !d.dnaResult) return null
   const r = d.dnaResult
   const score = Math.max(0, Math.min(100, r.score_viabilite || 0))
@@ -1877,7 +1891,7 @@ const TaskDNAPopup = memo(function TaskDNAPopup({ d, T, isMobile }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>{r.emoji_categorie || '🧬'}</div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase' }}>Task DNA</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase' }}>{t('dashboard.task_dna')}</div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.label_categorie || 'Analyse'}
                   </div>
@@ -1924,7 +1938,7 @@ const TaskDNAPopup = memo(function TaskDNAPopup({ d, T, isMobile }) {
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Viabilité</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>{t('dashboard.viability')}</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor, marginBottom: 8 }}>{scoreLabel}</div>
                   {r.explication_score && (
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{r.explication_score}</div>
@@ -1944,7 +1958,7 @@ const TaskDNAPopup = memo(function TaskDNAPopup({ d, T, isMobile }) {
                 }}>
                   <Sparkles size={15} color="var(--ember)" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 }}>Conseil de l'IA</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 }}>{t('dashboard.ai_advice')}</div>
                     <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{r.conseil_principal}</div>
                   </div>
                 </div>
@@ -2056,6 +2070,7 @@ const TEMPLATE_CATS = [
 ]
 
 const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) {
+  const { t } = useTranslation()
   const titreOk = !!d.nouveauTemplate?.titre?.trim()
   const tachesOk = (d.nouveauTemplate?.taches?.length || 0) > 0
   const valide = titreOk && tachesOk
@@ -2123,8 +2138,8 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
               <BookOpen size={18} color="var(--ember)" strokeWidth={1.8} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Créer un template</h2>
-              <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>Partage ta structure avec la communauté</p>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('dashboard.create_template')}</h2>
+              <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{t('dashboard.share_structure')}</p>
             </div>
           </div>
           <motion.button onClick={() => d.setShowCreerTemplate(false)}
@@ -2143,21 +2158,21 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
             <input
               value={d.nouveauTemplate?.titre || ''}
               onChange={e => d.setNouveauTemplate(prev => ({ ...prev, titre: e.target.value }))}
-              placeholder="Ex: Lancer un projet SaaS"
+              placeholder={t('dashboard.ex_saas')}
               style={{ width: '100%', padding: '11px 14px', background: 'var(--surface-1)', border: `1.5px solid ${titreOk ? 'var(--ember-ring)' : 'var(--border-subtle)'}`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 14, fontWeight: 500, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }} />
 
-            <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Description</label>
+            <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>{t('dashboard.description')}</label>
             <textarea
               value={d.nouveauTemplate?.description || ''}
               onChange={e => d.setNouveauTemplate(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Décris à quoi sert ce template…"
+              placeholder={t('dashboard.template_desc_ph')}
               rows={2}
               style={{ width: '100%', padding: '10px 14px', background: 'var(--surface-1)', border: '1.5px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', minHeight: 56 }} />
           </div>
 
           {/* Section Catégorie — scroll horizontal */}
           <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 10, paddingLeft: 2 }}>Catégorie</label>
+            <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, textTransform: 'uppercase', display: 'block', marginBottom: 10, paddingLeft: 2 }}>{t('common.category')}</label>
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', margin: isMobile ? '0 -16px' : '0 -4px', padding: isMobile ? '2px 16px 4px' : '2px 4px 4px' }}
               className="hide-scrollbar">
               {TEMPLATE_CATS.map(cat => {
@@ -2231,16 +2246,16 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
               value={d.nouvelleTacheTemplate?.titre || ''}
               onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, titre: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterTacheTemplate() } }}
-              placeholder="Titre d'une tâche…"
+              placeholder={t('dashboard.task_title_ph')}
               style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <select
                 value={d.nouvelleTacheTemplate?.priorite || 'moyenne'}
                 onChange={e => d.setNouvelleTacheTemplate(prev => ({ ...prev, priorite: e.target.value }))}
                 style={{ flex: '0 0 auto', padding: '7px 10px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 12, outline: 'none', cursor: 'pointer', minWidth: 90 }}>
-                <option value="haute">Haute</option>
-                <option value="moyenne">Moyenne</option>
-                <option value="basse">Basse</option>
+                <option value="haute">{t('common.high')}</option>
+                <option value="moyenne">{t('common.medium')}</option>
+                <option value="basse">{t('common.low')}</option>
               </select>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)' }}>
                 <span>Dans</span>
@@ -2315,6 +2330,7 @@ const CreerTemplateModal = memo(function CreerTemplateModal({ d, T, isMobile }) 
 // SourceSpotlight — onboarding 1ère vue d'une tâche avec source (Gmail/Drive/GCal)
 // ══════════════════════════════════════════════════════════════════════════════
 const SourceSpotlight = memo(function SourceSpotlight({ onDismiss }) {
+  const { t } = useTranslation()
   const [pos, setPos] = useState(null)
   const [placement, setPlacement] = useState('bottom')
 
@@ -2399,7 +2415,7 @@ const SourceSpotlight = memo(function SourceSpotlight({ onDismiss }) {
           zIndex: 10000,
           fontSize: 13, lineHeight: 1.5,
         }}>
-        <div style={{ fontWeight: 700, marginBottom: 4 }}>Astuce</div>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('dashboard.tip')}</div>
         <div style={{ marginBottom: 12, opacity: 0.95 }}>
           Tu peux retourner à la source d'une tâche en cliquant sur son logo (Gmail · Drive · Calendar).
         </div>
@@ -2411,7 +2427,7 @@ const SourceSpotlight = memo(function SourceSpotlight({ onDismiss }) {
           borderRadius: 8,
           cursor: 'pointer',
           fontSize: 12, fontWeight: 600,
-        }}>Compris</button>
+        }}>{t('dashboard.got_it')}</button>
       </motion.div>
     </>
   )
@@ -2421,6 +2437,7 @@ const SourceSpotlight = memo(function SourceSpotlight({ onDismiss }) {
 // DASHBOARD PRINCIPAL
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Dashboard() {
+  const { t } = useTranslation()
   const d = useDashboard()
   const navigate = useNavigate()
   const location = useLocation()
@@ -2568,7 +2585,7 @@ export default function Dashboard() {
             style={{ position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', zIndex: 1001, background: 'var(--surface-1)', border: '2px solid var(--ember)', borderRadius: 20, padding: '16px 28px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: `0 8px 40px var(--ember-soft)`, minWidth: 280 }}>
             <motion.span animate={{ rotate: [0, -15, 15, -10, 10, 0], scale: [1, 1.3, 1.3, 1.1, 1] }} transition={{ duration: 0.6 }} style={{ fontSize: 32 }}>{d.badgeNotif.icon}</motion.span>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 1, marginBottom: 2 }}>BADGE DÉBLOQUÉ !</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 1, marginBottom: 2 }}>{t('dashboard.badge_unlocked')}</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{d.badgeNotif.nom}</div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{d.badgeNotif.description}</div>
             </div>
@@ -2587,7 +2604,7 @@ export default function Dashboard() {
         isMobile={isMobile}>
         {/* Dashboard-specific: FILTRES section */}
         <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
-        <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
+        <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>{t('dashboard.filters')}</p>
         {[
           { val: 'toutes', label: 'Toutes les tâches' },
           { val: 'haute', label: 'Priorité haute' },
@@ -2639,15 +2656,15 @@ export default function Dashboard() {
                     <HelpCircle size={17} color="var(--ember)" strokeWidth={2} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Bienvenue sur GetShift !</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Consultez le guide pour démarrer.</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{t('dashboard.welcome_title')}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{t('dashboard.welcome_sub')}</div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <motion.button style={{ padding: '8px 16px', background: 'var(--ember)', border: 'none', borderRadius: 8, color: 'var(--bg-base)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                    onClick={() => { localStorage.setItem('guide_vu', 'true'); d.setShowGuideBanner(false); navigate('/help') }}>Voir le guide</motion.button>
+                    onClick={() => { localStorage.setItem('guide_vu', 'true'); d.setShowGuideBanner(false); navigate('/help') }}>{t('dashboard.see_guide')}</motion.button>
                   <motion.button style={{ padding: '8px 14px', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
-                    onClick={() => { localStorage.setItem('guide_vu', 'true'); d.setShowGuideBanner(false) }}>Plus tard</motion.button>
+                    onClick={() => { localStorage.setItem('guide_vu', 'true'); d.setShowGuideBanner(false) }}>{t('dashboard.later')}</motion.button>
                 </div>
               </motion.div>
             )}
@@ -2660,7 +2677,7 @@ export default function Dashboard() {
                 initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
                 <span style={{ fontSize: 16 }}>📡</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#e08a3c' }}>Mode hors ligne</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#e08a3c' }}>{t('dashboard.offline_mode')}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{d.pendingActions > 0 ? `${d.pendingActions} action(s) en attente` : 'Sync au retour du réseau'}</div>
                 </div>
               </motion.div>
@@ -2673,7 +2690,7 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
               <div>
                 <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.5px', margin: 0 }}>{d.salut}, {d.user?.nom?.split(' ')[0]}</h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 4 }}>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 4 }}>{new Date().toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 99, color: 'var(--ember)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
@@ -2698,7 +2715,7 @@ export default function Dashboard() {
           {isMobile && (
             <div style={{ marginBottom: 16 }}>
               <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', margin: '0 0 2px' }}>{d.salut}, {d.user?.nom?.split(' ')[0]}</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 11, margin: 0 }}>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 11, margin: 0 }}>{new Date().toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
             </div>
           )}
 
@@ -2812,7 +2829,7 @@ export default function Dashboard() {
                 <IconLock size={15} color="#e05c5c" />
                 <span style={{ flex: 1, fontSize: 13, color: '#e05c5c', fontWeight: 500 }}>{d.bloquees} tâche{d.bloquees > 1 ? 's bloquées' : ' bloquée'}</span>
                 <motion.button style={{ padding: '4px 12px', background: 'transparent', border: '1px solid rgba(224,92,92,0.3)', borderRadius: 8, color: '#e05c5c', fontSize: 12, cursor: 'pointer' }}
-                  onClick={() => d.setFiltre('bloquee')}>Voir</motion.button>
+                  onClick={() => d.setFiltre('bloquee')}>{t('common.view')}</motion.button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -2829,7 +2846,7 @@ export default function Dashboard() {
                   <Sparkles size={15} strokeWidth={2} color="var(--ember)" />Générer avec l'IA
                 </p>
                 <input style={{ width: '100%', padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
-                  placeholder="Ex: Apprendre React..." value={d.objectif} onChange={e => d.setObjectif(e.target.value)} onKeyDown={e => e.key === 'Enter' && d.genererTaches()} />
+                  placeholder={t('dashboard.ex_learn_react')} value={d.objectif} onChange={e => d.setObjectif(e.target.value)} onKeyDown={e => e.key === 'Enter' && d.genererTaches()} />
                 <motion.button style={{ width: '100%', padding: '9px 16px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
                   onClick={d.genererTaches} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   Générer 5 tâches automatiquement
@@ -2944,14 +2961,14 @@ export default function Dashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
                           {tache.gcal_imported_event_id && (
                             tache.source_url
-                              ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Calendar" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={12} /></a>
-                              : <span title="Importée depuis Google Calendar" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7 }}><GoogleCalendarLogo size={12} /></span>
+                              ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_in_gcal')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={12} /></a>
+                              : <span title={t('task.from_gcal')} style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7 }}><GoogleCalendarLogo size={12} /></span>
                           )}
                           {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
-                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir l'email d'origine" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={12} /></a>
+                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_email')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={12} /></a>
                           )}
                           {tache.source_url && tache.source_url.includes('drive.google.com') && (
-                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title="Ouvrir le fichier Drive" data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={12} /></a>
+                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_drive_file')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={12} /></a>
                           )}
                           {tache.source_url && tache.source_url.includes('notion.so') && (
                             <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><NotionLogo size={12} /></a>
@@ -2968,7 +2985,7 @@ export default function Dashboard() {
                             )
                           })()}
                           {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600 }}>+{pts} pts</span>}
-                          {isBloquee && <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: 'rgba(224,92,92,0.1)', color: '#e05c5c', fontWeight: 600 }}>Bloquée</span>}
+                          {isBloquee && <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: 'rgba(224,92,92,0.1)', color: '#e05c5c', fontWeight: 600 }}>{t('dashboard.blocked')}</span>}
                         </div>
                       </div>
                       <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700, flexShrink: 0, background: pBg(tache.priorite), color: pColor(tache.priorite), textTransform: 'uppercase' }}>
@@ -2989,13 +3006,13 @@ export default function Dashboard() {
                           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 8px', borderRadius: 8, fontSize: 11, background: isExpanded && currentMode === 'dependances' ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${isExpanded && currentMode === 'dependances' ? 'var(--ember)' : 'var(--border-subtle)'}`, color: isExpanded && currentMode === 'dependances' ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer' }}
                           whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                           <IconLink size={12} color="currentColor" />
-                          <span className="task-btn-label">Prérequis</span>
+                          <span className="task-btn-label">{t('task.dependencies')}</span>
                         </motion.button>
                         <motion.button onClick={() => d.toggleExpand(tache.id, 'sousTaches')}
                           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 8px', borderRadius: 8, fontSize: 11, background: isExpanded && currentMode === 'sousTaches' ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${isExpanded && currentMode === 'sousTaches' ? 'var(--ember)' : 'var(--border-subtle)'}`, color: isExpanded && currentMode === 'sousTaches' ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer' }}
                           whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                           {isExpanded && currentMode === 'sousTaches' ? <ChevronUp size={11} strokeWidth={2} /> : <ChevronDown size={11} strokeWidth={2} />}
-                          <span className="task-btn-label">Sous-tâches</span>
+                          <span className="task-btn-label">{t('task.subtasks')}</span>
                         </motion.button>
                         {tache.deadline && !tache.terminee && (
                           <motion.button onClick={() => d.exporterGoogleCalendar(tache)}
@@ -3069,7 +3086,7 @@ export default function Dashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkles size={16} color="var(--ember)" /></div>
                 <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Sous-tâches générées</h3>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('dashboard.generated_subtasks')}</h3>
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>Pour : <span style={{ color: 'var(--ember)', fontWeight: 600 }}>"{d.titrePourIA}"</span></p>
                 </div>
               </div>
@@ -3092,7 +3109,7 @@ export default function Dashboard() {
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
-                <motion.button onClick={() => d.setIaPanel(false)} style={{ flex: 1, padding: '11px 0', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 12, color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Annuler</motion.button>
+                <motion.button onClick={() => d.setIaPanel(false)} style={{ flex: 1, padding: '11px 0', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 12, color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>{t('common.cancel')}</motion.button>
                 <motion.button onClick={d.confirmerSousTachesIA} whileHover={{ scale: 1.02 }}
                   style={{ flex: 2, padding: '11px 0', background: 'var(--ember)', border: 'none', borderRadius: 12, color: 'var(--bg-base)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <Sparkles size={14} />Créer + {d.iaSousTaches.filter(st => st.selectionne).length} sous-tâches
@@ -3125,7 +3142,7 @@ export default function Dashboard() {
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Settings size={18} color="var(--ember)" strokeWidth={1.8} />
                     </div>
-                    <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h2>
+                    <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('nav.settings')}</h2>
                   </div>
                   <motion.button onClick={() => d.setShowSettings(false)}
                     style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -3148,11 +3165,11 @@ export default function Dashboard() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
                       <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
                         <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--ember)' }}>{d.badgesObtenus?.length || 0}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>badges obtenus</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{t('dashboard.badges_earned')}</div>
                       </div>
                       <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
                         <div style={{ fontSize: 28, fontWeight: 800, color: '#e08a3c' }}>{d.streak}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>jours de streak</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{t('dashboard.streak_days')}</div>
                       </div>
                     </div>
                     {['performance', 'points', 'streak', 'special'].map(cat => (
@@ -3180,7 +3197,7 @@ export default function Dashboard() {
                 )}
                 {d.activeSettingsTab === 'theme' && (
                   <div>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>Choisis l'apparence de GetShift.</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>{t('dashboard.choose_appearance')}</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {Object.entries(require('../themes').themes).map(([key, t]) => (
                         <motion.button key={key} onClick={() => d.changerTheme(key)}
@@ -3204,7 +3221,7 @@ export default function Dashboard() {
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: '#4A154B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 16, color: 'white', fontWeight: 700 }}>S</span></div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Slack</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Notifications dans votre canal</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('dashboard.slack_desc')}</div>
                       </div>
                       {d.slackWebhook && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4caf82' }} />}
                     </div>
@@ -3221,8 +3238,8 @@ export default function Dashboard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(251,188,4,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🌐</div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Extension Chrome</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Détecte Zoom, Meet, Notion, Drive</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t('dashboard.chrome_ext')}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('dashboard.chrome_desc')}</div>
                         </div>
                       </div>
                       <motion.a href="https://chrome.google.com/webstore/detail/getshift" target="_blank" rel="noreferrer"
@@ -3260,8 +3277,8 @@ export default function Dashboard() {
                       <BookOpen size={18} color="var(--ember)" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Templates</h2>
-                      <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>Projets prêts à l'emploi</p>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('dashboard.templates')}</h2>
+                      <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{t('dashboard.ready_projects')}</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -3297,7 +3314,7 @@ export default function Dashboard() {
                         <CheckCircle2 size={28} color="#22c55e" strokeWidth={1.8} />
                       </motion.div>
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Template appliqué !</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{t('dashboard.template_applied')}</div>
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                           {d.templateSucces.nb} tâche{d.templateSucces.nb > 1 ? 's' : ''} créée{d.templateSucces.nb > 1 ? 's' : ''} depuis <strong style={{ color: 'var(--text-primary)' }}>"{d.templateSucces.titre}"</strong>
                         </div>
@@ -3354,7 +3371,7 @@ export default function Dashboard() {
                               {isSelected && (
                                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                                   style={{ overflow: 'hidden', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
-                                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, marginBottom: 8, textTransform: 'uppercase' }}>Tâches incluses</p>
+                                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, marginBottom: 8, textTransform: 'uppercase' }}>{t('dashboard.included_tasks')}</p>
                                   {tmpl.taches?.slice(0, 5).map((t, ti) => (
                                     <div key={ti} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: `1px solid var(--border-default)` }}>
                                       <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--border-subtle)', flexShrink: 0 }} />
@@ -3367,7 +3384,7 @@ export default function Dashboard() {
                                     <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase' }}>Date de début *</p>
                                     <DatePicker selected={d.templateDateDebut} onChange={d.setTemplateDateDebut} locale="fr" dateFormat="dd/MM/yyyy" minDate={new Date()} placeholderText="Choisir une date de début"
                                       customInput={<input readOnly style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-1)', border: `1.5px solid ${d.templateDateDebut ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }} />} />
-                                    {!d.templateDateDebut && <p style={{ fontSize: 11, color: '#e08a3c', marginTop: 4 }}>Sélectionne une date pour activer l'import</p>}
+                                    {!d.templateDateDebut && <p style={{ fontSize: 11, color: '#e08a3c', marginTop: 4 }}>{t('dashboard.select_date_import')}</p>}
                                   </div>
                                   <motion.button
                                     onClick={(e) => { e.stopPropagation(); d.utiliserTemplate(tmpl) }}
@@ -3375,7 +3392,7 @@ export default function Dashboard() {
                                     style={{ width: '100%', marginTop: 12, padding: '12px', background: d.templateDateDebut ? 'var(--ember)' : 'var(--surface-2)', border: `1px solid ${d.templateDateDebut ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 11, color: d.templateDateDebut ? 'var(--bg-base)' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: (!d.templateDateDebut || d.templateImporting) ? 'not-allowed' : 'pointer', opacity: !d.templateDateDebut ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s' }}
                                     whileHover={d.templateDateDebut && !d.templateImporting ? { scale: 1.01 } : {}} whileTap={{ scale: 0.98 }}>
                                     {d.templateImporting ? (
-                                      <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><Target size={14} strokeWidth={2} /></motion.div>Import en cours...</>
+                                      <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><Target size={14} strokeWidth={2} /></motion.div>{t('dashboard.importing')}</>
                                     ) : (
                                       <><Sparkles size={14} strokeWidth={2} />{d.templateDateDebut ? 'Utiliser ce template' : "Choisir une date d'abord"}</>
                                     )}
@@ -3389,7 +3406,7 @@ export default function Dashboard() {
                     {d.templates.length === 0 && !d.templatesLoading && (
                       <div style={{ textAlign: 'center', padding: '48px 20px' }}>
                         <BookOpen size={36} color="var(--border-subtle)" strokeWidth={1} style={{ margin: '0 auto 12px', display: 'block' }} />
-                        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun template disponible</p>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('dashboard.no_templates')}</p>
                         <motion.button onClick={() => { d.setShowTemplates(false); d.setShowCreerTemplate(true) }}
                           style={{ padding: '9px 18px', background: 'var(--ember)', border: 'none', borderRadius: 10, color: 'var(--bg-base)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                           Créer un template
@@ -3410,7 +3427,7 @@ export default function Dashboard() {
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
             style={{ position: 'fixed', bottom: isMobile ? 100 : 90, left: '50%', transform: 'translateX(-50%)', zIndex: 1200, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.3)', whiteSpace: 'nowrap' }}>
             <Trash2 size={15} color="#e05c5c" />
-            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Tâche supprimée</span>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{t('dashboard.task_deleted')}</span>
             <div style={{ width: 60, height: 3, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
               <motion.div initial={{ width: '100%' }} animate={{ width: '0%' }} transition={{ duration: 5, ease: 'linear' }} style={{ height: '100%', background: '#e05c5c', borderRadius: 99 }} />
             </div>
