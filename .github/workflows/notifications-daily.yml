@@ -51,22 +51,22 @@ jobs:
         if: steps.heure.outputs.moment == 'matin' || steps.heure.outputs.moment == 'lifecycle' || steps.heure.outputs.moment == 'all'
         run: |
           echo "→ Lifecycle (onboarding Day N)"
-          curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/notifications/lifecycle-tick || echo "fail lifecycle"
+          curl -sf -X POST  -H "Authorization: Bearer ${{ secrets.JOB_SECRET }}" --max-time 60 https://getshift-backend.onrender.com/notifications/lifecycle-tick || echo "fail lifecycle"
 
       - name: Déclencher daily matin
         if: steps.heure.outputs.moment == 'matin' || steps.heure.outputs.moment == 'all'
         run: |
           echo "→ Daily matin"
-          curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/notifications/daily-matin || echo "fail matin"
+          curl -sf -X POST  -H "Authorization: Bearer ${{ secrets.JOB_SECRET }}" --max-time 60 https://getshift-backend.onrender.com/notifications/daily-matin || echo "fail matin"
 
       - name: Déclencher daily midi
         if: steps.heure.outputs.moment == 'midi' || steps.heure.outputs.moment == 'all'
         run: |
           echo "→ Daily midi"
-          curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/notifications/daily-midi || echo "fail midi"
+          curl -sf -X POST  -H "Authorization: Bearer ${{ secrets.JOB_SECRET }}" --max-time 60 https://getshift-backend.onrender.com/notifications/daily-midi || echo "fail midi"
 
       - name: Déclencher daily soir (streak warning + winback)
         if: steps.heure.outputs.moment == 'soir' || steps.heure.outputs.moment == 'all'
         run: |
           echo "→ Daily soir (streak warning + winback)"
-          curl -sf -X POST --max-time 60 https://getshift-backend.onrender.com/notifications/daily-soir || echo "fail soir"
+          curl -sf -X POST  -H "Authorization: Bearer ${{ secrets.JOB_SECRET }}" --max-time 60 https://getshift-backend.onrender.com/notifications/daily-soir || echo "fail soir"
