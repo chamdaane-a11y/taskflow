@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -348,13 +349,13 @@ function IPhoneMockup({ size = 'normal' }) {
 }
 
 // ── Badges ────────────────────────────────────────────────────────────────────
-const BADGES_SHOWCASE = [
-  { icon: Flame, label: 'En route', desc: '3 jours consécutifs', color: 'var(--warning)', tier: 'common' },
-  { icon: Trophy, label: 'Semaine parfaite', desc: '7 jours de streak', color: 'var(--ember)', tier: 'rare' },
-  { icon: Zap, label: 'Centurion', desc: '100 tâches terminées', color: 'var(--info)', tier: 'epic' },
-  { icon: Star, label: 'Maestro', desc: 'Focus score 95+', color: '#a855f7', tier: 'legendary' },
-  { icon: Brain, label: 'Stratège', desc: 'TomorrowBuilder 10×', color: 'var(--success)', tier: 'rare' },
-  { icon: Shield, label: 'Indestructible', desc: 'Streak Freeze utilisé', color: 'var(--danger)', tier: 'common' },
+const BADGES_SHOWCASE = (t) => [
+  { icon: Flame, label: t('landing.bdg1'), desc: t('landing.bdg1d'), color: 'var(--warning)', tier: 'common' },
+  { icon: Trophy, label: t('landing.bdg2'), desc: t('landing.bdg2d'), color: 'var(--ember)', tier: 'rare' },
+  { icon: Zap, label: t('landing.bdg3'), desc: t('landing.bdg3d'), color: 'var(--info)', tier: 'epic' },
+  { icon: Star, label: t('landing.bdg4'), desc: t('landing.bdg4d'), color: '#a855f7', tier: 'legendary' },
+  { icon: Brain, label: t('landing.bdg5'), desc: t('landing.bdg5d'), color: 'var(--success)', tier: 'rare' },
+  { icon: Shield, label: t('landing.bdg6'), desc: t('landing.bdg6d'), color: 'var(--danger)', tier: 'common' },
 ]
 
 const INTEGRATIONS = [
@@ -367,41 +368,41 @@ const INTEGRATIONS = [
   { name: 'Zoom', Logo: ZoomLogo },
 ]
 
-const PLANS = [
+const PLANS = (t) => [
   {
-    nom: 'Gratuit',
+    nom: t('landing.plan_free'),
     prix: '0€',
-    periode: 'pour toujours',
-    cta: 'Commencer gratuitement',
+    periode: t('landing.plan_free_period'),
+    cta: t('landing.plan_free_cta'),
     highlight: false,
     features: [
-      'Tâches illimitées',
-      'Assistant IA — 50 req/jour',
-      'Analytics — 90 derniers jours',
-      'Collaboration illimitée',
-      'Toutes les intégrations (7 services)',
-      'TomorrowBuilder & GoalReverse',
-      'Gamification (27 badges, 10 niveaux)',
-      'Rapports hebdos par email',
-      'PWA + thèmes light/dark',
+      t('landing.pf1'),
+      t('landing.pf2'),
+      t('landing.pf3'),
+      t('landing.pf4'),
+      t('landing.pf5'),
+      t('landing.pf6'),
+      t('landing.pf7'),
+      t('landing.pf8'),
+      t('landing.pf9'),
     ],
   },
   {
-    nom: 'Pro',
+    nom: t('landing.plan_pro'),
     prix: '4,99€',
-    periode: 'par mois',
-    cta: 'Passer Pro',
+    periode: t('landing.plan_pro_period'),
+    cta: t('landing.plan_pro_cta'),
     highlight: true,
-    badge: 'Bientôt disponible',
+    badge: t('landing.plan_pro_badge'),
     features: [
-      'Tout du plan Gratuit',
-      'Assistant IA illimité',
-      'Exports analytics CSV / JSON',
-      'TomorrowBuilder IA multi-semaines',
-      'GoalReverse IA avec jalons automatiques',
-      'Badge Pro exclusif',
-      'Accès prioritaire aux nouvelles features',
-      'Support prioritaire',
+      t('landing.pp1'),
+      t('landing.pp2'),
+      t('landing.pp3'),
+      t('landing.pp4'),
+      t('landing.pp5'),
+      t('landing.pp6'),
+      t('landing.pp7'),
+      t('landing.pp8'),
     ],
   },
 ]
@@ -410,6 +411,7 @@ const PLANS = [
 // PAGE
 // ════════════════════════════════════════════════════════════════════════════
 export default function Landing() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
 
@@ -487,7 +489,7 @@ export default function Landing() {
           <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px' }}>GetShift</span>
         </div>
         <div className="nav-links" style={{ display: 'flex', gap: 32 }}>
-          {[['#features', 'Fonctionnalités'], ['#integrations', 'Intégrations'], ['#gamification', 'Progression'], ['#pricing', 'Tarifs']].map(([href, label]) => (
+          {[['#features', t('landing.nav_features')], ['#integrations', t('landing.nav_integrations')], ['#gamification', t('landing.nav_gamification')], ['#pricing', t('landing.nav_pricing')]].map(([href, label]) => (
             <a key={href} href={href} style={{ color: 'var(--text-secondary)', fontSize: 14, textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}>{label}</a>
@@ -513,31 +515,31 @@ export default function Landing() {
 
         <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.7 }}
           style={{ fontSize: 'clamp(40px,6.5vw,84px)', fontWeight: 800, lineHeight: 1.04, letterSpacing: '-3px', marginBottom: 18, maxWidth: 860, color: 'var(--text-primary)' }}>
-          Organise.{' '}
-          <span className="ec sf">Performe.</span>
-          <br />Évolue.
+          {t('auth.hero1')}{' '}
+          <span className="ec sf">{t('auth.hero2')}</span>
+          <br />{t('auth.hero3')}
         </motion.h1>
 
         <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
           style={{ fontSize: 'clamp(15px,1.8vw,18px)', color: 'var(--text-secondary)', maxWidth: 540, lineHeight: 1.8, marginBottom: 36, fontWeight: 400 }}>
-          GetShift combine gestion de tâches, IA personnelle et analytics avancés pour t'aider à accomplir plus — chaque jour.
+          {t('landing.hero_subtitle')}
         </motion.p>
 
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.48 }}
           style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 14 }}>
           <motion.button onClick={() => navigate('/register')} whileHover={{ scale: 1.03, filter: 'brightness(1.07)' }} whileTap={{ scale: 0.97 }}
             style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '14px 28px', background: 'linear-gradient(135deg,var(--ember),var(--ember-hover))', border: 'none', borderRadius: 12, color: 'var(--text-on-ember)', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-ui)', boxShadow: 'var(--shadow-ember)' }}>
-            Commencer gratuitement <ArrowRight size={16} />
+            {t('landing.plan_free_cta')} <ArrowRight size={16} />
           </motion.button>
           <motion.button onClick={() => navigate('/login')} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: 'var(--surface-1)', border: '1.5px solid var(--border-default)', borderRadius: 12, color: 'var(--text-secondary)', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
-            Se connecter
+            {t('auth.login')}
           </motion.button>
         </motion.div>
 
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.62 }}
           style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 52 }}>
-          Aucune carte bancaire · Sans engagement · Gratuit pour toujours
+          {t('landing.hero_note')}
         </motion.p>
 
         {/* Desktop: browser mockup */}
@@ -555,7 +557,7 @@ export default function Landing() {
 
         <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 2.5, repeat: Infinity }}
           style={{ marginTop: 32, color: 'var(--text-tertiary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontSize: 11 }}>Découvrir</span>
+          <span style={{ fontSize: 11 }}>{t('landing.discover')}</span>
           <ChevronDown size={16} />
         </motion.div>
       </section>
@@ -564,10 +566,10 @@ export default function Landing() {
       <section style={{ padding: 'clamp(28px,4vw,44px) clamp(20px,5vw,80px)', borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-1)' }}>
         <div className="strip" style={{ maxWidth: 900, margin: '0 auto' }}>
           {[
-            { val: '8', label: 'Intégrations', sublabel: 'Google, Notion, Slack…', icon: Zap },
-            { val: '27', label: 'Badges', sublabel: '4 piliers de progression', icon: Trophy },
-            { val: '10', label: 'Niveaux', sublabel: 'Démarrage → Légende', icon: TrendingUp },
-            { val: '100%', label: 'Gratuit', sublabel: 'Sans CB, sans engagement', icon: Shield },
+            { val: '8', label: t('landing.nav_integrations'), sublabel: t('landing.stat_integrations_sub'), icon: Zap },
+            { val: '27', label: t('landing.stat_badges'), sublabel: t('landing.stat_badges_sub'), icon: Trophy },
+            { val: '10', label: t('landing.stat_levels'), sublabel: t('landing.stat_levels_sub'), icon: TrendingUp },
+            { val: '100%', label: t('landing.stat_free'), sublabel: t('landing.stat_free_sub'), icon: Shield },
           ].map(({ val, label, sublabel, icon: Icon }, i) => (
             <FadeUp key={label} delay={i * 0.07}>
               <div style={{ textAlign: 'center', padding: '20px 10px' }}>
@@ -586,13 +588,13 @@ export default function Landing() {
         <FadeUp>
           <div style={{ textAlign: 'center', marginBottom: 'clamp(48px,7vw,80px)' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, fontSize: 12, color: 'var(--ember)', fontWeight: 600, marginBottom: 16 }}>
-              <Sparkles size={12} /> Fonctionnalités
+              <Sparkles size={12} /> {t('landing.feat_section_badge')}
             </div>
             <h2 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', maxWidth: 600, margin: '0 auto 14px', lineHeight: 1.1 }}>
-              Tout ce qu'il faut pour <span className="ec sf">performer</span>
+              {t('landing.feat_h2a')} <span className="ec sf">{t('landing.feat_h2_em')}</span>
             </h2>
             <p style={{ fontSize: 16, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
-              Du tableau de bord à l'assistant IA en passant par les analytics — une suite complète dans une seule app.
+              {t('landing.feat_section_title')}
             </p>
           </div>
         </FadeUp>
@@ -602,15 +604,15 @@ export default function Landing() {
           <div className="fr">
             <div className="fr-text">
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 12px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, fontSize: 11, color: 'var(--ember)', fontWeight: 600, marginBottom: 16 }}>
-                <Target size={11} /> Dashboard & IA Coach
+                <Target size={11} /> {t('landing.feat1_badge')}
               </div>
               <h3 style={{ fontSize: 'clamp(22px,3vw,34px)', fontWeight: 800, letterSpacing: '-1px', color: 'var(--text-primary)', marginBottom: 14, lineHeight: 1.2 }}>
-                Ton hub de productivité — tout centralisé
+                {t('landing.feat1_title')}
               </h3>
               <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 24 }}>
-                Dashboard en temps réel avec stats du jour, streak, points et tâches prioritaires. Un Coach IA analyse tes patterns et te donne des recommandations personnalisées — pas des conseils génériques.
+                {t('landing.feat1_desc')}
               </p>
-              {['Tâches avec priorité, deadline et catégorie', 'Score de focus calculé sur tes habitudes réelles', 'Coach IA adaptatif — 3 styles (Bienveillant / Motivateur / Analytique)', 'Rapports hebdos automatiques par email'].map(f => (
+              {[t('landing.feat1_b1'), t('landing.feat1_b2'), t('landing.feat1_b3'), t('landing.feat1_b4')].map(f => (
                 <div key={f} className="fc">
                   <CheckCircle size={15} color="var(--ember)" style={{ flexShrink: 0, marginTop: 2 }} />
                   <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{f}</span>
@@ -630,15 +632,15 @@ export default function Landing() {
           <div className="fr fr-r">
             <div className="fr-text">
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 12px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, fontSize: 11, color: 'var(--ember)', fontWeight: 600, marginBottom: 16 }}>
-                <BarChart2 size={11} /> Analytics avancés
+                <BarChart2 size={11} /> {t('landing.feat2_badge')}
               </div>
               <h3 style={{ fontSize: 'clamp(22px,3vw,34px)', fontWeight: 800, letterSpacing: '-1px', color: 'var(--text-primary)', marginBottom: 14, lineHeight: 1.2 }}>
-                Comprends tes patterns, optimise chaque journée
+                {t('landing.feat2_title')}
               </h3>
               <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 24 }}>
-                Courbe de progression, chronotype productif, heatmap d'activité — des analytics qui te révèlent <em>quand</em> tu es au sommet. Pas juste "combien de tâches", mais <em>comment</em> tu travailles.
+                {t('landing.feat2_desc')}
               </p>
-              {['Courbe de croissance sur 7 / 30 / 90 jours', 'Chronotype : tes heures de pic de productivité', 'Comparaison semaine actuelle vs précédente', 'Score focus, vélocité et prédiction de la semaine'].map(f => (
+              {[t('landing.feat2_b1'), t('landing.feat2_b2'), t('landing.feat2_b3'), t('landing.feat2_b4')].map(f => (
                 <div key={f} className="fc">
                   <CheckCircle size={15} color="var(--ember)" style={{ flexShrink: 0, marginTop: 2 }} />
                   <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{f}</span>
@@ -658,15 +660,15 @@ export default function Landing() {
           <div className="fr">
             <div className="fr-text">
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 12px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, fontSize: 11, color: 'var(--ember)', fontWeight: 600, marginBottom: 16 }}>
-                <Brain size={11} /> Planification IA + Collaboration
+                <Brain size={11} /> {t('landing.feat3_badge')}
               </div>
               <h3 style={{ fontSize: 'clamp(22px,3vw,34px)', fontWeight: 800, letterSpacing: '-1px', color: 'var(--text-primary)', marginBottom: 14, lineHeight: 1.2 }}>
-                Planifie avec l'IA, exécute en équipe
+                {t('landing.feat3_title')}
               </h3>
               <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 24 }}>
-                TomorrowBuilder génère ton planning de demain en quelques secondes. GoalReverse décompose tes objectifs ambitieux en jalons actionnables. Partage et collabore en temps réel.
+                {t('landing.feat3_desc')}
               </p>
-              {['TomorrowBuilder : plan IA personnalisé en 30 secondes', 'GoalReverse : objectif → jalons en quelques clics', 'Kanban collaboratif avec rôles (admin / validateur / membre)', 'Synchronisation Google Calendar bidirectionnelle'].map(f => (
+              {[t('landing.feat3_b1'), t('landing.feat3_b2'), t('landing.feat3_b3'), t('landing.feat3_b4')].map(f => (
                 <div key={f} className="fc">
                   <CheckCircle size={15} color="var(--ember)" style={{ flexShrink: 0, marginTop: 2 }} />
                   <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{f}</span>
@@ -687,10 +689,10 @@ export default function Landing() {
         <FadeUp>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <h2 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 800, letterSpacing: '-1px', color: 'var(--text-primary)', marginBottom: 12 }}>
-              Connecté à tes outils du quotidien
+              {t('landing.integ_title')}
             </h2>
             <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 440, margin: '0 auto' }}>
-              7 intégrations OAuth réelles — pas de copier-coller, pas de friction. Tes tâches et ton calendrier se synchronisent automatiquement.
+              {t('landing.integ_desc')}
             </p>
           </div>
         </FadeUp>
@@ -707,7 +709,7 @@ export default function Landing() {
         </div>
         <FadeUp delay={0.4}>
           <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', marginTop: 20 }}>
-            Connexion via OAuth sécurisé — tes données ne transitent jamais par nos serveurs sans ton accord
+            {t('landing.integ_secure')}
           </p>
         </FadeUp>
       </section>
@@ -721,20 +723,20 @@ export default function Landing() {
           <FadeUp style={{ flex: 1, minWidth: 0 }}>
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, fontSize: 12, color: 'var(--ember)', fontWeight: 600, marginBottom: 18 }}>
-                <MessageSquare size={12} /> IA Coach dans ta poche
+                <MessageSquare size={12} /> {t('landing.pwa_badge')}
               </div>
               <h2 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', marginBottom: 16, lineHeight: 1.15 }}>
-                Toujours avec toi,<br />
-                <span className="ec sf">même en déplacement</span>
+                {t('landing.pwa_h2')}<br />
+                <span className="ec sf">{t('landing.pwa_highlight')}</span>
               </h2>
               <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 28, maxWidth: 420 }}>
-                GetShift est une PWA installable — expérience native sur mobile comme sur desktop. Parle à ton Coach IA, consulte tes tâches, reçois tes notifications push.
+                {t('landing.pwa_desc')}
               </p>
               {[
-                { icon: Brain, text: 'Coach IA avec contexte complet — tes tâches, ton historique, tes intégrations' },
-                { icon: Bell, text: 'Notifications push — rappels de deadlines, streak en danger, rapport hebdo' },
-                { icon: Zap, text: 'Chargement instantané après installation PWA — fonctionne hors ligne' },
-                { icon: Calendar, text: 'Synchronisation temps réel avec Google Calendar depuis le mobile' },
+                { icon: Brain, text: t('landing.pwa_b1') },
+                { icon: Bell, text: t('landing.pwa_b_notif') },
+                { icon: Zap, text: t('landing.pwa_b2') },
+                { icon: Calendar, text: t('landing.pwa_b3') },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
                   <div style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -753,14 +755,14 @@ export default function Landing() {
         <FadeUp>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, fontSize: 12, color: 'var(--ember)', fontWeight: 600, marginBottom: 16 }}>
-              <Flame size={12} /> Progression & Récompenses
+              <Flame size={12} /> {t('landing.gam_badge')}
             </div>
             <h2 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', marginBottom: 14, maxWidth: 600, margin: '0 auto 14px', lineHeight: 1.1 }}>
-              L'app qui te récompense<br />
-              <span className="ec sf">pour chaque effort</span>
+              {t('landing.gam_title')}<br />
+              <span className="ec sf">{t('landing.gam_h2_em')}</span>
             </h2>
             <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
-              27 badges, 10 niveaux et un système de streak pour transformer ta productivité en progression visible. Chaque tâche terminée compte.
+              {t('landing.gam_desc')}
             </p>
           </div>
         </FadeUp>
@@ -769,17 +771,17 @@ export default function Landing() {
           <div style={{ maxWidth: 680, margin: '0 auto 48px', padding: 'clamp(20px,3vw,32px)', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>NIVEAU 4</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>Discipliné</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>{t('landing.gam_level')}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{t('landing.gam_level_name')}</div>
               </div>
               <div style={{ display: 'flex', gap: 20 }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--ember)' }}>620</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>Points</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{t('landing.gam_points')}</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--warning)' }}>🔥 12</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>Jours de streak</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{t('landing.gam_streak_days')}</div>
                 </div>
               </div>
             </div>
@@ -788,12 +790,12 @@ export default function Landing() {
                 viewport={{ once: true }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
                 style={{ height: '100%', background: 'linear-gradient(90deg,var(--ember),var(--ember-hover))', borderRadius: 99 }} />
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 7 }}>62% vers Niveau 5 — Stratège · 380 pts restants</div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 7 }}>{t('landing.gam_progress')}</div>
           </div>
         </FadeUp>
 
         <div className="bg-grid" style={{ maxWidth: 820, margin: '0 auto' }}>
-          {BADGES_SHOWCASE.map(({ icon: Icon, label, desc, color, tier }, i) => (
+          {BADGES_SHOWCASE(t).map(({ icon: Icon, label, desc, color, tier }, i) => (
             <FadeUp key={label} delay={i * 0.07}>
               <motion.div whileHover={{ scale: 1.04, translateY: -2 }} transition={{ duration: 0.18 }}
                 style={{ padding: '16px 18px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -816,18 +818,18 @@ export default function Landing() {
         <FadeUp>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, fontSize: 12, color: 'var(--ember)', fontWeight: 600, marginBottom: 16 }}>
-              <Star size={12} /> Tarifs simples
+              <Star size={12} /> {t('landing.price_badge')}
             </div>
             <h2 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', marginBottom: 12 }}>
-              Commence <span className="ec sf">gratuitement</span>
+              {t('landing.price_h2a')} <span className="ec sf">{t('landing.price_h2_em')}</span>
             </h2>
             <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 400, margin: '0 auto' }}>
-              Tout ce dont tu as besoin pour performer est gratuit. Le Pro arrive bientôt pour ceux qui veulent aller plus loin.
+              {t('landing.price_desc')}
             </p>
           </div>
         </FadeUp>
         <div className="pr-grid" style={{ maxWidth: 780, margin: '0 auto' }}>
-          {PLANS.map((plan, i) => (
+          {PLANS(t).map((plan, i) => (
             <FadeUp key={plan.nom} delay={i * 0.1}>
               <div style={{ position: 'relative', padding: 'clamp(24px,4vw,36px)', background: plan.highlight ? 'var(--surface-2)' : 'var(--surface-1)', border: plan.highlight ? '2px solid var(--ember)' : '1px solid var(--border-default)', borderRadius: 'var(--radius-xl)', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 {plan.highlight && (
@@ -854,7 +856,7 @@ export default function Landing() {
                   whileHover={!plan.highlight ? { scale: 1.02 } : {}}
                   whileTap={!plan.highlight ? { scale: 0.97 } : {}}
                   style={{ width: '100%', padding: '13px 20px', borderRadius: 11, fontSize: 14, fontWeight: 700, cursor: plan.highlight ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)', border: 'none', background: plan.highlight ? 'var(--surface-3)' : 'linear-gradient(135deg,var(--ember),var(--ember-hover))', color: plan.highlight ? 'var(--text-tertiary)' : 'var(--text-on-ember)', boxShadow: plan.highlight ? 'none' : 'var(--shadow-ember)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, opacity: plan.highlight ? 0.7 : 1 }}>
-                  {plan.highlight ? ' Bientôt' : <>{plan.cta} <ArrowRight size={15} /></>}
+                  {plan.highlight ? t('landing.price_soon') : <>{plan.cta} <ArrowRight size={15} /></>}
                 </motion.button>
               </div>
             </FadeUp>
@@ -862,7 +864,7 @@ export default function Landing() {
         </div>
         <FadeUp delay={0.3}>
           <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', marginTop: 20 }}>
-            Aucune carte bancaire requise · Annulation à tout moment · Le Pro arrivera lorsque tu seras prêt
+            {t('landing.price_note')}
           </p>
         </FadeUp>
       </section>
@@ -872,17 +874,17 @@ export default function Landing() {
         <FadeUp>
           <GetShiftMark size={48} style={{ margin: '0 auto 20px' }} />
           <h2 style={{ fontSize: 'clamp(28px,5vw,56px)', fontWeight: 800, letterSpacing: '-2px', color: 'var(--text-primary)', marginBottom: 16, lineHeight: 1.05, maxWidth: 700, margin: '0 auto 16px' }}>
-            Prêt à passer au niveau supérieur ?
+            {t('landing.cta_title')}
           </h2>
           <p style={{ fontSize: 16, color: 'var(--text-secondary)', maxWidth: 420, margin: '0 auto 36px', lineHeight: 1.7 }}>
-            Rejoins GetShift — gratuit, sans CB, sans friction. Ton prochain streak commence maintenant.
+            {t('landing.cta_subtitle')}
           </p>
           <motion.button onClick={() => navigate('/register')} whileHover={{ scale: 1.04, filter: 'brightness(1.07)' }} whileTap={{ scale: 0.96 }}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '16px 36px', background: 'linear-gradient(135deg,var(--ember),var(--ember-hover))', border: 'none', borderRadius: 14, color: 'var(--text-on-ember)', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-ui)', boxShadow: '0 8px 32px -8px var(--ember)', marginBottom: 24 }}>
-            Commencer gratuitement <ArrowRight size={18} />
+            {t('landing.plan_free_cta')} <ArrowRight size={18} />
           </motion.button>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
-            {['Gratuit pour toujours', 'Sans carte bancaire', 'Données sécurisées'].map(t => (
+            {[t('landing.cta1'), t('landing.cta2'), t('landing.cta3')].map(t => (
               <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
                 <CheckCircle size={12} color="var(--success)" /> {t}
               </div>
@@ -896,14 +898,14 @@ export default function Landing() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <GetShiftMark size={22} />
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>GetShift</span>
-          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>© 2026 Hamdaane CHITOU</span>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t('landing.footer_copy')}</span>
         </div>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           {[
-            ['#/cgu', 'CGU'],
-            ['#/confidentialite', 'Confidentialité'],
-            ['#/mentions-legales', 'Mentions légales'],
-            ['mailto:chamdaane1@gmail.com', 'Contact'],
+            ['#/cgu', t('landing.footer_cgu')],
+            ['#/confidentialite', t('landing.footer_privacy')],
+            ['#/mentions-legales', t('landing.footer_legal')],
+            ['mailto:chamdaane1@gmail.com', t('landing.footer_contact')],
           ].map(([href, label]) => (
             <a key={label} href={href} style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
