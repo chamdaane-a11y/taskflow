@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { applyTheme } from '../useTheme'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -11,6 +12,7 @@ const API = 'https://getshift-backend.onrender.com'
 const GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleusercontent.com'
 
 function LoginInner() {
+  const { t } = useTranslation()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [erreur, setErreur]     = useState('')
@@ -27,7 +29,7 @@ function LoginInner() {
   const navigate = useNavigate()
 
   const login = async () => {
-    if (!email || !password) { setErreur('Remplis tous les champs'); return }
+    if (!email || !password) { setErreur(t('auth.err_fill_all')); return }
     setLoading(true); setErreur(''); setNonVerifie(false); setRenvoyeMsg('')
     try {
       const pendingCode = (() => { try { return localStorage.getItem('pending_invite_code') } catch { return null } })()
@@ -49,13 +51,13 @@ function LoginInner() {
     } catch (err) {
       const data = err.response?.data
       if (data?.non_verifie) { setNonVerifie(true); setErreur(data.erreur) }
-      else setErreur(data?.erreur || 'Email ou mot de passe incorrect')
+      else setErreur(data?.erreur || t('auth.err_invalid_credentials'))
     }
     setLoading(false)
   }
 
   const loginTotp = async () => {
-    if (twoFaCode.length !== 6) { setErreur('Code à 6 chiffres requis'); return }
+    if (twoFaCode.length !== 6) { setErreur(t('auth.err_code_required')); return }
     setLoading(true); setErreur('')
     try {
       const res = await axios.post(`${API}/login/totp`, {
@@ -78,7 +80,7 @@ function LoginInner() {
   const renvoyerEmail = async () => {
     try {
       await axios.post(`${API}/resend-verification`, { email })
-      setRenvoyeMsg('Email envoyé — vérifie ta boîte mail.')
+      setRenvoyeMsg(t('auth.resend_success'))
     } catch { setRenvoyeMsg('Erreur lors de l\'envoi') }
   }
 
@@ -109,7 +111,7 @@ function LoginInner() {
       }
       setGLoading(false)
     },
-    onError: () => setErreur('Connexion Google annulée'),
+    onError: () => setErreur(t('auth.err_google_cancelled')),
     flow: 'implicit',
   })
 
@@ -160,7 +162,7 @@ function LoginInner() {
           <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>GetShift</span>
         </Link>
         <Link to="/register" style={{ padding: '8px 20px', background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', borderRadius: 9, color: 'var(--text-on-ember)', fontSize: 14, fontWeight: 600, textDecoration: 'none', boxShadow: 'var(--shadow-ember)', fontFamily: 'var(--font-ui)' }}>
-          S'inscrire gratuitement
+          {t('auth.signup_free')}
         </Link>
       </motion.nav>
 
@@ -175,24 +177,24 @@ function LoginInner() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 18px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, marginBottom: 28, fontSize: 13, color: 'var(--ember)', fontWeight: 600, width: 'fit-content' }}>
             <Sparkles size={13} strokeWidth={2} />
-            Propulsé par l'Intelligence Artificielle
+            {t('auth.powered_by_ai')}
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
             style={{ fontSize: 'clamp(40px, 5vw, 66px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
-            Organise.{' '}
-            <span className="ember-text">Performe.</span>
-            <br />Évolue.
+            {t('auth.hero1')}{' '}
+            <span className="ember-text">{t('auth.hero2')}</span>
+            <br />{t('auth.hero3')}
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
             style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 460, lineHeight: 1.75, marginBottom: 48, fontWeight: 400 }}>
-            Gestion de tâches, analytics et planification intelligente — tout ce qu'il faut pour performer chaque jour.
+            {t('auth.hero_subtitle_login')}
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
             style={{ display: 'flex', gap: 40 }}>
-            {[{ val: '27', label: 'Badges' }, { val: '10', label: 'Niveaux' }, { val: '100%', label: 'Gratuit' }].map((s, i) => (
+            {[{ val: '27', label: t('auth.stat_badges') }, { val: '10', label: t('auth.stat_levels') }, { val: '100%', label: t('auth.stat_free') }].map((s, i) => (
               <div key={i}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px', fontFamily: 'var(--font-ui)' }}>{s.val}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>{s.label}</div>
@@ -208,9 +210,9 @@ function LoginInner() {
 
           <div style={{ marginBottom: 32 }}>
             <h2 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.6px', marginBottom: 6, fontFamily: 'var(--font-ui)' }}>
-              Bon retour.
+              {t('auth.welcome_back')}
             </h2>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Connectez-vous à votre espace GetShift.</p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{t('auth.login_subtitle')}</p>
           </div>
 
           <AnimatePresence mode="wait">
@@ -219,12 +221,12 @@ function LoginInner() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(76,175,130,0.08)', border: '1px solid rgba(76,175,130,0.2)', borderRadius: 10, marginBottom: 22 }}>
                   <span style={{ fontSize: 18 }}>📧</span>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Double authentification</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Code envoyé à <strong>{twoFaEmailMasked || 'ton email'}</strong>. Vérifie aussi le dossier spam.</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t('auth.two_fa_title')}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{t('auth.code_sent_to')} <strong>{twoFaEmailMasked || t('auth.your_email')}</strong>. {t('auth.check_spam')}</div>
                   </div>
                 </div>
                 <div style={{ marginBottom: 20 }}>
-                  <label className="tf-label">Code à 6 chiffres</label>
+                  <label className="tf-label">{t('auth.code_6_digits')}</label>
                   <input className="tf-input" type="text" inputMode="numeric" pattern="[0-9]*"
                     placeholder="000 000"
                     value={twoFaCode}
@@ -239,30 +241,30 @@ function LoginInner() {
                   </div>
                 )}
                 <button className="tf-btn-main" onClick={loginTotp} disabled={loading || twoFaCode.length !== 6}>
-                  {loading ? 'Vérification...' : <><span>Vérifier</span><ArrowRight size={16}/></>}
+                  {loading ? t('auth.verifying') : <><span>{t('auth.verify')}</span><ArrowRight size={16}/></>}
                 </button>
                 <button onClick={() => { setTwoFaRequired(false); setTwoFaCode(''); setTwoFaEmailMasked(''); setErreur('') }}
                   style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 13, cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit' }}>
-                  ← Retour à la connexion
+                  {t('auth.back_to_login')}
                 </button>
               </motion.div>
             ) : (
               <motion.div key="login-form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div style={{ marginBottom: 14 }}>
-                  <label className="tf-label">Adresse e-mail</label>
-                  <input className="tf-input" type="email" placeholder="vous@exemple.com" value={email}
+                  <label className="tf-label">{t('auth.email_address')}</label>
+                  <input className="tf-input" type="email" placeholder={t('auth.email_ph')} value={email}
                     onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()} />
                 </div>
 
                 <div style={{ marginBottom: 8 }}>
-                  <label className="tf-label">Mot de passe</label>
+                  <label className="tf-label">{t('auth.password')}</label>
                   <input className="tf-input" type="password" placeholder="••••••••" value={password}
                     onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()} />
                 </div>
 
                 <div style={{ textAlign: 'right', marginBottom: 22 }}>
                   <Link to="/forgot-password" style={{ fontSize: 13, color: 'var(--text-tertiary)', textDecoration: 'none' }}>
-                    Mot de passe oublié ?
+                    {t('auth.forgot_title')}
                   </Link>
                 </div>
 
@@ -274,7 +276,7 @@ function LoginInner() {
                       {nonVerifie && (
                         <button onClick={renvoyerEmail}
                           style={{ display: 'block', marginTop: 8, background: 'none', border: 'none', color: 'var(--ember)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', padding: 0, fontFamily: 'inherit' }}>
-                          Renvoyer l'email de vérification
+                          {t('auth.resend_verification')}
                         </button>
                       )}
                     </motion.div>
@@ -287,7 +289,7 @@ function LoginInner() {
                 </AnimatePresence>
 
                 <button className="tf-btn-main" onClick={login} disabled={loading}>
-                  {loading ? 'Connexion...' : <><span>Se connecter</span><ArrowRight size={16}/></>}
+                  {loading ? t('auth.connecting') : <><span>{t('auth.login')}</span><ArrowRight size={16}/></>}
                 </button>
               </motion.div>
             )}
@@ -297,7 +299,7 @@ function LoginInner() {
             <>
               <div className="tf-divider">
                 <div className="tf-divider-line" />
-                <span className="tf-divider-text">ou</span>
+                <span className="tf-divider-text">{t('common.or')}</span>
                 <div className="tf-divider-line" />
               </div>
 
@@ -308,15 +310,15 @@ function LoginInner() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                {gLoading ? 'Connexion...' : 'Continuer avec Google'}
+                {gLoading ? t('auth.connecting') : t('auth.login_with_google')}
               </button>
             </>
           )}
 
           <p style={{ fontSize: 13, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 24 }}>
-            Pas encore de compte ?{' '}
+            {t('auth.no_account_yet')}{' '}
             <Link to="/register" style={{ color: 'var(--ember)', fontWeight: 600, textDecoration: 'none' }}>
-              S'inscrire gratuitement
+              {t('auth.signup_free')}
             </Link>
           </p>
         </motion.div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { applyTheme } from '../useTheme'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -11,6 +12,7 @@ const API = 'https://getshift-backend.onrender.com'
 const GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleusercontent.com'
 
 function RegisterInner() {
+  const { t } = useTranslation()
   const [form, setForm]       = useState({ nom: '', email: '', password: '', password2: '' })
   const [erreur, setErreur]   = useState('')
   const [succes, setSucces]   = useState(false)
@@ -21,9 +23,9 @@ function RegisterInner() {
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value })
 
   const register = async () => {
-    if (!form.nom || !form.email || !form.password) { setErreur('Remplis tous les champs'); return }
-    if (form.password !== form.password2) { setErreur('Les mots de passe ne correspondent pas'); return }
-    if (form.password.length < 6) { setErreur('Le mot de passe doit faire au moins 6 caractères'); return }
+    if (!form.nom || !form.email || !form.password) { setErreur(t('auth.err_fill_all')); return }
+    if (form.password !== form.password2) { setErreur(t('auth.err_password_mismatch')); return }
+    if (form.password.length < 6) { setErreur(t('auth.err_password_6')); return }
     setLoading(true); setErreur('')
     try {
       const pendingCode = (() => { try { return localStorage.getItem('pending_invite_code') } catch { return null } })()
@@ -65,7 +67,7 @@ function RegisterInner() {
       }
       setGLoading(false)
     },
-    onError: () => setErreur('Inscription Google annulée'),
+    onError: () => setErreur(t('auth.err_google_signup_cancelled')),
     flow: 'implicit',
   })
 
@@ -132,26 +134,26 @@ function RegisterInner() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 18px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, marginBottom: 28, fontSize: 13, color: 'var(--ember)', fontWeight: 600, width: 'fit-content' }}>
             <Sparkles size={13} strokeWidth={2} />
-            Gratuit · Sans carte bancaire
+            {t('auth.free_no_card')}
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
             style={{ fontSize: 'clamp(40px, 5vw, 66px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-3px', marginBottom: 22, fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
-            Organise.{' '}
-            <span className="ember-text">Performe.</span>
-            <br />Évolue.
+            {t('auth.hero1')}{' '}
+            <span className="ember-text">{t('auth.hero2')}</span>
+            <br />{t('auth.hero3')}
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
             style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 460, lineHeight: 1.75, marginBottom: 44, fontWeight: 400 }}>
-            Crée ton compte gratuitement — sans carte bancaire, sans engagement.
+            {t('auth.hero_subtitle_register')}
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
             {[
-              { titre: 'IA intégrée', desc: 'Générez et priorisez vos tâches automatiquement' },
-              { titre: 'Collaboration', desc: 'Invitez votre équipe et travaillez ensemble' },
-              { titre: 'Bilan hebdomadaire', desc: 'Recevez vos stats chaque vendredi par email' },
+              { titre: t('auth.feat_ai_title'), desc: t('auth.feat_ai_desc') },
+              { titre: t('nav.collaboration'), desc: t('auth.feat_collab_desc') },
+              { titre: t('auth.feat_report_title'), desc: t('auth.feat_report_desc') },
             ].map((f, i) => (
               <motion.div key={i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.55 + i * 0.1 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -181,42 +183,42 @@ function RegisterInner() {
                     <path d="M2 10L8.5 16.5L22 2" stroke="var(--ember)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, fontFamily: 'var(--font-ui)' }}>Compte créé !</h3>
+                <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, fontFamily: 'var(--font-ui)' }}>{t('auth.account_created')}</h3>
                 <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
-                  Vérifie ta boîte mail pour activer ton compte.<br/>Pense à regarder les spams.
+                  {t('auth.check_email_full')}<br/>{t('auth.check_spam_short')}
                 </p>
                 <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', color: 'var(--text-on-ember)', borderRadius: 11, fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: 'var(--shadow-ember)' }}>
-                  Se connecter <ArrowRight size={16}/>
+                  {t('auth.login')} <ArrowRight size={16}/>
                 </Link>
               </motion.div>
             ) : (
               <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div style={{ marginBottom: 28 }}>
                   <h2 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.6px', marginBottom: 6, fontFamily: 'var(--font-ui)' }}>
-                    Créer un compte.
+                    {t('auth.create_account_title')}
                   </h2>
-                  <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Gratuit pour toujours. Aucune carte requise.</p>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{t('auth.free_forever')}</p>
                 </div>
 
                 <div className="reg-row">
                   <div>
-                    <label className="tf-label">Nom complet</label>
-                    <input className="tf-input" type="text" name="nom" placeholder="John Doe" value={form.nom} onChange={handleChange} onKeyDown={e => e.key === 'Enter' && register()} />
+                    <label className="tf-label">{t('auth.name')}</label>
+                    <input className="tf-input" type="text" name="nom" placeholder={t('auth.name_ph')} value={form.nom} onChange={handleChange} onKeyDown={e => e.key === 'Enter' && register()} />
                   </div>
                   <div>
-                    <label className="tf-label">Adresse e-mail</label>
-                    <input className="tf-input" type="email" name="email" placeholder="vous@exemple.com" value={form.email} onChange={handleChange} onKeyDown={e => e.key === 'Enter' && register()} />
+                    <label className="tf-label">{t('auth.email_address')}</label>
+                    <input className="tf-input" type="email" name="email" placeholder={t('auth.email_ph')} value={form.email} onChange={handleChange} onKeyDown={e => e.key === 'Enter' && register()} />
                   </div>
                 </div>
 
                 <div className="reg-row">
                   <div>
-                    <label className="tf-label">Mot de passe</label>
-                    <input className="tf-input" type="password" name="password" placeholder="6 caractères min." value={form.password} onChange={handleChange} onKeyDown={e => e.key === 'Enter' && register()} />
+                    <label className="tf-label">{t('auth.password')}</label>
+                    <input className="tf-input" type="password" name="password" placeholder={t('auth.password_ph_6')} value={form.password} onChange={handleChange} onKeyDown={e => e.key === 'Enter' && register()} />
                   </div>
                   <div>
-                    <label className="tf-label">Confirmer</label>
-                    <input className="tf-input" type="password" name="password2" placeholder="Répéter" value={form.password2} onChange={handleChange} onKeyDown={e => e.key === 'Enter' && register()} />
+                    <label className="tf-label">{t('auth.confirm_short')}</label>
+                    <input className="tf-input" type="password" name="password2" placeholder={t('auth.repeat_ph')} value={form.password2} onChange={handleChange} onKeyDown={e => e.key === 'Enter' && register()} />
                   </div>
                 </div>
 
@@ -230,12 +232,12 @@ function RegisterInner() {
                 </AnimatePresence>
 
                 <button className="tf-btn-main" onClick={register} disabled={loading}>
-                  {loading ? 'Création...' : <><span>Créer mon compte</span><ArrowRight size={16}/></>}
+                  {loading ? t('auth.creating') : <><span>{t('auth.create_account')}</span><ArrowRight size={16}/></>}
                 </button>
 
                 <div className="tf-divider">
                   <div className="tf-divider-line" />
-                  <span className="tf-divider-text">ou</span>
+                  <span className="tf-divider-text">{t('common.or')}</span>
                   <div className="tf-divider-line" />
                 </div>
 
@@ -246,18 +248,18 @@ function RegisterInner() {
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                   </svg>
-                  {gLoading ? 'Connexion...' : 'Continuer avec Google'}
+                  {gLoading ? t('auth.connecting') : t('auth.login_with_google')}
                 </button>
 
                 <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
-                  En créant un compte, vous acceptez nos{' '}
-                  <Link to="/cgu" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>conditions d'utilisation</Link>
+                  {t('auth.terms_prefix')}{' '}
+                  <Link to="/cgu" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>{t('auth.terms')}</Link>
                 </p>
 
                 <p style={{ fontSize: 13, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 16 }}>
-                  Déjà un compte ?{' '}
+                  {t('auth.already_account_q')}{' '}
                   <Link to="/" style={{ color: 'var(--ember)', fontWeight: 600, textDecoration: 'none' }}>
-                    Se connecter
+                    {t('auth.login')}
                   </Link>
                 </p>
               </motion.div>

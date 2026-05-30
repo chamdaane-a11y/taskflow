@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Mail } from 'lucide-react'
@@ -8,18 +9,19 @@ import axios from 'axios'
 const API = 'https://getshift-backend.onrender.com'
 
 export default function ForgotPassword() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [erreur, setErreur] = useState('')
   const [succes, setSucces] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async () => {
-    if (!email) { setErreur('Entre ton adresse email'); return }
+    if (!email) { setErreur(t('auth.err_enter_email')); return }
     setLoading(true)
     setErreur('')
     try {
       await axios.post(`${API}/forgot-password`, { email })
-      setSucces('Email envoyé ! Vérifiez votre boîte mail.')
+      setSucces(t('auth.forgot_success'))
     } catch (err) {
       setErreur(err.response?.data?.erreur || 'Erreur lors de l\'envoi')
     }
@@ -82,20 +84,20 @@ export default function ForgotPassword() {
         </div>
 
         <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>
-          Mot de passe oublié
+          {t('auth.forgot_title')}
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>
-          Entre ton email et on t'envoie un lien pour réinitialiser ton mot de passe.
+          {t('auth.forgot_subtitle')}
         </p>
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 7 }}>
-            Adresse e-mail
+            {t('auth.email_address')}
           </label>
           <input
             className="fp-input"
             type="email"
-            placeholder="vous@exemple.com"
+            placeholder={t('auth.email_ph')}
             value={email}
             onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -127,11 +129,11 @@ export default function ForgotPassword() {
         }}
           onMouseEnter={e => { if (!loading && !succes) e.currentTarget.style.filter = 'brightness(1.08)' }}
           onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
-          {loading ? 'Envoi...' : <><span>Envoyer le lien</span><ArrowRight size={16} /></>}
+          {loading ? t('auth.sending') : <><span>{t('auth.send_link')}</span><ArrowRight size={16} /></>}
         </button>
 
         <p style={{ color: 'var(--text-tertiary)', marginTop: 22, fontSize: 13, textAlign: 'center' }}>
-          <Link to="/" style={{ color: 'var(--ember)', textDecoration: 'none', fontWeight: 600 }}>← Retour à la connexion</Link>
+          <Link to="/" style={{ color: 'var(--ember)', textDecoration: 'none', fontWeight: 600 }}>{t('auth.back_to_login')}</Link>
         </p>
       </motion.div>
     </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, KeyRound } from 'lucide-react'
@@ -8,6 +9,7 @@ import axios from 'axios'
 const API = 'https://getshift-backend.onrender.com'
 
 export default function ResetPassword() {
+  const { t } = useTranslation()
   const { token } = useParams()
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
@@ -17,17 +19,17 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async () => {
-    if (!password || !password2) { setErreur('Remplis tous les champs'); return }
-    if (password !== password2) { setErreur('Les mots de passe ne correspondent pas'); return }
-    if (password.length < 8) { setErreur('Le mot de passe doit contenir au moins 8 caractères'); return }
+    if (!password || !password2) { setErreur(t('auth.err_fill_all')); return }
+    if (password !== password2) { setErreur(t('auth.err_password_mismatch')); return }
+    if (password.length < 8) { setErreur(t('auth.err_password_8')); return }
     setLoading(true)
     setErreur('')
     try {
       await axios.post(`${API}/reset-password`, { token, password })
-      setSucces('Mot de passe modifié ! Redirection...')
+      setSucces(t('auth.reset_success'))
       setTimeout(() => navigate('/'), 2000)
     } catch (err) {
-      setErreur(err.response?.data?.erreur || 'Lien invalide ou expiré')
+      setErreur(err.response?.data?.erreur || t('auth.reset_invalid_link'))
     }
     setLoading(false)
   }
@@ -88,20 +90,20 @@ export default function ResetPassword() {
         </div>
 
         <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>
-          Nouveau mot de passe
+          {t('auth.reset_title')}
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>
-          Choisis un nouveau mot de passe sécurisé d'au moins 8 caractères.
+          {t('auth.reset_subtitle')}
         </p>
 
         <div style={{ marginBottom: 14 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 7 }}>
-            Nouveau mot de passe
+            {t('auth.reset_title')}
           </label>
           <input
             className="rp-input"
             type="password"
-            placeholder="8 caractères minimum"
+            placeholder={t('auth.password_ph_8')}
             value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -110,12 +112,12 @@ export default function ResetPassword() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 7 }}>
-            Confirmer le mot de passe
+            {t('auth.confirm_password_label')}
           </label>
           <input
             className="rp-input"
             type="password"
-            placeholder="Répète ton mot de passe"
+            placeholder={t('auth.repeat_password_ph')}
             value={password2}
             onChange={e => setPassword2(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -147,11 +149,11 @@ export default function ResetPassword() {
         }}
           onMouseEnter={e => { if (!loading && !succes) e.currentTarget.style.filter = 'brightness(1.08)' }}
           onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
-          {loading ? 'Modification...' : <><span>Modifier le mot de passe</span><ArrowRight size={16} /></>}
+          {loading ? t('auth.modifying') : <><span>{t('auth.change_password')}</span><ArrowRight size={16} /></>}
         </button>
 
         <p style={{ color: 'var(--text-tertiary)', marginTop: 22, fontSize: 13, textAlign: 'center' }}>
-          <Link to="/" style={{ color: 'var(--ember)', textDecoration: 'none', fontWeight: 600 }}>← Retour à la connexion</Link>
+          <Link to="/" style={{ color: 'var(--ember)', textDecoration: 'none', fontWeight: 600 }}>{t('auth.back_to_login')}</Link>
         </p>
       </motion.div>
     </div>
