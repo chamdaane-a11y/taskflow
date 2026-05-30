@@ -1,8 +1,9 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import axios from 'axios'
 import './theme/tokens.css'  // Design system "Graphite & Ember" — must load before index.css
 import './index.css'
+import './i18n'  // i18next — doit être importé avant App pour que t() soit disponible
 import App from './App.jsx'
 
 // Réveille le backend Render dès le démarrage (cold start = ~30s sinon)
@@ -61,6 +62,8 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <Suspense fallback={null}>
+      <App />
+    </Suspense>
   </StrictMode>,
 )

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
+import { useTranslation } from 'react-i18next'
 import { themes } from '../themes'
 import { applyTheme } from '../useTheme'
 import {
@@ -10,6 +11,15 @@ import {
   Settings as SettingsIcon, Monitor, Smartphone, Globe, Trash2,
   Lock, Unlock, Mail, RefreshCw, Laptop,
 } from 'lucide-react'
+
+const LANGUAGES = [
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'en', label: 'English',  flag: '🇬🇧' },
+  { code: 'es', label: 'Español',  flag: '🇪🇸' },
+  { code: 'ar', label: 'العربية',  flag: '🇸🇦' },
+  { code: 'pt', label: 'Português',flag: '🇧🇷' },
+  { code: 'de', label: 'Deutsch',  flag: '🇩🇪' },
+]
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import MobileBackButton from '../components/MobileBackButton'
@@ -30,9 +40,11 @@ export default function Settings() {
   const isMobile = useMediaQuery('(max-width: 768px)')
   const isTablet = useMediaQuery('(max-width: 1100px)')
   const isTiny   = useMediaQuery('(max-width: 400px)')
+  const { i18n } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user'))
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
   const T = themes[theme]
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   const VALID_SECTIONS = ['theme', 'integrations', 'notifications', 'compte']
   const [activeSection, setActiveSection] = useState(() => {
@@ -462,6 +474,36 @@ export default function Settings() {
             </div>
           )}
 
+          {/* ── Langue & Région ── */}
+          <SectionTitle>Langue & Région</SectionTitle>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
+            GetShift détecte automatiquement la langue de ton navigateur. Tu peux la changer manuellement ici.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+            {LANGUAGES.map(lang => (
+              <button
+                key={lang.code}
+                onClick={() => i18n.changeLanguage(lang.code)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '10px 16px', borderRadius: 12, cursor: 'pointer',
+                  border: `2px solid ${i18n.language === lang.code ? 'var(--ember)' : 'var(--border-subtle)'}`,
+                  background: i18n.language === lang.code ? 'var(--ember-soft)' : 'var(--surface-1)',
+                  fontWeight: i18n.language === lang.code ? 700 : 500,
+                  fontSize: 14, color: 'var(--text-primary)', transition: 'all 0.15s',
+                }}
+              >
+                <span style={{ fontSize: 18 }}>{lang.flag}</span>
+                <span>{lang.label}</span>
+                {i18n.language === lang.code && <Check size={14} color="var(--ember)" />}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Globe size={13} /> Fuseau horaire détecté : <strong>{userTimezone}</strong>
+          </p>
+
+          {/* ── Apparence ── */}
           <SectionTitle>Apparence</SectionTitle>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
             Personnalise l'apparence de GetShift. Le thème est synchronisé sur tous tes appareils.
@@ -900,7 +942,7 @@ export default function Settings() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {sessions.map(s => {
                   const isHere = s.is_current
-                  const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
+                  const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
                   return (
                     <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: isHere ? 'rgba(76,175,130,0.06)' : 'var(--surface-2)', border: `1px solid ${isHere ? 'rgba(76,175,130,0.2)' : 'var(--border-subtle)'}`, borderRadius: 12 }}>
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: isHere ? 'rgba(76,175,130,0.15)' : 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
