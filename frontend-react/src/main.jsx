@@ -16,9 +16,21 @@ fetch('https://getshift-backend.onrender.com/health').catch(() => {})
 // Envoie le cookie HttpOnly JWT sur toutes les requêtes cross-origin
 axios.defaults.withCredentials = true
 
+// Lit le cookie CSRF non-httpOnly posé par flask-jwt-extended (csrf_access_token).
+// Tant que le backend n'active pas JWT_COOKIE_CSRF_PROTECT, ce cookie est absent
+// → aucun header envoyé (no-op inoffensif). Quand il l'active, le header part.
+export function getCsrfToken() {
+  const m = document.cookie.match(/(?:^|;\s*)csrf_access_token=([^;]+)/)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
 axios.interceptors.request.use(config => {
-  if ((config.method || 'get').toLowerCase() === 'get') {
+  const method = (config.method || 'get').toLowerCase()
+  if (method === 'get') {
     config.params = { ...(config.params || {}), _t: Date.now() }
+  } else {
+    const csrf = getCsrfToken()
+    if (csrf) config.headers = { ...(config.headers || {}), 'X-CSRF-TOKEN': csrf }
   }
   return config
 })

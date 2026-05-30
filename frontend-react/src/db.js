@@ -267,6 +267,13 @@ export const viderFileSync = async () => {
 
 // ============ SYNCHRONISATION ============
 
+// Header CSRF pour les fetch() mutants (file offline) — miroir de l'intercepteur axios.
+// Cookie absent tant que le backend n'a pas activé JWT_COOKIE_CSRF_PROTECT → no-op.
+const csrfHeader = () => {
+  const m = document.cookie.match(/(?:^|;\s*)csrf_access_token=([^;]+)/)
+  return m ? { 'X-CSRF-TOKEN': decodeURIComponent(m[1]) } : {}
+}
+
 export const synchroniserAvecServeur = async (userId, apiUrl) => {
   const actions = await lireActionsSync()
   if (actions.length === 0) return { synced: 0, errors: 0 }
@@ -279,7 +286,7 @@ export const synchroniserAvecServeur = async (userId, apiUrl) => {
       if (action.type === 'AJOUTER_TACHE') {
         const res = await fetch(`${apiUrl}/taches`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...csrfHeader() },
           credentials: 'include',
           body: JSON.stringify(action.data)
         })
@@ -293,7 +300,7 @@ export const synchroniserAvecServeur = async (userId, apiUrl) => {
       else if (action.type === 'TERMINER_TACHE') {
         const res = await fetch(`${apiUrl}/taches/${action.data.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...csrfHeader() },
           credentials: 'include',
           body: JSON.stringify({ terminee: action.data.terminee })
         })
@@ -306,6 +313,7 @@ export const synchroniserAvecServeur = async (userId, apiUrl) => {
       else if (action.type === 'SUPPRIMER_TACHE') {
         const res = await fetch(`${apiUrl}/taches/${action.data.id}`, {
           method: 'DELETE',
+          headers: { ...csrfHeader() },
           credentials: 'include',
         })
         if (res.ok) {
