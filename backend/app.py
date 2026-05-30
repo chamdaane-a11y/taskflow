@@ -75,11 +75,7 @@ app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_COOKIE_SECURE'] = True
 app.config['JWT_COOKIE_SAMESITE'] = 'None'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
-# CSRF : passer à True UNIQUEMENT après que le frontend (qui envoie déjà le header
-# X-CSRF-TOKEN depuis le cookie csrf_access_token) soit déployé en prod. Sinon toutes
-# les mutations cassent. À l'activation, les sessions actives devront se reconnecter
-# une fois (le cookie csrf est posé au login). CORS autorise déjà X-CSRF-TOKEN.
-app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+app.config['JWT_COOKIE_CSRF_PROTECT'] = True
 jwt = JWTManager(app)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
