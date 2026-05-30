@@ -216,9 +216,13 @@ JOB_ENDPOINTS = {
     'trigger_email_rappel_veille', 'trigger_email_rappel_jour_j',
     'trigger_email_taches_retard', 'trigger_email_resume_hebdo',
     'trigger_lifecycle', 'trigger_daily_matin', 'trigger_daily_midi', 'trigger_daily_soir',
-    'init_templates', 'trigger_backup', 'get_backup_historique', 'telecharger_backup',
+    'trigger_backup', 'get_backup_historique', 'telecharger_backup',
     'broadcast_email',
 }
+
+# Endpoints appelés par le frontend (auth JWT) mais idempotents/publics par nature
+# → JWT requis mais pas d'ownership à vérifier
+JWT_NO_OWNERSHIP = {'init_templates'}
 
 # Ressources à colonne user_id directe : (préfixe de règle, nom du param, table).
 # L'ownership est vérifié centralement (le param d'URL doit pointer une ligne
@@ -258,6 +262,8 @@ def _enforce_auth():
         return
     # Toute autre route exige un JWT valide
     verify_jwt_in_request()
+    if ep in JWT_NO_OWNERSHIP:
+        return  # JWT vérifié, pas d'ownership à checker
     uid = current_uid()
 
     # Anti-IDOR body : forcer user_id du body à l'identité authentifiée. Flask met
