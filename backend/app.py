@@ -8,7 +8,7 @@ import urllib.parse
 from flask import Flask, jsonify, request, make_response, redirect
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies, jwt_required, get_jwt, get_jwt_identity, decode_token
+from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies, unset_jwt_cookies, jwt_required, get_jwt, get_jwt_identity, decode_token, verify_jwt_in_request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from database import connecter
@@ -59,19 +59,123 @@ class ISODateJSONProvider(DefaultJSONProvider):
 app = Flask(__name__)
 app.json_provider_class = ISODateJSONProvider
 app.json = ISODateJSONProvider(app)
-app.secret_key = os.getenv('SECRET_KEY', 'getshift_secret')
+# Secrets OBLIGATOIRES via l'environnement — aucun fallback (le repo est public,
+# un fallback en dur = forge de JWT triviale). Fail-fast au boot si absent.
+_SECRET_KEY = os.getenv('SECRET_KEY')
+_JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+if not _SECRET_KEY or not _JWT_SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY et JWT_SECRET_KEY doivent etre definis dans l'environnement "
+        "(Render env vars). Aucun fallback autorise."
+    )
+app.secret_key = _SECRET_KEY
 
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'getshift_jwt_secret')
+app.config['JWT_SECRET_KEY'] = _JWT_SECRET_KEY
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_COOKIE_SECURE'] = True
 app.config['JWT_COOKIE_SAMESITE'] = 'None'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+# CSRF : passer à True UNIQUEMENT après que le frontend (qui envoie déjà le header
+# X-CSRF-TOKEN depuis le cookie csrf_access_token) soit déployé en prod. Sinon toutes
+# les mutations cassent. À l'activation, les sessions actives devront se reconnecter
+# une fois (le cookie csrf est posé au login). CORS autorise déjà X-CSRF-TOKEN.
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
-CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type", "X-CSRF-TOKEN"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+
+# ═══════════════════════════════════════════════════════════════════
+#  Sécurité — helpers transverses (auth, ownership, jobs, erreurs)
+# ═══════════════════════════════════════════════════════════════════
+from flask import abort
+
+def erreur_500(e):
+    """Réponse 500 générique. La trace complète va dans les logs serveur
+    UNIQUEMENT — jamais renvoyée au client (fuite d'info / fingerprinting)."""
+    app.logger.error("Exception non gérée: %s", e, exc_info=True)
+    return jsonify({"erreur": "Erreur interne"}), 500
+
+@app.errorhandler(500)
+def _handle_500(e):
+    return jsonify({"erreur": "Erreur interne"}), 500
+
+def current_uid():
+    """ID utilisateur authentifié issu du JWT (cookie). Suppose @jwt_required()."""
+    return int(get_jwt_identity())
+
+def require_owner(uid):
+    """403 si l'utilisateur authentifié n'est pas le propriétaire de la ressource."""
+    if current_uid() != int(uid):
+        abort(403)
+
+def owns_row(cur, table, row_id, uid, col='user_id'):
+    """True si la ligne `table.id=row_id` appartient à `uid`. `table`/`col` sont
+    toujours des littéraux internes (jamais d'input user) → pas d'injection."""
+    cur.execute(f"SELECT {col} AS owner FROM {table} WHERE id=%s", (row_id,))
+    r = cur.fetchone()
+    if r is None:
+        return None  # ressource inexistante
+    owner = r['owner'] if isinstance(r, dict) else r[0]
+    return owner is not None and int(owner) == int(uid)
+
+def require_job_secret():
+    """401 si le header Authorization ne porte pas le JOB_SECRET attendu.
+    Protège les endpoints cron/backup (déclenchés par GitHub Actions)."""
+    expected = os.getenv('JOB_SECRET')
+    sent = (request.headers.get('Authorization') or '').replace('Bearer ', '').strip()
+    if not expected or not secrets.compare_digest(sent, expected):
+        abort(401)
+
+def require_team_member(cur, equipe_id, uid, roles=None):
+    """403 si `uid` n'est pas membre de l'équipe (ou n'a pas un rôle requis).
+    Retourne le rôle du membre. `roles` = itérable de rôles autorisés (ex. {'admin'})."""
+    cur.execute("SELECT role FROM equipe_membres WHERE equipe_id=%s AND user_id=%s", (equipe_id, uid))
+    r = cur.fetchone()
+    if r is None:
+        abort(403)
+    role = r['role'] if isinstance(r, dict) else r[0]
+    if roles is not None and role not in roles:
+        abort(403)
+    return role
+
+def _implique_dans_tache(cur, tache_id, uid):
+    """True si `uid` est propriétaire de la tâche OU collaborateur dessus."""
+    cur.execute("SELECT user_id FROM taches WHERE id=%s", (tache_id,))
+    r = cur.fetchone()
+    owner = (r['user_id'] if isinstance(r, dict) else r[0]) if r else None
+    if owner is not None and int(owner) == int(uid):
+        return True
+    cur.execute("SELECT 1 FROM collaborations WHERE tache_id=%s AND collaborateur_id=%s", (tache_id, uid))
+    return cur.fetchone() is not None
+
+# ── Hash mot de passe — scrypt (werkzeug), avec support legacy SHA-256 + rehash transparent ──
+from werkzeug.security import generate_password_hash, check_password_hash
+
+def hash_password(pw):
+    return generate_password_hash(pw)
+
+def _looks_sha256(s):
+    return bool(s) and len(s) == 64 and all(c in '0123456789abcdef' for c in s.lower())
+
+def verify_password(pw, stored, user_id=None):
+    """Vérifie un mot de passe. Accepte les anciens hash SHA-256 non salés et, en
+    cas de succès, les re-hash en scrypt de façon transparente (migration progressive)."""
+    if stored is None:
+        return False
+    if _looks_sha256(stored):
+        if hashlib.sha256(pw.encode('utf-8')).hexdigest() == stored:
+            if user_id is not None:
+                try:
+                    db = connecter(); c = db.cursor()
+                    c.execute("UPDATE users SET password=%s WHERE id=%s", (hash_password(pw), user_id))
+                    db.commit(); db.close()
+                except Exception as _e:
+                    app.logger.error("rehash mdp échoué: %s", _e)
+            return True
+        return False
+    return check_password_hash(stored, pw)
 
 @app.after_request
 def disable_api_cache(response):
@@ -86,6 +190,137 @@ def disable_api_cache(response):
     except Exception:
         pass
     return response
+
+# ═══════════════════════════════════════════════════════════════════
+#  Garde d'authentification centralisé (anti-IDOR)
+#  Toute route exige un JWT valide SAUF l'allowlist publique. Les routes
+#  cron/backup exigent le JOB_SECRET. L'ownership URL (user_id / /users/<id>)
+#  est vérifié ici. L'ownership des ressources (id de tâche, etc.) et le
+#  scoping équipe sont gérés dans chaque handler concerné.
+# ═══════════════════════════════════════════════════════════════════
+
+# Endpoints publics (pas d'auth) — par NOM de fonction handler
+PUBLIC_ENDPOINTS = {
+    'health', 'auth_google', 'register', 'verify_email', 'login', 'logout',
+    'resend_verification', 'forgot_password', 'reset_password',
+    'confirm_email_change', 'login_totp', 'get_vapid_public_key',
+    # Flux OAuth (redirect navigateur + callbacks) — identité via query/state + table oauth_states
+    'auth_google_calendar', 'auth_google_calendar_callback', 'gcal_webhook',
+    'auth_gmail', 'auth_gmail_callback', 'auth_google_drive',
+    'auth_google_drive_callback', 'auth_zoom', 'auth_notion',
+    'auth_notion_callback', 'auth_slack_oauth', 'auth_discord',
+    # Données statiques non sensibles
+    'get_coach_styles', 'goal_reverse_templates',
+}
+
+# Endpoints job/cron/backup — protégés par JOB_SECRET (header Authorization Bearer)
+JOB_ENDPOINTS = {
+    'debug_push_status', 'debug_gcal_status', 'debug_email_status', 'debug_resume_hebdo',
+    'send_rappels', 'trigger_resume_matin', 'trigger_rappels_deadline', 'trigger_encouragements',
+    'trigger_email_rappel_veille', 'trigger_email_rappel_jour_j',
+    'trigger_email_taches_retard', 'trigger_email_resume_hebdo',
+    'trigger_lifecycle', 'trigger_daily_matin', 'trigger_daily_midi', 'trigger_daily_soir',
+    'init_templates', 'trigger_backup', 'get_backup_historique', 'telecharger_backup',
+}
+
+# Ressources à colonne user_id directe : (préfixe de règle, nom du param, table).
+# L'ownership est vérifié centralement (le param d'URL doit pointer une ligne
+# appartenant à l'utilisateur authentifié). Les sous-ressources nécessitant une
+# jointure (sous_taches, dependances, commentaires), les templates partagés et
+# les routes équipe sont gérés dans leurs handlers respectifs.
+RESOURCE_OWNERSHIP = [
+    ('/taches/<int:id>', 'id', 'taches'),
+    ('/taches/<int:tache_id>', 'tache_id', 'taches'),
+    ('/planification/<int:entry_id>', 'entry_id', 'planification'),
+    ('/categories/<int:id>', 'id', 'categories'),
+    ('/integrations/google-calendar/sync-task/<int:task_id>', 'task_id', 'taches'),
+    ('/ia/goal-reverse/<int:objectif_id>', 'objectif_id', 'objectifs'),
+]
+
+# Ressources d'équipe identifiées par un id de ressource (pas equipe_id dans l'URL).
+# On résout l'équipe via la ressource puis on exige l'appartenance. (préfixe, param, SQL→equipe_id)
+TEAM_RESOURCE = [
+    ('/equipes/taches/<int:tache_id>', 'tache_id', "SELECT equipe_id FROM taches_equipe WHERE id=%s"),
+    ('/equipes/labels/<int:label_id>', 'label_id', "SELECT equipe_id FROM labels_equipe WHERE id=%s"),
+    ('/equipes/sous-taches/<int:sous_tache_id>', 'sous_tache_id',
+     "SELECT te.equipe_id FROM sous_taches_equipe se JOIN taches_equipe te ON se.tache_id=te.id WHERE se.id=%s"),
+]
+
+@app.before_request
+def _enforce_auth():
+    # Laisser passer le préflight CORS (géré par flask-cors)
+    if request.method == 'OPTIONS':
+        return
+    ep = request.endpoint
+    if ep is None:
+        return  # route inconnue → 404 normal
+    if ep in PUBLIC_ENDPOINTS:
+        return
+    if ep in JOB_ENDPOINTS:
+        require_job_secret()
+        return
+    # Toute autre route exige un JWT valide
+    verify_jwt_in_request()
+    uid = current_uid()
+
+    # Anti-IDOR body : forcer user_id du body à l'identité authentifiée. Flask met
+    # en cache le JSON parsé → l'écrasement ici se propage à tous les handlers qui
+    # lisent data['user_id']. Le client ne peut plus agir au nom d'un autre.
+    if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        body = request.get_json(silent=True)
+        if isinstance(body, dict):
+            # Clés représentant l'utilisateur AGISSANT (jamais une cible) → forcées au JWT.
+            # NB: assignee_id / collaborateur_id / target_id ne sont PAS écrasés (cibles légitimes).
+            for _k in ('user_id', 'createur_id', 'owner_id'):
+                if _k in body:
+                    body[_k] = uid
+
+    # Ownership basé sur l'URL
+    args = request.view_args or {}
+    if 'user_id' in args and int(args['user_id']) != uid:
+        abort(403)
+    rule = getattr(request.url_rule, 'rule', '') or ''
+    if rule.startswith('/users/<int:id>') and 'id' in args and int(args['id']) != uid:
+        abort(403)
+
+    # Ownership des ressources à user_id direct
+    for prefix, param, table in RESOURCE_OWNERSHIP:
+        if rule.startswith(prefix) and param in args:
+            db = connecter(); cur = db.cursor(dictionary=True)
+            try:
+                owned = owns_row(cur, table, args[param], uid)
+            finally:
+                db.close()
+            if owned is None:
+                abort(404)
+            if not owned:
+                abort(403)
+            break
+
+    # Ownership équipe : être membre est requis pour toute route /equipes/<equipe_id>/*
+    # (les actions admin font en plus leur propre contrôle de rôle dans le handler).
+    if 'equipe_id' in args:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        try:
+            require_team_member(cur, args['equipe_id'], uid)
+        finally:
+            db.close()
+
+    # Ownership équipe via ressource (tâche/label/sous-tâche d'équipe) : résoudre
+    # l'équipe depuis la ressource puis exiger l'appartenance.
+    for prefix, param, sql in TEAM_RESOURCE:
+        if rule.startswith(prefix) and param in args:
+            db = connecter(); cur = db.cursor(dictionary=True)
+            try:
+                cur.execute(sql, (args[param],))
+                row = cur.fetchone()
+                if row is None:
+                    abort(404)
+                eq_id = row['equipe_id'] if isinstance(row, dict) else row[0]
+                require_team_member(cur, eq_id, uid)
+            finally:
+                db.close()
+            break
 
 VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
@@ -1803,7 +2038,7 @@ def register():
             return jsonify({"erreur": "Tous les champs sont requis"}), 400
         if len(password) < 8:
             return jsonify({"erreur": "Le mot de passe doit contenir au moins 8 caractères"}), 400
-        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        password_hash = hash_password(password)
         verification_token = secrets.token_urlsafe(32)
         db = connecter()
         curseur = db.cursor(dictionary=True)
@@ -1823,7 +2058,7 @@ def register():
         threading.Thread(target=envoyer_email_verification, args=(email, nom, verification_token)).start()
         return jsonify({"message": "Compte créé ! Vérifiez votre email."})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/verify-email/<token>', methods=['GET'])
 def verify_email(token):
@@ -1859,7 +2094,7 @@ def verify_email(token):
             <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">Se connecter →</a>
         </body></html>"""
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/login', methods=['POST'])
 @limiter.limit("10 per minute")
@@ -1870,14 +2105,14 @@ def login():
         password = data.get('password', '').strip()
         if not email or not password:
             return jsonify({"erreur": "Email et mot de passe requis"}), 400
-        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("SELECT id, nom, email, email_verifie, theme, totp_enabled FROM users WHERE email = %s AND password = %s", (email, password_hash))
+        curseur.execute("SELECT id, nom, email, email_verifie, theme, totp_enabled, password FROM users WHERE email = %s", (email,))
         user = curseur.fetchone()
         curseur.close(); db.close()
-        if not user:
+        if not user or not verify_password(password, user.get('password'), user['id']):
             return jsonify({"erreur": "Email ou mot de passe incorrect !"}), 401
+        user.pop('password', None)  # ne jamais propager le hash
         if not user.get('email_verifie'):
             return jsonify({"erreur": "Veuillez vérifier votre email avant de vous connecter !", "non_verifie": True}), 403
 
@@ -1917,7 +2152,7 @@ def login():
         set_access_cookies(response, access_token)
         return response
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/logout', methods=['POST'])
 @jwt_required(optional=True)
@@ -1956,7 +2191,7 @@ def resend_verification():
         threading.Thread(target=envoyer_email_verification, args=(email, user['nom'], new_token)).start()
         return jsonify({"message": "Email de vérification renvoyé !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/forgot-password', methods=['POST'])
 @limiter.limit("3 per hour")
@@ -1985,7 +2220,7 @@ def forgot_password():
         threading.Thread(target=envoyer_email, args=(email, "Réinitialisation mot de passe — GetShift", _base_email(contenu, "Réinitialisation"))).start()
         return jsonify({"message": "Si cet email existe, un lien a été envoyé."})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/reset-password', methods=['POST'])
 def reset_password():
@@ -2003,12 +2238,12 @@ def reset_password():
             db.close(); return jsonify({"erreur": "Lien invalide ou expiré"}), 400
         if user['reset_token_expiry'] and datetime.now() > user['reset_token_expiry']:
             db.close(); return jsonify({"erreur": "Lien expiré, demandez un nouveau"}), 400
-        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        password_hash = hash_password(password)
         curseur.execute("UPDATE users SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE id=%s", (password_hash, user['id']))
         db.commit(); db.close()
         return jsonify({"message": "Mot de passe modifié avec succès !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # UTILISATEURS
@@ -2053,7 +2288,7 @@ def update_nom(id):
         db.commit(); db.close()
         return jsonify({"message": "Nom mis à jour !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/password', methods=['PUT'])
 def update_password(id):
@@ -2065,18 +2300,17 @@ def update_password(id):
             return jsonify({"erreur": "Tous les champs sont requis"}), 400
         if len(nouveau) < 8:
             return jsonify({"erreur": "Le mot de passe doit contenir au moins 8 caractères"}), 400
-        ancien_hash = hashlib.sha256(ancien.encode('utf-8')).hexdigest()
-        nouveau_hash = hashlib.sha256(nouveau.encode('utf-8')).hexdigest()
         db = connecter()
         curseur = db.cursor(dictionary=True)
-        curseur.execute("SELECT id FROM users WHERE id=%s AND password=%s", (id, ancien_hash))
-        if not curseur.fetchone():
+        curseur.execute("SELECT password FROM users WHERE id=%s", (id,))
+        row = curseur.fetchone()
+        if not row or not verify_password(ancien, row.get('password'), id):
             db.close(); return jsonify({"erreur": "Mot de passe actuel incorrect"}), 400
-        curseur.execute("UPDATE users SET password=%s WHERE id=%s", (nouveau_hash, id))
+        curseur.execute("UPDATE users SET password=%s WHERE id=%s", (hash_password(nouveau), id))
         db.commit(); db.close()
         return jsonify({"message": "Mot de passe modifié avec succès !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/email-change/request', methods=['POST'])
 def request_email_change(id):
@@ -2101,8 +2335,7 @@ def request_email_change(id):
         if new_email == (user.get('email') or '').lower():
             cur.close(); db.close()
             return jsonify({"erreur": "C'est déjà ton email actuel"}), 400
-        pwd_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
-        if pwd_hash != user.get('password'):
+        if not verify_password(password, user.get('password'), id):
             cur.close(); db.close()
             return jsonify({"erreur": "Mot de passe incorrect"}), 401
         cur.execute("SELECT id FROM users WHERE email=%s AND id!=%s", (new_email, id))
@@ -2119,7 +2352,7 @@ def request_email_change(id):
         envoyer_email_changement(new_email, user['nom'], token)
         return jsonify({"message": "Un email de confirmation a été envoyé à ta nouvelle adresse"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/confirm-email-change/<token>', methods=['GET'])
 def confirm_email_change(token):
@@ -2213,7 +2446,7 @@ def export_user_data(id):
             headers={'Content-Disposition': f'attachment; filename="getshift-export-{id}-{datetime.now().strftime("%Y%m%d")}.json"'}
         )
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>', methods=['DELETE'])
 def delete_user(id):
@@ -2236,8 +2469,7 @@ def delete_user(id):
             if not password:
                 cur.close(); db.close()
                 return jsonify({"erreur": "Mot de passe requis"}), 400
-            pwd_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
-            if pwd_hash != user.get('password'):
+            if not verify_password(password, user.get('password'), id):
                 cur.close(); db.close()
                 return jsonify({"erreur": "Mot de passe incorrect"}), 401
 
@@ -2262,7 +2494,7 @@ def delete_user(id):
         unset_jwt_cookies(response)
         return response
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/email-change/cancel', methods=['POST'])
 def cancel_email_change(id):
@@ -2276,7 +2508,7 @@ def cancel_email_change(id):
         db.commit(); cur.close(); db.close()
         return jsonify({"message": "Changement annulé"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/sessions', methods=['GET'])
 @jwt_required()
@@ -2321,7 +2553,7 @@ def list_sessions(id):
         } for row in rows]
         return jsonify({"sessions": sessions})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/sessions/<int:session_id>', methods=['DELETE'])
 @jwt_required()
@@ -2334,7 +2566,7 @@ def delete_session(id, session_id):
         db.commit(); cur.close(); db.close()
         return jsonify({"message": "Session déconnectée"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/sessions/others', methods=['DELETE'])
 @jwt_required()
@@ -2348,7 +2580,7 @@ def delete_other_sessions(id):
         db.commit(); cur.close(); db.close()
         return jsonify({"message": "Autres sessions déconnectées"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/theme', methods=['PUT'])
 def update_theme(id):
@@ -2371,7 +2603,7 @@ def get_notif_prefs(id):
         prefs = json.loads(raw) if raw else None
         return jsonify({"prefs": prefs})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/notif-prefs', methods=['PUT'])
 def update_notif_prefs(id):
@@ -2385,7 +2617,7 @@ def update_notif_prefs(id):
         db.commit(); db.close()
         return jsonify({"message": "Préférences sauvegardées"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ── 2FA email OTP ─────────────────────────────────────────────────────────────
 
@@ -2437,7 +2669,6 @@ def _verify_user_password(user_id, password):
     une preuve d'identité."""
     if not password:
         return False, "Mot de passe requis"
-    pw_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
     db = connecter(); cur = db.cursor(dictionary=True)
     cur.execute("SELECT password, google_id FROM users WHERE id=%s", (user_id,))
     row = cur.fetchone(); cur.close(); db.close()
@@ -2445,7 +2676,7 @@ def _verify_user_password(user_id, password):
         return False, "Utilisateur introuvable"
     if not row.get('password'):
         return False, "Définis d'abord un mot de passe via 'Mot de passe oublié' depuis la page de login"
-    if row['password'] != pw_hash:
+    if not verify_password(password, row['password'], user_id):
         return False, "Mot de passe incorrect"
     return True, None
 
@@ -2481,7 +2712,7 @@ def get_2fa_status(id):
             return jsonify({"erreur": "Utilisateur introuvable"}), 404
         return jsonify({"enabled": bool(row.get('totp_enabled'))})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/2fa/setup', methods=['POST'])
 @limiter.limit("5 per hour")
@@ -2507,7 +2738,7 @@ def setup_2fa(id):
         masked = email[0] + '*' * max(1, at - 2) + email[at-1:] if at > 1 else email
         return jsonify({"message": f"Code envoyé à {masked}", "email_masked": masked})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/2fa/verify', methods=['POST'])
 @limiter.limit("10 per minute")
@@ -2546,7 +2777,7 @@ def verify_2fa(id):
         db.commit(); cur.close(); db.close()
         return jsonify({"message": "2FA activée"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/2fa/disable', methods=['POST'])
 @limiter.limit("10 per minute")
@@ -2573,7 +2804,7 @@ def disable_2fa(id):
         db.commit(); cur.close(); db.close()
         return jsonify({"message": "2FA désactivée"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/login/totp', methods=['POST'])
 @limiter.limit("10 per minute")
@@ -2640,7 +2871,7 @@ def login_totp():
         set_access_cookies(response, access_token)
         return response
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/calibration', methods=['GET'])
 def get_calibration(id):
@@ -2704,7 +2935,7 @@ def get_calibration(id):
             "surEstimes": sur_estimes,
         })
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/users/<int:id>/taches-jour/<date>', methods=['GET'])
@@ -2741,7 +2972,7 @@ def get_taches_jour(id, date):
                     r[key] = r[key].isoformat() if hasattr(r[key], 'isoformat') else str(r[key])
         return jsonify({"date": date, "taches": rows, "total": len(rows)})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/users/<int:id>/gamification', methods=['GET'])
@@ -2774,7 +3005,7 @@ def get_gamification(id):
             "seuilSuivant": seuil_suivant,
         })
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/users/<int:id>/points', methods=['PUT'])
@@ -3164,7 +3395,7 @@ def get_badges(id):
             "nb_total": len(REGLES_BADGES),
         })
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 def _freeze_disponible(user):
     """Le Streak Freeze est dispo si pas utilisé cette semaine ISO."""
@@ -3248,7 +3479,7 @@ def get_timeline(id):
 
         return jsonify({"events": events, "total": len(events)})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/users/<int:id>/streak', methods=['GET'])
@@ -3261,7 +3492,7 @@ def get_streak(id):
         db.close()
         return jsonify({"streak": user['streak'] or 0, "derniere_activite": str(user['derniere_activite']) if user['derniere_activite'] else None})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/dashboard/stats/<int:user_id>', methods=['GET'])
@@ -3342,7 +3573,7 @@ def dashboard_stats(user_id):
         })
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 # ============================================
 # CATEGORIES
@@ -3497,7 +3728,7 @@ def ajouter_tache():
             _autosync_calendar_hook(user_id, tache_id, 'create_from_deadline')
         return jsonify({"message": "Tâche ajoutée !", "id": tache_id})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/taches/<int:id>', methods=['PUT'])
 def terminer_tache(id):
@@ -3576,7 +3807,7 @@ def update_statut_tache(id):
         db.commit(); db.close()
         return jsonify({"message": "Statut mis à jour !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/taches/<int:id>/focus', methods=['PATCH'])
 def update_focus_tache(id):
@@ -3614,7 +3845,7 @@ def update_focus_tache(id):
             _autosync_calendar_hook(user_id, id, 'remove_focus')
             return jsonify({"message": "Focus retiré", "focus_date": None})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/taches/rappels/<int:user_id>', methods=['GET'])
 def get_rappels(user_id):
@@ -3630,7 +3861,7 @@ def get_rappels(user_id):
         db.close()
         return jsonify({"count": len(rappels), "rappels": rappels})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # DEPENDANCES
@@ -3646,7 +3877,7 @@ def get_dependances(tache_id):
         db.close()
         return jsonify(dependances)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/taches/<int:tache_id>/dependances', methods=['POST'])
 def ajouter_dependance(tache_id):
@@ -3667,18 +3898,24 @@ def ajouter_dependance(tache_id):
         db.commit(); db.close()
         return jsonify({"message": "Dépendance ajoutée !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/dependances/<int:id>', methods=['DELETE'])
 def supprimer_dependance(id):
     try:
         db = connecter()
-        curseur = db.cursor()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT t.user_id AS owner FROM dependances d JOIN taches t ON d.tache_id=t.id WHERE d.id=%s", (id,))
+        r = curseur.fetchone()
+        if not r:
+            db.close(); return jsonify({"erreur": "Dépendance introuvable"}), 404
+        if int(r['owner']) != current_uid():
+            db.close(); abort(403)
         curseur.execute("DELETE FROM dependances WHERE id=%s", (id,))
         db.commit(); db.close()
         return jsonify({"message": "Dépendance supprimée !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # IA — ROUTES EXISTANTES (S1-S7)
@@ -3708,7 +3945,7 @@ def executer_ia():
             db.commit(); db.close()
         return jsonify({"reponse": reponse, "modele": modele, "tache_id": tache_id})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/historique/<int:user_id>', methods=['GET'])
 def get_historique(user_id):
@@ -3747,7 +3984,7 @@ Réponds UNIQUEMENT en JSON valide :
             raise ValueError("Réponse IA invalide")
         return jsonify(json.loads(match.group()))
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/generer-taches', methods=['POST'])
 def generer_taches():
@@ -3769,7 +4006,7 @@ def generer_taches():
         db.commit(); db.close()
         return jsonify({"taches": taches_list, "message": "5 tâches créées avec succès"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/planifier', methods=['POST'])
 def planifier_semaine():
@@ -3801,7 +4038,7 @@ def planifier_semaine():
         db.commit(); db.close()
         return jsonify({"planification": plan['planification'], "conseil": plan.get('conseil', ''), "message": f"{len(plan['planification'])} taches planifiees !", "calendar_used": calendar_used})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/planifier-semaine-calendar/<int:user_id>', methods=['POST'])
 def planifier_semaine_calendar(user_id):
@@ -3938,7 +4175,7 @@ Réponds UNIQUEMENT en JSON valide, sans texte avant ni après :
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)[:300]}), 500
+        return erreur_500(e)
 
 
 # ============================================
@@ -3955,7 +4192,7 @@ def get_sous_taches(tache_id):
         db.close()
         return jsonify(sous_taches)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/taches/<int:tache_id>/sous-taches', methods=['POST'])
 def ajouter_sous_tache(tache_id):
@@ -3967,30 +4204,42 @@ def ajouter_sous_tache(tache_id):
         db.commit(); db.close()
         return jsonify({"message": "Sous-tache ajoutee !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/sous-taches/<int:id>', methods=['PUT'])
 def terminer_sous_tache(id):
     try:
         data = request.get_json()
         db = connecter()
-        curseur = db.cursor()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT t.user_id AS owner FROM sous_taches s JOIN taches t ON s.tache_id=t.id WHERE s.id=%s", (id,))
+        r = curseur.fetchone()
+        if not r:
+            db.close(); return jsonify({"erreur": "Sous-tache introuvable"}), 404
+        if int(r['owner']) != current_uid():
+            db.close(); abort(403)
         curseur.execute("UPDATE sous_taches SET terminee=%s WHERE id=%s", (data['terminee'], id))
         db.commit(); db.close()
         return jsonify({"message": "Sous-tache mise a jour !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/sous-taches/<int:id>', methods=['DELETE'])
 def supprimer_sous_tache(id):
     try:
         db = connecter()
-        curseur = db.cursor()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT t.user_id AS owner FROM sous_taches s JOIN taches t ON s.tache_id=t.id WHERE s.id=%s", (id,))
+        r = curseur.fetchone()
+        if not r:
+            db.close(); return jsonify({"erreur": "Sous-tache introuvable"}), 404
+        if int(r['owner']) != current_uid():
+            db.close(); abort(403)
         curseur.execute("DELETE FROM sous_taches WHERE id=%s", (id,))
         db.commit(); db.close()
         return jsonify({"message": "Sous-tache supprimee !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # TEMPS
@@ -4006,7 +4255,7 @@ def update_temps(id):
         db.commit(); db.close()
         return jsonify({"message": "Temps mis a jour !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # PLANIFICATION
@@ -4026,7 +4275,7 @@ def get_planification(user_id):
                 elif hasattr(value, 'isoformat'): row[key] = value.isoformat()
         return jsonify(planification)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/planification', methods=['POST'])
 def ajouter_planification():
@@ -4039,7 +4288,7 @@ def ajouter_planification():
         db.commit(); db.close()
         return jsonify({"message": "Planification ajoutee !", "id": new_id})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/planification/<int:entry_id>', methods=['PATCH'])
 def modifier_planification(entry_id):
@@ -4058,7 +4307,7 @@ def modifier_planification(entry_id):
         db.commit(); db.close()
         return jsonify({"message": "Bloc déplacé"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/planification/<int:entry_id>', methods=['DELETE'])
 def supprimer_planification(entry_id):
@@ -4068,7 +4317,7 @@ def supprimer_planification(entry_id):
         db.commit(); db.close()
         return jsonify({"message": "Bloc supprimé"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # PRIORITE INTELLIGENTE
@@ -4094,7 +4343,7 @@ def priorite_intelligente(user_id):
         taches.sort(key=lambda x: x['score_priorite'], reverse=True)
         return jsonify(taches)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # ANALYTICS
@@ -4110,7 +4359,7 @@ def get_charge(user_id):
         db.close()
         return jsonify(charge)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/analytics/<int:user_id>', methods=['GET'])
 def get_analytics(user_id):
@@ -4147,7 +4396,7 @@ def get_analytics(user_id):
         db.close()
         return jsonify({"total": total, "terminees": terminees, "taux_completion": taux, "priorites": priorites, "par_jour": par_jour, "cette_semaine": cette_semaine, "semaine_precedente": semaine_precedente, "ia_par_jour": ia_par_jour, "par_heure": par_heure, "evolution": evolution})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # COLLABORATION
@@ -4196,7 +4445,7 @@ def get_activites_equipe(equipe_id):
         db.close()
         return jsonify(activites)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes', methods=['POST'])
 def creer_equipe():
@@ -4214,7 +4463,7 @@ def creer_equipe():
         db.close()
         return jsonify(equipe)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/rejoindre', methods=['POST'])
 def rejoindre_equipe():
@@ -4259,7 +4508,7 @@ def rejoindre_equipe():
         db.close()
         return jsonify({"message": f"Tu as rejoint {equipe['nom']} !", "equipe": equipe})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/user/<int:user_id>', methods=['GET'])
 def get_mes_equipes(user_id):
@@ -4278,7 +4527,7 @@ def get_mes_equipes(user_id):
         db.close()
         return jsonify(equipes)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/<int:equipe_id>/membres', methods=['GET'])
 def get_membres_equipe(equipe_id):
@@ -4290,7 +4539,7 @@ def get_membres_equipe(equipe_id):
         db.close()
         return jsonify(membres)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 def _ensure_taches_equipe_columns(curseur):
     """Ajoute completed_at + completed_by si absents (migration lazy)."""
@@ -4356,7 +4605,7 @@ def get_taches_equipe(equipe_id):
         db.close()
         return jsonify(taches)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/<int:equipe_id>/bootstrap', methods=['GET'])
@@ -4428,7 +4677,7 @@ def bootstrap_equipe(equipe_id):
         db.close()
         return jsonify({"membres": membres, "labels": labels, "taches": taches})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/taches/<int:tache_id>/toggle-fait', methods=['PATCH'])
@@ -4553,7 +4802,7 @@ def toggle_tache_fait(tache_id):
         log_activite(t['equipe_id'], user_id, nom_user, action, t['titre'], tache_id)
         return jsonify(tache)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/taches', methods=['POST'])
 def creer_tache_equipe():
@@ -4604,7 +4853,7 @@ def creer_tache_equipe():
         log_activite(data['equipe_id'], data['createur_id'], nom_user, 'a créé la tâche', data['titre'], tache_id)
         return jsonify(tache)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/taches/<int:tache_id>', methods=['PUT'])
 def modifier_tache_equipe(tache_id):
@@ -4673,7 +4922,7 @@ def modifier_tache_equipe(tache_id):
             log_activite(tache['equipe_id'], user_id, data['nom_user'], action, tache['titre'], tache_id)
         return jsonify({"message": "Tache mise a jour"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 def _ensure_labels_schema(curseur):
     """Crée labels_equipe + taches_labels si absents."""
@@ -4706,7 +4955,7 @@ def get_labels_equipe(equipe_id):
         db.close()
         return jsonify(labels)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/<int:equipe_id>/labels', methods=['POST'])
@@ -4731,7 +4980,7 @@ def creer_label(equipe_id):
         db.close()
         return jsonify(label)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/labels/<int:label_id>', methods=['PATCH'])
@@ -4758,7 +5007,7 @@ def modifier_label(label_id):
         db.close()
         return jsonify(label)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/labels/<int:label_id>', methods=['DELETE'])
@@ -4771,7 +5020,7 @@ def supprimer_label(label_id):
         db.close()
         return jsonify({"ok": True})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/taches/<int:tache_id>/labels/<int:label_id>', methods=['POST'])
@@ -4790,7 +5039,7 @@ def assigner_label_tache(tache_id, label_id):
         db.close()
         return jsonify({"ok": True})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/taches/<int:tache_id>/labels/<int:label_id>', methods=['DELETE'])
@@ -4803,7 +5052,7 @@ def desassigner_label_tache(tache_id, label_id):
         db.close()
         return jsonify({"ok": True})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 def _ensure_sous_taches_schema(curseur):
@@ -4831,7 +5080,7 @@ def get_sous_taches_equipe(tache_id):
         db.close()
         return jsonify(sous_taches)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/taches/<int:tache_id>/sous-taches', methods=['POST'])
@@ -4858,7 +5107,7 @@ def creer_sous_tache_equipe(tache_id):
         db.close()
         return jsonify(sous_tache)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/sous-taches/<int:sous_tache_id>/toggle', methods=['PATCH'])
@@ -4877,7 +5126,7 @@ def toggle_sous_tache_equipe(sous_tache_id):
         db.close()
         return jsonify({"terminee": nouveau})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/sous-taches/<int:sous_tache_id>', methods=['DELETE'])
@@ -4890,7 +5139,7 @@ def supprimer_sous_tache_equipe(sous_tache_id):
         db.close()
         return jsonify({"ok": True})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/equipes/taches/<int:tache_id>/commentaires', methods=['GET'])
@@ -4903,7 +5152,7 @@ def get_commentaires_equipe(tache_id):
         db.close()
         return jsonify(commentaires)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/taches/commentaires', methods=['POST'])
 def ajouter_commentaire_equipe():
@@ -4941,7 +5190,7 @@ def ajouter_commentaire_equipe():
         db.close()
         return jsonify({"message": "Commentaire ajoute"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/<int:equipe_id>/membres/<int:target_id>/role', methods=['PATCH'])
 def changer_role_membre(equipe_id, target_id):
@@ -4961,7 +5210,7 @@ def changer_role_membre(equipe_id, target_id):
         db.commit(); db.close()
         return jsonify({"message": "Role mis a jour"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/<int:equipe_id>/membres/<int:target_id>', methods=['DELETE'])
 def exclure_membre(equipe_id, target_id):
@@ -4982,7 +5231,7 @@ def exclure_membre(equipe_id, target_id):
         db.commit(); db.close()
         return jsonify({"message": "Membre exclu"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/<int:equipe_id>/nom', methods=['PATCH'])
 def renommer_equipe(equipe_id):
@@ -5002,7 +5251,7 @@ def renommer_equipe(equipe_id):
         db.commit(); db.close()
         return jsonify({"message": "Equipe renommee", "nom": nouveau_nom})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/<int:equipe_id>/stats', methods=['GET'])
 def get_stats_equipe(equipe_id):
@@ -5057,7 +5306,7 @@ def get_stats_equipe(equipe_id):
             "membres": membres, "en_retard": en_retard, "activite_7j": activite_7j
         })
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/<int:equipe_id>/ia', methods=['POST'])
 def ia_equipe(equipe_id):
@@ -5126,7 +5375,7 @@ Réponds en français. Tu peux : analyser la charge de travail, identifier les b
         reponse = resp.choices[0].message.content
         return jsonify({"reponse": reponse})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/equipes/<int:equipe_id>', methods=['DELETE'])
 def supprimer_equipe(equipe_id):
@@ -5142,7 +5391,7 @@ def supprimer_equipe(equipe_id):
         db.commit(); db.close()
         return jsonify({"message": "Equipe supprimee"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/collaboration/inviter', methods=['POST'])
 def inviter_collaborateur():
@@ -5160,7 +5409,7 @@ def inviter_collaborateur():
         db.commit(); db.close()
         return jsonify({"message": f"{collaborateur['nom']} invite avec succes !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/collaboration/invitations/<int:user_id>', methods=['GET'])
 def get_invitations(user_id):
@@ -5172,19 +5421,26 @@ def get_invitations(user_id):
         db.close()
         return jsonify(invitations)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/collaboration/repondre/<int:id>', methods=['PUT'])
 def repondre_invitation(id):
     try:
         data = request.get_json()
         db = connecter()
-        curseur = db.cursor()
+        curseur = db.cursor(dictionary=True)
+        # Seul le collaborateur invité peut répondre à SON invitation.
+        curseur.execute("SELECT collaborateur_id FROM collaborations WHERE id=%s", (id,))
+        invit = curseur.fetchone()
+        if not invit:
+            db.close(); return jsonify({"erreur": "Invitation introuvable"}), 404
+        if int(invit['collaborateur_id']) != current_uid():
+            db.close(); abort(403)
         curseur.execute("UPDATE collaborations SET statut=%s WHERE id=%s", (data['statut'], id))
         db.commit(); db.close()
         return jsonify({"message": "Reponse enregistree"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/collaboration/taches/<int:user_id>', methods=['GET'])
 def get_taches_partagees(user_id):
@@ -5196,19 +5452,21 @@ def get_taches_partagees(user_id):
         db.close()
         return jsonify(taches)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/collaboration/membres/<int:tache_id>', methods=['GET'])
 def get_membres(tache_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
+        if not _implique_dans_tache(curseur, tache_id, current_uid()):
+            db.close(); abort(403)
         curseur.execute("SELECT c.*, u.nom, u.email FROM collaborations c JOIN users u ON c.collaborateur_id = u.id WHERE c.tache_id=%s", (tache_id,))
         membres = curseur.fetchall()
         db.close()
         return jsonify(membres)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # COMMENTAIRES
@@ -5219,12 +5477,14 @@ def get_commentaires(tache_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
+        if not _implique_dans_tache(curseur, tache_id, current_uid()):
+            db.close(); abort(403)
         curseur.execute("SELECT c.*, u.nom FROM commentaires c JOIN users u ON c.user_id = u.id WHERE c.tache_id=%s ORDER BY c.created_at ASC", (tache_id,))
         commentaires = curseur.fetchall()
         db.close()
         return jsonify(commentaires)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/commentaires', methods=['POST'])
 def ajouter_commentaire():
@@ -5236,7 +5496,7 @@ def ajouter_commentaire():
         db.commit(); db.close()
         return jsonify({"message": "Commentaire ajoute !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # PUSH NOTIFICATIONS ROUTES
@@ -5258,7 +5518,7 @@ def subscribe_push():
         db.commit(); cursor.close(); db.close()
         return jsonify({"message": "Abonnement enregistré !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/push/status/<int:user_id>', methods=['GET'])
 def push_status(user_id):
@@ -5270,7 +5530,7 @@ def push_status(user_id):
         cursor.close(); db.close()
         return jsonify({"subscribed": n > 0})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/push/unsubscribe/<int:user_id>', methods=['DELETE'])
 def push_unsubscribe(user_id):
@@ -5281,7 +5541,7 @@ def push_unsubscribe(user_id):
         db.commit(); cursor.close(); db.close()
         return jsonify({"message": "Désabonné"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/push/test/<int:user_id>', methods=['POST'])
 def push_test(user_id):
@@ -5299,7 +5559,7 @@ def push_test(user_id):
                 sent += 1
         return jsonify({"sent": sent})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/push/send-rappels', methods=['POST'])
 def send_rappels():
@@ -5319,7 +5579,7 @@ def send_rappels():
         cursor.close(); db.close()
         return jsonify({"message": f"{sent} notifications envoyées"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/push/resume-matin', methods=['POST'])
 def trigger_resume_matin():
@@ -5372,7 +5632,7 @@ def get_weekly_report_day(id):
             return jsonify({"erreur": "Utilisateur introuvable"}), 404
         return jsonify({"day": int(row.get('weekly_report_day') if row.get('weekly_report_day') is not None else 4)})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/weekly-report-day', methods=['PUT'])
 def set_weekly_report_day(id):
@@ -5387,7 +5647,7 @@ def set_weekly_report_day(id):
         db.commit(); cur.close(); db.close()
         return jsonify({"message": "Jour mis à jour", "day": day})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/users/<int:id>/email/resume-hebdo-test', methods=['POST'])
 @limiter.limit("3 per hour")
@@ -5749,7 +6009,7 @@ def test_email_user(user_id):
         return jsonify({"message": f"Email de test envoyé à {u['email']} !"})
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 # ============================================
 # INTEGRATIONS
@@ -5770,7 +6030,7 @@ def get_slack_integration():
             return jsonify({"webhook_url": config.get('webhook_url', '')})
         return jsonify({"webhook_url": ""})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/integrations/slack', methods=['POST'])
 def save_slack_integration():
@@ -5784,7 +6044,7 @@ def save_slack_integration():
         db.commit(); db.close()
         return jsonify({"message": "Webhook Slack sauvegardé !"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # OAUTH INTEGRATIONS (Calendar, Drive, Zoom, Notion, Discord)
@@ -5931,7 +6191,7 @@ def auth_google_calendar_callback():
         </script>"""
     except Exception as e:
         db.close()
-        return f"<pre>Erreur OAuth: {str(e)[:200]}</pre>", 500
+        return f"<pre>Erreur OAuth</pre>", 500
 
 # ─── Helpers Google Calendar : create/update/delete events depuis une tâche ───
 
@@ -6257,7 +6517,7 @@ def get_calendar_events(user_id):
             })
         return jsonify({"events": events, "connected": True, **range_info})
     except Exception as e:
-        return jsonify({"events": [], "connected": False, "erreur": str(e)[:200]}), 200
+        return jsonify({"events": [], "connected": False, "erreur": "indisponible"}), 200
 
 
 @app.route('/integrations/google-calendar/sync-task/<int:task_id>', methods=['POST'])
@@ -6507,7 +6767,7 @@ def gcal_import_events(user_id):
         ).execute()
         events = result.get('items', [])
     except Exception as e:
-        return jsonify({'error': str(e)[:200]}), 500
+        return erreur_500(e)
 
     db = connecter()
     c  = db.cursor(dictionary=True)
@@ -6687,7 +6947,7 @@ def auth_gmail_callback():
         db.commit()
     except Exception as e:
         db.close()
-        return f"<script>window.opener && window.opener.postMessage({{type:'oauth_error',integration:'gmail',error:'{str(e)[:200]}'}},'*'); window.close();</script>"
+        return f"<script>window.opener && window.opener.postMessage({{type:'oauth_error',integration:'gmail',error:'erreur'}},'*'); window.close();</script>"
     db.close()
     return """<script>
         window.opener && window.opener.postMessage({type:'oauth_success',integration:'gmail'},'*');
@@ -6796,7 +7056,7 @@ Règles:
                 t['gmail_message_id'] = msg_ids_used[idx]
         return jsonify({"taches": taches, "connected": True, "nb_emails": len(emails_text)})
     except Exception as e:
-        return jsonify({"taches": [], "connected": False, "erreur": str(e)[:200]}), 200
+        return jsonify({"taches": [], "connected": False, "erreur": "indisponible"}), 200
 
 @app.route('/integrations/gmail/status/<int:user_id>', methods=['GET'])
 def gmail_status(user_id):
@@ -6919,7 +7179,7 @@ def auth_google_drive_callback():
         db.commit()
     except Exception as e:
         db.close()
-        return f"<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'google_drive',error:'{str(e)[:200]}'}},'*');window.close();</script>"
+        return f"<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'google_drive',error:'erreur'}},'*');window.close();</script>"
     db.close()
     return """<script>
         window.opener && window.opener.postMessage({type:'oauth_success',integration:'google_drive'},'*');
@@ -6957,7 +7217,7 @@ def drive_recent_docs(user_id):
             })
         return jsonify({"docs": docs, "connected": True})
     except Exception as e:
-        return jsonify({"docs": [], "connected": False, "erreur": str(e)[:200]}), 200
+        return jsonify({"docs": [], "connected": False, "erreur": "indisponible"}), 200
 
 @app.route('/integrations/google-drive/to-task', methods=['POST'])
 def drive_to_task():
@@ -6985,7 +7245,7 @@ def drive_to_task():
         db.close()
         return jsonify({"message": "Tâche créée", "tache_id": tache_id})
     except Exception as e:
-        return jsonify({"erreur": str(e)[:200]}), 500
+        return erreur_500(e)
 
 @app.route('/integrations/google-drive/status/<int:user_id>', methods=['GET'])
 def drive_status(user_id):
@@ -7106,7 +7366,7 @@ def auth_notion_callback():
         db.commit()
     except Exception as e:
         db.close()
-        return f"<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'notion',error:'{str(e)[:200]}'}},'*');window.close();</script>"
+        return f"<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'notion',error:'erreur'}},'*');window.close();</script>"
     db.close()
     return """<script>
         window.opener && window.opener.postMessage({type:'oauth_success',integration:'notion'},'*');
@@ -7330,7 +7590,7 @@ Règles:
             "nb_ia": len(ia_taches),
         })
     except Exception as e:
-        return jsonify({"taches": [], "connected": False, "erreur": str(e)[:200]}), 200
+        return jsonify({"taches": [], "connected": False, "erreur": "indisponible"}), 200
 
 @app.route('/integrations/notion/status/<int:user_id>', methods=['GET'])
 def notion_status(user_id):
@@ -7369,7 +7629,7 @@ def notion_databases(user_id):
             })
         return jsonify({"databases": dbs, "connected": True})
     except Exception as e:
-        return jsonify({"databases": [], "connected": False, "erreur": str(e)[:200]}), 200
+        return jsonify({"databases": [], "connected": False, "erreur": "indisponible"}), 200
 
 @app.route('/auth/slack/oauth')
 def auth_slack_oauth():
@@ -7406,12 +7666,12 @@ def integrations_status_global(user_id):
             "discord": "discord" in connected_types,
         })
     except Exception as e:
-        return jsonify({"erreur": str(e)[:200]}), 500
+        return erreur_500(e)
 
 @app.route('/auth/disconnect/<integration_id>', methods=['DELETE'])
 def disconnect_integration(integration_id):
     try:
-        user_id = request.args.get('user_id')
+        user_id = current_uid()  # JWT — jamais la query (sinon IDOR)
         db = connecter()
         curseur = db.cursor()
         curseur.execute(
@@ -7421,7 +7681,7 @@ def disconnect_integration(integration_id):
         db.commit(); db.close()
         return jsonify({"message": f"{integration_id} déconnecté"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # SPRINT 3 — TEMPLATES
@@ -7650,7 +7910,7 @@ def init_templates():
         db.close()
         return jsonify({"message": "Tables templates créées avec succès"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/templates', methods=['GET'])
 def get_templates():
@@ -7676,7 +7936,7 @@ def get_templates():
         db.close()
         return jsonify(templates)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/templates', methods=['POST'])
 def creer_template():
@@ -7694,7 +7954,7 @@ def creer_template():
         db.commit(); db.close()
         return jsonify({"message": "Template créé", "id": template_id})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/templates/<int:template_id>/utiliser', methods=['POST'])
 def utiliser_template(template_id):
@@ -7724,7 +7984,7 @@ def utiliser_template(template_id):
         db.commit(); db.close()
         return jsonify({"message": f"{len(taches_creees)} tâches créées depuis le template", "taches_ids": taches_creees})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/templates/<int:template_id>', methods=['DELETE'])
 def supprimer_template(template_id):
@@ -7740,7 +8000,7 @@ def supprimer_template(template_id):
         db.commit(); db.close()
         return jsonify({"message": "Template supprimé"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # SPRINT 4 — TOMORROW BUILDER
@@ -7911,7 +8171,7 @@ Réponds UNIQUEMENT en JSON: {{"score_energie": {score_energie}, "niveau_energie
         return jsonify(planning_data)
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 @app.route('/ia/tomorrow-builder/<int:user_id>/saved', methods=['GET'])
 def get_saved_planning(user_id):
@@ -7925,7 +8185,7 @@ def get_saved_planning(user_id):
             return jsonify({"planning": json.loads(row['planning_json']), "cree_le": str(row['cree_le']), "date_planifiee": str(row['date_planifiee'])})
         return jsonify({"planning": None})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/tomorrow-builder/<int:user_id>/export-ical', methods=['GET'])
 def export_tomorrow_ical(user_id):
@@ -8005,7 +8265,7 @@ END:VCALENDAR"""
         response.headers['Content-Disposition'] = f'attachment; filename="getshift-{date_str}.ics"'
         return response
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/tomorrow-builder/<int:user_id>/update', methods=['PATCH'])
 def update_tomorrow_plan(user_id):
@@ -8024,7 +8284,7 @@ def update_tomorrow_plan(user_id):
         db.close()
         return jsonify({"message": "Planning mis à jour"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/checkin-soir/<int:user_id>/today', methods=['GET'])
 def get_checkin_today(user_id):
@@ -8059,7 +8319,7 @@ def get_checkin_today(user_id):
             "checkin_data": json.loads(checkin_existant['taches_json']) if checkin_existant else None
         })
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/checkin-soir', methods=['POST'])
 def soumettre_checkin():
@@ -8095,7 +8355,7 @@ def soumettre_checkin():
         db.commit(); db.close()
         return jsonify({"message": "Check-in enregistré", "taux_completion": taux_completion})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/energie-courbe/<int:user_id>', methods=['GET'])
 def energie_courbe(user_id):
@@ -8136,7 +8396,7 @@ def energie_courbe(user_id):
             "has_user_data": total > 0
         })
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/duree-stats/<int:user_id>', methods=['GET'])
 def duree_stats(user_id):
@@ -8201,7 +8461,7 @@ def duree_stats(user_id):
             "conseil": conseil
         })
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # SPRINT 5 — TASK DNA
@@ -8243,7 +8503,7 @@ Reponds UNIQUEMENT en JSON: {{"score_viabilite": 0, "prediction": "succes", "cat
         return jsonify(dna)
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 @app.route('/ia/task-dna/stats/<int:user_id>', methods=['GET'])
 def get_dna_stats(user_id):
@@ -8257,7 +8517,7 @@ def get_dna_stats(user_id):
         db.close()
         return jsonify({"stats_par_categorie": stats, "score_global": round(g['score_global'] or 0), "total_analyses": g['total_analyses'] or 0})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/procrastination/<int:user_id>', methods=['GET'])
 def analyser_procrastination(user_id):
@@ -8288,7 +8548,7 @@ def analyser_procrastination(user_id):
         alertes.sort(key=lambda x: x['score_procrastination'], reverse=True)
         return jsonify({"alertes": alertes, "total": len(alertes)})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/smart-planning/trigger', methods=['POST'])
 def trigger_tomorrow_builder_notif():
@@ -8300,7 +8560,7 @@ def trigger_tomorrow_builder_notif():
         db.close()
         return jsonify({"message": f"Tomorrow Builder déclenché pour {len(users)} utilisateurs"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # SPRINT 6 — COACH IA
@@ -8363,7 +8623,7 @@ def coach_chat():
         return jsonify({"reponse": reponse, "coach": {"nom": coach['nom'], "emoji": coach['emoji']}})
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 
 @app.route('/ia/coach/daily-message/<int:user_id>', methods=['GET'])
@@ -8437,7 +8697,7 @@ CONTEXTE DE {ctx['prenom'].upper()}:
         })
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 
 @app.route('/ia/coach/rapport/<int:user_id>', methods=['GET'])
@@ -8464,7 +8724,7 @@ def coach_rapport(user_id):
         return jsonify(rapport)
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 @app.route('/ia/coach/historique/<int:user_id>', methods=['GET'])
 def get_coach_historique(user_id):
@@ -8478,7 +8738,7 @@ def get_coach_historique(user_id):
         for m in messages: m['created_at'] = str(m['created_at'])
         return jsonify({"messages": list(reversed(messages))})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 # ============================================
 # SPRINT 7 — GOAL REVERSE ENGINEERING
@@ -8685,7 +8945,7 @@ FORMAT JSON STRICT (rien d'autre, pas de markdown):
         result['_coach'] = {'nom': coach['nom'], 'emoji': coach['emoji']}
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/goal-reverse/importer', methods=['POST'])
 def goal_reverse_importer():
@@ -8755,7 +9015,7 @@ def goal_reverse_importer():
         return jsonify({"message": f"{len(ids_crees)} tâches importées avec succès",
                         "ids": ids_crees, "objectif_id": objectif_id})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return erreur_500(e)
 
 @app.route('/ia/goal-reverse/list/<int:user_id>', methods=['GET'])
 def goal_reverse_list(user_id):
@@ -8818,7 +9078,7 @@ def goal_reverse_list(user_id):
         db.close()
         return jsonify({"objectifs": result})
     except Exception as e:
-        return jsonify({"error": str(e), "objectifs": []}), 200
+        return jsonify({"error": "indisponible", "objectifs": []}), 200
 
 
 @app.route('/ia/goal-reverse/iterate', methods=['POST'])
@@ -8918,7 +9178,7 @@ FORMAT JSON STRICT (rien d'autre) — même schéma que le plan actuel:
         result['_iteration'] = instruction
         return jsonify(result)
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 # Templates de Goal Reverse Engineering — objectifs inspirants pré-formatés
@@ -9086,7 +9346,7 @@ Sois réaliste : max 4-5 tâches par semaine."""
         db.close()
         return jsonify({"objectif_id": objectif_id, "replanning": plan})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 # ============================================
@@ -9969,7 +10229,7 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
         try: db.close()
         except: pass
         import traceback
-        return {"tool": nom_fonction, "ok": False, "erreur": str(e)[:200], "trace": traceback.format_exc()[:300]}
+        return {"tool": nom_fonction, "ok": False, "erreur": "Erreur interne"}
 
 
 @app.route('/ia/assistant', methods=['POST'])
@@ -10162,7 +10422,7 @@ def assistant_augmente():
     except Exception as e:
         import traceback
         print(f"[GetShift AI] Erreur: {e}")
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 @app.route('/ia/assistant/stream', methods=['POST'])
 def assistant_stream():
@@ -10279,7 +10539,7 @@ def assistant_stream():
                     print(f"[Stream] historique err: {e}")
                 threading.Thread(target=extraire_et_sauvegarder_memoire, args=(user_id, message_raw, full_response), daemon=True).start()
             except Exception as e:
-                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Erreur interne'})}\n\n"
 
         return Response(stream_with_context(generate()), mimetype='text/event-stream', headers={
             'Cache-Control': 'no-cache',
@@ -10288,7 +10548,7 @@ def assistant_stream():
         })
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()}), 500
+        return erreur_500(e)
 
 
 @app.route('/ia/suggestions/<int:user_id>', methods=['GET'])
@@ -10389,7 +10649,7 @@ def ia_suggestions(user_id):
 
         return jsonify({"suggestions": suggestions[:4]})
     except Exception as e:
-        return jsonify({"erreur": str(e), "suggestions": []}), 500
+        return jsonify({"erreur": "Erreur interne", "suggestions": []}), 500
 
 
 @app.route('/ia/web-search', methods=['POST'])
@@ -10414,7 +10674,7 @@ def clear_user_memory(user_id):
         db.commit(); cur.close(); db.close()
         return jsonify({"message": "Mémoire effacée"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/ia/memory/<int:user_id>/<int:memory_id>', methods=['DELETE'])
@@ -10430,7 +10690,7 @@ def delete_one_memory(user_id, memory_id):
             return jsonify({"erreur": "Mémoire non trouvée"}), 404
         return jsonify({"message": "Souvenir oublié"})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/ia/memory/<int:user_id>/full', methods=['GET'])
@@ -10447,7 +10707,7 @@ def get_user_memory_full(user_id):
         cur.close(); db.close()
         return jsonify({"items": rows, "total": len(rows)})
     except Exception as e:
-        return jsonify({"erreur": str(e), "items": []}), 500
+        return jsonify({"erreur": "Erreur interne", "items": []}), 500
 
 @app.route('/ia/upload-extract', methods=['POST'])
 def ia_upload_extract():
@@ -10502,7 +10762,7 @@ def ia_upload_extract():
                             lignes.append("\t".join("" if cell is None else str(cell) for cell in row))
                 contenu_extrait = "\n".join(lignes)
             except Exception as e:
-                return jsonify({"erreur": f"Lecture Excel impossible : {str(e)[:200]}"}), 500
+                return jsonify({"erreur": "Lecture Excel impossible"}), 500
 
         # ── CSV ────────────────────────────────────────────────────
         elif filename.endswith('.csv'):
@@ -10519,7 +10779,7 @@ def ia_upload_extract():
                 doc = Document(io.BytesIO(f.read()))
                 contenu_extrait = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
             except Exception as e:
-                return jsonify({"erreur": f"Lecture Word impossible : {str(e)[:200]}"}), 500
+                return jsonify({"erreur": "Lecture Word impossible"}), 500
 
         # ── IMAGE → Groq Vision ───────────────────────────────────
         elif filename.endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif')):
@@ -10543,7 +10803,7 @@ def ia_upload_extract():
                 )
                 contenu_extrait = vision_resp.choices[0].message.content.strip()
             except Exception as e:
-                return jsonify({"erreur": f"Vision IA indisponible : {str(e)[:200]}"}), 500
+                return jsonify({"erreur": "Vision IA indisponible"}), 500
         else:
             ext = filename.rsplit('.', 1)[-1] if '.' in filename else 'inconnu'
             return jsonify({"erreur": f"Type non supporté (.{ext}). Formats acceptés : PDF, Word, Excel, CSV, TXT, MD, images."}), 400
@@ -10560,7 +10820,7 @@ def ia_upload_extract():
         })
     except Exception as e:
         import traceback
-        return jsonify({"erreur": str(e), "trace": traceback.format_exc()[:500]}), 500
+        return erreur_500(e)
 
 
 @app.route('/ia/expand-abreviations', methods=['POST'])
@@ -10829,7 +11089,7 @@ def get_backup_historique():
             b['cree_le'] = str(b['cree_le'])
         return jsonify({"backups": backups, "total": len(backups)})
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 @app.route('/backup/restaurer/<int:backup_id>', methods=['GET'])
@@ -10855,7 +11115,7 @@ def telecharger_backup(backup_id):
             headers={'Content-Disposition': f'attachment; filename={backup["nom"]}'}
         )
     except Exception as e:
-        return jsonify({"erreur": str(e)}), 500
+        return erreur_500(e)
 
 
 
