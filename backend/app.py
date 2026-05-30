@@ -217,6 +217,7 @@ JOB_ENDPOINTS = {
     'trigger_email_taches_retard', 'trigger_email_resume_hebdo',
     'trigger_lifecycle', 'trigger_daily_matin', 'trigger_daily_midi', 'trigger_daily_soir',
     'init_templates', 'trigger_backup', 'get_backup_historique', 'telecharger_backup',
+    'broadcast_email',
 }
 
 # Ressources à colonne user_id directe : (préfixe de règle, nom du param, table).
@@ -6005,6 +6006,79 @@ def test_email_user(user_id):
         return jsonify({"message": f"Email de test envoyé à {u['email']} !"})
     except Exception as e:
         import traceback
+        return erreur_500(e)
+
+# ============================================
+# EMAIL BROADCAST (update produit, annonces)
+# ============================================
+
+def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href):
+    """Email d'annonce produit — même charte GRAPHITE & EMBER que les autres emails."""
+    t = EMAIL_TOKENS
+    items_html = "".join(
+        f'<tr><td style="padding:10px 14px;border-bottom:1px solid {t["border"]};">'
+        f'<span style="color:{t["ember"]};font-weight:700;margin-right:8px;">—</span>'
+        f'<span style="color:{t["text"]};font-size:13.5px;">{item}</span></td></tr>'
+        for item in corps_items
+    )
+    contenu = f"""
+<p style="margin:0 0 6px;font-size:22px;font-weight:700;color:{t['text']};letter-spacing:-0.3px;">{titre}</p>
+<p style="margin:0 0 24px;font-size:14px;color:{t['text_2']};line-height:1.7;">{intro}</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:{t['surface_2']};border-radius:12px;border:1px solid {t['border']};margin-bottom:28px;">
+  <tbody>{items_html}</tbody>
+</table>
+<p style="margin:0 0 24px;font-size:13px;color:{t['text_3']};line-height:1.7;">
+  Ces améliorations sont actives immédiatement — aucune action requise de ta part.
+  Si tu étais connecté, il se peut que tu doives te reconnecter une fois.
+</p>
+{_email_cta_btn(cta_label, cta_href)}
+"""
+    return _email_wrapper(f"Bonjour {nom},", contenu)
+
+@app.route('/email/broadcast', methods=['POST'])
+def broadcast_email():
+    """Envoie un email d'annonce à tous les utilisateurs vérifiés.
+    Protégé par JOB_SECRET. Supporte un dry_run pour prévisualiser sans envoyer."""
+    require_job_secret()
+    try:
+        data = request.get_json() or {}
+        dry_run = data.get('dry_run', False)
+        db = connecter()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, nom, email FROM users WHERE email_verifie=TRUE ORDER BY id")
+        users = cursor.fetchall()
+        cursor.close(); db.close()
+
+        titre  = data.get('titre',  "Améliorations GetShift — 30 mai 2026")
+        intro  = data.get('intro',  "Nous avons déployé ce matin plusieurs améliorations importantes sur GetShift.")
+        items  = data.get('items',  [
+            "Sécurité renforcée sur l'ensemble de l'application",
+            "Chiffrement des mots de passe mis à jour (plus robuste)",
+            "Protection CSRF activée sur toutes les actions",
+            "Notifications push mises à jour — réactivez-les dans Paramètres si besoin",
+        ])
+        cta_label = data.get('cta_label', "Ouvrir GetShift")
+        cta_href  = data.get('cta_href',  "https://chamdaane-a11y.github.io/taskflow")
+        subject   = data.get('subject',   f"[GetShift] {titre}")
+
+        sent, skipped = 0, 0
+        for u in users:
+            if dry_run:
+                skipped += 1
+                continue
+            html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href)
+            ok = envoyer_email(u['email'], subject, html)
+            if ok: sent += 1
+            else:  skipped += 1
+
+        return jsonify({
+            "dry_run": dry_run,
+            "total_users": len(users),
+            "sent": sent,
+            "skipped": skipped,
+            "preview_html": _html_broadcast("Prénom", titre, intro, items, cta_label, cta_href) if dry_run else None,
+        })
+    except Exception as e:
         return erreur_500(e)
 
 # ============================================
