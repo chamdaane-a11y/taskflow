@@ -487,15 +487,15 @@ export default function Settings() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
                   padding: '10px 16px', borderRadius: 12, cursor: 'pointer',
-                  border: `2px solid ${i18n.language === lang.code ? 'var(--ember)' : 'var(--border-subtle)'}`,
-                  background: i18n.language === lang.code ? 'var(--ember-soft)' : 'var(--surface-1)',
-                  fontWeight: i18n.language === lang.code ? 700 : 500,
+                  border: `2px solid ${i18n.language.startsWith(lang.code) ? 'var(--ember)' : 'var(--border-subtle)'}`,
+                  background: i18n.language.startsWith(lang.code) ? 'var(--ember-soft)' : 'var(--surface-1)',
+                  fontWeight: i18n.language.startsWith(lang.code) ? 700 : 500,
                   fontSize: 14, color: 'var(--text-primary)', transition: 'all 0.15s',
                 }}
               >
                 <span style={{ fontSize: 18 }}>{lang.flag}</span>
                 <span>{lang.label}</span>
-                {i18n.language === lang.code && <Check size={14} color="var(--ember)" />}
+                {i18n.language.startsWith(lang.code) && <Check size={14} color="var(--ember)" />}
               </button>
             ))}
           </div>

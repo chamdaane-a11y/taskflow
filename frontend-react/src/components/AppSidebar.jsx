@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import GetShiftMark from './GetShiftMark'
 import {
   LayoutDashboard, Bot, BarChart2, Calendar, Users, HelpCircle, Sparkles, Flag,
@@ -9,15 +10,16 @@ import {
 
 export const SIDEBAR_W = 248
 
+// Les labels sont des clés i18n — traduits dynamiquement dans le rendu
 export const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: 'Tableau de bord', path: '/dashboard' },
-  { icon: Bot,             label: 'Assistant IA',    path: '/ia' },
-  { icon: Sparkles,        label: 'Tomorrow Builder',path: '/tomorrow' },
-  { icon: Flag,            label: 'Goal Reverse',    path: '/goal' },
-  { icon: BarChart2,       label: 'Analytiques',     path: '/analytics' },
-  { icon: Calendar,        label: 'Planification',   path: '/planification' },
-  { icon: Users,           label: 'Collaboration',   path: '/collaboration' },
-  { icon: HelpCircle,      label: 'Aide',            path: '/help' },
+  { icon: LayoutDashboard, labelKey: 'nav.dashboard',     path: '/dashboard' },
+  { icon: Bot,             labelKey: 'nav.ai',            path: '/ia' },
+  { icon: Sparkles,        labelKey: 'nav.tomorrow',      path: '/tomorrow' },
+  { icon: Flag,            labelKey: 'nav.goal',          path: '/goal' },
+  { icon: BarChart2,       labelKey: 'nav.analytics',     path: '/analytics' },
+  { icon: Calendar,        labelKey: 'nav.planning',      path: '/planification' },
+  { icon: Users,           labelKey: 'nav.collaboration', path: '/collaboration' },
+  { icon: HelpCircle,      labelKey: 'nav.help',          path: '/help' },
 ]
 
 export function useSidebarState() {
@@ -91,6 +93,7 @@ export function SidebarToggle({ sidebarOpen, isMobile, onClick, T }) {
 }
 
 function ProfileMenu({ user, niveau, points, streak, niveauActuel, pctNiveau, showProfileMenu, setShowProfileMenu, navigate }) {
+  const { t } = useTranslation()
   return (
     <div style={{ position: 'relative', marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
       <motion.button
@@ -176,8 +179,8 @@ function ProfileMenu({ user, niveau, points, streak, niveauActuel, pctNiveau, sh
               </div>
               <div style={{ padding: 6 }}>
                 {[
-                  { label: 'Mon profil', icon: User,     onClick: () => { navigate('/profile');  setShowProfileMenu(false) } },
-                  { label: 'Paramètres', icon: Settings, onClick: () => { navigate('/settings'); setShowProfileMenu(false) }, shortcut: '⌘ ,' },
+                  { label: t('nav.profile'),  icon: User,     onClick: () => { navigate('/profile');  setShowProfileMenu(false) } },
+                  { label: t('nav.settings'), icon: Settings, onClick: () => { navigate('/settings'); setShowProfileMenu(false) }, shortcut: '⌘ ,' },
                 ].map(({ label, icon: Icon, onClick, shortcut }) => (
                   <motion.button key={label} onClick={onClick}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: 13, textAlign: 'left', fontFamily: 'var(--font-ui)' }}
@@ -201,7 +204,7 @@ function ProfileMenu({ user, niveau, points, streak, niveauActuel, pctNiveau, sh
                 <motion.button onClick={() => { localStorage.removeItem('user'); navigate('/') }}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-ui)' }}
                   whileHover={{ background: 'var(--danger-soft)' }}>
-                  <LogOut size={15} strokeWidth={1.8} />Se déconnecter
+                  <LogOut size={15} strokeWidth={1.8} />{t('nav.logout')}
                 </motion.button>
               </div>
             </motion.div>
@@ -219,6 +222,7 @@ export default function AppSidebar({
 }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   const sidebarLeft = isMobile ? (sidebarOpen ? 0 : '-100%') : (sidebarOpen ? 0 : -SIDEBAR_W)
@@ -277,7 +281,7 @@ export default function AppSidebar({
                 }}
                 whileHover={{ x: 2, color: 'var(--ember)' }}>
                 <Icon size={16} strokeWidth={active ? 2.5 : 1.8} />
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t(item.labelKey)}</span>
               </motion.button>
             )
           })
