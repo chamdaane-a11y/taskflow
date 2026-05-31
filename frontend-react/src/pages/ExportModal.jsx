@@ -17,8 +17,8 @@ function genererCSV(taches) {
     `"${t.titre.replace(/"/g, '""')}"`,
     t.priorite,
     t.terminee ? 'Terminée' : t.bloquee ? 'Bloquée' : 'En cours',
-    t.deadline ? new Date(t.deadline).toLocaleDateString('fr-FR') : '-',
-    new Date(t.created_at).toLocaleDateString('fr-FR'),
+    t.deadline ? new Date(t.deadline).toLocaleDateString(navigator.language) : '-',
+    new Date(t.created_at).toLocaleDateString(navigator.language),
   ])
   return [headers, ...lignes].map(r => r.join(',')).join('\n')
 }
@@ -29,14 +29,14 @@ function telechargerCSV(taches, nom) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${nom}_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.csv`
+  a.download = `${nom}_${new Date().toLocaleDateString(navigator.language).replace(/\//g, '-')}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
 
 function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResume) {
   const C = THEME_COLORS[theme] || THEME_COLORS.dark
-  const date = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const date = new Date().toLocaleDateString(navigator.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   const terminees = taches.filter(t => t.terminee).length
   const enCours = taches.filter(t => !t.terminee && !t.bloquee).length
   const bloquees = taches.filter(t => t.bloquee && !t.terminee).length
@@ -203,7 +203,7 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
         <div class="tache-titre">${t.titre}</div>
         <div class="tache-meta">
           <div class="tache-badges">${badgePriorite(t.priorite)}${badgeStatut(t)}</div>
-          ${t.deadline ? `<span class="tache-deadline">📅 ${new Date(t.deadline).toLocaleDateString('fr-FR')}</span>` : ''}
+          ${t.deadline ? `<span class="tache-deadline">📅 ${new Date(t.deadline).toLocaleDateString(navigator.language)}</span>` : ''}
         </div>
       </div>
     </div>
@@ -313,7 +313,7 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `GetShift_Rapport_${user.nom.replace(' ', '_')}_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.html`
+    a.download = `GetShift_Rapport_${user.nom.replace(' ', '_')}_${new Date().toLocaleDateString(navigator.language).replace(/\//g, '-')}.html`
     a.click()
     URL.revokeObjectURL(url)
   }

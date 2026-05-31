@@ -143,7 +143,7 @@ function useStatistics(data, jours) {
     const previous = getCount(prevKeys, data.par_jour)
 
     const labels = currentKeys.map(k =>
-      new Date(k).toLocaleDateString('fr-FR', {
+      new Date(k).toLocaleDateString(navigator.language, {
         weekday: n <= 7 ? 'short' : undefined,
         day: 'numeric',
         month: n > 7 ? 'short' : undefined,
@@ -274,7 +274,7 @@ const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
 
   if (!date) return null
 
-  const dateFmt = new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const dateFmt = new Date(date).toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const prioColor = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
 
   return (
@@ -460,7 +460,7 @@ const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
               <motion.div
                 key={key}
                 onClick={isFuture ? undefined : () => onDayClick?.(key)}
-                title={isFuture ? '' : `${date.toLocaleDateString('fr-FR')} : ${val} tâche${val !== 1 ? 's' : ''}`}
+                title={isFuture ? '' : `${date.toLocaleDateString(navigator.language)} : ${val} tâche${val !== 1 ? 's' : ''}`}
                 style={{ width: 12, height: 12, borderRadius: 3, background: getColor(intensity, isFuture), cursor: isFuture ? 'default' : 'pointer', flexShrink: 0 }}
                 whileHover={isFuture ? {} : { scale: 1.5, zIndex: 2 }}
                 whileTap={isFuture ? {} : { scale: 0.9 }}
@@ -1161,7 +1161,7 @@ const TrajectoryCard = memo(({ stats, T, loading, isMobile }) => {
     const daysNeeded = Math.ceil(total / velocity)
     const d = new Date()
     d.setDate(d.getDate() + daysNeeded)
-    milestoneStr = ` Tu doubles ta période vers le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`
+    milestoneStr = ` Tu doubles ta période vers le ${d.toLocaleDateString(navigator.language, { day: 'numeric', month: 'long' })}.`
   }
 
   const trendColor = isAccel ? '#4caf82' : isDecel ? '#e05c5c' : 'var(--ember)'

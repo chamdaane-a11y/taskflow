@@ -240,7 +240,7 @@ function tempsRelatif(iso) {
     if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`
     if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
     if (diff < 604800) return `il y a ${Math.floor(diff / 86400)}j`
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+    return d.toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' })
   } catch { return '' }
 }
 
@@ -452,7 +452,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
             </motion.button>
             {tache.deadline && (
               <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Clock size={9} />{new Date(tache.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                <Clock size={9} />{new Date(tache.deadline).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' })}
               </span>
             )}
             {/* Progrès sous-tâches */}
@@ -1003,7 +1003,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
                     ? 'envoi…'
                     : c._failed
                       ? '⚠ échec'
-                      : new Date(c.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      : new Date(c.created_at).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {c._failed && (
                   <button onClick={() => renvoyer(c)}
@@ -1091,7 +1091,7 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
     if (diff < 60) return 'à l\'instant'
     if (diff < 3600) return `il y a ${Math.floor(diff / 60)}min`
     if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
-    return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+    return new Date(iso).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' })
   }
 
   return (
@@ -1664,7 +1664,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {t.assignee_nom || 'Non assigné'} · {t.deadline ? new Date(t.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : ''}
+                        {t.assignee_nom || 'Non assigné'} · {t.deadline ? new Date(t.deadline).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' }) : ''}
                       </div>
                     </div>
                   </div>

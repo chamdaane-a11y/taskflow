@@ -963,7 +963,7 @@ export default function TomorrowBuilder() {
 
   const demain = new Date()
   demain.setDate(demain.getDate() + 1)
-  const demainStr = demain.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const demainStr = demain.toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
@@ -1319,7 +1319,7 @@ export default function TomorrowBuilder() {
         </div>
         {derniereGen && (
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'right', display: isMobile ? 'none' : 'block' }}>
-            Généré le {new Date(derniereGen).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+            Généré le {new Date(derniereGen).toLocaleString(navigator.language, { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
         <motion.button

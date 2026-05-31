@@ -231,9 +231,9 @@ export function getWeekDays(offset = 0) {
     d.setDate(monday + i + offset * 7)
     return {
       date:    d.toISOString().split('T')[0],
-      label:   d.toLocaleDateString('fr-FR', { weekday: 'short' }),
+      label:   d.toLocaleDateString(navigator.language, { weekday: 'short' }),
       num:     d.getDate(),
-      mois:    d.toLocaleDateString('fr-FR', { month: 'short' }),
+      mois:    d.toLocaleDateString(navigator.language, { month: 'short' }),
       isToday: d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0],
     }
   })
@@ -245,9 +245,9 @@ export function getSingleDay(offset = 0) {
   d.setDate(d.getDate() + offset)
   return [{
     date:    d.toISOString().split('T')[0],
-    label:   d.toLocaleDateString('fr-FR', { weekday: 'long' }),
+    label:   d.toLocaleDateString(navigator.language, { weekday: 'long' }),
     num:     d.getDate(),
-    mois:    d.toLocaleDateString('fr-FR', { month: 'short' }),
+    mois:    d.toLocaleDateString(navigator.language, { month: 'short' }),
     isToday: offset === 0,
   }]
 }
@@ -261,7 +261,7 @@ export function getGanttDays(n = 30, offsetDays = -5) {
       label:     d.getDate(),
       isToday:   d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0],
       isWeekend: d.getDay() === 0 || d.getDay() === 6,
-      mois:      d.toLocaleDateString('fr-FR', { month: 'short' }),
+      mois:      d.toLocaleDateString(navigator.language, { month: 'short' }),
     }
   })
 }
@@ -318,6 +318,6 @@ export function getMonthDays(monthOffset = 0) {
     }
   })
 
-  const monthLabel = firstDay.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+  const monthLabel = firstDay.toLocaleDateString(navigator.language, { month: 'long', year: 'numeric' })
   return { days, monthLabel }
 }

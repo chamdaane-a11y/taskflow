@@ -1490,7 +1490,7 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
                   Cette documentation est vivante. Si tu cherches une fonctionnalité et que tu ne la trouves pas ici,
                   écris-nous — ça nous indique ce qu'on doit améliorer.
                 </P>
-                <a href="mailto:hello@getshift.app"
+                <a href="mailto:chamdaane@gmail.com"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                     marginTop: 6,

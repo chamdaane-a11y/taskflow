@@ -98,7 +98,7 @@ const EventPopup = memo(function EventPopup({ selected, onClose, onComplete, onR
     if (!d) return null
     const dt = new Date(d)
     if (isNaN(dt)) return null
-    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    return dt.toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })
   }
 
   return (

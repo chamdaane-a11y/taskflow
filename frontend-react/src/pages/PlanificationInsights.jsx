@@ -39,7 +39,7 @@ export const DailyScore = memo(function DailyScore({
       const donePct = capaciteMin > 0 ? Math.min(100, (doneMin / capaciteMin) * 100) : 0
       days.push({
         date: dateStr,
-        label: d.toLocaleDateString('fr-FR', { weekday: 'narrow' }),
+        label: d.toLocaleDateString(navigator.language, { weekday: 'narrow' }),
         pct,
         donePct,
         isToday: i === 0,
