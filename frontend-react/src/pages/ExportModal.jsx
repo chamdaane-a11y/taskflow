@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
+import { useTranslation } from 'react-i18next'
 import { X, Download, FileText, Table, Sparkles, ChevronDown, Loader } from 'lucide-react'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -11,20 +12,20 @@ const THEME_COLORS = {
   light: { bg: '#F4F1EB', bg2: '#FFFFFF', accent: '#B8521C', text: '#1A1A1B', text2: '#5C5A57' },
 }
 
-function genererCSV(taches) {
-  const headers = ['Titre', 'Priorité', 'Statut', 'Deadline', 'Créée le']
+function genererCSV(taches, tr) {
+  const headers = [tr('export.csv_h_title'), tr('export.csv_h_priority'), tr('export.csv_h_status'), tr('export.csv_h_deadline'), tr('export.csv_h_created')]
   const lignes = taches.map(t => [
     `"${t.titre.replace(/"/g, '""')}"`,
     t.priorite,
-    t.terminee ? 'Terminée' : t.bloquee ? 'Bloquée' : 'En cours',
+    t.terminee ? tr('export.status_done') : t.bloquee ? tr('export.status_blocked') : tr('export.status_inprogress'),
     t.deadline ? new Date(t.deadline).toLocaleDateString(navigator.language) : '-',
     new Date(t.created_at).toLocaleDateString(navigator.language),
   ])
   return [headers, ...lignes].map(r => r.join(',')).join('\n')
 }
 
-function telechargerCSV(taches, nom) {
-  const csv = genererCSV(taches)
+function telechargerCSV(taches, nom, tr) {
+  const csv = genererCSV(taches, tr)
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -34,7 +35,7 @@ function telechargerCSV(taches, nom) {
   URL.revokeObjectURL(url)
 }
 
-function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResume) {
+function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResume, tr, lang) {
   const C = THEME_COLORS[theme] || THEME_COLORS.dark
   const date = new Date().toLocaleDateString(navigator.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   const terminees = taches.filter(t => t.terminee).length
@@ -50,18 +51,18 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
   }
 
   const badgeStatut = (t) => {
-    if (t.terminee) return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:#4caf82;background:#4caf8220">✓ Terminée</span>`
-    if (t.bloquee) return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:#e05c5c;background:#e05c5c20">⛔ Bloquée</span>`
-    if (t.deadline && new Date(t.deadline) < new Date()) return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:#e08a3c;background:#e08a3c20">⚠ En retard</span>`
-    return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:${C.accent};background:${C.accent}20">● En cours</span>`
+    if (t.terminee) return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:#4caf82;background:#4caf8220">${tr('export.pdf_status_done')}</span>`
+    if (t.bloquee) return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:#e05c5c;background:#e05c5c20">${tr('export.pdf_status_blocked')}</span>`
+    if (t.deadline && new Date(t.deadline) < new Date()) return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:#e08a3c;background:#e08a3c20">${tr('export.pdf_status_overdue')}</span>`
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:${C.accent};background:${C.accent}20">${tr('export.pdf_status_inprogress')}</span>`
   }
 
   return `<!DOCTYPE html>
-<html lang="fr">
+<html lang="${lang || 'fr'}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rapport GetShift — ${nomUtilisateur}</title>
+<title>${tr('export.pdf_title_doc')} — ${nomUtilisateur}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: var(--font-ui); background: ${C.bg}; color: ${C.text}; min-height: 100vh; }
@@ -144,34 +145,34 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
 
   <!-- TITRE -->
   <div class="titre-section">
-    <h1>Rapport de <span>productivité</span></h1>
-    <p>${taches.length} tâche${taches.length > 1 ? 's' : ''} analysée${taches.length > 1 ? 's' : ''} · Taux de complétion ${taux}%</p>
+    <h1>${tr('export.pdf_h1').replace('<1>', '<span>').replace('</1>', '</span>')}</h1>
+    <p>${tr('export.pdf_analyzed', { count: taches.length, taux })}</p>
   </div>
 
   <!-- STATS -->
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-val" style="color:${C.accent}">${taches.length}</div>
-      <div class="stat-label">Total</div>
+      <div class="stat-label">${tr('export.pdf_stat_total')}</div>
     </div>
     <div class="stat-card">
       <div class="stat-val" style="color:#4caf82">${terminees}</div>
-      <div class="stat-label">Terminées</div>
+      <div class="stat-label">${tr('export.pdf_stat_done')}</div>
     </div>
     <div class="stat-card">
       <div class="stat-val" style="color:#e08a3c">${enRetard}</div>
-      <div class="stat-label">En retard</div>
+      <div class="stat-label">${tr('export.pdf_stat_overdue')}</div>
     </div>
     <div class="stat-card">
       <div class="stat-val" style="color:#e05c5c">${bloquees}</div>
-      <div class="stat-label">Bloquées</div>
+      <div class="stat-label">${tr('export.pdf_stat_blocked')}</div>
     </div>
   </div>
 
   <!-- PROGRESSION -->
   <div class="progress-section">
     <div class="progress-header">
-      <span>Progression globale</span>
+      <span>${tr('export.pdf_progress')}</span>
       <span style="color:${C.accent};font-weight:700">${taux}%</span>
     </div>
     <div class="progress-bar">
@@ -185,8 +186,8 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
     <div class="ia-header">
       <div class="ia-badge">✨</div>
       <div class="ia-header-text">
-        <h3>Analyse IA — ${typeResume === 'court' ? 'Résumé rapide' : 'Rapport détaillé'}</h3>
-        <p>Généré par l'assistant GetShift</p>
+        <h3>${tr('export.pdf_ia_analysis')} — ${typeResume === 'court' ? tr('export.pdf_ia_short') : tr('export.pdf_ia_detailed')}</h3>
+        <p>${tr('export.pdf_ia_generated_by')}</p>
       </div>
     </div>
     <div class="ia-content">${resumeIA}</div>
@@ -195,7 +196,7 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
 
   <!-- TACHES EN COURS -->
   ${enCours > 0 ? `
-  <div class="section-title">En cours (${enCours})</div>
+  <div class="section-title">${tr('export.pdf_section_inprogress')} (${enCours})</div>
   ${taches.filter(t => !t.terminee && !t.bloquee).map(t => `
     <div class="tache-row">
       <div class="tache-check"></div>
@@ -212,7 +213,7 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
 
   <!-- TACHES TERMINEES -->
   ${terminees > 0 ? `
-  <div class="section-title" style="margin-top:28px">Terminées (${terminees})</div>
+  <div class="section-title" style="margin-top:28px">${tr('export.pdf_section_done')} (${terminees})</div>
   ${taches.filter(t => t.terminee).map(t => `
     <div class="tache-row" style="opacity:0.6">
       <div class="tache-check done">✓</div>
@@ -228,7 +229,7 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
 
   <!-- TACHES BLOQUEES -->
   ${bloquees > 0 ? `
-  <div class="section-title" style="margin-top:28px">Bloquées (${bloquees})</div>
+  <div class="section-title" style="margin-top:28px">${tr('export.pdf_section_blocked')} (${bloquees})</div>
   ${taches.filter(t => t.bloquee && !t.terminee).map(t => `
     <div class="tache-row">
       <div class="tache-check" style="border-color:#e05c5c"></div>
@@ -244,7 +245,7 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
 
   <!-- FOOTER -->
   <div class="footer">
-    <p>Généré par <span class="footer-logo">GetShift</span> · ${date}</p>
+    <p>${tr('export.pdf_footer_generated')} <span class="footer-logo">GetShift</span> · ${date}</p>
     <p style="color:${C.accent}">getshift.app</p>
   </div>
 
@@ -254,6 +255,8 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
 }
 
 export default function ExportModal({ isOpen, onClose, taches, stats, user, theme }) {
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language.split('-')[0]
   const [etape, setEtape] = useState('choix') // choix | generation | apercu
   const [typeResume, setTypeResume] = useState('court')
   const [incluireIA, setIncluireIA] = useState(true)
@@ -269,13 +272,14 @@ export default function ExportModal({ isOpen, onClose, taches, stats, user, them
       const enRetard = taches.filter(t => !t.terminee && t.deadline && new Date(t.deadline) < new Date()).length
       const bloquees = taches.filter(t => t.bloquee && !t.terminee).length
       const taux = taches.length > 0 ? Math.round((terminees / taches.length) * 100) : 0
+      const langDirective = t('export.ai_respond_lang')
 
       const prompt = typeResume === 'court'
-        ? `Fais un résumé de productivité TRÈS COURT (5-7 lignes max) pour ${user.nom} :
+        ? `${langDirective}\nFais un résumé de productivité TRÈS COURT (5-7 lignes max) pour ${user.nom} :
 - ${taches.length} tâches au total, ${terminees} terminées (${taux}% de complétion)
 - ${enRetard} en retard, ${bloquees} bloquées
 Ton style : direct, encourageant, professionnel. Pas de bullet points, juste du texte fluide.`
-        : `Fais un rapport de productivité DÉTAILLÉ pour ${user.nom} :
+        : `${langDirective}\nFais un rapport de productivité DÉTAILLÉ pour ${user.nom} :
 - ${taches.length} tâches au total, ${terminees} terminées (${taux}% de complétion)
 - ${enRetard} tâches en retard, ${bloquees} bloquées
 - Tâches haute priorité non terminées : ${taches.filter(t => t.priorite === 'haute' && !t.terminee).length}
@@ -302,7 +306,7 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
       resume = await genererResume()
       setResumeIA(resume)
     }
-    const html = genererHTMLPDF(taches, stats, resume, theme, user.nom, typeResume)
+    const html = genererHTMLPDF(taches, stats, resume, theme, user.nom, typeResume, t, lang)
     setHtmlGenere(html)
     setLoading(false)
     setEtape('apercu')
@@ -355,8 +359,8 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
                 <Download size={18} color="white" strokeWidth={2.5} />
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: T_COLORS.text }}>Exporter mes données</div>
-                <div style={{ fontSize: 12, color: T_COLORS.text2, marginTop: 2 }}>{taches.length} tâches disponibles</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: T_COLORS.text }}>{t('export.export_title')}</div>
+                <div style={{ fontSize: 12, color: T_COLORS.text2, marginTop: 2 }}>{t('export.tasks_available', { count: taches.length })}</div>
               </div>
             </div>
             <motion.button onClick={() => { reset(); onClose() }}
@@ -372,17 +376,17 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
 
               {/* CSV */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T_COLORS.text2, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Export rapide</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T_COLORS.text2, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>{t('export.quick_export')}</div>
                 <motion.button
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: T_COLORS.bg, border: `1px solid ${T_COLORS.accent}25`, borderRadius: 14, cursor: 'pointer', color: T_COLORS.text }}
-                  onClick={() => telechargerCSV(taches, `GetShift_${user.nom}`)}
+                  onClick={() => telechargerCSV(taches, `GetShift_${user.nom}`, t)}
                   whileHover={{ borderColor: T_COLORS.accent, scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(76,175,130,0.12)', border: '1px solid rgba(76,175,130,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Table size={16} color="#4caf82" />
                   </div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: T_COLORS.text }}>Exporter en CSV</div>
-                    <div style={{ fontSize: 12, color: T_COLORS.text2, marginTop: 2 }}>Toutes les tâches · Compatible Excel, Sheets</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: T_COLORS.text }}>{t('export.export_csv')}</div>
+                    <div style={{ fontSize: 12, color: T_COLORS.text2, marginTop: 2 }}>{t('export.csv_desc')}</div>
                   </div>
                   <Download size={16} color={T_COLORS.text2} />
                 </motion.button>
@@ -390,7 +394,7 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
 
               {/* PDF Options */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T_COLORS.text2, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Rapport PDF</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T_COLORS.text2, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>{t('export.pdf_report')}</div>
 
                 {/* Type de résumé IA */}
                 <div style={{ background: T_COLORS.bg, border: `1px solid ${T_COLORS.accent}20`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
@@ -399,8 +403,8 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
                       <Sparkles size={13} color="white" />
                     </div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: T_COLORS.text }}>Résumé IA</div>
-                      <div style={{ fontSize: 11, color: T_COLORS.text2 }}>Analyse intelligente de ta productivité</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: T_COLORS.text }}>{t('export.ai_summary')}</div>
+                      <div style={{ fontSize: 11, color: T_COLORS.text2 }}>{t('export.ai_summary_desc')}</div>
                     </div>
                     {/* Toggle */}
                     <motion.button
@@ -414,8 +418,8 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
                   {incluireIA && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       {[
-                        { val: 'court', label: 'Résumé court', desc: '5-7 lignes · rapide' },
-                        { val: 'detaille', label: 'Rapport détaillé', desc: '15-20 lignes · conseils' }
+                        { val: 'court', label: t('export.short_label'), desc: t('export.short_desc') },
+                        { val: 'detaille', label: t('export.detailed_label'), desc: t('export.detailed_desc') }
                       ].map(opt => (
                         <motion.button key={opt.val}
                           style={{ padding: '10px 12px', background: typeResume === opt.val ? `${T_COLORS.accent}15` : 'transparent', border: `1.5px solid ${typeResume === opt.val ? T_COLORS.accent : T_COLORS.accent + '25'}`, borderRadius: 10, cursor: 'pointer', textAlign: 'left' }}
@@ -432,7 +436,7 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 20px', background: `linear-gradient(135deg, ${T_COLORS.accent}, #4caf82)`, border: 'none', borderRadius: 14, cursor: 'pointer', color: 'white', fontSize: 14, fontWeight: 700, boxShadow: `0 8px 24px ${T_COLORS.accent}30` }}
                   onClick={genererPDF} whileHover={{ scale: 1.02, boxShadow: `0 12px 32px ${T_COLORS.accent}40` }} whileTap={{ scale: 0.98 }}>
                   <FileText size={17} />
-                  Générer le rapport PDF
+                  {t('export.generate_pdf')}
                 </motion.button>
               </div>
             </motion.div>
@@ -443,10 +447,10 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '40px 20px' }}>
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }} style={{ width: 56, height: 56, borderRadius: '50%', border: `3px solid ${T_COLORS.accent}20`, borderTop: `3px solid ${T_COLORS.accent}`, margin: '0 auto 20px' }} />
               <div style={{ fontSize: 15, fontWeight: 600, color: T_COLORS.text, marginBottom: 8 }}>
-                {incluireIA ? "L'IA analyse vos tâches..." : 'Génération du rapport...'}
+                {incluireIA ? t('export.ai_analyzing') : t('export.generating_report')}
               </div>
               <div style={{ fontSize: 13, color: T_COLORS.text2 }}>
-                {incluireIA ? 'Llama génère votre résumé personnalisé' : 'Mise en forme des données'}
+                {incluireIA ? t('export.ai_subgen') : t('export.formatting')}
               </div>
             </motion.div>
           )}
@@ -461,8 +465,8 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
                     <div style={{ width: 24, height: 24, borderRadius: 7, background: `linear-gradient(135deg, ${T_COLORS.accent}, #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Sparkles size={12} color="white" />
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: T_COLORS.text }}>Résumé IA généré</span>
-                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: `${T_COLORS.accent}15`, color: T_COLORS.accent, marginLeft: 'auto' }}>{typeResume === 'court' ? 'Court' : 'Détaillé'}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: T_COLORS.text }}>{t('export.ai_summary_ready')}</span>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: `${T_COLORS.accent}15`, color: T_COLORS.accent, marginLeft: 'auto' }}>{typeResume === 'court' ? t('export.badge_short') : t('export.badge_detailed')}</span>
                   </div>
                   <p style={{ fontSize: 12, color: T_COLORS.text2, lineHeight: 1.7, maxHeight: 120, overflowY: 'auto' }}>{resumeIA}</p>
                 </div>
@@ -471,9 +475,9 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
               {/* Récap */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
                 {[
-                  { val: taches.length, label: 'Tâches', color: T_COLORS.accent },
-                  { val: taches.filter(t => t.terminee).length, label: 'Terminées', color: '#4caf82' },
-                  { val: taches.filter(t => !t.terminee && t.deadline && new Date(t.deadline) < new Date()).length, label: 'En retard', color: '#e08a3c' },
+                  { val: taches.length, label: t('export.stat_tasks'), color: T_COLORS.accent },
+                  { val: taches.filter(t => t.terminee).length, label: t('export.stat_done'), color: '#4caf82' },
+                  { val: taches.filter(t => !t.terminee && t.deadline && new Date(t.deadline) < new Date()).length, label: t('export.stat_overdue'), color: '#e08a3c' },
                 ].map((s, i) => (
                   <div key={i} style={{ background: T_COLORS.bg, border: `1px solid ${s.color}20`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
                     <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.val}</div>
@@ -487,17 +491,17 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
                 <motion.button
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 20px', background: `linear-gradient(135deg, ${T_COLORS.accent}, #4caf82)`, border: 'none', borderRadius: 14, cursor: 'pointer', color: 'white', fontSize: 14, fontWeight: 700 }}
                   onClick={telechargerPDF} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Download size={17} /> Télécharger le rapport HTML/PDF
+                  <Download size={17} /> {t('export.download_report')}
                 </motion.button>
                 <motion.button
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '12px 20px', background: 'transparent', border: `1px solid ${T_COLORS.accent}40`, borderRadius: 14, cursor: 'pointer', color: T_COLORS.accent, fontSize: 13, fontWeight: 600 }}
                   onClick={ouvrirApercu} whileHover={{ background: `${T_COLORS.accent}10` }} whileTap={{ scale: 0.98 }}>
-                  <FileText size={15} /> Aperçu dans un nouvel onglet
+                  <FileText size={15} /> {t('export.preview_tab')}
                 </motion.button>
                 <motion.button
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px', background: 'transparent', border: `1px solid ${T_COLORS.accent}20`, borderRadius: 14, cursor: 'pointer', color: T_COLORS.text2, fontSize: 13 }}
                   onClick={reset} whileHover={{ color: T_COLORS.text }}>
-                  ← Recommencer
+                  {t('export.restart')}
                 </motion.button>
               </div>
             </motion.div>

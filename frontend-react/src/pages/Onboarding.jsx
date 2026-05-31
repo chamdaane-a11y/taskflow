@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   X, ArrowRight, ArrowLeft,
   Check, Bell, Sparkles,
@@ -47,44 +48,39 @@ const GetShiftMark = ({ size = 40 }) => {
    DATA
    ═══════════════════════════════════════════════════════════════════ */
 
-const INTEGRATIONS = [
-  { id: 'google_calendar', nom: 'Google Calendar', desc: 'Sync bidirectionnelle · time blocks IA',
-    Logo: GoogleCalendarLogo, oauthPath: '/integrations/google-calendar/start' },
-  { id: 'google_drive', nom: 'Google Drive', desc: 'Lie tes fichiers à tes tâches',
-    Logo: GoogleDriveLogo, oauthPath: '/integrations/google-drive/start' },
-  { id: 'gmail', nom: 'Gmail', desc: 'Transforme tes emails en actions',
-    Logo: GmailLogo, oauthPath: '/integrations/gmail/start' },
-  { id: 'notion', nom: 'Notion', desc: 'Synchronise notes et bases de données',
-    Logo: NotionLogo, oauthPath: '/integrations/notion/start' },
-  { id: 'slack', nom: 'Slack', desc: 'Alertes de tâches dans tes canaux',
-    Logo: SlackLogo, oauthPath: null },
+const INTEGRATIONS_BASE = [
+  { id: 'google_calendar', nom: 'Google Calendar', Logo: GoogleCalendarLogo, oauthPath: '/integrations/google-calendar/start' },
+  { id: 'google_drive',    nom: 'Google Drive',    Logo: GoogleDriveLogo,    oauthPath: '/integrations/google-drive/start' },
+  { id: 'gmail',           nom: 'Gmail',           Logo: GmailLogo,          oauthPath: '/integrations/gmail/start' },
+  { id: 'notion',          nom: 'Notion',          Logo: NotionLogo,         oauthPath: '/integrations/notion/start' },
+  { id: 'slack',           nom: 'Slack',           Logo: SlackLogo,          oauthPath: null },
 ]
 
-const RYTHMES = [
-  { val: 'matin', Icon: Sun,    label: 'Matin',       desc: 'Avant 12h' },
-  { val: 'apres', Icon: Sunset, label: 'Après-midi',  desc: '12h – 18h' },
-  { val: 'soir',  Icon: Moon,   label: 'Soir',        desc: 'Après 18h' },
+const RYTHMES_BASE = [
+  { val: 'matin', Icon: Sun    },
+  { val: 'apres', Icon: Sunset },
+  { val: 'soir',  Icon: Moon   },
 ]
 
-const USAGES = [
-  { val: 'pro',    Icon: Briefcase,      label: 'Travail',   desc: 'Projets pro, deadlines clients' },
-  { val: 'etudes', Icon: GraduationCap,  label: 'Études',    desc: 'Cours, examens, recherche' },
-  { val: 'perso',  Icon: Heart,          label: 'Personnel', desc: 'Objectifs perso, habitudes' },
-  { val: 'mixte',  Icon: Zap,            label: 'Mixte',     desc: 'Tout à la fois' },
+const USAGES_BASE = [
+  { val: 'pro',    Icon: Briefcase     },
+  { val: 'etudes', Icon: GraduationCap },
+  { val: 'perso',  Icon: Heart         },
+  { val: 'mixte',  Icon: Zap           },
 ]
 
-const TEAMS = [
-  { val: 'solo',    Icon: User,       label: 'Solo',      desc: 'Tu travailles seul' },
-  { val: 'petite',  Icon: Users,      label: 'Petite éq.', desc: '2 à 5 personnes' },
-  { val: 'grande',  Icon: Building2,  label: 'Grande éq.', desc: '6 personnes ou +' },
-  { val: 'variable',Icon: Shuffle,    label: 'Variable',   desc: 'Ça dépend des projets' },
+const TEAMS_BASE = [
+  { val: 'solo',     Icon: User      },
+  { val: 'petite',   Icon: Users     },
+  { val: 'grande',   Icon: Building2 },
+  { val: 'variable', Icon: Shuffle   },
 ]
 
-const CHALLENGES = [
-  { val: 'surcharge',     Icon: Layers,    label: 'Surcharge',      desc: 'Trop de choses à gérer en même temps' },
-  { val: 'procrastination', Icon: Clock4,  label: 'Procrastination',desc: 'Difficulté à démarrer ou à finir' },
-  { val: 'focus',         Icon: Target,    label: 'Focus',          desc: 'Distractions, contexte switching' },
-  { val: 'estimation',    Icon: Hourglass, label: 'Estimation',     desc: 'Mauvaise gestion du temps réel' },
+const CHALLENGES_BASE = [
+  { val: 'surcharge',       Icon: Layers    },
+  { val: 'procrastination', Icon: Clock4    },
+  { val: 'focus',           Icon: Target    },
+  { val: 'estimation',      Icon: Hourglass },
 ]
 
 const ETAPES_CONFIG = [
@@ -97,17 +93,6 @@ const ETAPES_CONFIG = [
   { id: 'fin' },
 ]
 
-const FEATURES_HERO = [
-  'Tâches, deadlines, priorités — collectées dans un seul espace.',
-  'Agent IA contextuel qui connaît ton calendrier et ta progression.',
-  'Goal Reverse — un objectif devient un plan d\'action par étapes.',
-  'Analytics temps réel sur ta productivité, sans bullshit.',
-]
-
-const CHAT_DEMO = [
-  { role: 'user', text: 'Planifie-moi cette semaine en évitant mes meetings Calendar' },
-  { role: 'ai', text: 'J\'ai analysé ton agenda : 14h de créneaux libres. Voici ma proposition :\n• Lun 9h–11h — Deadline rapport (priorité haute)\n• Mar 14h–16h — Préparer présentation\n• Jeu 10h–12h — Revue projet design\n\nTu veux que j\'applique ?' },
-]
 
 /* ═══════════════════════════════════════════════════════════════════
    HOOKS
@@ -201,7 +186,7 @@ function IntegrationRow({ integ, connectee, loading, onConnect }) {
           display: 'flex', alignItems: 'center', gap: 6,
           fontSize: 12, color: 'var(--ember)', fontWeight: 600,
         }}>
-          <Check size={14} strokeWidth={2.5} /> Connecté
+          <Check size={14} strokeWidth={2.5} /> {t('onboarding.connected')}
         </div>
       ) : loading ? (
         <motion.div
@@ -217,7 +202,7 @@ function IntegrationRow({ integ, connectee, loading, onConnect }) {
           fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)',
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
-          {integ.oauthPath ? 'Connecter' : 'Configurer'} <ArrowRight size={13} strokeWidth={2} />
+          {integ.oauthPath ? t('onboarding.connect') : t('onboarding.configure')} <ArrowRight size={13} strokeWidth={2} />
         </div>
       )}
     </motion.button>
@@ -322,6 +307,7 @@ function NotifPreview({ title, body, when }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 export default function Onboarding({ onTerminer, activerNotifications, userId, etapeInitiale = 0 }) {
+  const { t } = useTranslation()
   const [idx, setIdx] = useState(etapeInitiale)
   const [dir, setDir] = useState(1)
   const [integConnectees, setIntegConnectees] = useState({})
@@ -331,6 +317,17 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
   const isMobile = useIsMobile()
   const navigate = useNavigate()
   const containerRef = useRef(null)
+
+  const INTEGRATIONS = INTEGRATIONS_BASE.map(i => ({ ...i, desc: t(`onboarding.integ_${i.id}_desc`) }))
+  const RYTHMES = RYTHMES_BASE.map(r => ({ ...r, label: t(`onboarding.rythme_${r.val}`), desc: t(`onboarding.rythme_${r.val}_desc`) }))
+  const USAGES = USAGES_BASE.map(u => ({ ...u, label: t(`onboarding.usage_${u.val}`), desc: t(`onboarding.usage_${u.val}_desc`) }))
+  const TEAMS = TEAMS_BASE.map(tm => ({ ...tm, label: t(`onboarding.team_${tm.val}`), desc: t(`onboarding.team_${tm.val}_desc`) }))
+  const CHALLENGES = CHALLENGES_BASE.map(c => ({ ...c, label: t(`onboarding.challenge_${c.val}`), desc: t(`onboarding.challenge_${c.val}_desc`) }))
+  const FEATURES_HERO = [t('onboarding.feature_1'), t('onboarding.feature_2'), t('onboarding.feature_3'), t('onboarding.feature_4')]
+  const CHAT_DEMO = [
+    { role: 'user', text: t('onboarding.chat_user') },
+    { role: 'ai',   text: t('onboarding.chat_ai') },
+  ]
 
   const etape = ETAPES_CONFIG[idx]
   const total = ETAPES_CONFIG.length
@@ -435,12 +432,9 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
               style={{ marginBottom: 28 }}>
               <GetShiftMark size={72} />
             </motion.div>
-            <Eyebrow>GetShift · 2026</Eyebrow>
-            <Title serif>Bienvenue.</Title>
-            <Subtitle>
-              L'assistant IA qui pense ta semaine pour toi.
-              Connecte tes outils, parle-lui en langage naturel — il s'occupe du reste.
-            </Subtitle>
+            <Eyebrow>{t('onboarding.eyebrow_year')}</Eyebrow>
+            <Title serif>{t('onboarding.welcome_title')}</Title>
+            <Subtitle>{t('onboarding.welcome_sub')}</Subtitle>
             <div style={{
               marginTop: 36, display: 'flex', flexDirection: 'column', gap: 0,
               borderTop: '1px solid var(--border-subtle)',
@@ -471,12 +465,9 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
       case 'integrations':
         return (
           <StepShell maxWidth={620}>
-            <Eyebrow>Étape 1 · connecter tes outils</Eyebrow>
-            <Title>Connecte tes outils.</Title>
-            <Subtitle>
-              GetShift s'intègre à tout ce que tu utilises déjà.
-              Tu peux tout faire plus tard depuis Réglages — mais autant gagner du temps maintenant.
-            </Subtitle>
+            <Eyebrow>{t('onboarding.step1_eyebrow')}</Eyebrow>
+            <Title>{t('onboarding.step1_title')}</Title>
+            <Subtitle>{t('onboarding.step1_sub')}</Subtitle>
             <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {INTEGRATIONS.map(integ => (
                 <IntegrationRow key={integ.id} integ={integ}
@@ -491,14 +482,12 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
       case 'profil_rythme':
         return (
           <StepShell maxWidth={620}>
-            <Eyebrow>Étape 2 · ton rythme</Eyebrow>
-            <Title>Quand travailles-tu le mieux ?</Title>
-            <Subtitle>
-              L'IA proposera tes créneaux focus sur tes meilleures heures, et garde les tâches admin pour le reste.
-            </Subtitle>
+            <Eyebrow>{t('onboarding.step2_eyebrow')}</Eyebrow>
+            <Title>{t('onboarding.step2_title')}</Title>
+            <Subtitle>{t('onboarding.step2_sub')}</Subtitle>
 
             <div style={{ marginTop: 32 }}>
-              <SectionLabel>Ton créneau le plus productif</SectionLabel>
+              <SectionLabel>{t('onboarding.step2_peak_label')}</SectionLabel>
               <div style={{ display: 'flex', gap: 10 }}>
                 {RYTHMES.map(r => (
                   <SelectionCard key={r.val}
@@ -510,7 +499,7 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
             </div>
 
             <div style={{ marginTop: 24 }}>
-              <SectionLabel>Tu utilises GetShift pour</SectionLabel>
+              <SectionLabel>{t('onboarding.step2_usage_label')}</SectionLabel>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr',
@@ -530,14 +519,12 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
       case 'profil_travail':
         return (
           <StepShell maxWidth={620}>
-            <Eyebrow>Étape 3 · ton contexte</Eyebrow>
-            <Title>Et comment tu travailles ?</Title>
-            <Subtitle>
-              Deux dernières infos pour que GetShift comprenne ton quotidien et anticipe ce dont tu as besoin.
-            </Subtitle>
+            <Eyebrow>{t('onboarding.step3_eyebrow')}</Eyebrow>
+            <Title>{t('onboarding.step3_title')}</Title>
+            <Subtitle>{t('onboarding.step3_sub')}</Subtitle>
 
             <div style={{ marginTop: 32 }}>
-              <SectionLabel>Configuration de travail</SectionLabel>
+              <SectionLabel>{t('onboarding.step3_team_label')}</SectionLabel>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr',
@@ -553,7 +540,7 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
             </div>
 
             <div style={{ marginTop: 24 }}>
-              <SectionLabel>Ton plus gros défi en productivité</SectionLabel>
+              <SectionLabel>{t('onboarding.step3_challenge_label')}</SectionLabel>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {CHALLENGES.map(c => (
                   <motion.button key={c.val}
@@ -597,12 +584,9 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
       case 'ia':
         return (
           <StepShell maxWidth={680}>
-            <Eyebrow>Étape 4 · découverte</Eyebrow>
-            <Title>Ton agent IA personnel.</Title>
-            <Subtitle>
-              Planification, analyse, création de tâches — tout en langage naturel.
-              Il connaît ton calendrier, ta progression, tes priorités.
-            </Subtitle>
+            <Eyebrow>{t('onboarding.step4_eyebrow')}</Eyebrow>
+            <Title>{t('onboarding.step4_title')}</Title>
+            <Subtitle>{t('onboarding.step4_sub')}</Subtitle>
             <div style={{
               marginTop: 32, padding: '20px 18px',
               background: 'var(--surface-1)',
@@ -619,7 +603,7 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
                   fontSize: 12, fontWeight: 600,
                   color: 'var(--text-secondary)',
                   fontFamily: 'var(--font-mono)', letterSpacing: 0.3,
-                }}>ASSISTANT IA</span>
+                }}>{t('onboarding.step4_ia_label')}</span>
               </div>
               {CHAT_DEMO.map((m, i) => (
                 <div key={i} style={{ animationDelay: `${i * 0.4}s` }}>
@@ -632,7 +616,7 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
               color: 'var(--text-tertiary)', fontFamily: 'var(--font-ui)',
               fontStyle: 'italic',
             }}>
-              Exemples de prompts : « Planifie ma semaine », « Analyse ma productivité du mois », « Crée 3 tâches pour préparer mon entretien »
+              {t('onboarding.step4_examples')}
             </p>
           </StepShell>
         )
@@ -640,24 +624,21 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
       case 'notifs':
         return (
           <StepShell maxWidth={560}>
-            <Eyebrow>Étape 5 · presque fini</Eyebrow>
-            <Title>Ne rate plus aucune deadline.</Title>
-            <Subtitle>
-              Rappels push avant chaque échéance, récap quotidien, alertes de priorité.
-              Fonctionne même app fermée.
-            </Subtitle>
+            <Eyebrow>{t('onboarding.step5_eyebrow')}</Eyebrow>
+            <Title>{t('onboarding.step5_title')}</Title>
+            <Subtitle>{t('onboarding.step5_sub')}</Subtitle>
             <div style={{
               marginTop: 32, display: 'flex', flexDirection: 'column', gap: 10,
             }}>
               <NotifPreview
                 title="GetShift"
-                when="il y a 5 min"
-                body="Rapport trimestriel — deadline dans 2h. Tu veux time-block 14h–16h ?"
+                when={t('onboarding.notif1_when')}
+                body={t('onboarding.notif1_body')}
               />
               <NotifPreview
                 title="GetShift"
-                when="08:00"
-                body="Récap du matin : 3 tâches prioritaires, 2 réunions Calendar. Bonne journée."
+                when={t('onboarding.notif2_when')}
+                body={t('onboarding.notif2_body')}
               />
             </div>
           </StepShell>
@@ -686,12 +667,9 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
                 <Check size={14} color="#fff" strokeWidth={3} />
               </motion.div>
             </motion.div>
-            <Eyebrow>Étape finale</Eyebrow>
-            <Title serif>Tu es prêt.</Title>
-            <Subtitle>
-              GetShift apprend de tes habitudes et s'améliore au fil du temps.
-              Plus tu l'utilises, plus il devient pertinent.
-            </Subtitle>
+            <Eyebrow>{t('onboarding.final_eyebrow')}</Eyebrow>
+            <Title serif>{t('onboarding.final_title')}</Title>
+            <Subtitle>{t('onboarding.final_sub')}</Subtitle>
             <div style={{
               marginTop: 36, padding: '20px 24px',
               background: 'var(--surface-1)',
@@ -702,12 +680,14 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
                 fontSize: 11, fontWeight: 700, letterSpacing: 1,
                 color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)',
                 marginBottom: 12,
-              }}>CONFIGURÉ</div>
+              }}>{t('onboarding.config_badge')}</div>
               <ChecklistItem done={Object.keys(integConnectees).length > 0}
-                label={`${Object.keys(integConnectees).length} intégration${Object.keys(integConnectees).length > 1 ? 's' : ''} connectée${Object.keys(integConnectees).length > 1 ? 's' : ''}`} />
-              <ChecklistItem done={!!profil.rythme && !!profil.usage} label="Rythme de travail" />
-              <ChecklistItem done={!!profil.team && !!profil.challenge} label="Contexte personnalisé" />
-              <ChecklistItem done={notifActivee} label="Notifications push" last />
+                label={Object.keys(integConnectees).length > 1
+                  ? t('onboarding.integ_n_connected_plural', { n: Object.keys(integConnectees).length })
+                  : t('onboarding.integ_n_connected', { n: Object.keys(integConnectees).length })} />
+              <ChecklistItem done={!!profil.rythme && !!profil.usage} label={t('onboarding.checklist_rythme')} />
+              <ChecklistItem done={!!profil.team && !!profil.challenge} label={t('onboarding.checklist_context')} />
+              <ChecklistItem done={notifActivee} label={t('onboarding.checklist_notifs')} last />
             </div>
           </StepShell>
         )
@@ -721,14 +701,16 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
      ═══════════════════════════════════════════════════════════════════ */
 
   const ctaLabel = () => {
-    if (etape.id === 'bienvenue') return 'Commencer'
+    if (etape.id === 'bienvenue') return t('onboarding.cta_start')
     if (etape.id === 'integrations') {
       const n = Object.keys(integConnectees).length
-      return n > 0 ? `Continuer · ${n} connecté${n > 1 ? 's' : ''}` : 'Continuer'
+      return n > 0
+        ? (n > 1 ? t('onboarding.cta_connected_plural', { n }) : t('onboarding.cta_connected', { n }))
+        : t('onboarding.cta_continue')
     }
-    if (etape.id === 'notifs') return notifActivee ? 'Continuer' : 'Activer les notifications'
-    if (etape.id === 'fin') return 'Ouvrir GetShift'
-    return 'Continuer'
+    if (etape.id === 'notifs') return notifActivee ? t('onboarding.cta_continue') : t('onboarding.cta_notifs')
+    if (etape.id === 'fin') return t('onboarding.cta_open')
+    return t('onboarding.cta_continue')
   }
 
   const handleCta = () => {
@@ -791,7 +773,7 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-default)' }}
               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.borderColor = 'var(--border-subtle)' }}
             >
-              Passer <X size={12} strokeWidth={2} />
+              {t('onboarding.skip')} <X size={12} strokeWidth={2} />
             </button>
           )}
         </div>
@@ -837,7 +819,7 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
             opacity: idx === 0 ? 0.5 : 1,
             transition: 'all 150ms var(--ease-out-quart)',
           }}>
-          <ArrowLeft size={14} strokeWidth={2} /> {!isMobile && 'Retour'}
+          <ArrowLeft size={14} strokeWidth={2} /> {!isMobile && t('onboarding.back')}
         </button>
 
         <motion.button onClick={handleCta}
