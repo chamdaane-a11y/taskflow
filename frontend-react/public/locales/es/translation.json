@@ -522,5 +522,17 @@
     "delete_modal": "Todos tus datos se eliminarán permanentemente: tareas, insignias ({{badges}}), historial IA, integraciones, nivel {{niveau}}, {{points}} puntos. Sin recuperación posible.",
     "conn_via_google": "Inicio de sesión con Google",
     "google_pwd_help": "Tu cuenta está gestionada por Google. Para definir una contraseña local, usa el enlace «Olvidé mi contraseña» en la página de inicio de sesión."
+  },
+  "misc": {
+    "gcal_sync_remove": "Sincronizado con Google Calendar — clic para quitar",
+    "gcal_sync_add": "Sincronizar esta tarea con Google Calendar",
+    "splash_organize": "Organiza tus tareas",
+    "splash_ai": "Asistente IA integrado",
+    "splash_analytics": "Analítica y rendimiento",
+    "pomo_task_detected": "Tarea en curso detectada",
+    "agenda_not_connected": "No conectado",
+    "agenda_all_day": "Todo el día",
+    "agenda_all_synced": "Todo ya sincronizado ✓",
+    "agenda_importing": "Importando…"
   }
 }

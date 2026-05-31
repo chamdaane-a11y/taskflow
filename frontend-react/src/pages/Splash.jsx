@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckSquare, Bot, BarChart2, Sparkles } from 'lucide-react'
 import GetShiftMark from '../components/GetShiftMark'
 
 export default function Splash() {
+  const { t } = useTranslation()
   const [etape, setEtape] = useState(0)
   const navigate = useNavigate()
 
@@ -19,9 +21,9 @@ export default function Splash() {
   }, [])
 
   const features = [
-    { icon: CheckSquare, text: 'Organisez vos tâches' },
-    { icon: Bot,         text: 'Assistant IA intégré' },
-    { icon: BarChart2,   text: 'Analytics & performance' },
+    { icon: CheckSquare, text: t('misc.splash_organize') },
+    { icon: Bot,         text: t('misc.splash_ai') },
+    { icon: BarChart2,   text: t('misc.splash_analytics') },
   ]
 
   return (

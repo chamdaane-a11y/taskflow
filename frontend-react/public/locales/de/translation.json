@@ -522,5 +522,17 @@
     "delete_modal": "Alle deine Daten werden endgültig gelöscht: Aufgaben, Abzeichen ({{badges}}), KI-Verlauf, Integrationen, Level {{niveau}}, {{points}} Punkte. Keine Wiederherstellung möglich.",
     "conn_via_google": "Anmeldung über Google",
     "google_pwd_help": "Dein Konto wird von Google verwaltet. Um ein lokales Passwort festzulegen, nutze den Link „Passwort vergessen“ auf der Anmeldeseite."
+  },
+  "misc": {
+    "gcal_sync_remove": "Mit Google Calendar synchronisiert — zum Entfernen klicken",
+    "gcal_sync_add": "Diese Aufgabe mit Google Calendar synchronisieren",
+    "splash_organize": "Organisiere deine Aufgaben",
+    "splash_ai": "Integrierter KI-Assistent",
+    "splash_analytics": "Analysen & Leistung",
+    "pomo_task_detected": "Laufende Aufgabe erkannt",
+    "agenda_not_connected": "Nicht verbunden",
+    "agenda_all_day": "Ganztägig",
+    "agenda_all_synced": "Alles bereits synchronisiert ✓",
+    "agenda_importing": "Wird importiert…"
   }
 }

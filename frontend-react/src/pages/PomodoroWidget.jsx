@@ -4,6 +4,7 @@
 //   • Track : sessions du jour (localStorage)
 // ══════════════════════════════════════════════════════════════════════
 import { useState, useEffect, useMemo, useRef, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Pause, RotateCcw, X, Coffee } from 'lucide-react'
 
@@ -21,6 +22,7 @@ const todayKey = () => `pomodoro_count_${new Date().toISOString().split('T')[0]}
 export const PomodoroWidget = memo(function PomodoroWidget({
   T, isMobile, planification, taches
 }) {
+  const { t } = useTranslation()
   const [phase, setPhase] = useState('idle') // idle | work | break | paused
   const [secondsLeft, setSecondsLeft] = useState(WORK_SECONDS)
   const [count, setCount] = useState(() => {
@@ -179,7 +181,7 @@ export const PomodoroWidget = memo(function PomodoroWidget({
               Pomodoro 25/5
             </div>
             <div style={{ fontSize: 10, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeTitle ? `→ ${activeTitle}` : 'Tâche en cours détectée'}
+              {activeTitle ? `→ ${activeTitle}` : t('misc.pomo_task_detected')}
             </div>
           </>
         ) : (

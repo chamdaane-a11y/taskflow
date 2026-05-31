@@ -522,5 +522,17 @@
     "delete_modal": "سيتم حذف جميع بياناتك نهائياً: المهام، الشارات ({{badges}})، سجل الذكاء الاصطناعي، التكاملات، المستوى {{niveau}}، {{points}} نقطة. لا استرجاع ممكن.",
     "conn_via_google": "تسجيل الدخول عبر Google",
     "google_pwd_help": "حسابك مُدار عبر Google. لتعيين كلمة مرور محلية، استخدم رابط «نسيت كلمة المرور» في صفحة تسجيل الدخول."
+  },
+  "misc": {
+    "gcal_sync_remove": "مُزامن مع Google Calendar — انقر للإزالة",
+    "gcal_sync_add": "مزامنة هذه المهمة مع Google Calendar",
+    "splash_organize": "نظّم مهامك",
+    "splash_ai": "مساعد ذكاء اصطناعي مدمج",
+    "splash_analytics": "التحليلات والأداء",
+    "pomo_task_detected": "تم اكتشاف مهمة قيد التنفيذ",
+    "agenda_not_connected": "غير متصل",
+    "agenda_all_day": "طوال اليوم",
+    "agenda_all_synced": "كل شيء مُزامن بالفعل ✓",
+    "agenda_importing": "جارٍ الاستيراد…"
   }
 }

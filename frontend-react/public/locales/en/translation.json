@@ -522,5 +522,17 @@
     "delete_modal": "All your data will be permanently deleted: tasks, badges ({{badges}}), AI history, integrations, level {{niveau}}, {{points}} points. No recovery possible.",
     "conn_via_google": "Sign in via Google",
     "google_pwd_help": "Your account is managed by Google. To set a local password, use the \"Forgot password\" link on the sign-in page."
+  },
+  "misc": {
+    "gcal_sync_remove": "Synced with Google Calendar — click to remove",
+    "gcal_sync_add": "Sync this task with Google Calendar",
+    "splash_organize": "Organize your tasks",
+    "splash_ai": "Built-in AI assistant",
+    "splash_analytics": "Analytics & performance",
+    "pomo_task_detected": "Task in progress detected",
+    "agenda_not_connected": "Not connected",
+    "agenda_all_day": "All day",
+    "agenda_all_synced": "Everything already synced ✓",
+    "agenda_importing": "Importing…"
   }
 }

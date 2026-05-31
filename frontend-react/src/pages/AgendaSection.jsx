@@ -3,6 +3,7 @@
 // Repliée par défaut pour ne pas surcharger le Dashboard, état persisté en localStorage.
 // ══════════════════════════════════════════════════════════════════════
 import { memo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar, ExternalLink, MapPin, ChevronDown, Download } from 'lucide-react'
 import { useCalendarEvents } from './useCalendarEvents'
@@ -12,6 +13,7 @@ const API = 'https://getshift-backend.onrender.com'
 const STORAGE_KEY = 'gs_agenda_section_open'
 
 const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }) {
+  const { t } = useTranslation()
   const today = dateStr || new Date().toISOString().split('T')[0]
   const { events, loading, connected, refresh } = useCalendarEvents(user?.id, today)
 
@@ -49,7 +51,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
     }
   }
 
-  const titreDate = new Date(today).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const titreDate = new Date(today).toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })
 
   const onConnectClick = (e) => {
     e?.stopPropagation()
@@ -78,7 +80,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
   // Résumé compact pour le header replié
   const summary = (() => {
     if (loading) return '…'
-    if (connected === false) return 'Non connecté'
+    if (connected === false) return t('misc.agenda_not_connected')
     if (events.length === 0) return "Aucun événement"
     return `${events.length} événement${events.length > 1 ? 's' : ''}`
   })()
@@ -222,7 +224,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                           <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-                            {ev.all_day ? 'Journée entière' : `${ev.heure_debut} – ${ev.heure_fin}`}
+                            {ev.all_day ? t('misc.agenda_all_day') : `${ev.heure_debut} – ${ev.heure_fin}`}
                           </span>
                           {ev.location && (
                             <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3, opacity: 0.8 }}>
@@ -258,7 +260,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                       {importResult.error
                         ? 'Erreur lors de l\'import'
                         : importResult.count === 0
-                          ? 'Tout est déjà synchronisé ✓'
+                          ? t('misc.agenda_all_synced')
                           : `${importResult.count} tâche${importResult.count > 1 ? 's' : ''} importée${importResult.count > 1 ? 's' : ''} ✓`}
                     </div>
                   ) : (
@@ -274,7 +276,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                       }}>
                       <Download size={11} />
-                      {importing ? 'Import en cours…' : 'Importer comme tâches GetShift'}
+                      {importing ? t('misc.agenda_importing') : 'Importer comme tâches GetShift'}
                     </motion.button>
                   )}
                 </div>
