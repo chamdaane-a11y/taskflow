@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
 import { themes } from '../themes'
 import { applyTheme } from '../useTheme'
 import {
@@ -40,7 +40,7 @@ export default function Settings() {
   const isMobile = useMediaQuery('(max-width: 768px)')
   const isTablet = useMediaQuery('(max-width: 1100px)')
   const isTiny   = useMediaQuery('(max-width: 400px)')
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user'))
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
   const T = themes[theme]
@@ -193,8 +193,8 @@ export default function Settings() {
     try {
       await axios.delete(`${API}/users/${user.id}/sessions/${sessionId}`, { withCredentials: true })
       setSessions(prev => prev.filter(s => s.id !== sessionId))
-      afficherNotification('Session révoquée')
-    } catch { afficherNotification('Erreur', 'error') }
+      afficherNotification(t('settings.toast_session_revoked'))
+    } catch { afficherNotification(t('common.error'), 'error') }
     setDeletingSession(null)
   }
 
@@ -202,14 +202,14 @@ export default function Settings() {
     try {
       await axios.delete(`${API}/users/${user.id}/sessions/others`, { withCredentials: true })
       setSessions(prev => prev.filter(s => s.is_current))
-      afficherNotification('Autres sessions révoquées')
-    } catch { afficherNotification('Erreur', 'error') }
+      afficherNotification(t('settings.toast_others_revoked'))
+    } catch { afficherNotification(t('common.error'), 'error') }
   }
 
   // Étape 1 : password gate → backend génère le secret + QR
   const demarrer2faSetup = async (passwordOverride = null) => {
     const pwd = passwordOverride !== null ? passwordOverride : twoFaPassword
-    if (!pwd) { afficherNotification('Mot de passe requis', 'error'); return }
+    if (!pwd) { afficherNotification(t('settings.toast_pw_required'), 'error'); return }
     setTwoFaLoading(true)
     try {
       const res = await axios.post(`${API}/users/${user.id}/2fa/setup`, { password: pwd })
@@ -218,37 +218,37 @@ export default function Settings() {
       setTwoFaStep('setup-verify')
       setTwoFaCode('')
     } catch (e) {
-      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+      afficherNotification(e.response?.data?.erreur || t('common.error'), 'error')
     }
     setTwoFaLoading(false)
   }
 
   // Étape 2 : code email → activation
   const verifier2fa = async () => {
-    if (twoFaCode.length !== 6) { afficherNotification('Code à 6 chiffres requis', 'error'); return }
+    if (twoFaCode.length !== 6) { afficherNotification(t('settings.toast_code6_required'), 'error'); return }
     setTwoFaLoading(true)
     try {
       await axios.post(`${API}/users/${user.id}/2fa/verify`, { code: twoFaCode })
       setTwoFaEnabled(true)
       closeTwoFaWizard()
-      afficherNotification('2FA activée — ton compte est maintenant protégé')
+      afficherNotification(t('settings.toast_2fa_enabled'))
     } catch (e) {
-      afficherNotification(e.response?.data?.erreur || 'Code invalide', 'error')
+      afficherNotification(e.response?.data?.erreur || t('settings.toast_code_invalid'), 'error')
     }
     setTwoFaLoading(false)
   }
 
   // Désactivation : password requis pour tous (sécurité contre voleur de téléphone)
   const desactiver2fa = async () => {
-    if (!twoFaPassword) { afficherNotification('Mot de passe requis', 'error'); return }
+    if (!twoFaPassword) { afficherNotification(t('settings.toast_pw_required'), 'error'); return }
     setTwoFaLoading(true)
     try {
       await axios.post(`${API}/users/${user.id}/2fa/disable`, { password: twoFaPassword })
       setTwoFaEnabled(false)
       closeTwoFaWizard()
-      afficherNotification('2FA désactivée')
+      afficherNotification(t('settings.toast_2fa_disabled'))
     } catch (e) {
-      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+      afficherNotification(e.response?.data?.erreur || t('common.error'), 'error')
     }
     setTwoFaLoading(false)
   }
@@ -259,10 +259,10 @@ export default function Settings() {
     setWeeklyReportSaving(true)
     try {
       await axios.put(`${API}/users/${user.id}/weekly-report-day`, { day })
-      afficherNotification('Jour de rapport mis à jour')
+      afficherNotification(t('settings.toast_report_day'))
     } catch (e) {
       setWeeklyReportDay(prev)
-      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+      afficherNotification(e.response?.data?.erreur || t('common.error'), 'error')
     }
     setWeeklyReportSaving(false)
   }
@@ -271,9 +271,9 @@ export default function Settings() {
     setWeeklyTestSending(true)
     try {
       await axios.post(`${API}/users/${user.id}/email/resume-hebdo-test`)
-      afficherNotification('Rapport envoyé — vérifie ton email dans 1 min (et le dossier spam)')
+      afficherNotification(t('settings.toast_report_sent'))
     } catch (e) {
-      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+      afficherNotification(e.response?.data?.erreur || t('common.error'), 'error')
     }
     setWeeklyTestSending(false)
   }
@@ -289,7 +289,7 @@ export default function Settings() {
     setTheme(newTheme)
     applyTheme(newTheme)
     try { await axios.put(`${API}/users/${user.id}/theme`, { theme: newTheme }) } catch {}
-    afficherNotification('Thème mis à jour')
+    afficherNotification(t('settings.toast_theme_updated'))
   }
 
   const sauvegarderSlack = async () => {
@@ -298,9 +298,9 @@ export default function Settings() {
     try {
       await axios.post(`${API}/integrations/slack`, { user_id: user.id, webhook_url: slackWebhook })
       setSlackSaved(true)
-      afficherNotification('Webhook Slack sauvegardé')
+      afficherNotification(t('settings.toast_slack_saved'))
       setTimeout(() => setSlackSaved(false), 3000)
-    } catch { afficherNotification('Erreur lors de la sauvegarde', 'error') }
+    } catch { afficherNotification(t('settings.toast_save_error'), 'error') }
     setSlackSaving(false)
   }
 
@@ -320,16 +320,16 @@ export default function Settings() {
 
   const changerMotDePasse = async () => {
     const { ancien, nouveau, confirm } = pwForm
-    if (!ancien || !nouveau || !confirm) { afficherNotification('Tous les champs sont requis', 'error'); return }
-    if (nouveau !== confirm) { afficherNotification('Les mots de passe ne correspondent pas', 'error'); return }
-    if (nouveau.length < 8) { afficherNotification('8 caractères minimum', 'error'); return }
+    if (!ancien || !nouveau || !confirm) { afficherNotification(t('settings.toast_all_required'), 'error'); return }
+    if (nouveau !== confirm) { afficherNotification(t('settings.toast_pw_mismatch'), 'error'); return }
+    if (nouveau.length < 8) { afficherNotification(t('settings.toast_pw_min8'), 'error'); return }
     setPwLoading(true)
     try {
       await axios.put(`${API}/users/${user.id}/password`, { ancien_password: ancien, nouveau_password: nouveau })
-      afficherNotification('Mot de passe modifié')
+      afficherNotification(t('settings.toast_pw_changed'))
       setPwForm({ ancien: '', nouveau: '', confirm: '' })
     } catch (e) {
-      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+      afficherNotification(e.response?.data?.erreur || t('common.error'), 'error')
     }
     setPwLoading(false)
   }
@@ -344,22 +344,22 @@ export default function Settings() {
       a.download = `getshift-export-${user.id}-${new Date().toISOString().slice(0,10)}.json`
       a.click()
       URL.revokeObjectURL(url)
-      afficherNotification('Export téléchargé')
-    } catch { afficherNotification('Erreur lors de l\'export', 'error') }
+      afficherNotification(t('settings.toast_export_done'))
+    } catch { afficherNotification(t('settings.toast_export_error'), 'error') }
     setExportLoading(false)
   }
 
   const changerEmail = async () => {
     const { new_email, password } = emailForm
-    if (!new_email || !password) { afficherNotification('Email et mot de passe requis', 'error'); return }
+    if (!new_email || !password) { afficherNotification(t('settings.toast_email_pw_required'), 'error'); return }
     setEmailLoading(true)
     try {
       await axios.post(`${API}/users/${user.id}/email-change/request`, { new_email, password })
-      afficherNotification('Email de confirmation envoyé')
+      afficherNotification(t('settings.toast_email_sent'))
       setEmailPending(new_email)
       setEmailForm({ new_email: '', password: '' })
     } catch (e) {
-      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+      afficherNotification(e.response?.data?.erreur || t('common.error'), 'error')
     }
     setEmailLoading(false)
   }
@@ -368,8 +368,8 @@ export default function Settings() {
     try {
       await axios.post(`${API}/users/${user.id}/email-change/cancel`)
       setEmailPending(null)
-      afficherNotification('Changement d\'email annulé')
-    } catch { afficherNotification('Erreur', 'error') }
+      afficherNotification(t('settings.toast_email_cancelled'))
+    } catch { afficherNotification(t('common.error'), 'error') }
   }
 
   const supprimerCompte = async () => {
@@ -382,7 +382,7 @@ export default function Settings() {
       localStorage.removeItem('notif_prefs')
       navigate('/')
     } catch (e) {
-      afficherNotification(e.response?.data?.erreur || 'Erreur', 'error')
+      afficherNotification(e.response?.data?.erreur || t('common.error'), 'error')
     }
     setDeleteLoading(false)
   }
@@ -420,12 +420,12 @@ export default function Settings() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                     <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                      Installe GetShift comme une vraie app
+                      {t('settings.install_title')}
                     </h3>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ember)', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))', borderRadius: 99, padding: '2px 8px', letterSpacing: 0.5 }}>NOUVEAU</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ember)', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))', borderRadius: 99, padding: '2px 8px', letterSpacing: 0.5 }}>{t('settings.badge_new')}</span>
                   </div>
                   <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.55 }}>
-                    iPhone, iPad, Android, Mac, Windows — sans App Store, sans téléchargement. Plein écran, notifications push, hors ligne.
+                    {t('settings.install_desc')}
                   </p>
 
                   {/* CTA principal */}
@@ -433,7 +433,7 @@ export default function Settings() {
                     <motion.button onClick={installerApp}
                       whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}>
-                      Installer maintenant
+                      {t('settings.install_now')}
                     </motion.button>
                   )}
 
@@ -442,15 +442,15 @@ export default function Settings() {
                       <motion.button onClick={() => setShowIOSGuide(v => !v)}
                         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: 'var(--ember)', color: '#fff', border: 'none', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
-                        {showIOSGuide ? 'Masquer' : 'Voir les étapes iOS'}
+                        {showIOSGuide ? t('settings.ios_hide') : t('settings.ios_show')}
                       </motion.button>
                       {showIOSGuide && (
                         <div style={{ marginTop: 14, padding: '14px 16px', background: 'var(--surface-2)', borderRadius: 12, fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.85 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.5, marginBottom: 8 }}>iPhone / iPad — SAFARI</div>
-                          1. Ouvre <strong>Safari</strong> (pas Chrome/Firefox)<br/>
-                          2. Appuie sur <strong>⎙ Partager</strong> en bas de l'écran<br/>
-                          3. Fais défiler et touche <strong>« Sur l'écran d'accueil »</strong><br/>
-                          4. Touche <strong>« Ajouter »</strong> en haut à droite
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.5, marginBottom: 8 }}>{t('settings.ios_safari_label')}</div>
+                          <Trans i18nKey="settings.ios_step1" components={{ 1: <strong /> }} /><br/>
+                          <Trans i18nKey="settings.ios_step2" components={{ 1: <strong /> }} /><br/>
+                          <Trans i18nKey="settings.ios_step3" components={{ 1: <strong /> }} /><br/>
+                          <Trans i18nKey="settings.ios_step4" components={{ 1: <strong /> }} />
                         </div>
                       )}
                     </>
@@ -458,8 +458,8 @@ export default function Settings() {
 
                   {!installPrompt && !isIOS && (
                     <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                      <strong style={{ color: 'var(--text-primary)' }}>Android :</strong> Chrome → menu <strong style={{ fontFamily: 'var(--font-mono, monospace)' }}>⋮</strong> → « Installer l'application »<br/>
-                      <strong style={{ color: 'var(--text-primary)' }}>Desktop :</strong> Chrome/Edge → icône <strong style={{ fontFamily: 'var(--font-mono, monospace)' }}>⊕</strong> à droite de l'URL → « Installer GetShift »
+                      <strong style={{ color: 'var(--text-primary)' }}>{t('settings.android_label')}</strong> {t('settings.android_steps')}<br/>
+                      <strong style={{ color: 'var(--text-primary)' }}>{t('settings.desktop_label')}</strong> {t('settings.desktop_steps')}
                     </div>
                   )}
                 </div>
@@ -470,14 +470,14 @@ export default function Settings() {
           {appInstalled && (
             <div style={{ background: 'rgba(76,175,130,0.06)', border: '1px solid rgba(76,175,130,0.25)', borderRadius: 14, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
               <Check size={16} color="#4caf82" strokeWidth={2.5} />
-              <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)' }}>GetShift est installée comme application sur cet appareil ✓</span>
+              <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)' }}>{t('settings.installed_confirm')}</span>
             </div>
           )}
 
           {/* ── Langue & Région ── */}
-          <SectionTitle>Langue & Région</SectionTitle>
+          <SectionTitle>{t('settings.lang_region')}</SectionTitle>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
-            GetShift détecte automatiquement la langue de ton navigateur. Tu peux la changer manuellement ici.
+            {t('settings.lang_desc')}
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
             {LANGUAGES.map(lang => (
@@ -500,13 +500,13 @@ export default function Settings() {
             ))}
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Globe size={13} /> Fuseau horaire détecté : <strong>{userTimezone}</strong>
+            <Globe size={13} /> {t('settings.timezone_detected')} <strong>{userTimezone}</strong>
           </p>
 
           {/* ── Apparence ── */}
-          <SectionTitle>Apparence</SectionTitle>
+          <SectionTitle>{t('settings.appearance')}</SectionTitle>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
-            Personnalise l'apparence de GetShift. Le thème est synchronisé sur tous tes appareils.
+            {t('settings.appearance_desc')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
@@ -522,10 +522,10 @@ export default function Settings() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 15, fontWeight: theme === 'auto' ? 700 : 500, color: 'var(--text-primary)' }}>Auto (Système)</span>
+                  <span style={{ fontSize: 15, fontWeight: theme === 'auto' ? 700 : 500, color: 'var(--text-primary)' }}>{t('settings.theme_auto')}</span>
                   <Monitor size={13} color="var(--text-secondary)" />
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Suit le thème clair/sombre de ton appareil</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{t('settings.theme_auto_desc')}</div>
               </div>
               {theme === 'auto' && (
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--ember)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -562,14 +562,14 @@ export default function Settings() {
       // ── INTÉGRATIONS ──
       case 'integrations': return (
         <motion.div key="integrations" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <SectionTitle>Intégrations</SectionTitle>
+          <SectionTitle>{t('settings.integrations')}</SectionTitle>
 
           {/* Toutes les intégrations OAuth — connect / disconnect centralisé */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '20px', marginBottom: 16 }}>
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Connexions OAuth</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{t('settings.oauth_connections')}</div>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Connecte tes outils pour que l'IA puisse lire tes emails, pages Notion, docs Drive et événements Calendar.
+                {t('settings.oauth_desc')}
               </p>
             </div>
             <OutilsIntegrations T={T} userId={user.id} />
@@ -581,7 +581,7 @@ export default function Settings() {
       // ── NOTIFICATIONS ──
       case 'notifications': return (
         <motion.div key="notifications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <SectionTitle>Notifications</SectionTitle>
+          <SectionTitle>{t('settings.notifications')}</SectionTitle>
 
           {/* Rappel install — l'install card complète est dans Apparence */}
           {!appInstalled && (
@@ -589,8 +589,8 @@ export default function Settings() {
               style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))', borderRadius: 14, marginBottom: 16, cursor: 'pointer', color: 'var(--text-primary)', fontFamily: 'inherit' }}>
               <Smartphone size={18} color="var(--ember)" strokeWidth={2} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>Installer GetShift pour activer les notifications push</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Voir les étapes dans l'onglet Apparence ↑</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{t('settings.install_push_cta')}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{t('settings.install_push_sub')}</div>
               </div>
               <ChevronRight size={15} color="var(--text-secondary)" />
             </button>
@@ -600,14 +600,14 @@ export default function Settings() {
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <Mail size={16} color="var(--ember)" />
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Rapport hebdomadaire</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t('settings.weekly_report')}</div>
             </div>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
-              Bilan de ta semaine envoyé par email à 18h le jour de ton choix. Analyse de tes tâches terminées, conseil IA, et challenge pour la semaine suivante.
+              {t('settings.weekly_report_desc')}
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 14 }}>
-              {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((label, idx) => {
-                const fullLabels = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche']
+              {t('settings.days_short').split(',').map((label, idx) => {
+                const fullLabels = t('settings.days_full').split(',')
                 const active = weeklyReportDay === idx
                 return (
                   <motion.button key={idx}
@@ -636,21 +636,21 @@ export default function Settings() {
             <motion.button onClick={envoyerRapportTest} disabled={weeklyTestSending}
               style={{ width: '100%', padding: '10px', background: 'transparent', color: 'var(--ember)', border: '1px solid var(--ember)', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: weeklyTestSending ? 0.6 : 1 }}
               whileTap={{ scale: 0.97 }}>
-              {weeklyTestSending ? 'Envoi…' : "Envoyer un test maintenant"}
+              {weeklyTestSending ? t('settings.sending') : t('settings.send_test_now')}
             </motion.button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { label: 'Rappels de deadline',       desc: 'Notifiez-moi 24h avant chaque deadline' },
-              { label: 'Nouvelles tâches bloquées', desc: 'Alerte quand une tâche devient bloquée' },
-              { label: 'Tomorrow Builder (19h)',    desc: "Génération automatique du planning du lendemain" },
-              { label: 'Résumé hebdomadaire',       desc: 'Email récap envoyé le jour choisi ci-dessus' },
+              { id: 'Rappels de deadline',       label: t('settings.notif_deadline'), desc: t('settings.notif_deadline_desc') },
+              { id: 'Nouvelles tâches bloquées', label: t('settings.notif_blocked'),  desc: t('settings.notif_blocked_desc') },
+              { id: 'Tomorrow Builder (19h)',    label: t('settings.notif_tomorrow'), desc: t('settings.notif_tomorrow_desc') },
+              { id: 'Résumé hebdomadaire',       label: t('settings.notif_weekly'),   desc: t('settings.notif_weekly_desc') },
             ].map((item) => {
-              const active = notifPrefs[item.label] ?? true
+              const active = notifPrefs[item.id] ?? true
               return (
-                <motion.div key={item.label}
-                  onClick={() => toggleNotifPref(item.label)}
+                <motion.div key={item.id}
+                  onClick={() => toggleNotifPref(item.id)}
                   style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, cursor: 'pointer' }}
                   whileHover={{ background: 'var(--surface-2)' }}>
                   <div style={{ flex: 1 }}>
@@ -671,7 +671,7 @@ export default function Settings() {
             })}
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 16, lineHeight: 1.6 }}>
-            Préférences synchronisées sur tous tes appareils.
+            {t('settings.prefs_synced')}
           </p>
         </motion.div>
       )
@@ -679,17 +679,17 @@ export default function Settings() {
       // ── COMPTE ──
       case 'compte': return (
         <motion.div key="compte" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <SectionTitle>Compte & Sécurité</SectionTitle>
+          <SectionTitle>{t('settings.account_security')}</SectionTitle>
 
           {/* Infos compte */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, marginBottom: 16, textTransform: 'uppercase', margin: '0 0 16px' }}>INFORMATIONS DU COMPTE</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, marginBottom: 16, textTransform: 'uppercase', margin: '0 0 16px' }}>{t('settings.account_info')}</p>
             {[
-              { label: 'Nom', val: user?.nom },
-              { label: 'Email', val: user?.email },
-              { label: 'Plan', val: 'Gratuit' },
+              { id: 'nom', label: t('settings.field_name'), val: user?.nom },
+              { id: 'email', label: 'Email', val: user?.email },
+              { id: 'plan', label: t('settings.field_plan'), val: t('settings.plan_free') },
             ].map(item => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.label}</span>
                 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.val}</span>
               </div>
@@ -698,12 +698,12 @@ export default function Settings() {
 
           {/* Changer mot de passe */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 16px', textTransform: 'uppercase' }}>CHANGER DE MOT DE PASSE</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 16px', textTransform: 'uppercase' }}>{t('settings.change_password')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { key: 'ancien', placeholder: 'Mot de passe actuel' },
-                { key: 'nouveau', placeholder: 'Nouveau mot de passe (8 car. min.)' },
-                { key: 'confirm', placeholder: 'Confirmer le nouveau mot de passe' },
+                { key: 'ancien', placeholder: t('settings.pw_current') },
+                { key: 'nouveau', placeholder: t('settings.pw_new') },
+                { key: 'confirm', placeholder: t('settings.pw_confirm') },
               ].map(f => (
                 <div key={f.key} style={{ position: 'relative' }}>
                   <input
@@ -725,47 +725,47 @@ export default function Settings() {
                 disabled={pwLoading}
                 style={{ padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: pwLoading ? 'wait' : 'pointer', alignSelf: 'flex-start', opacity: pwLoading ? 0.7 : 1 }}
                 whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.97 }}>
-                {pwLoading ? 'Enregistrement…' : 'Mettre à jour'}
+                {pwLoading ? t('settings.saving') : t('settings.update')}
               </motion.button>
             </div>
           </div>
 
           {/* Changer d'email */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 16px', textTransform: 'uppercase' }}>CHANGER D'ADRESSE EMAIL</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 16px', textTransform: 'uppercase' }}>{t('settings.change_email')}</p>
             {isGoogleAccount ? (
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
-                Ton compte est lié à Google. Modifie ton adresse email directement dans les paramètres Google.
+                {t('settings.google_email_note')}
               </p>
             ) : emailPending ? (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'var(--ember-soft)', borderRadius: 10, marginBottom: 12 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ember)', flexShrink: 0 }} />
                   <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>
-                    En attente de confirmation pour <strong>{emailPending}</strong>
+                    {t('settings.email_pending_for')} <strong>{emailPending}</strong>
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.5 }}>
-                  Un lien de confirmation a été envoyé. Vérifie ta boîte de réception (et les spams).
+                  {t('settings.email_pending_note')}
                 </p>
                 <motion.button onClick={annulerChangementEmail}
                   style={{ fontSize: 13, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}
                   whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
-                  Annuler la demande
+                  {t('settings.cancel_request')}
                 </motion.button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input
                   type="email"
-                  placeholder="Nouvelle adresse email"
+                  placeholder={t('settings.email_new_placeholder')}
                   value={emailForm.new_email}
                   onChange={e => setEmailForm(p => ({ ...p, new_email: e.target.value }))}
                   style={INPUT_STYLE}
                 />
                 <input
                   type="password"
-                  placeholder="Mot de passe actuel (confirmation)"
+                  placeholder={t('settings.pw_confirm_placeholder')}
                   value={emailForm.password}
                   onChange={e => setEmailForm(p => ({ ...p, password: e.target.value }))}
                   style={INPUT_STYLE}
@@ -773,7 +773,7 @@ export default function Settings() {
                 <motion.button onClick={changerEmail} disabled={emailLoading}
                   style={{ padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: emailLoading ? 'wait' : 'pointer', alignSelf: 'flex-start', opacity: emailLoading ? 0.7 : 1 }}
                   whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.97 }}>
-                  {emailLoading ? 'Envoi…' : 'Envoyer le lien de confirmation'}
+                  {emailLoading ? t('settings.sending') : t('settings.send_confirm_link')}
                 </motion.button>
               </div>
             )}
@@ -782,23 +782,23 @@ export default function Settings() {
           {/* 2FA email OTP */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>DOUBLE AUTHENTIFICATION (2FA)</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>{t('settings.twofa_title')}</p>
               {twoFaEnabled && (
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf82', background: 'rgba(76,175,130,0.12)', border: '1px solid rgba(76,175,130,0.3)', borderRadius: 99, padding: '3px 10px' }}>ACTIVÉE</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf82', background: 'rgba(76,175,130,0.12)', border: '1px solid rgba(76,175,130,0.3)', borderRadius: 99, padding: '3px 10px' }}>{t('settings.twofa_enabled_badge')}</span>
               )}
             </div>
 
             {twoFaStep === null && !twoFaEnabled && (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                  Protège ton compte avec un code à 6 chiffres envoyé sur ton email. Chaque connexion demandera ce code en plus de ton mot de passe.
+                  {t('settings.twofa_intro')}
                 </p>
                 <motion.button
                   onClick={() => { setTwoFaStep('setup-password'); setTwoFaPassword('') }}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--ember)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                   whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.97 }}>
                   <Lock size={14} />
-                  Activer la 2FA
+                  {t('settings.twofa_enable')}
                 </motion.button>
               </>
             )}
@@ -807,13 +807,13 @@ export default function Settings() {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(76,175,130,0.08)', borderRadius: 10, marginBottom: 14 }}>
                   <Lock size={14} color="#4caf82" />
-                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Ton compte est protégé par la double authentification.</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{t('settings.twofa_protected')}</span>
                 </div>
                 <motion.button
                   onClick={() => { setTwoFaStep('disable'); setTwoFaPassword('') }}
                   style={{ fontSize: 13, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}
                   whileHover={{ borderColor: '#e05c5c', color: '#e05c5c' }}>
-                  Désactiver la 2FA
+                  {t('settings.twofa_disable')}
                 </motion.button>
               </>
             )}
@@ -822,12 +822,12 @@ export default function Settings() {
             {twoFaStep === 'setup-password' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                  Confirme ton identité avec ton mot de passe actuel avant de générer le secret 2FA.
+                  {t('settings.twofa_pw_gate')}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
                     type="password"
-                    placeholder="Mot de passe actuel"
+                    placeholder={t('settings.pw_current')}
                     value={twoFaPassword}
                     onChange={e => setTwoFaPassword(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && demarrer2faSetup()}
@@ -837,11 +837,11 @@ export default function Settings() {
                   <div style={{ display: 'flex', gap: 10 }}>
                     <motion.button onClick={closeTwoFaWizard}
                       style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                      whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                      whileTap={{ scale: 0.97 }}>{t('common.cancel')}</motion.button>
                     <motion.button onClick={demarrer2faSetup} disabled={twoFaLoading || !twoFaPassword}
                       style={{ flex: 1, padding: '10px', background: twoFaPassword ? 'var(--ember)' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaPassword ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaPassword ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
                       whileTap={twoFaPassword ? { scale: 0.97 } : {}}>
-                      {twoFaLoading ? 'Génération…' : 'Continuer'}
+                      {twoFaLoading ? t('settings.generating') : t('settings.continue')}
                     </motion.button>
                   </div>
                 </div>
@@ -854,16 +854,16 @@ export default function Settings() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, marginBottom: 16 }}>
                   <Mail size={18} color="var(--ember)" style={{ flexShrink: 0 }} />
                   <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                    Code envoyé à <strong>{twoFaEmailMasked || 'ton email'}</strong>. Vérifie ta boîte de réception (et les spams) puis entre le code à 6 chiffres ci-dessous.
+                    {t('settings.code_sent_to')} <strong>{twoFaEmailMasked || t('settings.your_email')}</strong>. {t('settings.check_inbox_then_enter')}
                   </div>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                  ⏱️ Le code expire dans 10 minutes.
+                  {t('settings.code_expires')}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
                     type="text" inputMode="numeric" pattern="[0-9]*"
-                    placeholder="Code à 6 chiffres"
+                    placeholder={t('settings.code_placeholder')}
                     value={twoFaCode}
                     onChange={e => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     onKeyDown={e => e.key === 'Enter' && verifier2fa()}
@@ -873,11 +873,11 @@ export default function Settings() {
                   <div style={{ display: 'flex', gap: 10 }}>
                     <motion.button onClick={closeTwoFaWizard}
                       style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                      whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                      whileTap={{ scale: 0.97 }}>{t('common.cancel')}</motion.button>
                     <motion.button onClick={verifier2fa} disabled={twoFaLoading || twoFaCode.length !== 6}
                       style={{ flex: 1, padding: '10px', background: twoFaCode.length === 6 ? 'var(--ember)' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaCode.length === 6 ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaCode.length === 6 ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
                       whileTap={twoFaCode.length === 6 ? { scale: 0.97 } : {}}>
-                      {twoFaLoading ? 'Vérification…' : 'Activer'}
+                      {twoFaLoading ? t('settings.verifying') : t('settings.activate')}
                     </motion.button>
                   </div>
                 </div>
@@ -888,12 +888,12 @@ export default function Settings() {
             {twoFaStep === 'disable' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                  Entre ton mot de passe pour désactiver la 2FA. <strong>Pas un code email</strong> — pour éviter qu'un accès à ton email puisse retirer la protection.
+                  {t('settings.twofa_disable_a')} <strong>{t('settings.twofa_disable_strong')}</strong> {t('settings.twofa_disable_b')}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
                     type="password"
-                    placeholder="Mot de passe actuel"
+                    placeholder={t('settings.pw_current')}
                     value={twoFaPassword}
                     onChange={e => setTwoFaPassword(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && desactiver2fa()}
@@ -903,11 +903,11 @@ export default function Settings() {
                   <div style={{ display: 'flex', gap: 10 }}>
                     <motion.button onClick={closeTwoFaWizard}
                       style={{ flex: 1, padding: '10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                      whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                      whileTap={{ scale: 0.97 }}>{t('common.cancel')}</motion.button>
                     <motion.button onClick={desactiver2fa} disabled={twoFaLoading || !twoFaPassword}
                       style={{ flex: 1, padding: '10px', background: twoFaPassword ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: twoFaPassword ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: twoFaPassword ? 'pointer' : 'not-allowed', opacity: twoFaLoading ? 0.7 : 1, transition: 'all 0.2s' }}
                       whileTap={twoFaPassword ? { scale: 0.97 } : {}}>
-                      {twoFaLoading ? 'Désactivation…' : 'Désactiver'}
+                      {twoFaLoading ? t('settings.disabling') : t('settings.twofa_disable')}
                     </motion.button>
                   </div>
                 </div>
@@ -918,13 +918,13 @@ export default function Settings() {
           {/* Sessions actives */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>SESSIONS ACTIVES</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>{t('settings.active_sessions')}</p>
               <div style={{ display: 'flex', gap: 8 }}>
                 {sessions.filter(s => !s.is_current).length > 0 && (
                   <motion.button onClick={revoquerAutresSessions}
                     style={{ fontSize: 12, color: '#e05c5c', background: 'rgba(224,92,92,0.07)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
                     whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
-                    Révoquer les autres
+                    {t('settings.revoke_others')}
                   </motion.button>
                 )}
                 <motion.button onClick={chargerSessions}
@@ -935,9 +935,9 @@ export default function Settings() {
               </div>
             </div>
             {sessionsLoading ? (
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', padding: '16px 0' }}>Chargement…</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', padding: '16px 0' }}>{t('common.loading')}</div>
             ) : sessions.length === 0 ? (
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Aucune session enregistrée</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('settings.no_sessions')}</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {sessions.map(s => {
@@ -951,7 +951,7 @@ export default function Settings() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.device || '—'}</span>
-                          {isHere && <span style={{ fontSize: 10, fontWeight: 700, color: '#4caf82', background: 'rgba(76,175,130,0.15)', borderRadius: 99, padding: '2px 8px', flexShrink: 0 }}>CETTE SESSION</span>}
+                          {isHere && <span style={{ fontSize: 10, fontWeight: 700, color: '#4caf82', background: 'rgba(76,175,130,0.15)', borderRadius: 99, padding: '2px 8px', flexShrink: 0 }}>{t('settings.session_current')}</span>}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                           {s.ip} · {lastSeen}
@@ -975,9 +975,9 @@ export default function Settings() {
 
           {/* Export données */}
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 8px', textTransform: 'uppercase' }}>EXPORTER MES DONNÉES</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 8px', textTransform: 'uppercase' }}>{t('settings.export_title')}</p>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
-              Télécharge toutes tes données GetShift (tâches, objectifs, planning, badges, intégrations) au format JSON.
+              {t('settings.export_desc')}
             </p>
             <motion.button
               onClick={exporterDonnees}
@@ -985,7 +985,7 @@ export default function Settings() {
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, fontWeight: 500, cursor: exportLoading ? 'wait' : 'pointer', opacity: exportLoading ? 0.7 : 1 }}
               whileHover={{ borderColor: 'var(--ember)' }} whileTap={{ scale: 0.97 }}>
               <Download size={14} strokeWidth={2} />
-              {exportLoading ? 'Génération…' : 'Télécharger (JSON)'}
+              {exportLoading ? t('settings.generating') : t('settings.export_btn')}
             </motion.button>
           </div>
 
@@ -996,19 +996,19 @@ export default function Settings() {
                 onClick={() => setShowLogoutConfirm(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '14px 18px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 14, color: '#e05c5c', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
                 whileHover={{ background: 'rgba(224,92,92,0.1)' }}>
-                <LogOut size={18} strokeWidth={1.8} />Se déconnecter
+                <LogOut size={18} strokeWidth={1.8} />{t('settings.logout')}
               </motion.button>
             ) : (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 style={{ background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 14, padding: '18px 20px' }}>
-                <p style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500, marginBottom: 14 }}>Confirmer la déconnexion ?</p>
+                <p style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500, marginBottom: 14 }}>{t('settings.logout_confirm')}</p>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <motion.button onClick={() => setShowLogoutConfirm(false)}
                     style={{ flex: 1, padding: '10px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                    whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                    whileTap={{ scale: 0.97 }}>{t('common.cancel')}</motion.button>
                   <motion.button onClick={() => { localStorage.removeItem('user'); navigate('/') }}
                     style={{ flex: 1, padding: '10px', background: '#e05c5c', border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-                    whileTap={{ scale: 0.97 }}>Se déconnecter</motion.button>
+                    whileTap={{ scale: 0.97 }}>{t('settings.logout')}</motion.button>
                 </div>
               </motion.div>
             )}
@@ -1021,28 +1021,28 @@ export default function Settings() {
                 onClick={() => setShowDeleteZone(true)}
                 style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationStyle: 'dotted' }}
                 whileHover={{ color: '#e05c5c' }}>
-                Supprimer mon compte
+                {t('settings.delete_account_link')}
               </motion.button>
             ) : (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 style={{ background: 'rgba(224,92,92,0.04)', border: '1px solid rgba(224,92,92,0.25)', borderRadius: 16, padding: '20px 24px' }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#e05c5c', margin: '0 0 4px', letterSpacing: 0.3, textTransform: 'uppercase', fontSize: 11 }}>ZONE DANGEREUSE</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#e05c5c', margin: '0 0 4px', letterSpacing: 0.3, textTransform: 'uppercase', fontSize: 11 }}>{t('settings.danger_zone')}</p>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                  Action irréversible. Toutes tes données seront supprimées définitivement.
-                  {!isGoogleAccount && ' Ton mot de passe est requis pour confirmer.'}
+                  {t('settings.delete_warning')}
+                  {!isGoogleAccount && ' ' + t('settings.delete_warning_pw')}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
                     type="text"
-                    placeholder="Tape SUPPRIMER pour confirmer"
+                    placeholder={t('settings.delete_confirm_placeholder')}
                     value={deleteForm.confirmation}
                     onChange={e => setDeleteForm(p => ({ ...p, confirmation: e.target.value }))}
-                    style={{ ...INPUT_STYLE, borderColor: deleteForm.confirmation === 'SUPPRIMER' ? '#e05c5c' : undefined }}
+                    style={{ ...INPUT_STYLE, borderColor: deleteForm.confirmation === t('settings.delete_confirm_word') ? '#e05c5c' : undefined }}
                   />
                   {!isGoogleAccount && (
                     <input
                       type="password"
-                      placeholder="Mot de passe actuel"
+                      placeholder={t('settings.pw_current')}
                       value={deleteForm.password}
                       onChange={e => setDeleteForm(p => ({ ...p, password: e.target.value }))}
                       style={INPUT_STYLE}
@@ -1051,13 +1051,13 @@ export default function Settings() {
                   <div style={{ display: 'flex', gap: 10 }}>
                     <motion.button onClick={() => { setShowDeleteZone(false); setDeleteForm({ confirmation: '', password: '' }) }}
                       style={{ flex: 1, padding: '10px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                      whileTap={{ scale: 0.97 }}>Annuler</motion.button>
+                      whileTap={{ scale: 0.97 }}>{t('common.cancel')}</motion.button>
                     <motion.button
                       onClick={supprimerCompte}
-                      disabled={deleteLoading || deleteForm.confirmation !== 'SUPPRIMER'}
-                      style={{ flex: 1, padding: '10px', background: deleteForm.confirmation === 'SUPPRIMER' ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: deleteForm.confirmation === 'SUPPRIMER' ? 'white' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: deleteForm.confirmation === 'SUPPRIMER' ? 'pointer' : 'not-allowed', opacity: deleteLoading ? 0.7 : 1, transition: 'all 0.2s' }}
-                      whileTap={deleteForm.confirmation === 'SUPPRIMER' ? { scale: 0.97 } : {}}>
-                      {deleteLoading ? 'Suppression…' : 'Supprimer définitivement'}
+                      disabled={deleteLoading || deleteForm.confirmation !== t('settings.delete_confirm_word')}
+                      style={{ flex: 1, padding: '10px', background: deleteForm.confirmation === t('settings.delete_confirm_word') ? '#e05c5c' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: deleteForm.confirmation === t('settings.delete_confirm_word') ? 'white' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: deleteForm.confirmation === t('settings.delete_confirm_word') ? 'pointer' : 'not-allowed', opacity: deleteLoading ? 0.7 : 1, transition: 'all 0.2s' }}
+                      whileTap={deleteForm.confirmation === t('settings.delete_confirm_word') ? { scale: 0.97 } : {}}>
+                      {deleteLoading ? t('settings.deleting') : t('settings.delete_forever')}
                     </motion.button>
                   </div>
                 </div>
@@ -1110,7 +1110,7 @@ export default function Settings() {
               onClick={() => navigate('/dashboard')}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, marginBottom: 28, borderRadius: 8 }}
               whileHover={{ color: 'var(--ember)' }}>
-              <ArrowLeft size={16} /> Retour au Dashboard
+              <ArrowLeft size={16} /> {t('settings.back_dashboard')}
             </motion.button>
 
             {/* Titre */}
@@ -1129,7 +1129,7 @@ export default function Settings() {
                   style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', borderRadius: 10, background: activeSection === id ? 'var(--ember-soft)' : 'transparent', border: 'none', color: activeSection === id ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 13, fontWeight: activeSection === id ? 600 : 400, cursor: 'pointer', textAlign: 'left', marginBottom: 2 }}
                   whileHover={{ color: 'var(--ember)', x: 2 }}>
                   <Icon size={16} strokeWidth={activeSection === id ? 2.5 : 1.8} />
-                  {label}
+                  {t('settings.section_' + id)}
                   {activeSection === id && <ChevronRight size={14} style={{ marginLeft: 'auto' }} />}
                 </motion.button>
               ))}
@@ -1164,7 +1164,7 @@ export default function Settings() {
                   style={{ display: 'flex', alignItems: 'center', gap: isTiny ? 0 : 6, padding: isTiny ? '8px 12px' : '7px 14px', background: activeSection === id ? 'var(--ember-soft)' : 'var(--surface-1)', border: `1px solid ${activeSection === id ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 99, color: activeSection === id ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 12, fontWeight: activeSection === id ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                   whileTap={{ scale: 0.97 }}>
                   <Icon size={14} strokeWidth={activeSection === id ? 2.5 : 1.8} />
-                  {!isTiny && label}
+                  {!isTiny && t('settings.section_' + id)}
                 </motion.button>
               ))}
             </div>
