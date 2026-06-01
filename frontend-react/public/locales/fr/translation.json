@@ -1277,5 +1277,28 @@
     "faq_a7": "Pas encore. L'extension est sur la roadmap pour capturer des tâches depuis n'importe quelle page web.",
     "faq_q8": "Puis-je exporter mes données ?",
     "faq_a8": "Oui — Réglages → Compte → Télécharger (JSON). L'export contient toutes tes données : tâches, objectifs, planning, badges et intégrations."
+  },
+  "legal": {
+    "cgu_title": "Conditions Générales d'Utilisation",
+    "cgu_badge": "Légal · GetShift",
+    "cgu_back": "Retour",
+    "cgu_toc": "Sommaire",
+    "cgu_question": "Une question ?",
+    "cgu_contact": "Contactez-nous directement.",
+    "cgu_intro": "Ces conditions régissent votre utilisation de GetShift. En créant un compte, vous les acceptez. Prenez le temps de les lire — elles protègent aussi vos droits.",
+    "cgu_footer": "© 2026 GetShift — Fondé et développé par Hamdaane CHITOU, Bénin.",
+    "conf_title": "Politique de Confidentialité",
+    "conf_badge": "RGPD · GetShift",
+    "conf_toc": "Sommaire",
+    "conf_question": "Une question ?",
+    "conf_contact": "Contactez-nous directement.",
+    "conf_intro": "Nous collectons le minimum nécessaire. Vos données vous appartiennent. Vous pouvez les exporter ou supprimer votre compte à tout moment.",
+    "conf_footer": "© 2026 GetShift — Hamdaane CHITOU, Bénin.",
+    "ml_title": "Mentions Légales",
+    "ml_badge": "Légal · GetShift",
+    "ml_toc": "Sommaire",
+    "ml_question": "Une question ?",
+    "ml_contact": "Contactez-nous directement.",
+    "ml_footer": "© 2026 GetShift · Hamdaane CHITOU, Bénin"
   }
 }

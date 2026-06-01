@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FileText, ArrowLeft, Mail, Globe, Server } from 'lucide-react'
@@ -47,6 +48,7 @@ const BLOCKS = [
 ]
 
 export default function MentionsLegales() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   return (
@@ -69,7 +71,7 @@ export default function MentionsLegales() {
         {/* Titre */}
         <div style={{ marginBottom: 48 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 99, fontSize: 12, color: 'var(--ember)', fontWeight: 600, marginBottom: 16 }}>
-            <FileText size={13} /> Mentions légales
+            <FileText size={13} />{t('legal.ml_title')}
           </div>
           <h1 style={{ fontSize: 'clamp(24px,4vw,40px)', fontWeight: 800, letterSpacing: '-1.5px', marginBottom: 12, lineHeight: 1.1 }}>
             Informations légales

@@ -1277,5 +1277,28 @@
     "faq_a7": "Not yet. The extension is on the roadmap to capture tasks from any web page.",
     "faq_q8": "Can I export my data?",
     "faq_a8": "Yes — Settings → Account → Download (JSON). The export contains all your data: tasks, goals, planning, badges and integrations."
+  },
+  "legal": {
+    "cgu_title": "Terms of Service",
+    "cgu_badge": "Legal · GetShift",
+    "cgu_back": "Back",
+    "cgu_toc": "Table of contents",
+    "cgu_question": "A question?",
+    "cgu_contact": "Contact us directly.",
+    "cgu_intro": "These terms govern your use of GetShift. By creating an account, you accept them. Take the time to read them — they also protect your rights.",
+    "cgu_footer": "© 2026 GetShift — Founded and developed by Hamdaane CHITOU, Benin.",
+    "conf_title": "Privacy Policy",
+    "conf_badge": "GDPR · GetShift",
+    "conf_toc": "Table of contents",
+    "conf_question": "A question?",
+    "conf_contact": "Contact us directly.",
+    "conf_intro": "We collect the minimum necessary. Your data belongs to you. You can export it or delete your account at any time.",
+    "conf_footer": "© 2026 GetShift — Hamdaane CHITOU, Benin.",
+    "ml_title": "Legal Notice",
+    "ml_badge": "Legal · GetShift",
+    "ml_toc": "Table of contents",
+    "ml_question": "A question?",
+    "ml_contact": "Contact us directly.",
+    "ml_footer": "© 2026 GetShift · Hamdaane CHITOU, Benin"
   }
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -155,6 +156,7 @@ Pour toute question relative aux présentes CGU, vous pouvez contacter : chamdaa
 ]
 
 export default function CGU() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [sectionActive, setSectionActive] = useState(null)
 
@@ -176,7 +178,7 @@ export default function CGU() {
         </div>
         <motion.button onClick={() => navigate('/')} whileHover={{ x: -2 }}
           style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontFamily: 'var(--font-ui)' }}>
-          <ArrowLeft size={15} /> Retour
+          <ArrowLeft size={15} /> {t('legal.cgu_back')}
         </motion.button>
       </div>
 
@@ -187,7 +189,7 @@ export default function CGU() {
             <FileText size={13} /> Documents légaux
           </div>
           <h1 style={{ fontSize: 'clamp(24px,4vw,42px)', fontWeight: 800, letterSpacing: '-1.5px', marginBottom: 10, lineHeight: 1.1 }}>
-            Conditions Générales d'Utilisation
+            {t('legal.cgu_title')}
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
             Dernière mise à jour : 24 mai 2026 · GetShift par <strong style={{ color: 'var(--text-primary)' }}>Hamdaane CHITOU</strong>
@@ -216,7 +218,7 @@ export default function CGU() {
           {/* Sidebar TOC */}
           <div className="cgu-sidebar" style={{ position: 'sticky', top: 80 }}>
             <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 14 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, padding: '0 6px' }}>Sommaire</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, padding: '0 6px' }}>{t('legal.cgu_toc')}</p>
               {SECTIONS_CGU.map(s => (
                 <a key={s.id} href={`#${s.id}`}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px', borderRadius: 8, color: sectionActive === s.id ? 'var(--ember)' : 'var(--text-secondary)', background: sectionActive === s.id ? 'var(--ember-soft)' : 'transparent', fontSize: 12, fontWeight: sectionActive === s.id ? 600 : 400, textDecoration: 'none', marginBottom: 1, lineHeight: 1.4 }}
@@ -230,9 +232,9 @@ export default function CGU() {
             <div style={{ background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 'var(--radius-md)', padding: 16, marginTop: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <Mail size={13} color="var(--ember)" />
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>Une question ?</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{t('legal.cgu_question')}</span>
               </div>
-              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 8 }}>Contactez-nous directement.</p>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 8 }}>{t('legal.cgu_contact')}</p>
               <a href="mailto:chamdaane1@gmail.com" style={{ fontSize: 11.5, color: 'var(--ember)', fontWeight: 600, textDecoration: 'none' }}>chamdaane1@gmail.com</a>
             </div>
           </div>
@@ -242,7 +244,7 @@ export default function CGU() {
             <div style={{ background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 'var(--radius-md)', padding: '16px 20px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <FileText size={16} color="var(--ember)" style={{ flexShrink: 0, marginTop: 2 }} />
               <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                Ces conditions régissent votre utilisation de GetShift. En créant un compte, vous les acceptez. Prenez le temps de les lire — elles protègent aussi vos droits.
+                {t('legal.cgu_intro')}
               </p>
             </div>
 

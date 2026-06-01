@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Shield, ArrowLeft, ChevronRight } from 'lucide-react'
@@ -193,6 +194,7 @@ La version en vigueur est toujours accessible à l'adresse : /#/confidentialite`
 ]
 
 export default function ConfidentialitePolicy() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   return (
@@ -221,14 +223,14 @@ export default function ConfidentialitePolicy() {
             Vos données, vos droits
           </h1>
           <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 620 }}>
-            Nous collectons le minimum nécessaire. Nous ne vendons rien. Voici exactement ce qui se passe avec vos données sur GetShift.
+            {t('legal.conf_intro')}
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 12 }}>Dernière mise à jour : 24 mai 2026</p>
         </div>
 
         {/* TOC */}
         <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'clamp(16px,3vw,24px)', marginBottom: 48 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Sommaire</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>{t('legal.conf_toc')}</div>
           {SECTIONS.map(s => (
             <a key={s.id} href={`#${s.id}`} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 0', borderBottom: '1px solid var(--border-subtle)', textDecoration: 'none', color: 'var(--text-secondary)', fontSize: 14 }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--ember)'}
@@ -253,8 +255,8 @@ export default function ConfidentialitePolicy() {
         {/* Contact */}
         <div style={{ padding: 'clamp(20px,4vw,32px)', background: 'var(--ember-soft)', border: '1px solid var(--ember-ring)', borderRadius: 'var(--radius-md)', marginTop: 24, textAlign: 'center' }}>
           <Shield size={20} color="var(--ember)" style={{ marginBottom: 10 }} />
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Une question sur vos données ?</div>
-          <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 14 }}>Contactez-nous à tout moment, nous répondons sous 30 jours.</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>{t('legal.conf_question')}</div>
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 14 }}>{t('legal.conf_contact')}</div>
           <a href="mailto:chamdaane1@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 20px', background: 'var(--ember)', border: 'none', borderRadius: 9, color: 'var(--text-on-ember)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
             chamdaane1@gmail.com
           </a>
