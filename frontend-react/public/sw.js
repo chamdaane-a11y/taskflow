@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getshift-v25'
+const CACHE_NAME = 'getshift-v26'
 const STATIC_ASSETS = [
   '/taskflow/',
   '/taskflow/index.html',
@@ -60,6 +60,25 @@ self.addEventListener('fetch', (e) => {
           return resp
         })
         .catch(() => caches.match(e.request).then(c => c || caches.match('/taskflow/index.html')))
+    )
+    return
+  }
+
+  // ── Fichiers de traduction (/locales/*.json) → NETWORK FIRST ──
+  // Ces fichiers changent à chaque ajout de clé i18n mais gardent la même URL
+  // (pas de hash). En cache-first, les nouvelles traductions n'apparaissent jamais
+  // et i18next affiche le nom de la clé brute (ex: "dashboard.complete_btn").
+  if (url.pathname.includes('/locales/') && url.pathname.endsWith('.json')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(resp => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone()
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone))
+          }
+          return resp
+        })
+        .catch(() => caches.match(e.request).then(c => c || new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })))
     )
     return
   }
