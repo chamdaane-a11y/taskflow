@@ -1300,5 +1300,40 @@
     "ml_question": "Une question ?",
     "ml_contact": "Contactez-nous directement.",
     "ml_footer": "© 2026 GetShift · Hamdaane CHITOU, Bénin"
+  },
+  "insights": {
+    "status_overdue": "En retard",
+    "status_upcoming": "À venir",
+    "status_inprogress": "En cours",
+    "time_overdue": "Dépassé de {{n}}min",
+    "time_starts": "Démarre dans {{n}}min",
+    "overdue_title": "{{n}} tâches en retard",
+    "overdue_msg": "Tu peux les replanifier maintenant — l'IA trouvera des créneaux libres.",
+    "overdue_cta": "Replanifier",
+    "overload_title": "Journée chargée ({{h}}h)",
+    "overload_msg": "Tu dépasses ta capacité ({{cap}}h). Pense à reporter les tâches basses prio.",
+    "empty_title_morning": "Bonjour, prêt à structurer ta journée ?",
+    "empty_title_day": "Tu n'as rien planifié aujourd'hui",
+    "empty_msg": "{{n}} tâche en attente. L'IA peut te proposer un planning intelligent.",
+    "empty_msg_plural": "{{n}} tâches en attente. L'IA peut te proposer un planning intelligent.",
+    "empty_cta": "Proposer un planning",
+    "unplanned_title": "{{n}} tâches non planifiées",
+    "unplanned_msg": "L'IA peut les répartir dans tes créneaux libres cette semaine.",
+    "unplanned_cta": "Planifier",
+    "good_title": "{{h}}h planifiées aujourd'hui · {{pct}}% de capacité",
+    "good_msg_full": "Journée bien remplie — prends une pause toutes les 90min.",
+    "good_msg_ok": "Bon rythme. Reste concentré sur tes priorités haute.",
+    "good_msg_low": "Tu as encore de la marge pour ajouter ou approfondir.",
+    "tomorrow_title": "La journée s'achève",
+    "tomorrow_msg": "Prépare demain avec un planning intelligent.",
+    "tomorrow_cta": "Planifier demain"
+  },
+  "coach": {
+    "placeholder": "Écris à {{name}}…",
+    "error_reply": "Désolé, j'ai eu un souci.",
+    "error_conn": "Connexion difficile — réessaie dans un instant.",
+    "alex_tagline": "Bienveillant",
+    "max_tagline": "Énergique",
+    "nova_tagline": "Analytique"
   }
 }

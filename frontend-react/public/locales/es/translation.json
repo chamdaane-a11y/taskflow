@@ -1300,5 +1300,40 @@
     "ml_question": "¿Una pregunta?",
     "ml_contact": "Contáctanos directamente.",
     "ml_footer": "© 2026 GetShift · Hamdaane CHITOU, Benín"
+  },
+  "insights": {
+    "status_overdue": "Atrasada",
+    "status_upcoming": "Próxima",
+    "status_inprogress": "En curso",
+    "time_overdue": "Retraso de {{n}}min",
+    "time_starts": "Comienza en {{n}}min",
+    "overdue_title": "{{n}} tareas atrasadas",
+    "overdue_msg": "Puedes reprogramarlas ahora — la IA encontrará franjas libres.",
+    "overdue_cta": "Reprogramar",
+    "overload_title": "Día cargado ({{h}}h)",
+    "overload_msg": "Superas tu capacidad ({{cap}}h). Piensa en posponer las tareas de baja prioridad.",
+    "empty_title_morning": "Buenos días, ¿listo para estructurar tu día?",
+    "empty_title_day": "No has planificado nada hoy",
+    "empty_msg": "{{n}} tarea pendiente. La IA puede proponerte un planning inteligente.",
+    "empty_msg_plural": "{{n}} tareas pendientes. La IA puede proponerte un planning inteligente.",
+    "empty_cta": "Proponer un planning",
+    "unplanned_title": "{{n}} tareas sin planificar",
+    "unplanned_msg": "La IA puede repartirlas en tus franjas libres esta semana.",
+    "unplanned_cta": "Planificar",
+    "good_title": "{{h}}h planificadas hoy · {{pct}}% de capacidad",
+    "good_msg_full": "Día bien lleno — toma una pausa cada 90min.",
+    "good_msg_ok": "Buen ritmo. Mantén el foco en tus prioridades altas.",
+    "good_msg_low": "Todavía tienes margen para añadir o profundizar.",
+    "tomorrow_title": "El día se acaba",
+    "tomorrow_msg": "Prepara mañana con un planning inteligente.",
+    "tomorrow_cta": "Planificar mañana"
+  },
+  "coach": {
+    "placeholder": "Escribe a {{name}}…",
+    "error_reply": "Lo siento, tuve un problema.",
+    "error_conn": "Problema de conexión — inténtalo de nuevo en un momento.",
+    "alex_tagline": "Compasivo",
+    "max_tagline": "Enérgico",
+    "nova_tagline": "Analítico"
   }
 }

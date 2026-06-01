@@ -1300,5 +1300,40 @@
     "ml_question": "A question?",
     "ml_contact": "Contact us directly.",
     "ml_footer": "© 2026 GetShift · Hamdaane CHITOU, Benin"
+  },
+  "insights": {
+    "status_overdue": "Overdue",
+    "status_upcoming": "Upcoming",
+    "status_inprogress": "In progress",
+    "time_overdue": "{{n}}min overdue",
+    "time_starts": "Starts in {{n}}min",
+    "overdue_title": "{{n}} tasks overdue",
+    "overdue_msg": "You can reschedule them now — the AI will find free slots.",
+    "overdue_cta": "Reschedule",
+    "overload_title": "Busy day ({{h}}h)",
+    "overload_msg": "You're exceeding your capacity ({{cap}}h). Consider pushing low-priority tasks.",
+    "empty_title_morning": "Good morning, ready to structure your day?",
+    "empty_title_day": "You haven't planned anything today",
+    "empty_msg": "{{n}} task pending. The AI can suggest a smart schedule.",
+    "empty_msg_plural": "{{n}} tasks pending. The AI can suggest a smart schedule.",
+    "empty_cta": "Suggest a schedule",
+    "unplanned_title": "{{n}} unscheduled tasks",
+    "unplanned_msg": "The AI can spread them across your free slots this week.",
+    "unplanned_cta": "Schedule",
+    "good_title": "{{h}}h scheduled today · {{pct}}% of capacity",
+    "good_msg_full": "Busy day — take a break every 90 min.",
+    "good_msg_ok": "Good pace. Stay focused on your high priorities.",
+    "good_msg_low": "You still have room to add or go deeper.",
+    "tomorrow_title": "The day is winding down",
+    "tomorrow_msg": "Prepare tomorrow with a smart schedule.",
+    "tomorrow_cta": "Plan tomorrow"
+  },
+  "coach": {
+    "placeholder": "Write to {{name}}…",
+    "error_reply": "Sorry, I had a problem.",
+    "error_conn": "Connection issue — try again in a moment.",
+    "alex_tagline": "Caring",
+    "max_tagline": "Energetic",
+    "nova_tagline": "Analytical"
   }
 }

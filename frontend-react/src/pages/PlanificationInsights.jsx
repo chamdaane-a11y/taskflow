@@ -216,9 +216,9 @@ export const FocusBar = memo(function FocusBar({
   const statusBg    = isOverdue ? '#ef444415' : isUpcoming ? `var(--text-secondary)10` : 'var(--ember-soft)'
 
   const statusLabel = isOverdue
-    ? `Dépassé de ${nowMins - end}min`
+    ? t('insights.time_overdue', { n: nowMins - end })
     : isUpcoming
-      ? `Démarre dans ${start - nowMins}min`
+      ? t('insights.time_starts', { n: start - nowMins })
       : remaining >= 60
         ? `${Math.floor(remaining / 60)}h${String(remaining % 60).padStart(2,'0')} restantes`
         : `${remaining}min restantes`
@@ -286,7 +286,7 @@ export const FocusBar = memo(function FocusBar({
               background: statusBg,
               whiteSpace: 'nowrap',
             }}>
-              {isOverdue ? 'En retard' : isUpcoming ? 'À venir' : 'En cours'}
+              {isOverdue ? t('insights.status_overdue') : isUpcoming ? t('insights.status_upcoming') : t('insights.status_inprogress')}
             </span>
             <span style={{
               fontSize: 10,
@@ -412,9 +412,9 @@ export const InsightCard = memo(function InsightCard({
         type: 'overdue',
         Icon: AlertTriangle,
         color: '#ef4444',
-        title: `${overdue.length} tâches en retard`,
-        msg: `Tu peux les replanifier maintenant — l'IA trouvera des créneaux libres.`,
-        cta: 'Replanifier',
+        title: t('insights.overdue_title', { n: overdue.length }),
+        msg: t('insights.overdue_msg'),
+        cta: t('insights.overdue_cta'),
         action: onPlanIA,
       }
     }
@@ -426,8 +426,8 @@ export const InsightCard = memo(function InsightCard({
         type: 'overload',
         Icon: AlertTriangle,
         color: '#f59e0b',
-        title: `Journée chargée (${heures}h)`,
-        msg: `Tu dépasses ta capacité (${heuresDispo}h). Pense à reporter les tâches basses prio.`,
+        title: t('insights.overload_title', { h: heures }),
+        msg: t('insights.overload_msg', { cap: heuresDispo }),
         cta: null,
       }
     }
@@ -438,9 +438,9 @@ export const InsightCard = memo(function InsightCard({
         type: 'empty',
         Icon: Sun,
         color: 'var(--ember)',
-        title: nowH < 12 ? 'Bonjour, prêt à structurer ta journée ?' : 'Tu n\'as rien planifié aujourd\'hui',
-        msg: `${unplanned.length} tâche${unplanned.length > 1 ? 's' : ''} en attente. L'IA peut te proposer un planning intelligent.`,
-        cta: 'Proposer un planning',
+        title: nowH < 12 ? t('insights.empty_title_morning') : t('insights.empty_title_day'),
+        msg: unplanned.length > 1 ? t('insights.empty_msg_plural', { n: unplanned.length }) : t('insights.empty_msg', { n: unplanned.length }),
+        cta: t('insights.empty_cta'),
         action: onPlanIA,
       }
     }
@@ -451,9 +451,9 @@ export const InsightCard = memo(function InsightCard({
         type: 'unplanned',
         Icon: Brain,
         color: 'var(--ember)',
-        title: `${unplanned.length} tâches non planifiées`,
-        msg: `L'IA peut les répartir dans tes créneaux libres cette semaine.`,
-        cta: 'Planifier',
+        title: t('insights.unplanned_title', { n: unplanned.length }),
+        msg: t('insights.unplanned_msg'),
+        cta: t('insights.unplanned_cta'),
         action: onPlanIA,
       }
     }
@@ -466,12 +466,12 @@ export const InsightCard = memo(function InsightCard({
         type: 'good',
         Icon: Sparkles,
         color: '#10b981',
-        title: `${heures}h planifiées aujourd'hui · ${pct}% de capacité`,
+        title: t('insights.good_title', { h: heures, pct }),
         msg: pct >= 80
-          ? 'Journée bien remplie — prends une pause toutes les 90min.'
+          ? t('insights.good_msg_full')
           : pct >= 50
-            ? 'Bon rythme. Reste concentré sur tes priorités haute.'
-            : 'Tu as encore de la marge pour ajouter ou approfondir.',
+            ? t('insights.good_msg_ok')
+            : t('insights.good_msg_low'),
         cta: null,
       }
     }
@@ -482,9 +482,9 @@ export const InsightCard = memo(function InsightCard({
         type: 'tomorrow',
         Icon: Coffee,
         color: 'var(--ember)',
-        title: 'La journée s\'achève',
-        msg: `Prépare demain avec un planning intelligent.`,
-        cta: 'Planifier demain',
+        title: t('insights.tomorrow_title'),
+        msg: t('insights.tomorrow_msg'),
+        cta: t('insights.tomorrow_cta'),
         action: onPlanIA,
       }
     }

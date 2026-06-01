@@ -1300,5 +1300,40 @@
     "ml_question": "Eine Frage?",
     "ml_contact": "Kontaktiere uns direkt.",
     "ml_footer": "© 2026 GetShift · Hamdaane CHITOU, Benin"
+  },
+  "insights": {
+    "status_overdue": "Überfällig",
+    "status_upcoming": "Bevorstehend",
+    "status_inprogress": "In Bearbeitung",
+    "time_overdue": "{{n}} Min. überfällig",
+    "time_starts": "Startet in {{n}} Min.",
+    "overdue_title": "{{n}} überfällige Aufgaben",
+    "overdue_msg": "Du kannst sie jetzt umplanen — die KI findet freie Slots.",
+    "overdue_cta": "Umplanen",
+    "overload_title": "Voller Tag ({{h}}h)",
+    "overload_msg": "Du überschreitest deine Kapazität ({{cap}}h). Überleg, niedrig-priorisierte Aufgaben zu verschieben.",
+    "empty_title_morning": "Guten Morgen, bereit, deinen Tag zu strukturieren?",
+    "empty_title_day": "Du hast heute noch nichts geplant",
+    "empty_msg": "{{n}} Aufgabe ausstehend. Die KI kann dir einen smarten Plan vorschlagen.",
+    "empty_msg_plural": "{{n}} Aufgaben ausstehend. Die KI kann dir einen smarten Plan vorschlagen.",
+    "empty_cta": "Plan vorschlagen",
+    "unplanned_title": "{{n}} ungeplante Aufgaben",
+    "unplanned_msg": "Die KI kann sie auf deine freien Slots diese Woche verteilen.",
+    "unplanned_cta": "Einplanen",
+    "good_title": "{{h}}h eingeplant heute · {{pct}}% der Kapazität",
+    "good_msg_full": "Voller Tag — mach alle 90 Min. eine Pause.",
+    "good_msg_ok": "Gutes Tempo. Bleib fokussiert auf deine Hochprioritäten.",
+    "good_msg_low": "Du hast noch Spielraum, um mehr hinzuzufügen oder tiefer zu gehen.",
+    "tomorrow_title": "Der Tag neigt sich",
+    "tomorrow_msg": "Bereite morgen mit einem smarten Plan vor.",
+    "tomorrow_cta": "Morgen planen"
+  },
+  "coach": {
+    "placeholder": "Schreibe an {{name}}…",
+    "error_reply": "Entschuldigung, ich hatte ein Problem.",
+    "error_conn": "Verbindungsproblem — versuche es in einem Moment erneut.",
+    "alex_tagline": "Fürsorglich",
+    "max_tagline": "Energisch",
+    "nova_tagline": "Analytisch"
   }
 }

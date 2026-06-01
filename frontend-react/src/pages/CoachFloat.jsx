@@ -1,6 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════
 // CoachFloat.jsx — bulle flottante coach (Alex/Max/Nova) + mini chat
 // ══════════════════════════════════════════════════════════════════════
+import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useRef, useMemo, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
@@ -143,10 +144,10 @@ export const CoachFloat = memo(function CoachFloat({
           peakHour: analyticsStats.peakHour,
         } : null,
       })
-      const reply = res.data?.reponse || res.data?.message || "Désolé, j'ai eu un souci."
+      const reply = res.data?.reponse || res.data?.message || t('coach.error_reply')
       setMessages(m => [...m, { role: 'assistant', content: reply }])
     } catch {
-      setMessages(m => [...m, { role: 'assistant', content: "Connexion difficile — réessaie dans un instant." }])
+      setMessages(m => [...m, { role: 'assistant', content: t('coach.error_conn') }])
     } finally {
       setSending(false)
     }
@@ -387,7 +388,7 @@ export const CoachFloat = memo(function CoachFloat({
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
-                placeholder={`Écris à ${coach.label}…`}
+                placeholder={t('coach.placeholder', { name: coach.label })}
                 disabled={sending}
                 style={{
                   flex: 1,
