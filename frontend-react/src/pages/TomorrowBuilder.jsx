@@ -338,6 +338,7 @@ function PushMatinBloc({ user, T, isMobile }) {
 
 // ---- Courbe d'énergie 24h ----
 function EnergyCourbeChart({ courbeData, T }) {
+  const { t } = useTranslation()
   const now = new Date().getHours()
   const picHeure = courbeData.heure_pic
   const heures = courbeData.courbe.map(p => `${p.heure}h`)

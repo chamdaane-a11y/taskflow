@@ -26,8 +26,8 @@ const API = 'https://getshift-backend.onrender.com'
 const COLONNES = [
   { id: 'todo',          label: 'À faire',     couleur: 'var(--ember)', bg: 'var(--ember-ring)' },
   { id: 'en_cours',      label: 'En cours',    couleur: '#e08a3c', bg: '#e08a3c12' },
-  { id: 'en_validation', label: t('collab.status_validating'), couleur: '#f59e0b', bg: '#f59e0b14' },
-  { id: 'termine',       label: t('collab.status_done'), couleur: '#4caf82', bg: '#4caf8212' },
+  { id: 'en_validation', label: 'À valider',   couleur: '#f59e0b', bg: '#f59e0b14' },
+  { id: 'termine',       label: 'Terminé',     couleur: '#4caf82', bg: '#4caf8212' },
 ]
 const PRIORITE_COLOR = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
 
@@ -1681,14 +1681,16 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
 }
 
 // ===== DRAWER IA COACH D'ÉQUIPE =====
-const SUGGESTIONS_IA_EQUIPE = [
-  { icon: '🔍', text: t('collab.ia_prompt_1') },
-  { icon: '⚡', text: t('collab.ia_prompt_2') },
-  { icon: '⚠️', text: t('collab.ia_prompt_3') },
-  { icon: '🔄', text: t('collab.ia_prompt_4') },
+const SUGGESTIONS_IA_EQUIPE_BASE = [
+  { icon: '🔍', key: 'collab.ia_prompt_1' },
+  { icon: '⚡', key: 'collab.ia_prompt_2' },
+  { icon: '⚠️', key: 'collab.ia_prompt_3' },
+  { icon: '🔄', key: 'collab.ia_prompt_4' },
 ]
 
 function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
+  const { t } = useTranslation()
+  const SUGGESTIONS_IA_EQUIPE = SUGGESTIONS_IA_EQUIPE_BASE.map(s => ({ ...s, text: t(s.key) }))
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -1819,6 +1821,13 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
 // ===== PAGE PRINCIPALE =====
 export default function Collaboration() {
   const { t } = useTranslation()
+  const STATUTS_TR = useMemo(() => STATUTS.map(s => ({
+    ...s,
+    label: s.id === 'todo' ? t('collab.status_todo')
+      : s.id === 'en_cours' ? t('collab.status_inprogress')
+      : s.id === 'en_validation' ? t('collab.status_validating')
+      : s.id === 'termine' ? t('collab.status_done') : s.label
+  })), [t])
   const user = JSON.parse(localStorage.getItem('user'))
   const { T } = useTheme()
   const navigate = useNavigate()

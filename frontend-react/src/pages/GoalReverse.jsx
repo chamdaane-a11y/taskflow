@@ -23,10 +23,10 @@ import { useSidebarUser } from '../components/useSidebarUser'
 registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
 
-const NIVEAUX = [
-  { id: 'realiste',  label: t('goal.niveau_realiste'), desc: t('goal.niveau_realiste_desc'),       emoji: '🌱', color: '#4caf82' },
-  { id: 'ambitieux', label: t('goal.niveau_ambitieux'), desc: t('goal.niveau_ambitieux_desc'),   emoji: '🔥', color: '#e08a3c' },
-  { id: 'extreme',   label: t('goal.niveau_extreme'), desc: t('goal.niveau_extreme_desc'),    emoji: '⚡', color: '#e05c5c' },
+const NIVEAUX_BASE = [
+  { id: 'realiste',  emoji: '🌱', color: '#4caf82' },
+  { id: 'ambitieux', emoji: '🔥', color: '#e08a3c' },
+  { id: 'extreme',   emoji: '⚡', color: '#e05c5c' },
 ]
 
 const DIFFICULTE_COLOR = {
@@ -35,18 +35,28 @@ const DIFFICULTE_COLOR = {
   'élevée':  '#e05c5c',
 }
 
-const QUICK_ITERATIONS = [
-  { emoji: '➕', label: t('goal.adjust_1week'), text: t('goal.adjust_1week_text') },
-  { emoji: '🌿', label: t('goal.adjust_chill'), text: t('goal.adjust_chill_text') },
-  { emoji: '🔥', label: t('goal.adjust_intense'), text: t('goal.adjust_intense_text') },
-  { emoji: '🗜️', label: t('goal.adjust_merge'), text: t('goal.adjust_merge_text') },
-  { emoji: '🎯', label: t('goal.adjust_prep'), text: t('goal.adjust_prep_text') },
-  { emoji: '📅', label: t('goal.adjust_dates'), text: t('goal.adjust_dates_text') },
+const QUICK_ITERATIONS_BASE = [
+  { emoji: '➕', lkey: 'goal.adjust_1week', tkey: 'goal.adjust_1week_text' },
+  { emoji: '🌿', lkey: 'goal.adjust_chill', tkey: 'goal.adjust_chill_text' },
+  { emoji: '🔥', lkey: 'goal.adjust_intense', tkey: 'goal.adjust_intense_text' },
+  { emoji: '🗜️', lkey: 'goal.adjust_merge', tkey: 'goal.adjust_merge_text' },
+  { emoji: '🎯', lkey: 'goal.adjust_prep', tkey: 'goal.adjust_prep_text' },
+  { emoji: '📅', lkey: 'goal.adjust_dates', tkey: 'goal.adjust_dates_text' },
 ]
 
 export default function GoalReverse() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const NIVEAUX = NIVEAUX_BASE.map(n => ({
+    ...n,
+    label: t(`goal.niveau_${n.id}`),
+    desc: t(`goal.niveau_${n.id}_desc`),
+  }))
+  const QUICK_ITERATIONS = QUICK_ITERATIONS_BASE.map(qi => ({
+    ...qi,
+    label: t(qi.lkey),
+    text: t(qi.tkey),
+  }))
   const { user, niveau: userNiveau, points: userPoints, streak: userStreak, niveauActuel: userNiveauActuel, pctNiveau: userPctNiveau } = useSidebarUser()
   const themeKey = localStorage.getItem('theme') || 'light'
   const T = themes[themeKey]
