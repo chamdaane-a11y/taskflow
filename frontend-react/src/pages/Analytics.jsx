@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useMemo, useCallback, memo, useRef  } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -185,7 +186,7 @@ function useStatistics(data, jours) {
     // Chronotype: peak hour
     const heures = data.par_heure || Array(24).fill(0)
     const peakHour = heures.indexOf(Math.max(...heures))
-    const chronotype = peakHour < 12 ? 'Matin' : peakHour < 17 ? 'Après-midi' : 'Soir'
+    const chronotype = peakHour < 12 ? t('analytics.chronotype_morning') : peakHour < 17 ? t('analytics.chronotype_afternoon') : t('analytics.chronotype_evening')
 
     // 80/20 rule
     const haute = data.priorites?.haute || 0
@@ -319,7 +320,7 @@ const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
               </div>
             ) : !data?.taches?.length ? (
               <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-secondary)', fontSize: 13 }}>
-                Aucune tâche enregistrée ce jour.
+                {t('analytics.day_modal_none')}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -442,7 +443,7 @@ const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
   }
 
   // Dim Lun Mar Mer Jeu Ven Sam
-  const dayLabels = ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa']
+  const dayLabels = t('analytics.day_label').split(',')
 
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -690,9 +691,9 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
   }
 
   const ringColor = calibrationGlobale > 70 ? '#4caf82' : calibrationGlobale > 40 ? '#e08a3c' : '#e05c5c'
-  const verdict = calibrationGlobale > 75 ? 'Tu calibres très bien'
-    : calibrationGlobale > 50 ? 'Calibration correcte'
-    : 'Marge de progression'
+  const verdict = calibrationGlobale > 75 ? t('analytics.calibration_great')
+    : calibrationGlobale > 50 ? t('analytics.calibration_ok')
+    : t('analytics.calibration_progress')
 
   return (
     <motion.div
@@ -733,7 +734,7 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: ringColor, marginBottom: 2 }}>{verdict}</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-            % de tâches dans la zone ±20% du temps estimé
+            {t('analytics.calibration_percent')}
           </div>
         </div>
       </div>
@@ -774,7 +775,7 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
         )}
         {sousEstimes.length === 0 && surEstimes.length === 0 && (
           <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: 20 }}>
-            ✨ Tes estimations sont remarquablement justes — pas d'écart significatif détecté.
+            {t('analytics.calibration_perfect')}
           </div>
         )}
       </div>
@@ -814,46 +815,46 @@ const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) =
     } else {
       actionPhrase = `Focus ${focusScore}/100, streak ${streak}j. Pur travail d'élite — savoure-le.`
     }
-    ctaLabel = 'Continuer →'
+    ctaLabel = t('analytics.coach_cta_continue')
     ctaAction = () => navigate('/planification')
   } else if (isCrushing) {
     actionPhrase = wow >= 30
       ? `+${wow}% vs sem dernière — tu accélères fort. Garde ce rythme.`
       : `${streak}j de série et ${total} tâches — tu joues bien. Push pour viser plus haut.`
-    ctaLabel = 'Pousser plus'
+    ctaLabel = t('analytics.coach_cta_push')
     ctaAction = () => navigate('/planification')
   }
   // ── MODE CHALLENGER (l'user slack) ──
   else if (total === 0) {
     actionPhrase = `Zéro tâche. Le top 10% en fait déjà 15. Démarre maintenant.`
-    ctaLabel = 'Attaquer'
+    ctaLabel = t('analytics.coach_cta_attack')
     ctaAction = () => navigate('/planification')
   } else if (burnoutRisk) {
     actionPhrase = `Tu pousses fort mais mal réparti. Étale, garde l'intensité.`
-    ctaLabel = 'Réorganiser'
+    ctaLabel = t('analytics.coach_cta_reorg')
     ctaAction = () => navigate('/planification')
   } else if (lowRatio > 70) {
     actionPhrase = `${lowRatio}% de vanité. Le travail qui compte est ailleurs — vas-y.`
-    ctaLabel = 'Voir prio haute'
+    ctaLabel = t('analytics.coach_cta_high')
     ctaAction = () => {
       try { sessionStorage.setItem('dashboard_init_filter', 'haute') } catch {}
       navigate('/dashboard')
     }
   } else if (ecartPotentiel >= maxDay && maxDay > 0) {
     actionPhrase = `Ton meilleur jour : ${maxDay}. Sur 7j ça fait ${potentielSemaine}. Tu es à ${total}. Réveille-toi.`
-    ctaLabel = 'Pousser'
+    ctaLabel = t('analytics.coach_cta_push2')
     ctaAction = () => navigate('/planification')
   } else if (wow < -10) {
     actionPhrase = `${wow}% vs sem dernière. Tu redescends. Reprends le contrôle aujourd'hui.`
-    ctaLabel = 'Reprendre'
+    ctaLabel = t('analytics.coach_cta_resume')
     ctaAction = () => navigate('/planification')
   } else if (streak >= 3) {
     actionPhrase = `Série de ${streak}j. Ne casse pas la chaîne — planifie demain MAINTENANT.`
-    ctaLabel = 'Planifier J+1'
+    ctaLabel = t('analytics.coach_cta_plan')
     ctaAction = () => navigate('/planification')
   } else {
     actionPhrase = `${total} tâches. Vise +30% cette semaine — c'est ${Math.round(total * 1.3)} au lieu de ${total}.`
-    ctaLabel = 'Viser haut'
+    ctaLabel = t('analytics.coach_cta_aim')
     ctaAction = () => navigate('/planification')
   }
 
@@ -1015,7 +1016,7 @@ const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, 
         <div>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>Focus</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-            {focusScore > 75 ? '🎯 Excellent' : focusScore > 40 ? 'Correct' : '↑ À améliorer'}
+            {focusScore > 75 ? t('analytics.focus_excellent') : focusScore > 40 ? t('analytics.focus_correct') : t('analytics.focus_improve')}
           </div>
         </div>
       </div>
@@ -1042,7 +1043,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
         Icon: Crown, color: '#a855f7',
         title: `👑 ${stats.streak} jours d'identité — tu n'es plus un débutant`,
         text: 'C\'est rare. Ce que tu construis aujourd\'hui, peu de gens y arrivent. Continue.',
-        ctaLabel: 'Voir mes records →',
+        ctaLabel: t('analytics.coach_cta_continue'),
         ctaAction: () => navigate('/dashboard'),
       }
     } else if (stats.wow >= 30 && stats.streak >= 3) {
@@ -1050,7 +1051,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
         Icon: TrendingUp, color: '#4caf82',
         title: `🚀 +${stats.wow}% cette semaine — tu accélères fort`,
         text: 'Ce momentum est précieux. Garde le rythme et passe au seuil suivant.',
-        ctaLabel: 'Pousser plus →',
+        ctaLabel: t('analytics.coach_cta_push') + ' →',
         ctaAction: () => navigate('/planification'),
       }
     } else if (stats.burnoutRisk) {
@@ -1058,7 +1059,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
         Icon: Flame, color: '#e05c5c',
         title: '⚠️ Pattern burnout : tu pousses mal',
         text: 'Tu sprintes 3 jours puis tu craches. Étale l\'intensité — garde le rythme, pas l\'épuisement.',
-        ctaLabel: 'Réorganiser →',
+        ctaLabel: t('analytics.coach_cta_reorg') + ' →',
         ctaAction: () => navigate('/planification'),
       }
     } else if (stats.lowRatio > 70) {
@@ -1066,7 +1067,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
         Icon: AlertTriangle, color: '#e08a3c',
         title: `⚡ ${stats.lowRatio}% de vanité — le vrai impact est ailleurs`,
         text: 'Tu coches des cases faciles mais tu n\'avances pas sur ce qui compte. Attaque tes haute prio MAINTENANT.',
-        ctaLabel: 'Attaquer prio haute →',
+        ctaLabel: t('analytics.coach_cta_attack') + ' →',
         ctaAction: () => {
           try { sessionStorage.setItem('dashboard_init_filter', 'haute') } catch {}
           navigate('/dashboard')
@@ -1077,7 +1078,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
         Icon: Flame, color: '#e08a3c',
         title: `🔥 Streak ${stats.streak}j — ne casse pas la chaîne`,
         text: `Tu as construit ${stats.streak} jours d'identité. Une journée vide et tout repart de zéro. Planifie demain MAINTENANT.`,
-        ctaLabel: 'Planifier J+1 →',
+        ctaLabel: t('analytics.coach_cta_plan') + ' →',
         ctaAction: () => navigate('/planification'),
       }
     } else if (stats.wow < -15) {
@@ -1085,7 +1086,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
         Icon: TrendingDown, color: '#e05c5c',
         title: `📉 ${stats.wow}% vs semaine dernière — tu redescends`,
         text: 'Identifie ce qui a changé et reprends le contrôle aujourd\'hui. Pas demain. Aujourd\'hui.',
-        ctaLabel: 'Reprendre →',
+        ctaLabel: t('analytics.coach_cta_resume') + ' →',
         ctaAction: () => navigate('/planification'),
       }
     }
@@ -1134,7 +1135,7 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
                 try { localStorage.setItem('analytics_alert_dismissed', todayKey) } catch {}
               }}
               whileTap={{ scale: 0.85 }}
-              title="Masquer pour aujourd'hui"
+              title={t('analytics.ai_close_today')}
               style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <X size={13} />
             </motion.button>
@@ -1232,6 +1233,7 @@ const TrajectoryCard = memo(({ stats, T, loading, isMobile }) => {
 // MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════════════
 export default function Analytics() {
+  const { t } = useTranslation()
   const [periode, setPeriode] = useState('7')
   const [activeTab, setActiveTab] = useState('overview')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -1284,10 +1286,10 @@ export default function Analytics() {
   ]
 
   const tabs = [
-    { id: 'overview',  label: 'Graphes',         icon: Activity  },
-    { id: 'stats',     label: 'Statistiques',    icon: Target    },
-    { id: 'insights',  label: 'Insights IA',     icon: Brain     },
-    { id: 'heatmap',   label: 'Heatmap',         icon: Flame     },
+    { id: 'overview',  label: t('analytics.tab_graphs'),   icon: Activity  },
+    { id: 'stats',     label: t('analytics.tab_stats'),    icon: Target    },
+    { id: 'insights',  label: t('analytics.tab_insights'), icon: Brain     },
+    { id: 'heatmap',   label: t('analytics.tab_heatmap'),  icon: Flame     },
   ]
 
   // Filtres (inutilisés dans analytics mais présents pour la sidebar identique)
@@ -1369,7 +1371,7 @@ export default function Analytics() {
       labels: stats.labels,
       datasets: [
         {
-          label: 'Cette période',
+          label: t('analytics.period_current'),
           data: stats.current,
           borderColor: PASTEL.main,
           backgroundColor: makeAreaGradient(PASTEL.main),
@@ -1383,7 +1385,7 @@ export default function Analytics() {
           tension: 0.4,
         },
         {
-          label: 'Période précédente',
+          label: t('analytics.period_prev'),
           data: stats.previous,
           borderColor: PASTEL.ghost,
           backgroundColor: 'transparent',
@@ -1394,7 +1396,7 @@ export default function Analytics() {
           tension: 0.4,
         },
         {
-          label: 'Moyenne 7J',
+          label: t('analytics.period_ma7'),
           data: stats.movingAvg,
           borderColor: PASTEL.mint,
           backgroundColor: 'transparent',
@@ -1472,7 +1474,7 @@ export default function Analytics() {
   const doughnutData = useMemo(() => {
     if (!stats) return null
     return {
-      labels: ['Haute', 'Moyenne', 'Basse'],
+      labels: [t('analytics.prio_high'), t('analytics.prio_medium'), t('analytics.prio_low')],
       datasets: [{
         data: [stats.priorites?.haute || 0, stats.priorites?.moyenne || 0, stats.priorites?.basse || 0],
         backgroundColor: [PASTEL.rose, PASTEL.peach, PASTEL.mint],
@@ -1538,10 +1540,10 @@ export default function Analytics() {
         <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
         <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
         {[
-          { val: 'toutes',   label: 'Toutes les tâches' },
-          { val: 'haute',    label: 'Priorité haute' },
-          { val: 'bloquee',  label: `Bloquées${bloquees > 0 ? ` (${bloquees})` : ''}` },
-          { val: 'terminee', label: 'Terminées' },
+          { val: 'toutes',   label: t('analytics.filter_all') },
+          { val: 'haute',    label: t('analytics.filter_high') },
+          { val: 'bloquee',  label: `${t('analytics.filter_blocked')}${bloquees > 0 ? ` (${bloquees})` : ''}` },
+          { val: 'terminee', label: t('analytics.filter_done') },
         ].map(f => (
           <motion.button key={f.val}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 10, color: filtre === f.val ? 'var(--ember)' : 'var(--text-secondary)', background: filtre === f.val ? 'var(--ember-soft)' : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: filtre === f.val ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
@@ -1571,11 +1573,11 @@ export default function Analytics() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               style={{ fontSize: 'clamp(22px,5vw,28px)', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px', lineHeight: 1.2 }}>
-              Analytiques
+              t('analytics.page_title')
             </motion.h1>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
               style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Intelligence comportementale de votre productivité
+              {t('analytics.page_subtitle')}
             </motion.p>
           </div>
 
@@ -1636,7 +1638,7 @@ export default function Analytics() {
               {(() => {
                 // ── Cartes graphes définies une fois, rendues différemment mobile/desktop ──
                 const lineCard = (
-                  <ChartCard title="Évolution quotidienne" subtitle="Cette période · Précédente · Moy. mobile 7J" delay={0.1}>
+                  <ChartCard title={t('analytics.chart_daily_title')} subtitle={t('analytics.chart_daily_sub')} delay={0.1}>
                     {loading ? <Skeleton height={isMobile ? 200 : 280} radius={10} /> : (
                       <div style={{ height: isMobile ? 200 : 280, position: 'relative' }}>
                         {lineChartData && <Line data={lineChartData} options={lineOptionsWithLegend} />}
@@ -1645,7 +1647,7 @@ export default function Analytics() {
                   </ChartCard>
                 )
                 const barCard = (
-                  <ChartCard title="Distribution par jour" subtitle="Le jour le plus actif est mis en avant" delay={0.2}>
+                  <ChartCard title={t('analytics.chart_distrib_title')} subtitle={t('analytics.chart_distrib_sub')} delay={0.2}>
                     {loading ? <Skeleton height={isMobile ? 200 : 220} radius={10} /> : (
                       <div style={{ height: isMobile ? 200 : 220, position: 'relative' }}>
                         {barData && <Bar data={barData} options={baseOptions} />}
@@ -1654,7 +1656,7 @@ export default function Analytics() {
                   </ChartCard>
                 )
                 const cumulCard = (
-                  <ChartCard title="Courbe de croissance" subtitle="Tâches cumulées sur la période" delay={0.25}>
+                  <ChartCard title={t('analytics.chart_growth_title')} subtitle={t('analytics.chart_growth_sub')} delay={0.25}>
                     {loading ? <Skeleton height={isMobile ? 200 : 220} radius={10} /> : (
                       <div style={{ height: isMobile ? 200 : 220, position: 'relative' }}>
                         {cumulativeData && <Line data={cumulativeData} options={{ ...baseOptions, plugins: { ...baseOptions.plugins, legend: { display: false } } }} />}
@@ -1663,7 +1665,7 @@ export default function Analytics() {
                   </ChartCard>
                 )
                 const chronoCard = (
-                  <ChartCard title="Chronotype productif" subtitle="Quand es-tu le plus efficace ?" delay={0.3}>
+                  <ChartCard title={t('analytics.chart_chronotype_title')} subtitle={t('analytics.chart_chronotype_sub')} delay={0.3}>
                     {loading ? <Skeleton height={isMobile ? 200 : 220} radius={10} /> : (
                       <>
                         <div style={{ height: isMobile ? 180 : 200, position: 'relative' }}>
@@ -1681,7 +1683,7 @@ export default function Analytics() {
                   </ChartCard>
                 )
                 const doughnutCard = (
-                  <ChartCard title="Répartition priorités" subtitle="Vanité vs Impact" delay={0.35}>
+                  <ChartCard title={t('analytics.chart_prio_title')} subtitle={t('analytics.chart_prio_sub')} delay={0.35}>
                     {loading ? <Skeleton height={isMobile ? 200 : 220} radius={10} /> : (
                       <>
                         <div style={{ height: 180, position: 'relative' }}>
@@ -1741,10 +1743,10 @@ export default function Analytics() {
 
               {/* KPI Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : isTablet ? 3 : 4}, 1fr)`, gap: 14, marginBottom: 24 }}>
-                <KPICard icon={Target}  label="Taux de complétion"  value={loading ? '—' : `${stats?.taux || 0}%`}          sub={`${data?.terminees || 0}/${data?.total || 0} tâches`} color="var(--ember)" delta={stats?.wow}  loading={loading} />
-                <KPICard icon={Zap}     label="Vélocité"             value={loading ? '—' : `${stats?.velocity || 0}/j`}      sub="Tâches/jour actif"                                    color="#4caf82"      delta={undefined}   loading={loading} />
-                <KPICard icon={Award}   label="Score de focus"       value={loading ? '—' : `${stats?.focusScore || 0}/100`}  sub="Priorité haute vs vanité"                             color="#e08a3c"      delta={undefined}   loading={loading} />
-                <KPICard icon={Flame}   label="Série active"         value={loading ? '—' : `${stats?.streak || 0}j`}         sub={stats?.chronotype || '—'}                             color="#a855f7"      delta={undefined}   loading={loading} />
+                <KPICard icon={Target}  label={t('analytics.kpi_completion')}  value={loading ? '—' : `${stats?.taux || 0}%`}          sub={`${data?.terminees || 0}/${data?.total || 0} tâches`} color="var(--ember)" delta={stats?.wow}  loading={loading} />
+                <KPICard icon={Zap}     label={t('analytics.kpi_velocity')}             value={loading ? '—' : `${stats?.velocity || 0}/j`}      sub={t('analytics.kpi_velocity_sub')}                                    color="#4caf82"      delta={undefined}   loading={loading} />
+                <KPICard icon={Award}   label={t('analytics.kpi_focus')}       value={loading ? '—' : `${stats?.focusScore || 0}/100`}  sub={t('analytics.kpi_focus_sub')}                             color="#e08a3c"      delta={undefined}   loading={loading} />
+                <KPICard icon={Flame}   label={t('analytics.kpi_streak')}         value={loading ? '—' : `${stats?.streak || 0}j`}         sub={stats?.chronotype || '—'}                             color="#a855f7"      delta={undefined}   loading={loading} />
               </div>
 
               {/* WoW banner */}
@@ -1753,11 +1755,11 @@ export default function Analytics() {
                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', borderRadius: 10, marginBottom: 20, background: stats.wow > 0 ? '#4caf8212' : '#e05c5c12', border: `1px solid ${stats.wow > 0 ? '#4caf8230' : '#e05c5c30'}`, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
                   {stats.wow > 0 ? <TrendingUp size={16} color="#4caf82" /> : <TrendingDown size={16} color="#e05c5c" />}
                   <span style={{ fontSize: 13, color: stats.wow > 0 ? '#4caf82' : '#e05c5c', fontWeight: 600 }}>
-                    {stats.wow > 0 ? '+' : ''}{stats.wow}% vs période précédente
+                    {stats.wow > 0 ? '+' : ''}{stats.wow}% {t('analytics.wow_vs_prev')}
                   </span>
                   {!isMobile && (
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                      — {stats.total} tâches cette période vs {stats.totalPrev} la précédente
+                      — {t('analytics.wow_tasks_period', { total: stats.total, prev: stats.totalPrev })}
                     </span>
                   )}
                 </motion.div>
@@ -1775,15 +1777,15 @@ export default function Analytics() {
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 24 }}>
                 <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px' }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '1px', marginBottom: 14 }}>MÉTRIQUES AVANCÉES</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '1px', marginBottom: 14 }}>{t('analytics.metrics_title')}</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {[
-                      { label: 'Vélocité', value: `${stats?.velocity || 0} tâches/jour actif`, color: '#4caf82' },
-                      { label: 'Score de focus', value: `${stats?.focusScore || 0}/100`, color: 'var(--ember)' },
-                      { label: 'Meilleur jour', value: stats?.maxIdx >= 0 ? stats?.labels[stats.maxIdx] || '—' : '—', color: '#e08a3c' },
-                      { label: 'Tâches basse priorité', value: `${stats?.lowRatio || 0}% du total`, color: stats?.lowRatio > 70 ? '#e05c5c' : '#4caf82' },
-                      { label: 'Série en cours', value: `${stats?.streak || 0} jours`, color: '#a855f7' },
-                      { label: 'Risque burnout', value: stats?.burnoutRisk ? 'Détecté' : 'Normal', color: stats?.burnoutRisk ? '#e05c5c' : '#4caf82' },
+                      { label: t('analytics.metric_velocity'), value: t('analytics.metric_velocity_val', { val: stats?.velocity || 0 }), color: '#4caf82' },
+                      { label: t('analytics.metric_focus'), value: `${stats?.focusScore || 0}/100`, color: 'var(--ember)' },
+                      { label: t('analytics.metric_bestday'), value: stats?.maxIdx >= 0 ? stats?.labels[stats.maxIdx] || '—' : '—', color: '#e08a3c' },
+                      { label: t('analytics.metric_lowprio'), value: t('analytics.metric_lowprio_val', { val: stats?.lowRatio || 0 }), color: stats?.lowRatio > 70 ? '#e05c5c' : '#4caf82' },
+                      { label: t('analytics.metric_streak'), value: t('analytics.metric_streak_val', { val: stats?.streak || 0 }), color: '#a855f7' },
+                      { label: t('analytics.metric_burnout'), value: stats?.burnoutRisk ? t('analytics.metric_burnout_detected') : t('analytics.metric_burnout_normal'), color: stats?.burnoutRisk ? '#e05c5c' : '#4caf82' },
                     ].map((m, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{m.label}</span>
@@ -1794,7 +1796,7 @@ export default function Analytics() {
                 </div>
 
                 <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px' }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '1px', marginBottom: 14 }}>INDICATEUR BURNOUT</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '1px', marginBottom: 14 }}>{t('analytics.burnout_title')}</p>
                   {loading ? <Skeleton height={160} radius={10} /> : (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -1803,15 +1805,15 @@ export default function Analytics() {
                         </div>
                         <div>
                           <div style={{ fontSize: 18, fontWeight: 800, color: stats?.burnoutRisk ? '#e05c5c' : '#4caf82' }}>
-                            {stats?.burnoutRisk ? 'Risque détecté' : 'Niveau normal'}
+                            {stats?.burnoutRisk ? t('analytics.burnout_detected') : t('analytics.burnout_normal')}
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Basé sur vos {jours} derniers jours</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('analytics.burnout_based', { jours })}</div>
                         </div>
                       </div>
                       <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                         {stats?.burnoutRisk
-                          ? 'Une forte intensité sur 3 jours consécutifs est suivie d\'une chute de productivité. Prenez des pauses intentionnelles.'
-                          : 'Votre rythme de travail semble équilibré. Continuez à maintenir un effort régulier.'}
+                          ? t('analytics.burnout_risk_text')
+                          : t('analytics.burnout_ok_text')}
                       </p>
                       <div style={{ marginTop: 16, height: 6, borderRadius: 99, background: 'var(--border-subtle)', overflow: 'hidden' }}>
                         <motion.div
@@ -1828,8 +1830,8 @@ export default function Analytics() {
 
               {/* AI Insights */}
               <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '22px 24px' }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Insights générés par l'algorithme</p>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18 }}>Basés sur vos données réelles des {jours} derniers jours</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{t('analytics.insights_title')}</p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18 }}>{t('analytics.insights_based', { jours })}</p>
                 {loading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {[1, 2, 3].map(i => <Skeleton key={i} height={56} radius={12} />)}
@@ -1842,7 +1844,7 @@ export default function Analytics() {
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)', fontSize: 13 }}>
-                    Pas assez de données pour générer des insights. Continuez à utiliser GetShift !
+                    {t('analytics.insights_empty')}
                   </div>
                 )}
               </div>
@@ -1852,7 +1854,7 @@ export default function Analytics() {
           {/* ── TAB: HEATMAP ── */}
           {activeTab === 'heatmap' && (
             <motion.div key="heatmap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ChartCard title="Heatmap de productivité" subtitle="Intensité quotidienne · 4 derniers mois · clique un jour pour voir le détail">
+              <ChartCard title={t('analytics.chart_heatmap_title')} subtitle={t('analytics.chart_heatmap_sub')}>
                 {loading ? <Skeleton height={140} radius={10} /> : (
                   <GitHubHeatmap parJour={data?.par_jour} T={T} onDayClick={setDrillDownDate} />
                 )}
@@ -1861,7 +1863,7 @@ export default function Analytics() {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: 14, marginTop: 16 }}>
                 {[
                   { label: 'Total période', value: stats?.total || 0, icon: CheckSquare, color: 'var(--ember)' },
-                  { label: 'Meilleur jour', value: stats?.maxVal || 0, icon: Star,        color: '#e08a3c' },
+                  { label: t('analytics.metric_bestday'), value: stats?.maxVal || 0, icon: Star,        color: '#e08a3c' },
                   { label: 'Jours actifs',  value: loading ? '—' : `${stats?.current?.filter(v => v > 0).length || 0}/${jours}`, icon: Activity, color: '#4caf82' },
                 ].map((m, i) => {
                   const Icon = m.icon

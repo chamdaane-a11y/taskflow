@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -51,6 +52,7 @@ function ProgressBar({ value, color, height = 6 }) {
 // headerExtra (optionnel) : ReactNode affiché sous le header (ex: dropdown DB Notion)
 // getTaskBadge (optionnel) : (task) => ReactNode — petit badge à côté du titre
 function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onExtract, onImport, scanLabel, onActiver, headerExtra, getTaskBadge }) {
+  const { t } = useTranslation()
   return (
     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -62,9 +64,9 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
             {connected
               ? (tasks.length > 0
-                ? `${tasks.length} tâche${tasks.length > 1 ? 's' : ''} détectée${tasks.length > 1 ? 's' : ''}`
-                : (nbItems > 0 ? `${nbItems} ${itemLabel}${nbItems > 1 ? 's' : ''} analysé${nbItems > 1 ? 's' : ''}` : (sublabel || 'Connecté')))
-              : 'Non connecté'}
+                ? tasks.length > 1 ? t('tomorrow.source_connected_plural', { n: tasks.length }) : t('tomorrow.source_connected', { n: tasks.length })
+                : (nbItems > 0 ? nbItems > 1 ? t('tomorrow.source_analyzed_plural', { n: nbItems }) : t('tomorrow.source_analyzed', { n: nbItems }) : (sublabel || t('tomorrow.source_not_connected'))))
+              : t('tomorrow.source_not_connected')}
           </div>
         </div>
         {connected && <CheckCircle size={14} color={color} />}
@@ -76,7 +78,7 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
         <motion.button onClick={onActiver}
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '9px 0', background: 'transparent', border: `1.5px dashed ${color}4D`, borderRadius: 10, color, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-          Activer dans Paramètres →
+          {t('tomorrow.source_activate')}
         </motion.button>
       ) : (
         <>
@@ -123,6 +125,7 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
 
 // ---- Bloc apprentissage durées ----
 function DureeApprentissageBloc({ user, T, isMobile }) {
+  const { t } = useTranslation()
   const [stats, setStats] = useState(null)
   const [open, setOpen] = useState(false)
 
@@ -148,10 +151,10 @@ function DureeApprentissageBloc({ user, T, isMobile }) {
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>APPRENTISSAGE DURÉES</div>
           <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
             {total === 0
-              ? 'En attente de données…'
+              ? t('tomorrow.learn_waiting')
               : precision != null
                 ? <>Précision <span style={{ color: accent }}>{precision}%</span> · {total} tâches</>
-                : `${total} tâche${total > 1 ? 's' : ''} apprises`}
+                : total > 1 ? t('tomorrow.learn_tasks_plural', { n: total }) : t('tomorrow.learn_tasks', { n: total })}
           </div>
         </div>
         {stats.categories?.length > 0 && (
@@ -167,7 +170,7 @@ function DureeApprentissageBloc({ user, T, isMobile }) {
 
       {total === 0 ? (
         <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '4px 0 0', lineHeight: 1.5 }}>
-          Marque le temps réel de tes tâches terminées pour calibrer tes estimations.
+          {t('tomorrow.learn_mark')}
         </p>
       ) : (
         <>
@@ -211,6 +214,7 @@ function DureeApprentissageBloc({ user, T, isMobile }) {
 
 // ---- Bloc Push matin 7h ----
 function PushMatinBloc({ user, T, isMobile }) {
+  const { t } = useTranslation()
   const [state, setState] = useState('loading') // loading | unsupported | denied | inactive | active | error
   const [busy, setBusy] = useState(false)
 
@@ -287,11 +291,11 @@ function PushMatinBloc({ user, T, isMobile }) {
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>NOTIF MATIN 7H</div>
           <div style={{ fontSize: 11, color: isActive ? '#4caf82' : state === 'error' ? '#e05c5c' : 'var(--text-secondary)', fontWeight: 600 }}>
             {state === 'loading' && '…'}
-            {state === 'unsupported' && 'Non supporté'}
-            {state === 'denied' && 'Autorisation refusée'}
+            {state === 'unsupported' && t('tomorrow.notif_unsupported')}
+            {state === 'denied' && t('tomorrow.notif_denied')}
             {state === 'inactive' && 'Inactif'}
-            {state === 'active' && 'Activé · rappel chaque matin'}
-            {state === 'error' && 'Erreur — réessaie'}
+            {state === 'active' && t('tomorrow.notif_active')}
+            {state === 'error' && t('tomorrow.notif_error')}
           </div>
         </div>
         {isActive && <CheckCircle size={13} color="#4caf82" />}
@@ -299,7 +303,7 @@ function PushMatinBloc({ user, T, isMobile }) {
 
       {state === 'denied' && (
         <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-          Réactive dans les paramètres navigateur (cadenas → notifications → autoriser).
+          {t('tomorrow.notif_reinstruct')}
         </p>
       )}
 
@@ -324,7 +328,7 @@ function PushMatinBloc({ user, T, isMobile }) {
           </motion.button>
           <motion.button onClick={desactiver} disabled={busy} whileHover={!busy ? { scale: 1.02 } : {}} whileTap={!busy ? { scale: 0.98 } : {}}
             style={{ flex: 1, padding: '7px 0', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 8, color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
-            Désactiver
+            {t('tomorrow.notif_disable')}
           </motion.button>
         </div>
       )}
@@ -388,7 +392,7 @@ function EnergyCourbeChart({ courbeData, T }) {
             if (h === picHeure) return `${ctx[0].label} — ⚡ Pic`
             return ctx[0].label
           },
-          label: ctx => ` ${ctx.parsed.y}% énergie`
+          label: ctx => `${t('tomorrow.energy_chart_label', { val: ctx.parsed.y })}`
         }
       }
     },
@@ -411,7 +415,7 @@ function EnergyCourbeChart({ courbeData, T }) {
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Courbe d'énergie 24h</div>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-            {courbeData.has_user_data ? 'Calibrée sur tes habitudes réelles (30j)' : 'Rythme circadien — complète des tâches pour personnaliser'}
+            {courbeData.has_user_data ? t('tomorrow.energy_calibrated') : t('tomorrow.energy_circadian')}
           </div>
         </div>
         <div style={{ padding: '4px 12px', borderRadius: 99, background: 'var(--ember-soft)', fontSize: 12, fontWeight: 700, color: 'var(--ember)', whiteSpace: 'nowrap' }}>
@@ -437,8 +441,9 @@ function EnergyCourbeChart({ courbeData, T }) {
 
 // ---- Composant jauge énergie ----
 function EnergyGauge({ score, T }) {
+  const { t } = useTranslation()
   const color = score >= 70 ? '#4caf82' : score >= 40 ? '#e08a3c' : '#e05c5c'
-  const label = score >= 70 ? 'Élevé' : score >= 40 ? 'Moyen' : 'Faible'
+  const label = score >= 70 ? t('tomorrow.energy_high') : score >= 40 ? t('tomorrow.energy_medium') : t('tomorrow.energy_low')
   const Icon = score >= 70 ? Battery : score >= 40 ? BatteryMedium : BatteryLow
 
   return (
@@ -448,16 +453,16 @@ function EnergyGauge({ score, T }) {
           <Icon size={18} color={color} />
         </div>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1 }}>SCORE D'ÉNERGIE</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1 }}>{t('tomorrow.energy_score_label')}</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>{score}<span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>/100</span></div>
         </div>
         <div style={{ marginLeft: 'auto', padding: '4px 12px', borderRadius: 99, background: `${color}20`, color, fontSize: 12, fontWeight: 700 }}>{label}</div>
       </div>
       <ProgressBar value={score} color={color} height={8} />
       <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>
-        {score >= 70 ? '⚡ Tu es en pleine forme — parfait pour les tâches complexes !'
-          : score >= 40 ? '🌤 Énergie correcte — alterne tâches légères et complexes'
-          : '😴 Énergie basse — privilégie les quick wins aujourd\'hui'}
+        {score >= 70 ? t('tomorrow.energy_hi_msg')
+          : score >= 40 ? t('tomorrow.energy_mid_msg')
+          : t('tomorrow.energy_low_msg')}
       </div>
     </div>
   )
@@ -495,6 +500,7 @@ function decalerHeure(heureStr, minutesAjouter) {
 
 // ---- Composant card tâche planning ----
 function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, showDecalerMenu, onToggleDecalerMenu, dragListeners, dragAttributes }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const isEnCours = statut === 'en_cours'
 
@@ -623,7 +629,7 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
                 onClick={onToggleDecalerMenu}
                 whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, border: `1.5px solid ${showDecalerMenu ? 'var(--ember)' : 'var(--border-subtle)'}`, background: showDecalerMenu ? 'var(--ember-soft)' : 'var(--surface-2)', color: showDecalerMenu ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 11, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}>
-                <Clock size={11} /> Décaler
+                <Clock size={11} /> {t('tomorrow.delay_btn')}
               </motion.button>
               <AnimatePresence>
                 {showDecalerMenu && (
@@ -689,7 +695,7 @@ function CalendarEventCard({ event, index, T }) {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#1A73E8', fontWeight: 600 }}>
                   <Clock size={11} />
-                  {event.all_day ? 'Toute la journée' : `${event.heure_debut} → ${event.heure_fin}`}
+                  {event.all_day ? t('planification.all_day') : `${event.heure_debut} → ${event.heure_fin}`}
                 </span>
                 {event.location && (
                   <span style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>📍 {event.location}</span>
@@ -751,7 +757,7 @@ function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOn
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>{tache.titre}</div>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Clock size={10} />
-                {tache.heure_debut} → {tache.heure_fin} · {tache.duree_minutes} min prévu
+                {t('tomorrow.task_time_range', { start: tache.heure_debut, end: tache.heure_fin, dur: tache.duree_minutes })}
               </div>
             </div>
           </div>
@@ -805,14 +811,14 @@ function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOn
 // ---- Composant slider énergie ressentie ----
 function EnergySliderCheckin({ value, onChange, T }) {
   const emoji = value >= 80 ? '⚡' : value >= 60 ? '🌤' : value >= 40 ? '😐' : value >= 20 ? '😴' : '💀'
-  const label = value >= 80 ? 'En feu !' : value >= 60 ? 'Bonne journée' : value >= 40 ? 'Correct' : value >= 20 ? 'Fatigué' : 'À plat'
+  const label = value >= 80 ? t('tomorrow.slider_fire') : value >= 60 ? t('tomorrow.slider_good') : value >= 40 ? t('tomorrow.slider_ok') : value >= 20 ? t('tomorrow.slider_tired') : t('tomorrow.slider_flat')
   const color = value >= 70 ? '#4caf82' : value >= 40 ? '#e08a3c' : '#e05c5c'
 
   return (
     <div style={{ background: `${color}08`, border: `1.5px solid ${color}25`, borderRadius: 16, padding: '18px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1, marginBottom: 2 }}>ÉNERGIE RESSENTIE</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1, marginBottom: 2 }}>{t('tomorrow.slider_label')}</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
             {emoji} {value}<span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 400 }}>/100</span>
           </div>
@@ -823,7 +829,7 @@ function EnergySliderCheckin({ value, onChange, T }) {
         onChange={e => onChange(parseInt(e.target.value))}
         style={{ width: '100%', accentColor: color, cursor: 'pointer' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)', marginTop: 5 }}>
-        <span>💀 À plat</span><span>😐 Moyen</span><span>⚡ En feu</span>
+        <span>{t('tomorrow.slider_dead')}</span><span>{t('tomorrow.slider_mid')}</span><span>{t('tomorrow.slider_max')}</span>
       </div>
     </div>
   )
@@ -831,6 +837,7 @@ function EnergySliderCheckin({ value, onChange, T }) {
 
 // ======= COMPOSANT PRINCIPAL =======
 export default function TomorrowBuilder() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const isTablet = useMediaQuery('(max-width: 1100px)')
@@ -943,7 +950,7 @@ export default function TomorrowBuilder() {
       const items = [...prev.planning]
       const tache = items[idx]
       const newItems = items.filter((_, i) => i !== idx)
-      const newReportees = [...(prev.taches_reportees || []), { titre: tache.titre, raison: 'Décalé manuellement' }]
+      const newReportees = [...(prev.taches_reportees || []), { titre: tache.titre, raison: t('tomorrow.deferred_note') }]
       const updated = { ...prev, planning: newItems, taches_reportees: newReportees }
       axios.patch(`${API}/ia/tomorrow-builder/${user.id}/update`, { planning: updated }).catch(() => {})
       return updated
@@ -1013,7 +1020,7 @@ export default function TomorrowBuilder() {
       } else if (e.data?.type === 'oauth_error') {
         window.removeEventListener('message', listener)
         setCalendarConnecting(false)
-        setErreur('Connexion Google Calendar annulée')
+        setErreur(t('planification.cancel_gcal'))
       }
     }
     window.addEventListener('message', listener)
@@ -1047,7 +1054,7 @@ export default function TomorrowBuilder() {
       } else if (e.data?.type === 'oauth_error') {
         window.removeEventListener('message', listener)
         setGmailConnecting(false)
-        setErreur('Connexion Gmail annulée')
+        setErreur(t('planification.cancel_gmail'))
       }
     }
     window.addEventListener('message', listener)
@@ -1112,7 +1119,7 @@ export default function TomorrowBuilder() {
       } else if (e.data?.type === 'oauth_error') {
         window.removeEventListener('message', listener)
         setNotionConnecting(false)
-        setErreur('Connexion Notion annulée')
+        setErreur(t('planification.cancel_notion'))
       }
     }
     window.addEventListener('message', listener)
@@ -1192,7 +1199,7 @@ export default function TomorrowBuilder() {
       } else if (e.data?.type === 'oauth_error') {
         window.removeEventListener('message', listener)
         setDriveConnecting(false)
-        setErreur('Connexion Drive annulée')
+        setErreur(t('planification.cancel_drive'))
       }
     }
     window.addEventListener('message', listener)
@@ -1315,11 +1322,11 @@ export default function TomorrowBuilder() {
             <h1 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Tomorrow Builder</h1>
             <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 700 }}>IA</span>
           </div>
-          <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>Planning IA pour {demainStr}</p>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{t('tomorrow.subtitle', { date: demainStr })}</p>
         </div>
         {derniereGen && (
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'right', display: isMobile ? 'none' : 'block' }}>
-            Généré le {new Date(derniereGen).toLocaleString(navigator.language, { hour: '2-digit', minute: '2-digit' })}
+            {t('tomorrow.generated_at', { time: new Date(derniereGen).toLocaleString(navigator.language, { hour: '2-digit', minute: '2-digit' }) })}
           </div>
         )}
         <motion.button
@@ -1327,8 +1334,8 @@ export default function TomorrowBuilder() {
           onClick={genererPlanning} disabled={loading}
           whileHover={!loading ? { scale: 1.03 } : {}} whileTap={!loading ? { scale: 0.97 } : {}}>
           {loading
-            ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={14} /></motion.span> Génération...</>
-            : <><Sparkles size={14} /> {planning ? 'Régénérer' : 'Générer mon planning'}</>}
+            ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}><RefreshCw size={14} /></motion.span> {t('tomorrow.btn_generating')}</>
+            : <><Sparkles size={14} /> {planning ? t('tomorrow.btn_regenerate') : t('tomorrow.btn_generate')}</>}
         </motion.button>
       </div>
 
@@ -1354,14 +1361,14 @@ export default function TomorrowBuilder() {
                 <CheckSquare size={18} color="var(--ember)" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>Check-in du soir disponible ✅</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Tu avais planifié {checkinTaches.length} tâche{checkinTaches.length > 1 ? 's' : ''} pour aujourd'hui — retour d'expérience en 1 min.</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{t('tomorrow.checkin_banner_title')}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{checkinTaches.length > 1 ? t('tomorrow.checkin_banner_sub_plural', { n: checkinTaches.length }) : t('tomorrow.checkin_banner_sub', { n: checkinTaches.length })}</div>
               </div>
               <motion.button
                 onClick={() => setActiveTab('checkin')}
                 whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                 style={{ padding: '8px 16px', background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, border: 'none', borderRadius: 10, color: 'var(--bg-base)', fontWeight: 700, cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
-                Commencer
+                {t('tomorrow.checkin_start')}
               </motion.button>
             </motion.div>
           )}
@@ -1374,12 +1381,12 @@ export default function TomorrowBuilder() {
             <div style={{ width: 80, height: 80, borderRadius: 24, background: 'var(--ember-soft)', border: `2px solid var(--ember-soft)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
               <Sparkles size={36} color="var(--ember)" />
             </div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>Ton planning IA t'attend</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>{t('tomorrow.empty_title')}</h2>
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 400, margin: '0 auto 28px', lineHeight: 1.6 }}>
-              L'IA analyse tes tâches, ta productivité et tes patterns pour construire le planning optimal pour demain.
+              {t('tomorrow.empty_sub')}
             </p>
             <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 40 }}>
-              {[['🎯','Ordre optimal','Tâches prioritaires au bon moment'],['⚡','Score d\'énergie','Adapté à ton niveau du jour'],['🧠','Conseils IA','Tips personnalisés pour chaque tâche'],['☕','Anti-burnout','Pauses intelligentes intégrées']].map(([ico, titre, desc]) => (
+              {[['🎯',t('tomorrow.feature_optimal'),t('tomorrow.feature_optimal_desc')],['⚡',t('tomorrow.feature_energy'),t('tomorrow.feature_energy_desc')],['🧠',t('tomorrow.feature_ia'),t('tomorrow.feature_ia_desc')],['☕',t('tomorrow.feature_burnout'),t('tomorrow.feature_burnout_desc')]].map(([ico, titre, desc]) => (
                 <div key={titre} style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '16px', width: 160, textAlign: 'left' }}>
                   <div style={{ fontSize: 24, marginBottom: 8 }}>{ico}</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{titre}</div>
@@ -1390,7 +1397,7 @@ export default function TomorrowBuilder() {
             <motion.button
               style={{ padding: '14px 36px', background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, border: 'none', borderRadius: 14, color: 'var(--bg-base)', fontWeight: 700, cursor: 'pointer', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 10 }}
               onClick={genererPlanning} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-              <Sparkles size={18} /> Générer mon planning pour demain
+              <Sparkles size={18} /> {t('tomorrow.btn_generate_big')}
             </motion.button>
           </motion.div>
         )}
@@ -1400,10 +1407,10 @@ export default function TomorrowBuilder() {
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
               style={{ width: 60, height: 60, borderRadius: '50%', border: '3px solid var(--border-subtle)', borderTop: '3px solid var(--ember)', margin: '0 auto 24px' }} />
-            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>L'IA analyse tes tâches...</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Calcul du score d'énergie, détection des patterns, optimisation du planning</p>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>{t('tomorrow.loading_title')}</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('tomorrow.loading_sub')}</p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 20, flexWrap: 'wrap' }}>
-              {['Analyse des priorités', 'Détection heure productive', 'Optimisation planning', 'Calcul anti-burnout'].map((step, i) => (
+              {[t('tomorrow.step_prio'), t('tomorrow.step_peak'), t('tomorrow.step_optim'), t('tomorrow.step_burnout')].map((step, i) => (
                 <motion.div key={step}
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.4 }}
                   style={{ fontSize: 11, padding: '4px 12px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', border: `1px solid var(--ember-soft)` }}>
@@ -1427,7 +1434,7 @@ export default function TomorrowBuilder() {
                     <AlertTriangle size={18} color="#e05c5c" />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#e05c5c', marginBottom: 2 }}>⚠️ Risque de surcharge détecté</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#e05c5c', marginBottom: 2 }}>{t('tomorrow.burnout_alert')}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{planning.message_alerte}</div>
                   </div>
                 </motion.div>
@@ -1442,7 +1449,7 @@ export default function TomorrowBuilder() {
                   <Brain size={20} color="var(--ember)" />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 1, marginBottom: 4 }}>ANALYSE IA</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 1, marginBottom: 4 }}>{t('tomorrow.ia_analysis')}</div>
                   <p style={{ fontSize: 14, color: 'var(--text-primary)', margin: 0, lineHeight: 1.6 }}>{planning.resume_global}</p>
                   {planning.conseil_journee && (
                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, marginTop: 8, fontStyle: 'italic' }}>💡 {planning.conseil_journee}</p>
@@ -1454,10 +1461,10 @@ export default function TomorrowBuilder() {
             {/* STATS ROW */}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
               {[
-                { label: 'Tâches planifiées', val: tachesPlanning.length, icon: Target, color: 'var(--ember)' },
-                { label: 'Pauses intégrées', val: pausesPlanning.length, icon: Coffee, color: 'var(--ember)' },
-                { label: 'Durée totale', val: `${Math.round((planning.duree_totale_planifiee || 0) / 60)}h${(planning.duree_totale_planifiee || 0) % 60}m`, icon: Clock, color: '#4caf82' },
-                { label: 'Score énergie', val: `${planning.score_energie}/100`, icon: Zap, color: planning.score_energie >= 70 ? '#4caf82' : planning.score_energie >= 40 ? '#e08a3c' : '#e05c5c' },
+                { label: t('tomorrow.stat_planned'), val: tachesPlanning.length, icon: Target, color: 'var(--ember)' },
+                { label: t('tomorrow.stat_breaks'), val: pausesPlanning.length, icon: Coffee, color: 'var(--ember)' },
+                { label: t('tomorrow.stat_duration'), val: `${Math.round((planning.duree_totale_planifiee || 0) / 60)}h${(planning.duree_totale_planifiee || 0) % 60}m`, icon: Clock, color: '#4caf82' },
+                { label: t('tomorrow.stat_energy'), val: `${planning.score_energie}/100`, icon: Zap, color: planning.score_energie >= 70 ? '#4caf82' : planning.score_energie >= 40 ? '#e08a3c' : '#e05c5c' },
               ].map((s, i) => {
                 const Icon = s.icon
                 return (
@@ -1476,10 +1483,10 @@ export default function TomorrowBuilder() {
             {/* TABS */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: 'var(--surface-1)', padding: 6, borderRadius: 12, border: '1px solid var(--border-subtle)', width: 'fit-content', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
               {[
-                ['planning', 'Planning', Sparkles],
-                ['energie', 'Énergie', Zap],
-                ['procrastination', `Alertes${procrastination.length > 0 ? ` (${procrastination.length})` : ''}`, AlertTriangle],
-                ...(checkinTaches.length > 0 ? [['checkin', `Check-in${checkinFait ? ' ✓' : ''}`, CheckSquare]] : [])
+                ['planning', t('tomorrow.tab_planning'), Sparkles],
+                ['energie', t('tomorrow.tab_energy'), Zap],
+                ['procrastination', `${t('tomorrow.tab_alerts')}${procrastination.length > 0 ? ` (${procrastination.length})` : ''}`, AlertTriangle],
+                ...(checkinTaches.length > 0 ? [['checkin', `${t('tomorrow.tab_checkin')}${checkinFait ? ' ✓' : ''}`, CheckSquare]] : [])
               ].map(([val, label, Icon]) => (
                 <motion.button key={val}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: activeTab === val ? 'var(--ember)' : 'transparent', border: val === 'checkin' && !checkinFait ? `1px solid var(--ember-soft)` : 'none', borderRadius: 8, color: activeTab === val ? 'var(--bg-base)' : val === 'checkin' && !checkinFait ? 'var(--ember)' : 'var(--text-secondary)', fontSize: 13, fontWeight: activeTab === val ? 700 : val === 'checkin' && !checkinFait ? 600 : 400, cursor: 'pointer' }}
@@ -1586,7 +1593,7 @@ export default function TomorrowBuilder() {
                       </div>
                     </div>
                     <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                      Tes tâches les plus complexes sont planifiées autour de cette heure.
+                      {t('tomorrow.peak_focus')}
                     </p>
                   </div>
 
@@ -1632,7 +1639,7 @@ export default function TomorrowBuilder() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: '#1A73E8', letterSpacing: 0.8 }}>GOOGLE CALENDAR</div>
                           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                            {calendarEvents.length === 0 ? 'Journée libre ✨' : `${calendarEvents.length} event${calendarEvents.length > 1 ? 's' : ''}`}
+                            {calendarEvents.length === 0 ? t('tomorrow.free_day') : calendarEvents.length > 1 ? t('tomorrow.calendar_events_plural', { n: calendarEvents.length }) : t('tomorrow.calendar_events', { n: calendarEvents.length })}
                           </div>
                         </div>
                         <CheckCircle size={14} color="#1A73E8" />
@@ -1697,7 +1704,7 @@ export default function TomorrowBuilder() {
                               color: 'var(--text-primary)',
                               cursor: 'pointer',
                             }}>
-                            <option value="">Toutes les pages récentes</option>
+                            <option value="">{t('tomorrow.notion_page_dropdown')}</option>
                             {notionDatabases.map(db => (
                               <option key={db.id} value={db.id}>{db.title}</option>
                             ))}
@@ -1712,11 +1719,11 @@ export default function TomorrowBuilder() {
                         </div>
                       )}
                       getTaskBadge={(t) => t.notion_block_id
-                        ? <span title="To-do explicite Notion — sera coché automatiquement quand tu termines la tâche"
+                        ? <span title={t('tomorrow.notion_todo_explicit')}
                             style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(34,197,94,0.14)', color: '#16a34a', whiteSpace: 'nowrap' }}>
                             ✓ TO-DO
                           </span>
-                        : <span title="Action implicite détectée par l'IA dans le contenu"
+                        : <span title={t('tomorrow.notion_todo_implicit')}
                             style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(15,23,42,0.08)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                             IA
                           </span>
@@ -1747,7 +1754,7 @@ export default function TomorrowBuilder() {
                             </a>
                             <button
                               onClick={() => creerTacheDepuisDrive(d)}
-                              title="Créer une tâche depuis ce fichier"
+                              title={t('tomorrow.drive_task_tooltip')}
                               style={{ flexShrink: 0, background: driveToTaskDone.has(d.id) ? 'rgba(0,172,71,0.15)' : 'var(--surface-2)', border: 'none', borderRadius: 6, padding: '3px 6px', cursor: driveToTaskDone.has(d.id) ? 'default' : 'pointer', display: 'flex', alignItems: 'center', color: driveToTaskDone.has(d.id) ? '#00AC47' : 'var(--text-secondary)' }}>
                               {driveToTaskLoading.has(d.id) ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: 11 }}>↻</motion.span> : driveToTaskDone.has(d.id) ? <Check size={11} /> : <Plus size={11} />}
                             </button>
@@ -1767,7 +1774,7 @@ export default function TomorrowBuilder() {
                       whileHover={{ opacity: 1 }} initial={{ opacity: 0.5 }} animate={{ opacity: 0.5 }}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', marginTop: 14, padding: '7px 0', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
                     >
-                      <ExternalLink size={10} /> Connecter des intégrations
+                      <ExternalLink size={10} /> {t('tomorrow.generate_from_integration')}
                     </motion.button>
                   )}
 
@@ -1793,13 +1800,13 @@ export default function TomorrowBuilder() {
                   <EnergyGauge score={energieCourbe.score_global || planning.score_energie || 60} T={T} />
                 )}
                 <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: 16, marginTop: 12 }}>
-                  <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>🔥 Règles anti-burnout intégrées</h4>
+                  <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>{`🔥 ${t('planification.rules_title')}`}</h4>
                   {[
-                    'Maximum 6h de travail effectif planifié par jour',
-                    'Pause de 15 min obligatoire après chaque 90 min de travail',
-                    '20% du temps libre gardé pour l\'imprévu',
-                    'Maximum 3 tâches haute priorité par jour',
-                    'Aucune tâche complexe planifiée en fin de journée si énergie < 40',
+                    t('planification.rule_1'),
+                    t('planification.rule_2'),
+                    t('planification.rule_3'),
+                    t('planification.rule_4'),
+                    t('planification.rule_5'),
                   ].map((r, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: i < 4 ? '1px solid var(--border-subtle)' : 'none' }}>
                       <CheckCircle size={13} color="#4caf82" style={{ flexShrink: 0 }} />
@@ -1829,10 +1836,10 @@ export default function TomorrowBuilder() {
                     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: 16, marginTop: 16 }}>
                       <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>💡 Conseils pour sortir de la procrastination</h4>
                       {[
-                        'Découpe la tâche en sous-tâches de 15 min maximum',
-                        'Utilise la règle des 2 minutes : si ça prend moins de 2 min, fais-le maintenant',
-                        'Place la tâche difficile en première position demain matin',
-                        'Demande à l\'IA de décomposer la tâche pour toi',
+                        t('planification.procrastination_tip1'),
+                        t('planification.procrastination_tip2'),
+                        t('planification.procrastination_tip3'),
+                        t('planification.procrastination_tip4'),
                       ].map((c, i) => (
                         <div key={i} style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: i < 3 ? '1px solid var(--border-subtle)' : 'none' }}>
                           <span style={{ fontSize: 13, color: 'var(--ember)', flexShrink: 0 }}>→</span>

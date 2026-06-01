@@ -2,6 +2,7 @@
 // Planification.jsx — Main orchestrator (thin shell, delegates to sub-components)
 // Architecture: state → hooks → sub-components → utils
 // ══════════════════════════════════════════════════════════════════════
+import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -53,6 +54,7 @@ const COLONNES = [
 // MAIN
 // ══════════════════════════════════════════════════════════════════════
 export default function Planification() {
+  const { t } = useTranslation()
   const { T } = useTheme()
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
@@ -129,7 +131,7 @@ export default function Planification() {
         refreshGcal()
       }
     } catch (e) {
-      alert("Sync Google Calendar impossible. Vérifie que Calendar est bien connecté avec les permissions read+write.")
+      alert(t('planification.sync_gcal_error'))
     }
   }, [refreshGcal])
 
@@ -204,7 +206,7 @@ export default function Planification() {
       setAutoplanMeta({ conflicts_avoided: res.data.conflicts_avoided, gcal_connected: res.data.gcal_connected })
       setAutoplanModal(true)
     } catch (e) {
-      alert("Impossible de générer le planning. Réessaie.")
+      alert(t('planification.gen_error'))
     } finally {
       setAutoplanLoading(false)
     }
@@ -565,8 +567,8 @@ export default function Planification() {
   const stats = useMemo(() => ([
     { label: 'Total', value: taches.length, color: '#6366f1', Icon: Target },
     { label: 'En cours', value: taches.filter(t => !t.terminee && t.statut === 'en_cours').length, color: '#f59e0b', Icon: Zap },
-    { label: 'Terminées', value: taches.filter(t => t.terminee).length, color: '#10b981', Icon: CheckSquare },
-    { label: 'Planifiées', value: planification.length, color: '#8b5cf6', Icon: Calendar },
+    { label: t('common.done'), value: taches.filter(t => t.terminee).length, color: '#10b981', Icon: CheckSquare },
+    { label: t('planification.view_list'), value: planification.length, color: '#8b5cf6', Icon: Calendar },
   ]), [taches, planification])
 
   // ── Bloc "Aujourd'hui" — créneaux planifiés du jour + actions rapides ──
@@ -642,10 +644,10 @@ export default function Planification() {
         <div style={{ background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover))`, border: `1px solid var(--ember-soft)`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
             <Brain size={13} color="var(--ember)" />
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.3 }}>PLANIFICATION IA</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.3 }}>{t('planification.sidebar_ia_label')}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Heures / jour</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('planification.sidebar_hours_label')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-1)', borderRadius: 8, padding: '4px 8px', border: '1px solid var(--border-subtle)' }}>
               <motion.button style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0 }} onClick={() => setHeuresDispo(h => Math.max(1, h - 1))} whileTap={{ scale: 0.8 }}>−</motion.button>
               <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--ember)', minWidth: 18, textAlign: 'center' }}>{heuresDispo}</span>
@@ -655,7 +657,7 @@ export default function Planification() {
 
           {smartResult && smartResult.length > 0 && (
             <div style={{ marginBottom: 10, padding: '8px 10px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
-              <span style={{ color: 'var(--ember)', fontWeight: 700 }}>{smartResult.length}</span> proposition{smartResult.length > 1 ? 's' : ''} en attente
+              <span style={{ color: 'var(--ember)', fontWeight: 700 }}>{smartResult.length}</span> {smartResult.length > 1 ? t('planification.sidebar_pending_plural', { n: smartResult.length }) : t('planification.sidebar_pending', { n: smartResult.length })}
             </div>
           )}
 
@@ -665,7 +667,7 @@ export default function Planification() {
             whileHover={!loadingIA ? { scale: 1.02, y: -1 } : {}}
             whileTap={{ scale: 0.98 }}>
             <Sparkles size={12} />
-            {loadingIA ? 'Analyse...' : 'Proposer un planning'}
+            {loadingIA ? t('planification.btn_analyzing') : t('planification.btn_propose')}
           </motion.button>
 
           {gcalConnected && (
@@ -683,7 +685,7 @@ export default function Planification() {
               whileHover={!autoplanLoading ? { scale: 1.02, y: -1 } : {}}
               whileTap={{ scale: 0.98 }}>
               <Zap size={12} />
-              {autoplanLoading ? 'Analyse...' : 'Planifier avec Calendar'}
+              {autoplanLoading ? t('planification.btn_analyzing') : t('planification.btn_plan_cal')}
             </motion.button>
           )}
         </div>
@@ -692,7 +694,7 @@ export default function Planification() {
         {conseil && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
             style={{ padding: '10px 12px', background: 'var(--surface-2)' || 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 10, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.65 }}>
-            <span style={{ color: 'var(--ember)', fontWeight: 600 }}>Conseil IA</span><br />{conseil}
+            <span style={{ color: 'var(--ember)', fontWeight: 600 }}>{t('planification.conseil_label')}</span><br />{conseil}
           </motion.div>
         )}
 
@@ -700,7 +702,7 @@ export default function Planification() {
         {priorites.length > 0 && (
           <>
             <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0 14px' }} />
-            <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 2, marginBottom: 8, padding: '0 6px', opacity: 0.6 }}>TOP PRIORITÉS</p>
+            <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 2, marginBottom: 8, padding: '0 6px', opacity: 0.6 }}>{t('planification.top_prios')}</p>
             {priorites.map((t, i) => (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 8px', borderRadius: 8, marginBottom: 3 }}>
                 <div style={{ width: 18, height: 18, borderRadius: 5, background: i < 2 ? pColor(t.priorite) : 'var(--ember-ring)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: i < 2 ? '#fff' : 'var(--ember)', flexShrink: 0 }}>{i + 1}</div>
@@ -737,7 +739,7 @@ export default function Planification() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
                   <div style={{ width: 8, height: 28, borderRadius: 99, background: `linear-gradient(180deg, var(--ember), var(--ember-hover))`, flexShrink: 0 }} />
-                  <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 900, letterSpacing: '-0.7px', margin: 0, background: `linear-gradient(135deg, var(--text-primary), var(--text-secondary))`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Planification</h1>
+                  <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 900, letterSpacing: '-0.7px', margin: 0, background: `linear-gradient(135deg, var(--text-primary), var(--text-secondary))`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('planification.page_title')}</h1>
                 </div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 12, textTransform: 'capitalize', paddingLeft: 18, margin: 0 }}>
                   {new Date().toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -767,12 +769,12 @@ export default function Planification() {
             msOverflowStyle: 'none',
           }}>
             {[
-              { id: 'liste', label: 'Liste', Icon: CheckSquare },
-              { id: 'kanban', label: 'Kanban', Icon: Columns },
-              { id: 'jour', label: 'Jour', Icon: Target },
-              { id: 'calendrier', label: 'Semaine', Icon: Calendar },
-              { id: 'mois', label: 'Mois', Icon: CalendarDays },
-              { id: 'gantt', label: 'Gantt', Icon: BarChart },
+              { id: 'liste', label: t('planification.view_list'), Icon: CheckSquare },
+              { id: 'kanban', label: t('planification.view_kanban'), Icon: Columns },
+              { id: 'jour', label: t('planification.view_day'), Icon: Target },
+              { id: 'calendrier', label: t('planification.view_week'), Icon: Calendar },
+              { id: 'mois', label: t('planification.view_month'), Icon: CalendarDays },
+              { id: 'gantt', label: t('planification.view_gantt'), Icon: BarChart },
             ].map(({ id, label, Icon }) => (
               <motion.button key={id}
                 style={{
@@ -929,7 +931,7 @@ export default function Planification() {
                       </motion.button>
                     )}
                     <motion.button onClick={() => terminerTache(entry.tache.id)} whileTap={{ scale: 0.92 }}
-                      title="Marquer terminée"
+                      title={t('planification.terminate_title')}
                       style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <CheckSquare size={12} />
                     </motion.button>
@@ -938,7 +940,7 @@ export default function Planification() {
               })}
               {aujourdHui.length > 6 && (
                 <p style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', marginTop: 4, opacity: 0.7 }}>
-                  + {aujourdHui.length - 6} autre{aujourdHui.length - 6 > 1 ? 's' : ''} créneau{aujourdHui.length - 6 > 1 ? 'x' : ''}
+                  {aujourdHui.length - 6 > 1 ? t('planification.slots_more_plural', { n: aujourdHui.length - 6 }) : t('planification.slots_more', { n: aujourdHui.length - 6 })}
                 </p>
               )}
             </div>
@@ -958,7 +960,7 @@ export default function Planification() {
                     </div>
                     <div>
                       <h2 style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>L'IA te propose un planning</h2>
-                      <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 1 }}>Accepte ou refuse créneau par créneau — rien n'est appliqué sans ton accord.</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, marginTop: 1 }}>{t('planification.suggest_accept_sub')}</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
@@ -1384,7 +1386,7 @@ export default function Planification() {
                     <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Planning IA — Calendar</h3>
                     <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>
                       {autoplanSugs.length} suggestion{autoplanSugs.length !== 1 ? 's' : ''}
-                      {autoplanMeta?.conflicts_avoided > 0 && ` · ${autoplanMeta.conflicts_avoided} conflit${autoplanMeta.conflicts_avoided > 1 ? 's' : ''} évité${autoplanMeta.conflicts_avoided > 1 ? 's' : ''}`}
+                      {autoplanMeta?.conflicts_avoided > 0 && ` ${autoplanMeta.conflicts_avoided > 1 ? t('planification.autoplan_conflicts_plural', { n: autoplanMeta.conflicts_avoided }) : t('planification.autoplan_conflicts', { n: autoplanMeta.conflicts_avoided })}`}
                     </p>
                   </div>
                 </div>
@@ -1395,13 +1397,13 @@ export default function Planification() {
               </div>
 
               <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.6, flexShrink: 0 }}>
-                Accepte ou refuse créneau par créneau — rien n'est appliqué sans ton accord.
+                {t('planification.suggest_accept_sub')}
               </p>
 
               {/* Liste des suggestions */}
               {autoplanSugs.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-secondary)', fontSize: 13, opacity: 0.7 }}>
-                  Aucune suggestion — toutes les tâches sont déjà planifiées ou sans deadline.
+                  {t('planification.suggest_none')}
                 </div>
               ) : (
                 <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4 }}>
@@ -1521,10 +1523,10 @@ export default function Planification() {
               {showEstimer._score && (
                 <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 11, color: 'var(--ember)', background: 'var(--ember-soft)', padding: '3px 10px', borderRadius: 99 }}>
-                    Score de priorité : {showEstimer._score.toFixed(1)}
+                    {t('planification.score_priority')} {showEstimer._score.toFixed(1)}
                   </span>
                   <span style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-base)', padding: '3px 10px', borderRadius: 99, border: '1px solid var(--border-subtle)' }}>
-                    Priorité {showEstimer.priorite}
+                    {t('planification.priority_label')} {showEstimer.priorite}
                   </span>
                 </div>
               )}
