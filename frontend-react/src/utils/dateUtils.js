@@ -1,8 +1,9 @@
+import i18n from '../i18n'
 // Utilitaire date/timezone — remplace tous les toLocaleDateString('fr-FR') hardcodés.
 // Toujours utiliser ces fonctions pour l'affichage afin que la locale et le timezone
 // du navigateur soient respectés automatiquement.
 
-export const userLocale = () => navigator.language || 'fr-FR'
+export const userLocale = () => i18n.language || navigator.language || 'fr-FR'
 export const userTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 
 export function formatDate(date, opts = {}) {

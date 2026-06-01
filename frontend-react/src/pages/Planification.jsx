@@ -3,6 +3,7 @@
 // Architecture: state → hooks → sub-components → utils
 // ══════════════════════════════════════════════════════════════════════
 import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -742,7 +743,7 @@ export default function Planification() {
                   <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 900, letterSpacing: '-0.7px', margin: 0, background: `linear-gradient(135deg, var(--text-primary), var(--text-secondary))`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('planification.page_title')}</h1>
                 </div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 12, textTransform: 'capitalize', paddingLeft: 18, margin: 0 }}>
-                  {new Date().toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })}
                 </p>
               </div>
               <DailyScore
@@ -976,7 +977,7 @@ export default function Planification() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {smartResult.slice(0, 8).map((p, i) => {
-                    const dateLabel = new Date(p.date).toLocaleDateString(navigator.language, { weekday: 'short', day: 'numeric', month: 'short' })
+                    const dateLabel = new Date(p.date).toLocaleDateString(i18n.language, { weekday: 'short', day: 'numeric', month: 'short' })
                     return (
                       <motion.div key={`${p.task.id}-${p.date}-${p.startMins}-${i}`}
                         initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} transition={{ delay: i * 0.03 }}
@@ -1073,7 +1074,7 @@ export default function Planification() {
                           <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: t.terminee ? 'line-through' : 'none' }}>{t.titre}</span>
                           {t.deadline && !t.terminee && (
                             <span style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
-                              {new Date(t.deadline).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })}
+                              {new Date(t.deadline).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}
                             </span>
                           )}
                           {t.temps_estime && !t.terminee && (
@@ -1408,7 +1409,7 @@ export default function Planification() {
               ) : (
                 <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4 }}>
                   {autoplanSugs.map((sug, i) => {
-                    const dayLabel = new Date(sug.day_iso).toLocaleDateString(navigator.language, { weekday: 'short', day: 'numeric', month: 'short' })
+                    const dayLabel = new Date(sug.day_iso).toLocaleDateString(i18n.language, { weekday: 'short', day: 'numeric', month: 'short' })
                     return (
                       <motion.div
                         key={i}

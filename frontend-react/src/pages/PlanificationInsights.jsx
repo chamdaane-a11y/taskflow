@@ -4,6 +4,7 @@
 //   • InsightCard   — carte contextuelle proactive (IA propose)
 // ══════════════════════════════════════════════════════════════════════
 import { useEffect, useMemo, useState, memo } from 'react'
+import i18n from '../i18n'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -40,7 +41,7 @@ export const DailyScore = memo(function DailyScore({
       const donePct = capaciteMin > 0 ? Math.min(100, (doneMin / capaciteMin) * 100) : 0
       days.push({
         date: dateStr,
-        label: d.toLocaleDateString(navigator.language, { weekday: 'narrow' }),
+        label: d.toLocaleDateString(i18n.language, { weekday: 'narrow' }),
         pct,
         donePct,
         isToday: i === 0,

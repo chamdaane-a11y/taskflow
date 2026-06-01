@@ -2,6 +2,7 @@
 // KanbanColumn.jsx — Single Kanban column, drag & drop, connected state
 // ══════════════════════════════════════════════════════════════════════
 import { memo } from 'react'
+import i18n from '../i18n'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GripVertical, Plus, Clock, Flag, Sparkles, Calendar, CheckCircle2 } from 'lucide-react'
@@ -157,7 +158,7 @@ const KanbanColumn = memo(function KanbanColumn({
               {task.deadline && (
                 <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                   <Flag size={9} strokeWidth={2} />
-                  {new Date(task.deadline).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })}
+                  {new Date(task.deadline).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}
                 </span>
               )}
 

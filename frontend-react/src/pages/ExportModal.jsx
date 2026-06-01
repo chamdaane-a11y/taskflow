@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import i18n from '../i18n'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import { useTranslation } from 'react-i18next'
@@ -18,8 +19,8 @@ function genererCSV(taches, tr) {
     `"${t.titre.replace(/"/g, '""')}"`,
     t.priorite,
     t.terminee ? tr('export.status_done') : t.bloquee ? tr('export.status_blocked') : tr('export.status_inprogress'),
-    t.deadline ? new Date(t.deadline).toLocaleDateString(navigator.language) : '-',
-    new Date(t.created_at).toLocaleDateString(navigator.language),
+    t.deadline ? new Date(t.deadline).toLocaleDateString(i18n.language) : '-',
+    new Date(t.created_at).toLocaleDateString(i18n.language),
   ])
   return [headers, ...lignes].map(r => r.join(',')).join('\n')
 }
@@ -30,14 +31,14 @@ function telechargerCSV(taches, nom, tr) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${nom}_${new Date().toLocaleDateString(navigator.language).replace(/\//g, '-')}.csv`
+  a.download = `${nom}_${new Date().toLocaleDateString(i18n.language).replace(/\//g, '-')}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
 
 function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResume, tr, lang) {
   const C = THEME_COLORS[theme] || THEME_COLORS.dark
-  const date = new Date().toLocaleDateString(navigator.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const date = new Date().toLocaleDateString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   const terminees = taches.filter(t => t.terminee).length
   const enCours = taches.filter(t => !t.terminee && !t.bloquee).length
   const bloquees = taches.filter(t => t.bloquee && !t.terminee).length
@@ -204,7 +205,7 @@ function genererHTMLPDF(taches, stats, resumeIA, theme, nomUtilisateur, typeResu
         <div class="tache-titre">${t.titre}</div>
         <div class="tache-meta">
           <div class="tache-badges">${badgePriorite(t.priorite)}${badgeStatut(t)}</div>
-          ${t.deadline ? `<span class="tache-deadline">📅 ${new Date(t.deadline).toLocaleDateString(navigator.language)}</span>` : ''}
+          ${t.deadline ? `<span class="tache-deadline">📅 ${new Date(t.deadline).toLocaleDateString(i18n.language)}</span>` : ''}
         </div>
       </div>
     </div>
@@ -317,7 +318,7 @@ Inclus : bilan global, points forts, axes d'amélioration, conseils concrets. St
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `GetShift_Rapport_${user.nom.replace(' ', '_')}_${new Date().toLocaleDateString(navigator.language).replace(/\//g, '-')}.html`
+    a.download = `GetShift_Rapport_${user.nom.replace(' ', '_')}_${new Date().toLocaleDateString(i18n.language).replace(/\//g, '-')}.html`
     a.click()
     URL.revokeObjectURL(url)
   }

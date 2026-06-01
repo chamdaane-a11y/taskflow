@@ -1,4 +1,5 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
+import i18n from '../i18n'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -44,7 +45,7 @@ const labelDate = (deadline) => {
   const tm = [tom.getFullYear(), tom.getMonth() + 1, tom.getDate()]
   if (y === t[0] && m === t[1] && d === t[2]) return "Aujourd'hui"
   if (y === tm[0] && m === tm[1] && d === tm[2]) return 'Demain'
-  return new Date(y, m - 1, d).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })
+  return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })
 }
 
 const PRIORITES = [
@@ -1537,7 +1538,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
   const focused = d.tachesFocus || []
   const slots = [0, 1, 2]
   const limitAtteinte = focused.length >= 3
-  const dateTitre = new Date().toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })
+  const dateTitre = new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })
 
   useEffect(() => {
     const h = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false) }
@@ -2690,7 +2691,7 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
               <div>
                 <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.5px', margin: 0 }}>{d.salut}, {d.user?.nom?.split(' ')[0]}</h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 4 }}>{new Date().toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 4 }}>{new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 99, color: 'var(--ember)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
@@ -2715,7 +2716,7 @@ export default function Dashboard() {
           {isMobile && (
             <div style={{ marginBottom: 16 }}>
               <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', margin: '0 0 2px' }}>{d.salut}, {d.user?.nom?.split(' ')[0]}</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 11, margin: 0 }}>{new Date().toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 11, margin: 0 }}>{new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
             </div>
           )}
 

@@ -2,6 +2,7 @@
 // CalendarGrid.jsx — Continuous timeline calendar (08:00–21:00)
 // ══════════════════════════════════════════════════════════════════════
 import { useRef, useState, useCallback, useMemo, memo, useEffect, useLayoutEffect } from 'react'
+import i18n from '../i18n'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, X, CheckCircle2, Trash2, Clock, Flag, Calendar } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
@@ -98,7 +99,7 @@ const EventPopup = memo(function EventPopup({ selected, onClose, onComplete, onR
     if (!d) return null
     const dt = new Date(d)
     if (isNaN(dt)) return null
-    return dt.toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })
+    return dt.toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })
   }
 
   return (

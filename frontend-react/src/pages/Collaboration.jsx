@@ -244,7 +244,7 @@ function tempsRelatif(iso) {
     if (diff < 3600) return i18n.t('common.rel_min', { n: Math.floor(diff / 60) })
     if (diff < 86400) return i18n.t('common.rel_hour', { n: Math.floor(diff / 3600) })
     if (diff < 604800) return i18n.t('common.rel_day', { n: Math.floor(diff / 86400) })
-    return d.toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' })
+    return d.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' })
   } catch { return '' }
 }
 
@@ -457,7 +457,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
             </motion.button>
             {tache.deadline && (
               <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Clock size={9} />{new Date(tache.deadline).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' })}
+                <Clock size={9} />{new Date(tache.deadline).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' })}
               </span>
             )}
             {/* Progrès sous-tâches */}
@@ -1010,7 +1010,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
                     ? 'envoi…'
                     : c._failed
                       ? '⚠ échec'
-                      : new Date(c.created_at).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      : new Date(c.created_at).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {c._failed && (
                   <button onClick={() => renvoyer(c)}
@@ -1099,7 +1099,7 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
     if (diff < 60) return t('collab.time_instant')
     if (diff < 3600) return `il y a ${Math.floor(diff / 60)}min`
     if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
-    return new Date(iso).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' })
+    return new Date(iso).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' })
   }
 
   return (
@@ -1675,7 +1675,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tk.titre}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {tk.assignee_nom || t('collab.not_assigned_stat')} · {tk.deadline ? new Date(tk.deadline).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' }) : ''}
+                        {tk.assignee_nom || t('collab.not_assigned_stat')} · {tk.deadline ? new Date(tk.deadline).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' }) : ''}
                       </div>
                     </div>
                   </div>

@@ -3,6 +3,7 @@
 // Repliée par défaut pour ne pas surcharger le Dashboard, état persisté en localStorage.
 // ══════════════════════════════════════════════════════════════════════
 import { memo, useState } from 'react'
+import i18n from '../i18n'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar, ExternalLink, MapPin, ChevronDown, Download } from 'lucide-react'
@@ -51,7 +52,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
     }
   }
 
-  const titreDate = new Date(today).toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })
+  const titreDate = new Date(today).toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })
 
   const onConnectClick = (e) => {
     e?.stopPropagation()
@@ -81,8 +82,8 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
   const summary = (() => {
     if (loading) return '…'
     if (connected === false) return t('misc.agenda_not_connected')
-    if (events.length === 0) return "Aucun événement"
-    return `${events.length} événement${events.length > 1 ? 's' : ''}`
+    if (events.length === 0) return t('misc.agenda_no_event')
+    return events.length > 1 ? t('misc.agenda_events_plural', { n: events.length }) : t('misc.agenda_events', { n: events.length })
   })()
 
   return (
@@ -121,7 +122,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-            Agenda du jour
+            {t('misc.agenda_title')}
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {titreDate} · <span style={{ fontWeight: 600 }}>{summary}</span>
@@ -164,7 +165,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                   border: '1px dashed var(--border-subtle)',
                 }}>
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginBottom: 10 }}>
-                    Connecte Google Calendar pour voir ton agenda du jour ici.
+                    {t('misc.agenda_connect_msg')}
                   </p>
                   <motion.button
                     onClick={onConnectClick}
@@ -182,7 +183,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                     }}
                   >
-                    <Calendar size={12} /> Connecter Google Calendar
+                    <Calendar size={12} /> {t('misc.agenda_connect_btn')}
                   </motion.button>
                 </div>
               ) : events.length === 0 ? (
@@ -192,7 +193,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                   background: 'var(--bg-base)', borderRadius: 10,
                   border: '1px dashed var(--border-subtle)',
                 }}>
-                  Aucun événement aujourd'hui — ta journée est libre 🎯
+                  {t('misc.agenda_free_day')}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto' }}>
@@ -276,7 +277,7 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                       }}>
                       <Download size={11} />
-                      {importing ? t('misc.agenda_importing') : 'Importer comme tâches GetShift'}
+                      {importing ? t('misc.agenda_importing') : t('misc.agenda_import_btn')}
                     </motion.button>
                   )}
                 </div>

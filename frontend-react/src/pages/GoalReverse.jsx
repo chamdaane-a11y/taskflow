@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -547,7 +548,7 @@ export default function GoalReverse() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{jalon.titre}</div>
                         <div style={{ display: 'flex', gap: isMobile ? 8 : 10, marginTop: 3, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: isMobile ? 10.5 : 11, color: 'var(--text-secondary)' }}>📅 {new Date(jalon.date_fin).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })}</span>
+                          <span style={{ fontSize: isMobile ? 10.5 : 11, color: 'var(--text-secondary)' }}>📅 {new Date(jalon.date_fin).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}</span>
                           <span style={{ fontSize: isMobile ? 10.5 : 11, fontWeight: 600, color: DIFFICULTE_COLOR[jalon.difficulte] || 'var(--text-secondary)' }}>● {jalon.difficulte}</span>
                           <span style={{ fontSize: isMobile ? 10.5 : 11, color: 'var(--text-secondary)' }}>{jalon.taches.length} tâche{jalon.taches.length > 1 ? 's' : ''}</span>
                         </div>
@@ -589,7 +590,7 @@ export default function GoalReverse() {
                                     </span>
                                   )}
                                   <span style={{ fontSize: isMobile ? 9 : 10, padding: '2px 7px', borderRadius: 99, background: `${pColor}18`, color: pColor, fontWeight: 600 }}>{tache.priorite}</span>
-                                  <span style={{ fontSize: isMobile ? 10 : 11, color: 'var(--text-secondary)' }}>{new Date(tache.deadline).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })}</span>
+                                  <span style={{ fontSize: isMobile ? 10 : 11, color: 'var(--text-secondary)' }}>{new Date(tache.deadline).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}</span>
                                 </div>
                               </motion.div>
                             )

@@ -662,7 +662,15 @@
     "agenda_not_connected": "غير متصل",
     "agenda_all_day": "طوال اليوم",
     "agenda_all_synced": "كل شيء مُزامن بالفعل ✓",
-    "agenda_importing": "جارٍ الاستيراد…"
+    "agenda_importing": "جارٍ الاستيراد…",
+    "agenda_title": "أجندة اليوم",
+    "agenda_no_event": "لا يوجد حدث",
+    "agenda_events": "{{n}} حدث",
+    "agenda_events_plural": "{{n}} أحداث",
+    "agenda_connect_msg": "وصّل Google Calendar لرؤية أجندة يومك هنا.",
+    "agenda_connect_btn": "توصيل Google Calendar",
+    "agenda_free_day": "لا حدث اليوم — يومك حر 🎯",
+    "agenda_import_btn": "استيراد كمهام GetShift"
   },
   "export": {
     "export_title": "تصدير بياناتي",

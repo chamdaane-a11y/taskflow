@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { useState, useEffect, useMemo, useCallback, memo, useRef  } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -145,7 +146,7 @@ function useStatistics(data, jours) {
     const previous = getCount(prevKeys, data.par_jour)
 
     const labels = currentKeys.map(k =>
-      new Date(k).toLocaleDateString(navigator.language, {
+      new Date(k).toLocaleDateString(i18n.language, {
         weekday: n <= 7 ? 'short' : undefined,
         day: 'numeric',
         month: n > 7 ? 'short' : undefined,
@@ -277,7 +278,7 @@ const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
 
   if (!date) return null
 
-  const dateFmt = new Date(date).toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const dateFmt = new Date(date).toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const prioColor = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
 
   return (
@@ -464,7 +465,7 @@ const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
               <motion.div
                 key={key}
                 onClick={isFuture ? undefined : () => onDayClick?.(key)}
-                title={isFuture ? '' : `${date.toLocaleDateString(navigator.language)} : ${val} tâche${val !== 1 ? 's' : ''}`}
+                title={isFuture ? '' : `${date.toLocaleDateString(i18n.language)} : ${val} tâche${val !== 1 ? 's' : ''}`}
                 style={{ width: 12, height: 12, borderRadius: 3, background: getColor(intensity, isFuture), cursor: isFuture ? 'default' : 'pointer', flexShrink: 0 }}
                 whileHover={isFuture ? {} : { scale: 1.5, zIndex: 2 }}
                 whileTap={isFuture ? {} : { scale: 0.9 }}
@@ -1169,7 +1170,7 @@ const TrajectoryCard = memo(({ stats, T, loading, isMobile }) => {
     const daysNeeded = Math.ceil(total / velocity)
     const d = new Date()
     d.setDate(d.getDate() + daysNeeded)
-    milestoneStr = ` Tu doubles ta période vers le ${d.toLocaleDateString(navigator.language, { day: 'numeric', month: 'long' })}.`
+    milestoneStr = ` Tu doubles ta période vers le ${d.toLocaleDateString(i18n.language, { day: 'numeric', month: 'long' })}.`
   }
 
   const trendColor = isAccel ? '#4caf82' : isDecel ? '#e05c5c' : 'var(--ember)'
@@ -1580,7 +1581,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               style={{ fontSize: 'clamp(22px,5vw,28px)', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px', lineHeight: 1.2 }}>
-              t('analytics.page_title')
+              {t('analytics.page_title')}
             </motion.h1>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
               style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>

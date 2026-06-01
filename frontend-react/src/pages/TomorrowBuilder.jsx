@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -974,7 +975,7 @@ export default function TomorrowBuilder() {
 
   const demain = new Date()
   demain.setDate(demain.getDate() + 1)
-  const demainStr = demain.toLocaleDateString(navigator.language, { weekday: 'long', day: 'numeric', month: 'long' })
+  const demainStr = demain.toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
@@ -1330,7 +1331,7 @@ export default function TomorrowBuilder() {
         </div>
         {derniereGen && (
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'right', display: isMobile ? 'none' : 'block' }}>
-            {t('tomorrow.generated_at', { time: new Date(derniereGen).toLocaleString(navigator.language, { hour: '2-digit', minute: '2-digit' }) })}
+            {t('tomorrow.generated_at', { time: new Date(derniereGen).toLocaleString(i18n.language, { hour: '2-digit', minute: '2-digit' }) })}
           </div>
         )}
         <motion.button

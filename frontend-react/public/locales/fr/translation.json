@@ -662,7 +662,15 @@
     "agenda_not_connected": "Non connecté",
     "agenda_all_day": "Journée entière",
     "agenda_all_synced": "Tout est déjà synchronisé ✓",
-    "agenda_importing": "Import en cours…"
+    "agenda_importing": "Import en cours…",
+    "agenda_title": "Agenda du jour",
+    "agenda_no_event": "Aucun événement",
+    "agenda_events": "{{n}} événement",
+    "agenda_events_plural": "{{n}} événements",
+    "agenda_connect_msg": "Connecte Google Calendar pour voir ton agenda du jour ici.",
+    "agenda_connect_btn": "Connecter Google Calendar",
+    "agenda_free_day": "Aucun événement aujourd'hui — ta journée est libre 🎯",
+    "agenda_import_btn": "Importer comme tâches GetShift"
   },
   "export": {
     "export_title": "Exporter mes données",

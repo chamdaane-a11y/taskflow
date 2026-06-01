@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -874,7 +875,7 @@ export default function IAChat() {
                   {p.content}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 5 }}>
-                  <span style={{ fontSize: 9, color: 'var(--text-secondary)' }}>{new Date(p.timestamp).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })}</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-secondary)' }}>{new Date(p.timestamp).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}</span>
                   <motion.button
                     onClick={() => togglePin(p)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', padding: 0 }}
@@ -987,7 +988,7 @@ export default function IAChat() {
                 <motion.div key={h.id} className="glass" style={{ borderRadius: 9, padding: '8px 12px', marginBottom: 5, cursor: 'pointer' }}
                   whileHover={{ borderColor: `${accent}50` }}
                   onClick={() => { setPrompt(h.prompt); setShowHistorique(false) }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>{new Date(h.created_at).toLocaleDateString(navigator.language)}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>{new Date(h.created_at).toLocaleDateString(i18n.language)}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.prompt?.substring(0, 80)}</div>
                 </motion.div>
               ))}
@@ -1371,7 +1372,7 @@ export default function IAChat() {
                             <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{m.valeur}</div>
                             <div style={{ fontSize: 9.5, color: 'var(--text-secondary)', marginTop: 5, opacity: 0.6, display: 'flex', gap: 8 }}>
                               <span>poids {m.poids}</span>
-                              {m.created_at && <span>· {new Date(m.created_at).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })}</span>}
+                              {m.created_at && <span>· {new Date(m.created_at).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}</span>}
                             </div>
                           </div>
                           <motion.button onClick={() => oublierUnSouvenir(m.id)}
@@ -1455,7 +1456,7 @@ export default function IAChat() {
                         }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
                         <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</span>
-                        {t.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{new Date(t.deadline).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short' })}</span>}
+                        {t.deadline && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{new Date(t.deadline).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}</span>}
                       </motion.button>
                     )
                   })

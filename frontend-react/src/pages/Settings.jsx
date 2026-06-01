@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import i18n from '../i18n'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
@@ -942,7 +943,7 @@ export default function Settings() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {sessions.map(s => {
                   const isHere = s.is_current
-                  const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString(navigator.language, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
+                  const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
                   return (
                     <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: isHere ? 'rgba(76,175,130,0.06)' : 'var(--surface-2)', border: `1px solid ${isHere ? 'rgba(76,175,130,0.2)' : 'var(--border-subtle)'}`, borderRadius: 12 }}>
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: isHere ? 'rgba(76,175,130,0.15)' : 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
