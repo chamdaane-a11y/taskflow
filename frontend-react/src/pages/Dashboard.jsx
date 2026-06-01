@@ -779,7 +779,7 @@ const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, na
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 1 }}>{t('dashboard.choose_template')}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>25 modèles prêts à l'emploi</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('dashboard.templates_ready')}</div>
             </div>
             <ChevronRight size={14} color="var(--text-secondary)" />
           </motion.button>
@@ -1325,7 +1325,7 @@ const DnaInsightFooter = memo(function DnaInsightFooter({ d, T, isMobile }) {
         {topCatLabel && (
           <>
             <span style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>·</span>
-            <span>Top catégorie : <strong style={{ color: 'var(--text-primary)' }}>{topCatLabel}</strong></span>
+            <span>{t('dashboard.top_category')} <strong style={{ color: 'var(--text-primary)' }}>{topCatLabel}</strong></span>
           </>
         )}
       </div>
@@ -3381,7 +3381,7 @@ export default function Dashboard() {
                                   ))}
                                   {tmpl.taches?.length > 5 && <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>+{tmpl.taches.length - 5} autres tâches</p>}
                                   <div style={{ marginTop: 14 }} onClick={e => e.stopPropagation()}>
-                                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase' }}>Date de début *</p>
+                                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase' }}>{t('dashboard.date_start')} *</p>
                                     <DatePicker selected={d.templateDateDebut} onChange={d.setTemplateDateDebut} locale="fr" dateFormat="dd/MM/yyyy" minDate={new Date()} placeholderText="Choisir une date de début"
                                       customInput={<input readOnly style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-1)', border: `1.5px solid ${d.templateDateDebut ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }} />} />
                                     {!d.templateDateDebut && <p style={{ fontSize: 11, color: '#e08a3c', marginTop: 4 }}>{t('dashboard.select_date_import')}</p>}

@@ -281,7 +281,7 @@ export default function GoalReverse() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <Lightbulb size={14} color="var(--ember)" strokeWidth={2.3} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1 }}>PAS D'IDÉE ? INSPIRE-TOI</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1 }}>{t('goal.templates_inspire')}</span>
               </div>
               {!isMobile && (
                 <motion.button
@@ -750,7 +750,7 @@ export default function GoalReverse() {
                   </div>
                   <div>
                     <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.3px' }}>Templates inspirants</h2>
-                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0' }}>Clique pour pré-remplir ton objectif</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0' }}>{t('goal.templates_click')}</p>
                   </div>
                 </div>
                 <motion.button

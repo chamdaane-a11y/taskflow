@@ -1118,7 +1118,7 @@ export default function Settings() {
               <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <SettingsIcon size={16} color="var(--ember)" strokeWidth={1.8} />
               </div>
-              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Paramètres</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{t('nav.settings')}</span>
             </div>
 
             {/* Navigation sections */}
@@ -1151,7 +1151,7 @@ export default function Settings() {
                 whileHover={{ color: 'var(--ember)', borderColor: 'var(--ember)' }}>
                 <ArrowLeft size={16} />
               </motion.button>
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h1>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('nav.settings')}</h1>
             </div>
           )}
 

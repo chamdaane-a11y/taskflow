@@ -1910,7 +1910,7 @@ export default function Analytics() {
                       <Settings size={18} color="var(--ember)" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h2>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('analytics.settings_title')}</h2>
                       <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{userData.nom}</p>
                     </div>
                   </div>
@@ -1922,7 +1922,7 @@ export default function Analytics() {
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Paramètres généraux à venir...</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('common.settings_soon')}</p>
               </div>
               <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}

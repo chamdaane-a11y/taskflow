@@ -64,7 +64,8 @@
     "rel_month": "منذ {{n}} شهر",
     "rel_year": "منذ {{n}} سنة",
     "rel_year_plural": "منذ {{n}} سنوات",
-    "ongoing": "قيد التنفيذ"
+    "ongoing": "قيد التنفيذ",
+    "settings_soon": "الإعدادات العامة قريبًا..."
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -403,7 +404,10 @@
     "welcome_start": "ابدأ خلال 30 ثانية — اختر كيف تبدأ:",
     "template_tasks": "{{n}} مهام · {{cat}}",
     "task_validating_day": "اختر اليوم",
-    "task_validating_hour": "اختر الوقت"
+    "task_validating_hour": "اختر الوقت",
+    "templates_ready": "25 قالبًا جاهزًا للاستخدام",
+    "top_category": "الفئة الأبرز:",
+    "date_start": "تاريخ البدء"
   },
   "landing": {
     "nav_features": "الميزات",
@@ -883,7 +887,8 @@
     "coach_cta_resume": "استئناف",
     "coach_cta_plan": "تخطيط J+1",
     "coach_cta_aim": "استهدف أعلى",
-    "ai_close_today": "إخفاء اليوم"
+    "ai_close_today": "إخفاء اليوم",
+    "settings_title": "الإعدادات"
   },
   "planification": {
     "page_title": "التخطيط",
@@ -931,7 +936,11 @@
     "cancel_gcal": "تم إلغاء اتصال Google Calendar",
     "cancel_gmail": "تم إلغاء اتصال Gmail",
     "cancel_notion": "تم إلغاء اتصال Notion",
-    "cancel_drive": "تم إلغاء اتصال Drive"
+    "cancel_drive": "تم إلغاء اتصال Drive",
+    "empty_no_task": "لا توجد مهام بعد",
+    "empty_no_task_sub": "أنشئ أول مهمة من لوحة التحكم",
+    "empty_no_deadline": "لا توجد مهام بموعد نهائي",
+    "settings_title": "الإعدادات"
   },
   "tomorrow": {
     "subtitle": "خطة الذكاء الاصطناعي لـ{{date}}",
@@ -1018,7 +1027,21 @@
     "source_not_connected": "غير متصل",
     "source_activate": "تفعيل في الإعدادات →",
     "task_time_range": "{{start}} → {{end}} · {{dur}} دقيقة مخططة",
-    "deferred_note": "مؤجَّل يدويًا"
+    "deferred_note": "مؤجَّل يدويًا",
+    "learn_durations": "تعلّم المدد",
+    "learn_precision": "الدقة {{pct}}% · {{n}} مهام",
+    "energy_curve": "منحنى الطاقة 24 ساعة",
+    "break_recommended": "☕ استراحة موصى بها",
+    "real_duration": "⏱ المدة الفعلية",
+    "peak_hour": "ساعة الذروة",
+    "detected": "مكتشفة",
+    "no_procrastination": "لم يُكتشف تسويف 🎉",
+    "no_procrastination_sub": "أنت تدير مهامك بكفاءة. واصل هكذا!",
+    "checkin_saved": "تم حفظ التسجيل!",
+    "checkin_saved_sub": "سيستخدم الذكاء الاصطناعي هذه الملاحظات لتحسين خطة الغد.",
+    "checkin_already": "تم التسجيل بالفعل اليوم",
+    "checkin_already_sub": "يمكنك إعادته إذا تغيّر شيء ما",
+    "checkin_validate_hint": "قيّم مهمة واحدة على الأقل للتأكيد"
   },
   "goal": {
     "page_title": "Goal Reverse",
@@ -1064,7 +1087,9 @@
     "err_no_objective": "صف هدفك.",
     "err_ia": "خطأ في الذكاء الاصطناعي — أعد المحاولة بعد لحظة.",
     "template_applied": "تم تطبيق القالب \"{{titre}}\" — انقر على تقسيم",
-    "plan_refined": "✨ خطة محسَّنة: \"{{instr}}\""
+    "plan_refined": "✨ خطة محسَّنة: \"{{instr}}\"",
+    "templates_inspire": "لا فكرة؟ استلهم",
+    "templates_click": "انقر لملء هدفك مسبقًا"
   },
   "ia": {
     "model_recommended": "موصى به",
@@ -1119,7 +1144,11 @@
     "extract_error": "فشل الاستخراج",
     "conn_error": "خطأ في الاتصال. تحقق من اتصالك وأعد المحاولة.",
     "conn_error_short": "خطأ في الاتصال.",
-    "task_created_msg": "تم إنشاء المهمة: \"{{titre}}\""
+    "task_created_msg": "تم إنشاء المهمة: \"{{titre}}\"",
+    "memory_title": "ذاكرة الذكاء الاصطناعي",
+    "active_tasks": "مهامك النشطة",
+    "tap_to_link": "انقر ← الربط بالمحادثة",
+    "no_active_task": "لا توجد مهمة نشطة"
   },
   "collab": {
     "status_todo": "للتنفيذ",
@@ -1196,7 +1225,35 @@
     "task_mark_done": "وضع علامة منجزة",
     "focus_unpin": "إزالة من التركيز",
     "focus_full": "التركيز ممتلئ (3/3)",
-    "focus_pin": "تثبيت في التركيز"
+    "focus_pin": "تثبيت في التركيز",
+    "invite_title": "دعوة إلى الفريق",
+    "share_link_desc": "شارك هذا الرابط. أي شخص ينقر يمكنه الانضمام إلى الفريق مباشرة.",
+    "qr_desc": "امسح رمز QR هذا للانضمام إلى الفريق فورًا.",
+    "qr_compat": "متوافق مع كاميرا أي هاتف",
+    "social_desc": "شارك مباشرة على شبكاتك الاجتماعية.",
+    "assign_to": "تعيين إلى",
+    "priority_upper": "الأولوية",
+    "kbd_hint": "↑↓ التنقل · Enter اختيار · Esc إلغاء",
+    "activity": "النشاط",
+    "activity_sub": "آخر 30 إجراءً",
+    "activity_empty": "لا يوجد نشاط",
+    "activity_empty_sub": "ستظهر إجراءات الفريق هنا.",
+    "status_label": "الحالة",
+    "team_name_label": "اسم الفريق",
+    "creator": "المنشئ",
+    "team_analytics": "تحليلات الفريق",
+    "velocity_contrib": "السرعة والمساهمة",
+    "completion_rate": "معدل الإنجاز",
+    "distribution": "التوزيع",
+    "team_coach": "مدرب الذكاء الاصطناعي للفريق",
+    "team_coach_intro": "أعرف كل مهام وأعضاء فريقك. اسألني أي شيء.",
+    "my_teams": "فِرقي",
+    "no_team": "لا يوجد فريق",
+    "no_team_sub": "أنشئ فريقك الأول أو انضم إلى فريق برمز دعوة.",
+    "create_team": "إنشاء فريق",
+    "join_team": "الانضمام إلى فريق",
+    "join_team_sub": "أدخل رمز الدعوة الذي شاركه المنشئ.",
+    "settings_title": "الإعدادات"
   },
   "outils": {
     "gcal_desc": "تجنُّب التعارضات — ذكاؤك الاصطناعي يحترم جدولك.",

@@ -64,7 +64,8 @@
     "rel_month": "há {{n}} meses",
     "rel_year": "há {{n}} ano",
     "rel_year_plural": "há {{n}} anos",
-    "ongoing": "Em andamento"
+    "ongoing": "Em andamento",
+    "settings_soon": "Configurações gerais em breve..."
   },
   "nav": {
     "dashboard": "Painel",
@@ -403,7 +404,10 @@
     "welcome_start": "Comece em 30 segundos — escolha como você começa:",
     "template_tasks": "{{n}} tarefas · {{cat}}",
     "task_validating_day": "Escolha o dia",
-    "task_validating_hour": "Escolha a hora"
+    "task_validating_hour": "Escolha a hora",
+    "templates_ready": "25 modelos prontos para usar",
+    "top_category": "Categoria principal:",
+    "date_start": "Data de início"
   },
   "landing": {
     "nav_features": "Recursos",
@@ -883,7 +887,8 @@
     "coach_cta_resume": "Retomar",
     "coach_cta_plan": "Planejar J+1",
     "coach_cta_aim": "Almejar mais alto",
-    "ai_close_today": "Ocultar por hoje"
+    "ai_close_today": "Ocultar por hoje",
+    "settings_title": "Configurações"
   },
   "planification": {
     "page_title": "Planejamento",
@@ -931,7 +936,11 @@
     "cancel_gcal": "Conexão do Google Calendar cancelada",
     "cancel_gmail": "Conexão do Gmail cancelada",
     "cancel_notion": "Conexão do Notion cancelada",
-    "cancel_drive": "Conexão do Drive cancelada"
+    "cancel_drive": "Conexão do Drive cancelada",
+    "empty_no_task": "Nenhuma tarefa por enquanto",
+    "empty_no_task_sub": "Crie sua primeira tarefa pelo Painel",
+    "empty_no_deadline": "Nenhuma tarefa com prazo",
+    "settings_title": "Configurações"
   },
   "tomorrow": {
     "subtitle": "Planning IA para {{date}}",
@@ -1018,7 +1027,21 @@
     "source_not_connected": "Não conectado",
     "source_activate": "Ativar em Configurações →",
     "task_time_range": "{{start}} → {{end}} · {{dur}} min previsto",
-    "deferred_note": "Adiado manualmente"
+    "deferred_note": "Adiado manualmente",
+    "learn_durations": "APRENDIZADO DE DURAÇÕES",
+    "learn_precision": "Precisão {{pct}}% · {{n}} tarefas",
+    "energy_curve": "Curva de energia 24h",
+    "break_recommended": "☕ Pausa recomendada",
+    "real_duration": "⏱ Duração real",
+    "peak_hour": "HORÁRIO DE PICO",
+    "detected": "detectado",
+    "no_procrastination": "Nenhuma procrastinação detectada 🎉",
+    "no_procrastination_sub": "Você gerencia suas tarefas com eficiência. Continue assim!",
+    "checkin_saved": "Check-in salvo!",
+    "checkin_saved_sub": "A IA usará este feedback para melhorar o plano de amanhã.",
+    "checkin_already": "Check-in já feito hoje",
+    "checkin_already_sub": "Você pode refazê-lo se algo mudou",
+    "checkin_validate_hint": "Avalie pelo menos uma tarefa para validar"
   },
   "goal": {
     "page_title": "Goal Reverse",
@@ -1064,7 +1087,9 @@
     "err_no_objective": "Descreva seu objetivo.",
     "err_ia": "Erro de IA — tente novamente em instantes.",
     "template_applied": "Template \"{{titre}}\" aplicado — clique em Desmembrar",
-    "plan_refined": "✨ Plano refinado: \"{{instr}}\""
+    "plan_refined": "✨ Plano refinado: \"{{instr}}\"",
+    "templates_inspire": "SEM IDEIA? INSPIRE-SE",
+    "templates_click": "Clique para pré-preencher seu objetivo"
   },
   "ia": {
     "model_recommended": "Recomendado",
@@ -1119,7 +1144,11 @@
     "extract_error": "Extração falhou",
     "conn_error": "Erro de conexão. Verifique sua conexão e tente novamente.",
     "conn_error_short": "Erro de conexão.",
-    "task_created_msg": "Tarefa criada: \"{{titre}}\""
+    "task_created_msg": "Tarefa criada: \"{{titre}}\"",
+    "memory_title": "Memória da IA",
+    "active_tasks": "Suas tarefas ativas",
+    "tap_to_link": "Toque → vincular à conversa",
+    "no_active_task": "Nenhuma tarefa ativa"
   },
   "collab": {
     "status_todo": "A fazer",
@@ -1196,7 +1225,35 @@
     "task_mark_done": "Marcar como concluída",
     "focus_unpin": "Desafixar do foco",
     "focus_full": "Foco completo (3/3)",
-    "focus_pin": "Fixar no foco"
+    "focus_pin": "Fixar no foco",
+    "invite_title": "Convidar para a equipe",
+    "share_link_desc": "Compartilhe este link. Qualquer pessoa que clicar pode entrar na equipe diretamente.",
+    "qr_desc": "Escaneie este QR code para entrar na equipe instantaneamente.",
+    "qr_compat": "Compatível com a câmera de qualquer telefone",
+    "social_desc": "Compartilhe diretamente nas suas redes sociais.",
+    "assign_to": "ATRIBUIR A",
+    "priority_upper": "PRIORIDADE",
+    "kbd_hint": "↑↓ navegar · Enter selecionar · Esc cancelar",
+    "activity": "Atividade",
+    "activity_sub": "Últimas 30 ações",
+    "activity_empty": "Sem atividade",
+    "activity_empty_sub": "As ações da equipe aparecerão aqui.",
+    "status_label": "STATUS",
+    "team_name_label": "NOME DA EQUIPE",
+    "creator": "CRIADOR",
+    "team_analytics": "Análises da equipe",
+    "velocity_contrib": "Velocidade e contribuição",
+    "completion_rate": "Taxa de conclusão",
+    "distribution": "DISTRIBUIÇÃO",
+    "team_coach": "Coach IA da equipe",
+    "team_coach_intro": "Conheço todas as tarefas e membros da sua equipe. Pergunte-me qualquer coisa.",
+    "my_teams": "MINHAS EQUIPES",
+    "no_team": "Nenhuma equipe",
+    "no_team_sub": "Crie sua primeira equipe ou entre em uma com um código de convite.",
+    "create_team": "Criar uma equipe",
+    "join_team": "Entrar em uma equipe",
+    "join_team_sub": "Digite o código de convite compartilhado pelo criador.",
+    "settings_title": "Configurações"
   },
   "outils": {
     "gcal_desc": "Evita conflitos — sua IA respeita sua agenda.",

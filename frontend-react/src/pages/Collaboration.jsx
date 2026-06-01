@@ -88,7 +88,7 @@ function ModalePartage({ T, equipe, onFermer }) {
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}>
         <div style={{ padding: '22px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)", margin: 0 }}>Inviter dans l'équipe</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)", margin: 0 }}>{t('collab.invite_title')}</h3>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>{equipe.nom}</p>
           </div>
           <motion.button style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -109,7 +109,7 @@ function ModalePartage({ T, equipe, onFermer }) {
           <AnimatePresence mode="wait">
             {onglet === 'lien' && (
               <motion.div key="lien" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.65 }}>Partage ce lien. Toute personne qui clique peut rejoindre l'équipe directement.</p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.65 }}>{t('collab.share_link_desc')}</p>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '10px 14px' }}>
                   <Link2 size={13} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>{lien}</span>
@@ -128,16 +128,16 @@ function ModalePartage({ T, equipe, onFermer }) {
             {onglet === 'qr' && (
               <motion.div key="qr" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.65 }}>Scanne ce QR code pour rejoindre l'équipe instantanément.</p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.65 }}>{t('collab.qr_desc')}</p>
                 <div style={{ padding: 14, background: 'white', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
                   <QRCode value={lien} size={160} />
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--text-secondary)', opacity: 0.65 }}>Compatible avec l'appareil photo de n'importe quel téléphone</p>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', opacity: 0.65 }}>{t('collab.qr_compat')}</p>
               </motion.div>
             )}
             {onglet === 'reseaux' && (
               <motion.div key="reseaux" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.65 }}>Partage directement sur tes réseaux sociaux.</p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.65 }}>{t('collab.social_desc')}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr', gap: 10 }}>
                   {reseaux.map(r => (
                     <motion.a key={r.nom}
@@ -526,7 +526,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               zIndex: 50,
               boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
             }}>
-            <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-secondary)', letterSpacing: 1.4, padding: '6px 10px 4px', margin: 0 }}>ASSIGNER À</p>
+            <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-secondary)', letterSpacing: 1.4, padding: '6px 10px 4px', margin: 0 }}>{t('collab.assign_to')}</p>
             <button
               onClick={() => { onAssign?.(tache.id, null); setAssignOpen(false) }}
               style={popItemStyle(T, tache.assignee_id === null)}>
@@ -638,7 +638,7 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
             placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>PRIORITÉ</label>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>{t('collab.priority_upper')}</label>
               <select style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer' }}
                 value={form.priorite} onChange={e => setForm({ ...form, priorite: e.target.value })}>
                 <option value="haute">Haute</option>
@@ -647,7 +647,7 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>STATUT</label>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>{t('collab.status_label')}</label>
               <select style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer' }}
                 value={form.statut} onChange={e => setForm({ ...form, statut: e.target.value })}>
                 <option value="todo">{t('collab.option_todo')}</option>
@@ -1046,7 +1046,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
                   {m.role === 'admin' && <Crown size={10} color="var(--ember)" style={{ marginLeft: 'auto' }} />}
                 </motion.div>
               ))}
-              <div style={{ padding: '3px 10px 4px', fontSize: 10, color: 'var(--text-secondary)' }}>↑↓ naviguer · Enter sélectionner · Esc annuler</div>
+              <div style={{ padding: '3px 10px 4px', fontSize: 10, color: 'var(--text-secondary)' }}>{t('collab.kbd_hint')}</div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1112,8 +1112,8 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
             <Activity size={16} color="var(--ember)" />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: "var(--font-ui)" }}>Activité</h3>
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>30 dernières actions</p>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: "var(--font-ui)" }}>{t('collab.activity')}</h3>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{t('collab.activity_sub')}</p>
           </div>
         </div>
         <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1131,8 +1131,8 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
         ) : activites.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 60 }}>
             <Activity size={28} color="var(--border-subtle)" strokeWidth={1.2} style={{ margin: '0 auto 12px', display: 'block' }} />
-            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Aucune activité</p>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>Les actions de l'équipe apparaîtront ici.</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t('collab.activity_empty')}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{t('collab.activity_empty_sub')}</p>
           </div>
         ) : (
           <div style={{ position: 'relative' }}>
@@ -1225,7 +1225,7 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
         {/* Renommer l'équipe — admin uniquement */}
         {!viewOnly && (
         <>
-        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.3, marginBottom: 10 }}>NOM DE L'ÉQUIPE</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.3, marginBottom: 10 }}>{t('collab.team_name_label')}</p>
         {editingNom ? (
           <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
             <input style={{ flex: 1, padding: '9px 12px', background: 'var(--surface-2)', border: `1px solid var(--ember-soft)`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
@@ -1270,7 +1270,7 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
                       <div style={{ fontSize: 10, color: m.role === 'admin' ? 'var(--ember)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                         {m.role === 'admin' ? <><Crown size={9} /> Admin</> : 'Membre'}
                       </div>
-                      {isCreateur && <span style={{ fontSize: 9, background: 'var(--ember-soft)', color: 'var(--ember)', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>CRÉATEUR</span>}
+                      {isCreateur && <span style={{ fontSize: 9, background: 'var(--ember-soft)', color: 'var(--ember)', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>{t('collab.creator')}</span>}
                     </div>
                   </div>
                   {!viewOnly && !isMe && !isCreateur && (
@@ -1569,8 +1569,8 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
             <TrendingUp size={16} color="var(--ember)" />
           </div>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: "var(--font-ui)" }}>Analytics équipe</h3>
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>Vélocité & contribution</p>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: "var(--font-ui)" }}>{t('collab.team_analytics')}</h3>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{t('collab.velocity_contrib')}</p>
           </div>
         </div>
         <motion.button style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1617,14 +1617,14 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#4caf82' }}>{stats.taux_completion}%</div>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Taux de complétion</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{t('collab.completion_rate')}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>{stats.par_statut?.termine || 0} tâches terminées sur {stats.total}</div>
               </div>
             </div>
 
             {/* Répartition par statut */}
             <div style={{ padding: '16px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 14 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.2, marginBottom: 12 }}>RÉPARTITION</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.2, marginBottom: 12 }}>{t('collab.distribution')}</p>
               {Object.entries(STATUT_LABEL).map(([statut, label]) => (
                 <MiniBar key={statut} T={T}
                   valeur={stats.par_statut?.[statut] || 0}
@@ -1758,8 +1758,8 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
             <div style={{ width: 56, height: 56, borderRadius: 18, background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
               <Brain size={26} color="var(--ember)" strokeWidth={1.5} />
             </div>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px', fontFamily: "var(--font-ui)" }}>Coach IA de l'équipe</h4>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.6, marginBottom: 20, maxWidth: 280 }}>Je connais toutes les tâches et membres de ton équipe. Demande-moi n'importe quoi.</p>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px', fontFamily: "var(--font-ui)" }}>{t('collab.team_coach')}</h4>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.6, marginBottom: 20, maxWidth: 280 }}>{t('collab.team_coach_intro')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
               {SUGGESTIONS_IA_EQUIPE.map((s, i) => (
                 <motion.button key={i}
@@ -2386,7 +2386,7 @@ export default function Collaboration() {
         {equipes.length > 0 && (
           <>
             <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
-            <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>MES ÉQUIPES</p>
+            <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>{t('collab.my_teams')}</p>
             {equipes.map(eq => (
               <motion.button key={eq.id}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 9, background: equipeActive?.id === eq.id ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${equipeActive?.id === eq.id ? 'var(--ember-ring)' : 'transparent'}`, cursor: 'pointer', textAlign: 'left', marginBottom: 2 }}
@@ -2554,8 +2554,8 @@ export default function Collaboration() {
               <Users size={28} color="var(--ember)" strokeWidth={1.5} />
             </motion.div>
             <div style={{ textAlign: 'center' }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)", marginBottom: 8 }}>Aucune équipe</h2>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 300 }}>Crée ta première équipe ou rejoins-en une avec un code d'invitation.</p>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', fontFamily: "var(--font-ui)", marginBottom: 8 }}>{t('collab.no_team')}</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 300 }}>{t('collab.no_team_sub')}</p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
               <motion.button style={{ padding: '10px 18px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}
@@ -2801,7 +2801,7 @@ export default function Collaboration() {
             <motion.div style={{ background: 'var(--surface-1)', borderRadius: 20, padding: '24px 26px', width: 'min(400px,100%)', position: 'relative', border: '1px solid var(--border-subtle)', boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
               initial={{ y: 20, scale: 0.97 }} animate={{ y: 0, scale: 1 }}>
               <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setShowCreer(false)}><X size={16} /></button>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 20, fontFamily: "var(--font-ui)" }}>Créer une équipe</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 20, fontFamily: "var(--font-ui)" }}>{t('collab.create_team')}</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input style={{ padding: '10px 14px', background: 'var(--surface-2)', border: `1px solid ${erreur ? '#e05c5c' : 'var(--border-subtle)'}`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 13.5, outline: 'none', width: '100%' }}
                   placeholder="Nom de l'équipe *" value={nomEquipe} onChange={e => { setNomEquipe(e.target.value); setErreur('') }} autoFocus onKeyDown={e => e.key === 'Enter' && creerEquipe()} />
@@ -2827,8 +2827,8 @@ export default function Collaboration() {
             <motion.div style={{ background: 'var(--surface-1)', borderRadius: 20, padding: '24px 26px', width: 'min(400px,100%)', position: 'relative', border: '1px solid var(--border-subtle)', boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
               initial={{ y: 20, scale: 0.97 }} animate={{ y: 0, scale: 1 }}>
               <button style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setShowRejoindre(false)}><X size={16} /></button>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6, fontFamily: "var(--font-ui)" }}>Rejoindre une équipe</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18, lineHeight: 1.65 }}>Entre le code d'invitation partagé par le créateur.</p>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6, fontFamily: "var(--font-ui)" }}>{t('collab.join_team')}</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18, lineHeight: 1.65 }}>{t('collab.join_team_sub')}</p>
               <input style={{ width: '100%', padding: '11px 14px', background: 'var(--surface-2)', border: `1px solid ${erreur ? '#e05c5c' : 'var(--border-subtle)'}`, borderRadius: 10, color: 'var(--text-primary)', fontSize: 14, outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: 1.5 }}
                 placeholder="Code d'invitation" value={codeRejoint} onChange={e => { setCodeRejoint(e.target.value); setErreur('') }}
                 onKeyDown={e => e.key === 'Enter' && rejoindreEquipe()} autoFocus />
@@ -2860,7 +2860,7 @@ export default function Collaboration() {
                       <Settings size={18} color="var(--ember)" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h2>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('collab.settings_title')}</h2>
                       <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{userData.nom}</p>
                     </div>
                   </div>
@@ -2872,7 +2872,7 @@ export default function Collaboration() {
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Paramètres généraux à venir...</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('common.settings_soon')}</p>
               </div>
               <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}

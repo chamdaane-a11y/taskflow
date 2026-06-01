@@ -64,7 +64,8 @@
     "rel_month": "{{n}}mo ago",
     "rel_year": "{{n}}y ago",
     "rel_year_plural": "{{n}}y ago",
-    "ongoing": "In progress"
+    "ongoing": "In progress",
+    "settings_soon": "General settings coming soon..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -403,7 +404,10 @@
     "welcome_start": "Start in 30 seconds — choose how you begin:",
     "template_tasks": "{{n}} tasks · {{cat}}",
     "task_validating_day": "Choose the day",
-    "task_validating_hour": "Choose the time"
+    "task_validating_hour": "Choose the time",
+    "templates_ready": "25 ready-to-use templates",
+    "top_category": "Top category:",
+    "date_start": "Start date"
   },
   "landing": {
     "nav_features": "Features",
@@ -883,7 +887,8 @@
     "coach_cta_resume": "Resume",
     "coach_cta_plan": "Plan J+1",
     "coach_cta_aim": "Aim higher",
-    "ai_close_today": "Hide for today"
+    "ai_close_today": "Hide for today",
+    "settings_title": "Settings"
   },
   "planification": {
     "page_title": "Planning",
@@ -931,7 +936,11 @@
     "cancel_gcal": "Google Calendar connection cancelled",
     "cancel_gmail": "Gmail connection cancelled",
     "cancel_notion": "Notion connection cancelled",
-    "cancel_drive": "Drive connection cancelled"
+    "cancel_drive": "Drive connection cancelled",
+    "empty_no_task": "No tasks yet",
+    "empty_no_task_sub": "Create your first task from the Dashboard",
+    "empty_no_deadline": "No tasks with a deadline",
+    "settings_title": "Settings"
   },
   "tomorrow": {
     "subtitle": "AI plan for {{date}}",
@@ -1018,7 +1027,21 @@
     "source_not_connected": "Not connected",
     "source_activate": "Enable in Settings →",
     "task_time_range": "{{start}} → {{end}} · {{dur}} min planned",
-    "deferred_note": "Manually deferred"
+    "deferred_note": "Manually deferred",
+    "learn_durations": "DURATION LEARNING",
+    "learn_precision": "Accuracy {{pct}}% · {{n}} tasks",
+    "energy_curve": "24h energy curve",
+    "break_recommended": "☕ Break recommended",
+    "real_duration": "⏱ Actual duration",
+    "peak_hour": "PEAK HOUR",
+    "detected": "detected",
+    "no_procrastination": "No procrastination detected 🎉",
+    "no_procrastination_sub": "You manage your tasks efficiently. Keep it up!",
+    "checkin_saved": "Check-in saved!",
+    "checkin_saved_sub": "The AI will use this feedback to improve tomorrow's plan.",
+    "checkin_already": "Check-in already done today",
+    "checkin_already_sub": "You can redo it if something changed",
+    "checkin_validate_hint": "Rate at least one task to validate"
   },
   "goal": {
     "page_title": "Goal Reverse",
@@ -1064,7 +1087,9 @@
     "err_no_objective": "Describe your goal.",
     "err_ia": "AI error — try again in a moment.",
     "template_applied": "Template \"{{titre}}\" applied — click Decompose",
-    "plan_refined": "✨ Plan refined: \"{{instr}}\""
+    "plan_refined": "✨ Plan refined: \"{{instr}}\"",
+    "templates_inspire": "NO IDEA? GET INSPIRED",
+    "templates_click": "Click to pre-fill your goal"
   },
   "ia": {
     "model_recommended": "Recommended",
@@ -1119,7 +1144,11 @@
     "extract_error": "Extraction failed",
     "conn_error": "Connection error. Check your connection and try again.",
     "conn_error_short": "Connection error.",
-    "task_created_msg": "Task created: \"{{titre}}\""
+    "task_created_msg": "Task created: \"{{titre}}\"",
+    "memory_title": "AI memory",
+    "active_tasks": "Your active tasks",
+    "tap_to_link": "Tap → link to conversation",
+    "no_active_task": "No active task"
   },
   "collab": {
     "status_todo": "To do",
@@ -1196,7 +1225,35 @@
     "task_mark_done": "Mark as done",
     "focus_unpin": "Unpin from focus",
     "focus_full": "Focus full (3/3)",
-    "focus_pin": "Pin to focus"
+    "focus_pin": "Pin to focus",
+    "invite_title": "Invite to the team",
+    "share_link_desc": "Share this link. Anyone who clicks can join the team directly.",
+    "qr_desc": "Scan this QR code to join the team instantly.",
+    "qr_compat": "Works with any phone's camera",
+    "social_desc": "Share directly on your social networks.",
+    "assign_to": "ASSIGN TO",
+    "priority_upper": "PRIORITY",
+    "kbd_hint": "↑↓ navigate · Enter select · Esc cancel",
+    "activity": "Activity",
+    "activity_sub": "Last 30 actions",
+    "activity_empty": "No activity",
+    "activity_empty_sub": "Team actions will appear here.",
+    "status_label": "STATUS",
+    "team_name_label": "TEAM NAME",
+    "creator": "CREATOR",
+    "team_analytics": "Team analytics",
+    "velocity_contrib": "Velocity & contribution",
+    "completion_rate": "Completion rate",
+    "distribution": "DISTRIBUTION",
+    "team_coach": "Team AI Coach",
+    "team_coach_intro": "I know all your team's tasks and members. Ask me anything.",
+    "my_teams": "MY TEAMS",
+    "no_team": "No team",
+    "no_team_sub": "Create your first team or join one with an invitation code.",
+    "create_team": "Create a team",
+    "join_team": "Join a team",
+    "join_team_sub": "Enter the invitation code shared by the creator.",
+    "settings_title": "Settings"
   },
   "outils": {
     "gcal_desc": "Avoids conflicts — your AI respects your schedule.",

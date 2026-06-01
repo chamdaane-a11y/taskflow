@@ -148,12 +148,12 @@ function DureeApprentissageBloc({ user, T, isMobile }) {
           <Brain size={14} color={accent} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>APPRENTISSAGE DURÉES</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>{t('tomorrow.learn_durations')}</div>
           <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
             {total === 0
               ? t('tomorrow.learn_waiting')
               : precision != null
-                ? <>Précision <span style={{ color: accent }}>{precision}%</span> · {total} tâches</>
+                ? <>{t('tomorrow.learn_precision', { pct: precision, n: total })}</>
                 : total > 1 ? t('tomorrow.learn_tasks_plural', { n: total }) : t('tomorrow.learn_tasks', { n: total })}
           </div>
         </div>
@@ -414,7 +414,7 @@ function EnergyCourbeChart({ courbeData, T }) {
     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Courbe d'énergie 24h</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{t('tomorrow.energy_curve')}</div>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
             {courbeData.has_user_data ? t('tomorrow.energy_calibrated') : t('tomorrow.energy_circadian')}
           </div>
@@ -516,7 +516,7 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
           <Coffee size={14} color="var(--ember)" />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ember)' }}>☕ Pause recommandée</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ember)' }}>{t('tomorrow.break_recommended')}</div>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{item.heure_debut} → {item.heure_fin} · {item.duree_minutes} min</div>
         </div>
         <div style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 600 }}>Repos</div>
@@ -791,7 +791,7 @@ function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOn
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
                 <div style={{ paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>⏱ Durée réelle</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>{t('tomorrow.real_duration')}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ember)' }}>{reponse?.duree_reelle ?? tache.duree_minutes} min</span>
                   </div>
                   <input type="range" min={5} max={240} step={5}
@@ -1592,8 +1592,8 @@ export default function TomorrowBuilder() {
                         {planning.heure_productive < 12 ? <Sun size={16} color="var(--ember)" /> : <Moon size={16} color="var(--ember)" />}
                       </div>
                       <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>HEURE DE POINTE</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>{planning.heure_productive}h00 <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 400 }}>détectée</span></div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8 }}>{t('tomorrow.peak_hour')}</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>{planning.heure_productive}h00 <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 400 }}>{t('tomorrow.detected')}</span></div>
                       </div>
                     </div>
                     <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
@@ -1827,8 +1827,8 @@ export default function TomorrowBuilder() {
                 {procrastination.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                     <CheckCircle size={40} color="#4caf82" style={{ margin: '0 auto 16px' }} />
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Aucune procrastination détectée 🎉</h3>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Tu gères tes tâches efficacement. Continue comme ça !</p>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>{t('tomorrow.no_procrastination')}</h3>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('tomorrow.no_procrastination_sub')}</p>
                   </div>
                 ) : (
                   <>
@@ -1866,8 +1866,8 @@ export default function TomorrowBuilder() {
                       style={{ textAlign: 'center', padding: '48px 20px', background: 'rgba(76,175,130,0.06)', border: '1.5px solid rgba(76,175,130,0.25)', borderRadius: 20, marginBottom: 20 }}>
                       <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 0.5 }}
                         style={{ fontSize: 56, marginBottom: 16 }}>🎉</motion.div>
-                      <h3 style={{ fontSize: 20, fontWeight: 800, color: '#4caf82', marginBottom: 8 }}>Check-in enregistré !</h3>
-                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 340, margin: '0 auto' }}>L'IA utilisera ce retour pour améliorer le planning de demain.</p>
+                      <h3 style={{ fontSize: 20, fontWeight: 800, color: '#4caf82', marginBottom: 8 }}>{t('tomorrow.checkin_saved')}</h3>
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 340, margin: '0 auto' }}>{t('tomorrow.checkin_saved_sub')}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1881,8 +1881,8 @@ export default function TomorrowBuilder() {
                           <CheckCircle size={18} color="#4caf82" />
                         </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#4caf82' }}>Check-in déjà fait aujourd'hui</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Tu peux le refaire si quelque chose a changé</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#4caf82' }}>{t('tomorrow.checkin_already')}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('tomorrow.checkin_already_sub')}</div>
                         </div>
                       </div>
                       <motion.button
@@ -1986,7 +1986,7 @@ export default function TomorrowBuilder() {
                       }
                     </motion.button>
                     {Object.values(checkinReponses).filter(r => r?.statut).length === 0 && (
-                      <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>Évalue au moins une tâche pour valider</p>
+                      <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>{t('tomorrow.checkin_validate_hint')}</p>
                     )}
                   </div>
                 )}

@@ -64,7 +64,8 @@
     "rel_month": "vor {{n}} Mon.",
     "rel_year": "vor {{n}} J.",
     "rel_year_plural": "vor {{n}} J.",
-    "ongoing": "In Bearbeitung"
+    "ongoing": "In Bearbeitung",
+    "settings_soon": "Allgemeine Einstellungen folgen bald..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -403,7 +404,10 @@
     "welcome_start": "Starte in 30 Sekunden — wähle, wie du beginnst:",
     "template_tasks": "{{n}} Aufgaben · {{cat}}",
     "task_validating_day": "Wähle den Tag",
-    "task_validating_hour": "Wähle die Zeit"
+    "task_validating_hour": "Wähle die Zeit",
+    "templates_ready": "25 gebrauchsfertige Vorlagen",
+    "top_category": "Top-Kategorie:",
+    "date_start": "Startdatum"
   },
   "landing": {
     "nav_features": "Funktionen",
@@ -883,7 +887,8 @@
     "coach_cta_resume": "Weitermachen",
     "coach_cta_plan": "J+1 planen",
     "coach_cta_aim": "Höher zielen",
-    "ai_close_today": "Heute ausblenden"
+    "ai_close_today": "Heute ausblenden",
+    "settings_title": "Einstellungen"
   },
   "planification": {
     "page_title": "Planung",
@@ -931,7 +936,11 @@
     "cancel_gcal": "Google Calendar-Verbindung abgebrochen",
     "cancel_gmail": "Gmail-Verbindung abgebrochen",
     "cancel_notion": "Notion-Verbindung abgebrochen",
-    "cancel_drive": "Drive-Verbindung abgebrochen"
+    "cancel_drive": "Drive-Verbindung abgebrochen",
+    "empty_no_task": "Noch keine Aufgaben",
+    "empty_no_task_sub": "Erstelle deine erste Aufgabe im Dashboard",
+    "empty_no_deadline": "Keine Aufgaben mit Frist",
+    "settings_title": "Einstellungen"
   },
   "tomorrow": {
     "subtitle": "KI-Plan für {{date}}",
@@ -1018,7 +1027,21 @@
     "source_not_connected": "Nicht verbunden",
     "source_activate": "In Einstellungen aktivieren →",
     "task_time_range": "{{start}} → {{end}} · {{dur}} Min geplant",
-    "deferred_note": "Manuell verschoben"
+    "deferred_note": "Manuell verschoben",
+    "learn_durations": "DAUER-LERNEN",
+    "learn_precision": "Genauigkeit {{pct}}% · {{n}} Aufgaben",
+    "energy_curve": "24h-Energiekurve",
+    "break_recommended": "☕ Pause empfohlen",
+    "real_duration": "⏱ Tatsächliche Dauer",
+    "peak_hour": "SPITZENZEIT",
+    "detected": "erkannt",
+    "no_procrastination": "Keine Prokrastination erkannt 🎉",
+    "no_procrastination_sub": "Du verwaltest deine Aufgaben effizient. Weiter so!",
+    "checkin_saved": "Check-in gespeichert!",
+    "checkin_saved_sub": "Die KI nutzt dieses Feedback, um den morgigen Plan zu verbessern.",
+    "checkin_already": "Check-in heute bereits erledigt",
+    "checkin_already_sub": "Du kannst ihn wiederholen, falls sich etwas geändert hat",
+    "checkin_validate_hint": "Bewerte mindestens eine Aufgabe zum Bestätigen"
   },
   "goal": {
     "page_title": "Goal Reverse",
@@ -1064,7 +1087,9 @@
     "err_no_objective": "Beschreibe dein Ziel.",
     "err_ia": "KI-Fehler — versuche es in einem Moment erneut.",
     "template_applied": "Vorlage \"{{titre}}\" angewendet — klicke auf Aufteilen",
-    "plan_refined": "✨ Plan verfeinert: \"{{instr}}\""
+    "plan_refined": "✨ Plan verfeinert: \"{{instr}}\"",
+    "templates_inspire": "KEINE IDEE? LASS DICH INSPIRIEREN",
+    "templates_click": "Klicke, um dein Ziel vorzubefüllen"
   },
   "ia": {
     "model_recommended": "Empfohlen",
@@ -1119,7 +1144,11 @@
     "extract_error": "Extraktion fehlgeschlagen",
     "conn_error": "Verbindungsfehler. Überprüfe deine Verbindung und versuche es erneut.",
     "conn_error_short": "Verbindungsfehler.",
-    "task_created_msg": "Aufgabe erstellt: \"{{titre}}\""
+    "task_created_msg": "Aufgabe erstellt: \"{{titre}}\"",
+    "memory_title": "KI-Speicher",
+    "active_tasks": "Deine aktiven Aufgaben",
+    "tap_to_link": "Tippen → mit Gespräch verknüpfen",
+    "no_active_task": "Keine aktive Aufgabe"
   },
   "collab": {
     "status_todo": "Zu erledigen",
@@ -1196,7 +1225,35 @@
     "task_mark_done": "Als erledigt markieren",
     "focus_unpin": "Aus Fokus entfernen",
     "focus_full": "Fokus voll (3/3)",
-    "focus_pin": "Im Fokus anheften"
+    "focus_pin": "Im Fokus anheften",
+    "invite_title": "Zum Team einladen",
+    "share_link_desc": "Teile diesen Link. Jeder, der klickt, kann dem Team direkt beitreten.",
+    "qr_desc": "Scanne diesen QR-Code, um dem Team sofort beizutreten.",
+    "qr_compat": "Funktioniert mit der Kamera jedes Telefons",
+    "social_desc": "Teile direkt in deinen sozialen Netzwerken.",
+    "assign_to": "ZUWEISEN AN",
+    "priority_upper": "PRIORITÄT",
+    "kbd_hint": "↑↓ navigieren · Enter auswählen · Esc abbrechen",
+    "activity": "Aktivität",
+    "activity_sub": "Letzte 30 Aktionen",
+    "activity_empty": "Keine Aktivität",
+    "activity_empty_sub": "Teamaktionen erscheinen hier.",
+    "status_label": "STATUS",
+    "team_name_label": "TEAMNAME",
+    "creator": "ERSTELLER",
+    "team_analytics": "Team-Analysen",
+    "velocity_contrib": "Geschwindigkeit & Beitrag",
+    "completion_rate": "Abschlussrate",
+    "distribution": "VERTEILUNG",
+    "team_coach": "Team-KI-Coach",
+    "team_coach_intro": "Ich kenne alle Aufgaben und Mitglieder deines Teams. Frag mich alles.",
+    "my_teams": "MEINE TEAMS",
+    "no_team": "Kein Team",
+    "no_team_sub": "Erstelle dein erstes Team oder tritt einem mit einem Einladungscode bei.",
+    "create_team": "Team erstellen",
+    "join_team": "Team beitreten",
+    "join_team_sub": "Gib den vom Ersteller geteilten Einladungscode ein.",
+    "settings_title": "Einstellungen"
   },
   "outils": {
     "gcal_desc": "Vermeidet Konflikte — deine KI respektiert deinen Kalender.",

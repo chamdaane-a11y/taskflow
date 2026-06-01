@@ -1046,8 +1046,8 @@ export default function Planification() {
                   return (
                     <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface-1)', borderRadius: 16, border: '1px solid var(--border-subtle)' }}>
                       <CheckSquare size={40} color="var(--border-subtle)" strokeWidth={1} style={{ margin: '0 auto 16px' }} />
-                      <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune tâche pour le moment</p>
-                      <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Crée ta première tâche depuis le Dashboard</p>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>{t('planification.empty_no_task')}</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('planification.empty_no_task_sub')}</p>
                     </div>
                   )
                 }
@@ -1293,7 +1293,7 @@ export default function Planification() {
               {tachesAvecDeadline.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface-1)', borderRadius: 16, border: '1px solid var(--border-subtle)' }}>
                   <BarChart size={40} color="var(--border-subtle)" strokeWidth={1} style={{ margin: '0 auto 16px' }} />
-                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune tâche avec deadline</p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>{t('planification.empty_no_deadline')}</p>
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Ajoutez des deadlines pour visualiser le Gantt</p>
                 </div>
               ) : (
@@ -1559,7 +1559,7 @@ export default function Planification() {
                       <Settings size={18} color="var(--ember)" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Paramètres</h2>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('planification.settings_title')}</h2>
                       <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, marginTop: 2 }}>{userData.nom}</p>
                     </div>
                   </div>
@@ -1571,7 +1571,7 @@ export default function Planification() {
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Paramètres généraux à venir...</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('common.settings_soon')}</p>
               </div>
               <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}

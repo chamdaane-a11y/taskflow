@@ -1326,7 +1326,7 @@ export default function IAChat() {
                     <Database size={16} color={accent} strokeWidth={2.2} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>Mémoire de l'IA</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>{t('ia.memory_title')}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Ce que {coach.nom} sait de toi · {memoryItems.length} souvenirs</div>
                   </div>
                 </div>
@@ -1427,8 +1427,8 @@ export default function IAChat() {
                     <Layers size={15} color={accent} strokeWidth={2.2} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>Tes tâches actives</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Tap → lier à la conversation</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>{t('ia.active_tasks')}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('ia.tap_to_link')}</div>
                   </div>
                 </div>
                 <motion.button onClick={() => setShowTasksPanelMobile(false)} whileTap={{ scale: 0.9 }}
@@ -1438,7 +1438,7 @@ export default function IAChat() {
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 14px' }}>
                 {tachesEnCours.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)', fontSize: 12 }}>Aucune tâche active</div>
+                  <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)', fontSize: 12 }}>{t('ia.no_active_task')}</div>
                 ) : (
                   tachesEnCours.slice(0, 30).map(t => {
                     const pColor = t.priorite === 'haute' ? '#e05c5c' : t.priorite === 'moyenne' ? '#e08a3c' : '#4caf82'
