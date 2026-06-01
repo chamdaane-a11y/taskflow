@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,7 +25,7 @@ const API = 'https://getshift-backend.onrender.com'
 const MODELES = [
   { id: 'llama-3.3-70b-versatile', nom: 'GetShift AI',        tag: 'Recommandé' },
   { id: 'mixtral-8x7b-32768',      nom: 'GetShift AI Rapide', tag: 'Rapide'     },
-  { id: 'gemma2-9b-it',            nom: 'GetShift AI Lite',   tag: 'Léger'      },
+  { id: 'gemma2-9b-it',            nom: 'GetShift AI Lite',   tag: 'Léger' },
 ]
 
 const SUGGESTIONS = [
@@ -35,9 +36,9 @@ const SUGGESTIONS = [
 ]
 
 const INTENTION_META = {
-  search:           { label: 'Web temps réel', color: '#0ea5e9', Icon: Globe       },
-  action_creer:     { label: 'Tâche créée',    color: '#10b981', Icon: Plus        },
-  action_terminer:  { label: 'Terminée',        color: '#10b981', Icon: CheckCircle },
+  search:           { label: 'Web temps réel', color: '#0ea5e9', Icon: Globe },
+  action_creer:     { label: 'Tâche créée', color: '#10b981', Icon: Plus },
+  action_terminer:  { label: 'Terminée', color: '#10b981', Icon: CheckCircle },
   action_planifier: { label: 'Planification',   color: '#f59e0b', Icon: Calendar    },
   chat:             { label: 'GetShift AI',     color: '#a855f7', Icon: Sparkles    },
 }
@@ -45,14 +46,14 @@ const INTENTION_META = {
 // ── Personas Coach (lien avec le drawer Coach du Dashboard) ────────────
 const COACHES = {
   bienveillant: { id: 'bienveillant', nom: 'Alex',  Icon: Heart,    color: '#ec4899', tag: 'Bienveillant', accroche: 'Doux, encourageant, à ton écoute' },
-  motivateur:   { id: 'motivateur',   nom: 'Max',   Icon: Flame,    color: '#f97316', tag: 'Motivateur',   accroche: 'Énergique, challengeant, on passe à l\'action' },
-  analytique:   { id: 'analytique',   nom: 'Nova',  Icon: BarChart, color: '#3b82f6', tag: 'Analytique',   accroche: 'Précis, factuel, basé sur tes données' },
+  motivateur:   { id: 'motivateur',   nom: 'Max',   Icon: Flame,    color: '#f97316', tag: 'Motivateur', accroche: 'Énergique, challengeant, on passe à l\'action' },
+  analytique:   { id: 'analytique',   nom: 'Nova',  Icon: BarChart, color: '#3b82f6', tag: 'Analytique', accroche: 'Précis, factuel, basé sur tes données' },
 }
 const getCoach = (style) => COACHES[style] || COACHES.bienveillant
 
 // ── Slash commands ────────────────────────────────────────────────────
 const SLASH_COMMANDS = [
-  { cmd: '/tache',  Icon: Plus,         color: '#10b981', desc: "Crée une tâche : préciser le titre",                     prefix: 'Crée une tâche : ' },
+  { cmd: '/tache',  Icon: Plus,         color: '#10b981', desc: 'Crée une tâche : préciser le titre',                     prefix: 'Crée une tâche : ' },
   { cmd: '/focus',  Icon: Target,       color: '#a855f7', desc: 'Choisis mes 3 priorités du jour parmi mes tâches',         prefix: 'Choisis mes 3 priorités du jour parmi mes tâches actives' },
   { cmd: '/plan',   Icon: Calendar,     color: '#f59e0b', desc: 'Construis mon planning de la semaine',                     prefix: 'Construis mon planning de la semaine' },
   { cmd: '/dna',    Icon: Brain,        color: '#0ea5e9', desc: 'Analyse mes patterns Task DNA et donne 3 conseils',        prefix: 'Analyse mes patterns Task DNA et donne 3 conseils actionnables' },
@@ -194,28 +195,29 @@ const SourcesWeb = memo(function SourcesWeb({ results, T }) {
 // ── Carte action memoïsé ──────────────────────────────────────────────
 // Supporte 2 formats : ancien {type, ...} et nouveau tool format {tool, ok, ...}
 const CarteAction = memo(function CarteAction({ action, T }) {
+  const { t } = useTranslation()
   if (!action) return null
   // Anciens formats (legacy)
   const legacyConfigs = {
-    tache_creee:               { color: '#10b981', Icon: Plus,     label: 'Tâche créée' },
-    tache_terminee:            { color: '#10b981', Icon: Check,    label: 'Terminée' },
+    tache_creee:               { color: '#10b981', Icon: Plus,     label: t('ia.action_label_created') },
+    tache_terminee:            { color: '#10b981', Icon: Check,    label: t('ia.action_label_done') },
     redirect_tomorrow_builder: { color: '#f59e0b', Icon: Calendar, label: 'Tomorrow Builder' },
   }
   // Nouveaux formats (tool use)
   const toolConfigs = {
-    creer_tache:        { color: '#10b981', Icon: Plus,        label: 'Tâche créée' },
-    creer_taches_lot:   { color: '#10b981', Icon: Layers,      label: 'Tâches créées' },
-    terminer_tache:     { color: '#10b981', Icon: CheckCircle, label: 'Terminée' },
-    supprimer_tache:    { color: '#ef4444', Icon: Trash2,      label: 'Supprimée' },
-    modifier_tache:     { color: '#f59e0b', Icon: Sparkles,    label: 'Modifiée' },
-    epingler_focus_jour:{ color: '#a855f7', Icon: Target,      label: 'Épinglée(s) au focus' },
+    creer_tache:        { color: '#10b981', Icon: Plus,        label: t('ia.action_label_created') },
+    creer_taches_lot:   { color: '#10b981', Icon: Layers,      label: t('ia.action_label_bulk') },
+    terminer_tache:     { color: '#10b981', Icon: CheckCircle, label: t('ia.action_label_terminated') },
+    supprimer_tache:    { color: '#ef4444', Icon: Trash2,      label: t('ia.action_label_deleted') },
+    modifier_tache:     { color: '#f59e0b', Icon: Sparkles,    label: t('ia.action_label_modified') },
+    epingler_focus_jour:{ color: '#a855f7', Icon: Target,      label: t('ia.action_label_pinned') },
     lister_taches:      { color: 'var(--ember)', Icon: Search,      label: 'Liste tâches' },
-    obtenir_stats:      { color: '#0ea5e9', Icon: BarChart2,   label: 'Stats récupérées' },
+    obtenir_stats:      { color: '#0ea5e9', Icon: BarChart2,   label: t('ia.action_label_stats') },
     analyser_task_dna:  { color: '#a855f7', Icon: Brain,       label: 'Task DNA' },
-    rechercher_web:     { color: '#0ea5e9', Icon: Globe,       label: 'Web temps réel' },
-    lister_membres_equipe:  { color: '#3b82f6', Icon: Users,    label: 'Membres équipe' },
-    creer_tache_equipe:     { color: '#10b981', Icon: UserPlus, label: 'Tâche équipe créée' },
-    assigner_tache_equipe:  { color: '#3b82f6', Icon: UserPlus, label: 'Tâche assignée' },
+    rechercher_web:     { color: '#0ea5e9', Icon: Globe,       label: t('ia.action_label_web') },
+    lister_membres_equipe:  { color: '#3b82f6', Icon: Users,    label: t('ia.action_label_team_members') },
+    creer_tache_equipe:     { color: '#10b981', Icon: UserPlus, label: t('ia.action_label_team_task') },
+    assigner_tache_equipe:  { color: '#3b82f6', Icon: UserPlus, label: t('ia.action_label_assigned') },
     naviguer_vers:          { color: '#a855f7', Icon: Compass,  label: 'Navigation' },
   }
 
@@ -226,16 +228,16 @@ const CarteAction = memo(function CarteAction({ action, T }) {
   // Sous-titre intelligent selon le tool
   let subtitle = null
   if (isToolFormat) {
-    if (!action.ok) subtitle = action.erreur || 'Échec'
+    if (!action.ok) subtitle = action.erreur || t('ia.action_fail')
     else if (action.tool === 'creer_tache') subtitle = `"${action.titre}"${action.priorite ? ` · ${action.priorite}` : ''}`
     else if (action.tool === 'creer_taches_lot') subtitle = `${action.nb} tâches : ${(action.crees||[]).slice(0,3).map(t => `"${t.titre}"`).join(', ')}${action.nb > 3 ? '…' : ''}`
     else if (action.tool === 'terminer_tache' || action.tool === 'supprimer_tache') subtitle = `"${action.titre}"`
-    else if (action.tool === 'epingler_focus_jour') subtitle = `${action.nb} tâche${action.nb > 1 ? 's' : ''} épinglée${action.nb > 1 ? 's' : ''}`
-    else if (action.tool === 'lister_taches') subtitle = `${action.nb} tâches (${action.filtre})`
+    else if (action.tool === 'epingler_focus_jour') subtitle = action.nb > 1 ? t('ia.action_pinned_plural', { n: action.nb }) : t('ia.action_pinned', { n: action.nb })
+    else if (action.tool === 'lister_taches') subtitle = t('ia.action_tasks_fil', { n: action.nb, filtre: action.filtre })
     else if (action.tool === 'obtenir_stats') subtitle = `${action.terminees_total}/${action.total} tâches · ${action.points} pts · streak ${action.streak}j`
     else if (action.tool === 'analyser_task_dna') subtitle = `Score ${action.dna?.score_viabilite || '?'}/100`
     else if (action.tool === 'rechercher_web') subtitle = `${action.nb} sources sur "${action.requete}"`
-    else if (action.tool === 'lister_membres_equipe') subtitle = `${action.nb} membre${action.nb > 1 ? 's' : ''} dans l'équipe`
+    else if (action.tool === 'lister_membres_equipe') subtitle = action.nb > 1 ? t('ia.action_team_members', { n: action.nb }) : t('ia.action_team_member', { n: action.nb })
     else if (action.tool === 'creer_tache_equipe') subtitle = `"${action.titre}"${action.assignee_nom ? ` → ${action.assignee_nom}` : ''}`
     else if (action.tool === 'assigner_tache_equipe') subtitle = `"${action.titre}" → ${action.assignee_nom}`
     else if (action.tool === 'naviguer_vers') subtitle = `Vers ${action.page}${action.section ? ` · ${action.section}` : ''}`
@@ -357,9 +359,9 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
           {msg.role === 'ia' && !msg.streaming && msg.content && (
             <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
               {[
-                { label: copie === idx ? 'Copié !' : 'Copier', Icon: Copy,         action: () => onCopy(msg.content, idx),                         color: copie === idx ? accent : null },
-                { label: 'Créer tâche',                         Icon: Plus,         action: () => onCreerTache(msg.content.substring(0, 80)),       color: null },
-                { label: 'Continuer',                           Icon: ChevronRight, action: () => onEnvoyer('Continue et développe davantage'),     color: null },
+                { label: copie === idx ? t('ia.btn_copied') : t('ia.btn_copy'), Icon: Copy,         action: () => onCopy(msg.content, idx),                         color: copie === idx ? accent : null },
+                { label: t('ia.btn_create_task'),                         Icon: Plus,         action: () => onCreerTache(msg.content.substring(0, 80)),       color: null },
+                { label: t('ia.btn_continue'),                           Icon: ChevronRight, action: () => onEnvoyer('Continue et développe davantage'),     color: null },
                 { label: 'Rechercher',                          Icon: Search,       action: () => { onForceSearch(); onEnvoyer(msg.content.substring(0, 60)) }, color: '#0ea5e9' },
               ].map(({ label, Icon, action, color }) => (
                 <motion.button key={label}
@@ -371,11 +373,11 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
               ))}
               <motion.button
                 onClick={() => onPin(msg)}
-                title={isPinned ? 'Retirer des Insights' : 'Épingler dans Insights'}
+                title={isPinned ? t('ia.pin_remove') : t('ia.pin_add')}
                 style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: isPinned ? `${accent}18` : 'transparent', border: `1px solid ${isPinned ? accent + '40' : 'var(--border-subtle)'}`, borderRadius: 99, color: isPinned ? accent : 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
                 whileHover={{ color: accent, borderColor: `${accent}50` }}>
                 <Bookmark size={10} fill={isPinned ? accent : 'none'} />
-                {isPinned ? 'Épinglé' : 'Insights'}
+                {isPinned ? t('ia.pinned') : t('ia.pin_label')}
               </motion.button>
             </div>
           )}
@@ -395,6 +397,7 @@ function detectWebSearch(text) {
 // COMPOSANT PRINCIPAL
 // ══════════════════════════════════════════════════════════════════════
 export default function IAChat() {
+  const { t } = useTranslation()
   const user    = useMemo(() => { try { return JSON.parse(localStorage.getItem('user')) } catch { return null } }, [])
   const { T }   = useTheme()
   const accent  = 'var(--ember)'
@@ -512,7 +515,7 @@ export default function IAChat() {
   }, [user?.id])
 
   const oublierToutSouvenirs = useCallback(async () => {
-    if (!confirm("Effacer toute la mémoire de l'IA ? L'IA oubliera tout ce qu'elle sait de toi.")) return
+    if (!confirm(t('ia.clear_memory_confirm'))) return
     try {
       await axios.delete(`${API}/ia/memory/${user.id}`)
       setMemoryItems([]); setMemoryCount(0)
@@ -536,7 +539,7 @@ export default function IAChat() {
       if (r.data?.texte) {
         setAttachment({ filename: r.data.filename, type: r.data.type, texte: r.data.texte, longueur: r.data.longueur })
       } else {
-        alert(r.data?.erreur || 'Extraction échouée')
+        alert(r.data?.erreur || t('ia.extract_error'))
       }
     } catch (e) {
       alert(e.response?.data?.erreur || "Erreur lors de l'upload")
@@ -749,9 +752,9 @@ export default function IAChat() {
         setMessages(p => {
           const out = [...p]
           if (out.length && out[out.length - 1].streaming) {
-            out[out.length - 1] = { role: 'erreur', content: 'Erreur de connexion. Vérifie ta connexion et réessaie.' }
+            out[out.length - 1] = { role: 'erreur', content: t('ia.conn_error') }
           } else {
-            out.push({ role: 'erreur', content: 'Erreur de connexion.' })
+            out.push({ role: 'erreur', content: t('ia.conn_error_short') })
           }
           return out
         })
@@ -769,7 +772,7 @@ export default function IAChat() {
     try {
       await axios.post(`${API}/taches`, { titre: titre.substring(0, 100), priorite: 'moyenne', user_id: user.id })
       chargerTaches()
-      setMessages(p => [...p, { role: 'systeme', content: `Tâche créée : "${titre.substring(0, 50)}"` }])
+      setMessages(p => [...p, { role: 'systeme', content: t('ia.task_created_msg', { titre: titre.substring(0, 50) }) }])
     } catch {}
   }, [user?.id, chargerTaches])
 
@@ -844,7 +847,7 @@ export default function IAChat() {
               whileTap={{ scale: 0.97 }}
               style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', background: `${accent}12`, borderRadius: 8, border: `1px solid ${accent}30`, cursor: 'pointer', marginBottom: 8 }}>
               <Database size={11} color={accent} />
-              <span style={{ fontSize: 10, color: accent, fontWeight: 700, letterSpacing: '0.5px', flex: 1, textAlign: 'left' }}>{memoryCount} SOUVENIRS</span>
+              <span style={{ fontSize: 10, color: accent, fontWeight: 700, letterSpacing: '0.5px', flex: 1, textAlign: 'left' }}>{memoryCount} {t('ia.sidebar_memories')}</span>
               <ChevronRight size={11} color={accent} />
             </motion.button>
           </>
@@ -854,11 +857,11 @@ export default function IAChat() {
 
         {/* Insights — messages épinglés */}
         <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Bookmark size={9} />INSIGHTS {pinnedMessages.length > 0 && <span style={{ background: `${accent}20`, color: accent, borderRadius: 99, padding: '1px 6px', fontSize: 8 }}>{pinnedMessages.length}</span>}
+          <Bookmark size={9} />{t('ia.sidebar_insights')} {pinnedMessages.length > 0 && <span style={{ background: `${accent}20`, color: accent, borderRadius: 99, padding: '1px 6px', fontSize: 8 }}>{pinnedMessages.length}</span>}
         </div>
         {pinnedMessages.length === 0 ? (
           <div style={{ padding: '7px 10px', fontSize: 11, color: 'var(--text-secondary)', fontStyle: 'italic', opacity: 0.6 }}>
-            Épingle un message IA pour le retrouver ici.
+            {t('ia.sidebar_no_insight')}
           </div>
         ) : (
           <div style={{ maxHeight: 160, overflowY: 'auto', marginBottom: 6 }}>
@@ -886,9 +889,9 @@ export default function IAChat() {
         <div style={{ height: 1, background: 'var(--surface-2)', margin: '4px 0 16px' }} />
 
         {/* Tâches à lier */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>LIER UNE TÂCHE</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: 8, padding: '0 6px' }}>{t('ia.sidebar_link_task')}</div>
         <div style={{ maxHeight: 130, overflowY: 'auto', marginBottom: 6 }}>
-          {[{ id: null, titre: 'Aucune', priorite: '' }, ...tachesEnCours.slice(0, 8)].map(t => (
+          {[{ id: null, titre: t('ia.task_none'), priorite: '' }, ...tachesEnCours.slice(0, 8)].map(t => (
             <motion.button key={t.id || 'none'}
               style={{ width: '100%', padding: '6px 10px', borderRadius: 8, background: tacheSelectionnee === t.id ? `${accent}18` : 'transparent', border: `1px solid ${tacheSelectionnee === t.id ? accent + '40' : 'transparent'}`, color: tacheSelectionnee === t.id ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, textAlign: 'left', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               onClick={() => setTacheSelectionnee(t.id)}
@@ -901,7 +904,7 @@ export default function IAChat() {
         <div style={{ marginTop: 12 }}>
           <motion.button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, marginBottom: 2 }}
             onClick={() => setShowHistorique(!showHistorique)} whileHover={{ color: 'var(--text-primary)' }}>
-            <History size={13} strokeWidth={1.8} />Historique ({historique.length})
+            <History size={13} strokeWidth={1.8} />{t('ia.sidebar_history')} ({historique.length})
           </motion.button>
         </div>
       </AppSidebar>
@@ -924,7 +927,7 @@ export default function IAChat() {
         {isDragging && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 100, background: `${accent}18`, border: `2px dashed ${accent}`, borderRadius: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, pointerEvents: 'none' }}>
             <Paperclip size={36} color={accent} strokeWidth={1.5} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: accent }}>Dépose le fichier ici</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: accent }}>{t('ia.drop_here')}</span>
           </div>
         )}
 

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -23,9 +24,9 @@ registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
 
 const NIVEAUX = [
-  { id: 'realiste',  label: 'Réaliste',  desc: 'Progression douce et durable',       emoji: '🌱', color: '#4caf82' },
-  { id: 'ambitieux', label: 'Ambitieux', desc: 'Rythme soutenu, résultats rapides',   emoji: '🔥', color: '#e08a3c' },
-  { id: 'extreme',   label: 'Extrême',   desc: 'Tout-ou-rien, intensité maximale',    emoji: '⚡', color: '#e05c5c' },
+  { id: 'realiste',  label: t('goal.niveau_realiste'), desc: t('goal.niveau_realiste_desc'),       emoji: '🌱', color: '#4caf82' },
+  { id: 'ambitieux', label: t('goal.niveau_ambitieux'), desc: t('goal.niveau_ambitieux_desc'),   emoji: '🔥', color: '#e08a3c' },
+  { id: 'extreme',   label: t('goal.niveau_extreme'), desc: t('goal.niveau_extreme_desc'),    emoji: '⚡', color: '#e05c5c' },
 ]
 
 const DIFFICULTE_COLOR = {
@@ -35,15 +36,16 @@ const DIFFICULTE_COLOR = {
 }
 
 const QUICK_ITERATIONS = [
-  { emoji: '➕', label: '+1 semaine', text: 'Ajoute 1 semaine supplémentaire au planning' },
-  { emoji: '🌿', label: 'Plus chill', text: 'Rends le plan plus chill, moins intense, avec moins de tâches par semaine' },
-  { emoji: '🔥', label: 'Plus intense', text: 'Rends le plan plus intense, ajoute des tâches pour aller plus vite' },
-  { emoji: '🗜️', label: '−1 jalon', text: 'Fusionne 2 jalons proches pour réduire le nombre total' },
-  { emoji: '🎯', label: 'Prépa au début', text: 'Ajoute une phase de préparation/setup en premier jalon' },
-  { emoji: '📅', label: 'Recale les dates', text: 'Recale toutes les dates pour mieux répartir la charge' },
+  { emoji: '➕', label: t('goal.adjust_1week'), text: t('goal.adjust_1week_text') },
+  { emoji: '🌿', label: t('goal.adjust_chill'), text: t('goal.adjust_chill_text') },
+  { emoji: '🔥', label: t('goal.adjust_intense'), text: t('goal.adjust_intense_text') },
+  { emoji: '🗜️', label: t('goal.adjust_merge'), text: t('goal.adjust_merge_text') },
+  { emoji: '🎯', label: t('goal.adjust_prep'), text: t('goal.adjust_prep_text') },
+  { emoji: '📅', label: t('goal.adjust_dates'), text: t('goal.adjust_dates_text') },
 ]
 
 export default function GoalReverse() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user, niveau: userNiveau, points: userPoints, streak: userStreak, niveauActuel: userNiveauActuel, pctNiveau: userPctNiveau } = useSidebarUser()
   const themeKey = localStorage.getItem('theme') || 'light'
@@ -91,7 +93,7 @@ export default function GoalReverse() {
     setShowTemplatesModal(false)
     setResult(null)
     setImported(false)
-    afficherNotification(`Template "${tpl.titre}" appliqué — clique sur Décomposer`)
+    afficherNotification(t('goal.template_applied', { titre: tpl.titre }))
     setTimeout(() => {
       const el = document.querySelector('textarea')
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -114,7 +116,7 @@ export default function GoalReverse() {
       setResult(res.data)
       setIterationInput('')
       if (res.data.jalons?.length > 0) setJalonsOuverts({ 0: true })
-      afficherNotification(`✨ Plan affiné : "${instr.length > 40 ? instr.slice(0, 40) + '…' : instr}"`)
+      afficherNotification(t('goal.plan_refined', { instr: instr.length > 40 ? instr.slice(0, 40) + '…' : instr }))
     } catch {
       afficherNotification("Erreur lors de l'affinement", 'error')
     }
@@ -131,7 +133,7 @@ export default function GoalReverse() {
   })()
 
   const decomposer = async () => {
-    if (!objectif.trim()) { setErreur("Décris ton objectif."); return }
+    if (!objectif.trim()) { setErreur(t('goal.err_no_objective')); return }
     if (!deadline) { setErreur("Choisis une deadline."); return }
     setErreur('')
     setLoading(true)
@@ -150,7 +152,7 @@ export default function GoalReverse() {
         setJalonsOuverts({ 0: true })
       }
     } catch (e) {
-      setErreur("Erreur IA — réessaie dans un instant.")
+      setErreur(t('goal.err_ia'))
     }
     setLoading(false)
   }
@@ -324,7 +326,7 @@ export default function GoalReverse() {
 
           {/* Objectif */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, display: 'block', marginBottom: 8 }}>TON OBJECTIF</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, display: 'block', marginBottom: 8 }}>{t('goal.objective_label')}</label>
             <textarea
               value={objectif}
               onChange={e => setObjectif(e.target.value)}
@@ -338,14 +340,14 @@ export default function GoalReverse() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 20 }}>
             {/* Deadline */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, display: 'block', marginBottom: 8 }}>DEADLINE FINALE</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, display: 'block', marginBottom: 8 }}>{t('goal.deadline_label')}</label>
               <DatePicker
                 selected={deadline}
                 onChange={date => setDeadline(date)}
                 locale="fr"
                 dateFormat="dd/MM/yyyy"
                 minDate={new Date()}
-                placeholderText="📅 Choisir une date"
+                placeholderText={t('goal.date_placeholder')}
                 customInput={
                   <input style={{ width: '100%', padding: '10px 14px', background: 'var(--surface-2)', border: `1px solid ${erreur && !deadline ? '#e05c5c' : 'var(--border-subtle)'}`, borderRadius: 12, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }} />
                 }
@@ -354,7 +356,7 @@ export default function GoalReverse() {
 
             {/* Niveau */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, display: 'block', marginBottom: 8 }}>NIVEAU D'AMBITION</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, display: 'block', marginBottom: 8 }}>{t('goal.ambition_label')}</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 {NIVEAUX.map(n => (
                   <motion.button key={n.id}
@@ -382,10 +384,10 @@ export default function GoalReverse() {
               <>
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--border-subtle)', borderTop: '2px solid var(--ember)' }} />
-                Analyse en cours...
+                {t('goal.btn_analyze')}
               </>
             ) : (
-              <><Sparkles size={16} /> Décomposer mon objectif</>
+              <><Sparkles size={16} /> {t('goal.btn_decompose')}</>
             )}
           </motion.button>
         </motion.div>
@@ -398,10 +400,10 @@ export default function GoalReverse() {
               {/* Résumé */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 10, marginBottom: isMobile ? 18 : 24 }}>
                 {[
-                  { label: 'Semaines', val: result.duree_semaines, icon: Calendar, color: 'var(--ember)' },
-                  { label: 'Jalons', val: result.jalons?.length, icon: Flag, color: 'var(--ember)' },
-                  { label: 'Tâches', val: totalTaches, icon: CheckCircle2, color: '#4caf82' },
-                  { label: 'Faisabilité', val: `${result.score_faisabilite}%`, icon: Target, color: result.score_faisabilite >= 70 ? '#4caf82' : result.score_faisabilite >= 40 ? '#e08a3c' : '#e05c5c' },
+                  { label: t('goal.stat_weeks'), val: result.duree_semaines, icon: Calendar, color: 'var(--ember)' },
+                  { label: t('goal.stat_milestones'), val: result.jalons?.length, icon: Flag, color: 'var(--ember)' },
+                  { label: t('goal.stat_tasks'), val: totalTaches, icon: CheckCircle2, color: '#4caf82' },
+                  { label: t('goal.stat_feasibility'), val: `${result.score_faisabilite}%`, icon: Target, color: result.score_faisabilite >= 70 ? '#4caf82' : result.score_faisabilite >= 40 ? '#e08a3c' : '#e05c5c' },
                 ].map((s, i) => {
                   const Icon = s.icon
                   return (
@@ -437,7 +439,7 @@ export default function GoalReverse() {
                   style={{ background: 'rgba(224,92,92,0.08)', border: '1px solid rgba(224,92,92,0.25)', borderRadius: isMobile ? 12 : 14, padding: isMobile ? '12px 14px' : '14px 18px', marginBottom: isMobile ? 16 : 24 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <AlertTriangle size={isMobile ? 13 : 15} color="#e05c5c" strokeWidth={2} />
-                    <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: '#e05c5c', letterSpacing: 0.8 }}>RISQUES IDENTIFIÉS</span>
+                    <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: '#e05c5c', letterSpacing: 0.8 }}>{t('goal.risks_title')}</span>
                   </div>
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
                     {result.risques.map((r, i) => (
@@ -495,7 +497,7 @@ export default function GoalReverse() {
                   {/* Légende */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
                     <div style={{ display: 'flex', gap: isMobile ? 8 : 10, flexWrap: 'wrap' }}>
-                      {[['faible', 'Facile'], ['moyenne', 'Moyen'], ['élevée', 'Élevé']].map(([k, lbl]) => (
+                      {[['faible', t('goal.difficulty_low')], ['moyenne', t('goal.difficulty_medium')], ['élevée', t('goal.difficulty_high')]].map(([k, lbl]) => (
                         <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <div style={{ width: 8, height: 8, borderRadius: 2, background: DIFFICULTE_COLOR[k] }} />
                           <span style={{ fontSize: 9.5, color: 'var(--text-secondary)' }}>{lbl}</span>
@@ -504,7 +506,7 @@ export default function GoalReverse() {
                     </div>
                     {!isMobile && (
                       <span style={{ fontSize: 9.5, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                        Clique sur un jalon pour le détailler ↓
+                        {t('goal.milestone_detail')}
                       </span>
                     )}
                   </div>
@@ -607,7 +609,7 @@ export default function GoalReverse() {
                   </div>
                   {result._iteration && isMobile && (
                     <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: 10, padding: '6px 10px', background: 'var(--ember-soft)', borderRadius: 8, lineHeight: 1.4 }}>
-                      ✨ Dernière modif : "{result._iteration}"
+                      {t('goal.last_iteration')} "{result._iteration}"
                     </div>
                   )}
                   {/* Quick actions */}
@@ -679,7 +681,7 @@ export default function GoalReverse() {
                 {imported ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px', background: 'rgba(76,175,130,0.1)', border: '1px solid rgba(76,175,130,0.3)', borderRadius: 14, color: '#4caf82', fontWeight: 600, fontSize: 14 }}>
                     <CheckCircle2 size={18} />
-                    {totalTaches} tâches importées dans GetShift !
+                    {t('goal.import_done', { n: totalTaches })}
                     <motion.button onClick={() => navigate('/dashboard')}
                       style={{ marginLeft: 12, padding: '6px 14px', background: '#4caf82', border: 'none', borderRadius: 8, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
                       whileHover={{ scale: 1.03 }}>
@@ -695,7 +697,7 @@ export default function GoalReverse() {
                         style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--border-subtle)', borderTop: '2px solid var(--ember)' }} />
                       Import en cours...</>
                     ) : (
-                      <><Download size={16} /> Importer {totalTaches} tâches dans GetShift</>
+                      <><Download size={16} /> {t('goal.btn_import', { n: totalTaches })}</>
                     )}
                   </motion.button>
                 )}
