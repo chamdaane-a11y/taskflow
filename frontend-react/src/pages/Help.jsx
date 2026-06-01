@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -25,95 +26,95 @@ const SECTIONS = [
   {
     id: 'demarrage', label: 'Démarrage', Icon: Rocket,
     sub: [
-      { id: 'qu-est-ce-que-getshift', label: 'Qu\'est-ce que GetShift' },
-      { id: 'premiers-pas',            label: 'Premiers pas' },
-      { id: 'installer-pwa',           label: 'Installer comme app (PWA)' },
-      { id: 'pwa-avantages',           label: 'Pourquoi installer la PWA' },
+      { id: 'qu-est-ce-que-getshift', label: "Qu'est-ce que GetShift" },
+      { id: 'premiers-pas', label: 'Premiers pas' },
+      { id: 'installer-pwa', label: 'Installer comme app (PWA)' },
+      { id: 'pwa-avantages', label: 'Pourquoi installer la PWA' },
     ],
   },
   {
     id: 'taches', label: 'Tâches', Icon: CheckSquare,
     sub: [
-      { id: 'creer-tache',     label: 'Créer une tâche' },
-      { id: 'task-dna',        label: 'Task DNA — analyse avant création' },
-      { id: 'priorites-points',label: 'Priorités · deadlines · points' },
-      { id: 'kanban',          label: 'Vue Kanban' },
-      { id: 'mode-focus',      label: 'Mode focus' },
-      { id: 'sources-logos',   label: 'Sources Gmail · Drive · Calendar' },
+      { id: 'creer-tache', label: 'Créer une tâche' },
+      { id: 'task-dna', label: 'Task DNA — analyse avant création' },
+      { id: 'priorites-points', label: 'Priorités · deadlines · points' },
+      { id: 'kanban', label: 'Vue Kanban' },
+      { id: 'mode-focus', label: 'Mode focus' },
+      { id: 'sources-logos', label: 'Sources Gmail · Drive · Calendar' },
     ],
   },
   {
     id: 'planification', label: 'Planification', Icon: Calendar,
     sub: [
-      { id: 'calendrier',     label: 'Vue calendrier' },
-      { id: 'time-blocks',    label: 'Time blocks' },
-      { id: 'conflits',       label: 'Conflits Calendar' },
-      { id: 'planif-auto',    label: 'Planification IA auto' },
+      { id: 'calendrier', label: 'Vue calendrier' },
+      { id: 'time-blocks', label: 'Time blocks' },
+      { id: 'conflits', label: 'Conflits Calendar' },
+      { id: 'planif-auto', label: 'Planification IA auto' },
     ],
   },
   {
     id: 'pomodoro', label: 'Pomodoro', Icon: Timer,
     sub: [
       { id: 'pomodoro-sessions', label: 'Sessions de travail' },
-      { id: 'wake-lock',         label: 'Wake Lock écran' },
+      { id: 'wake-lock', label: 'Wake Lock écran' },
     ],
   },
   {
     id: 'ia', label: 'Assistant IA', Icon: Bot,
     sub: [
-      { id: 'ia-comment',  label: 'Comment lui parler' },
-      { id: 'ia-outils',   label: 'Outils disponibles' },
-      { id: 'ia-prompts',  label: 'Exemples de prompts' },
+      { id: 'ia-comment', label: 'Comment lui parler' },
+      { id: 'ia-outils', label: 'Outils disponibles' },
+      { id: 'ia-prompts', label: 'Exemples de prompts' },
     ],
   },
   {
     id: 'builders', label: 'Builders IA', Icon: Sunrise,
     sub: [
       { id: 'tomorrow-builder', label: 'Tomorrow Builder' },
-      { id: 'goal-reverse',     label: 'Goal Reverse' },
+      { id: 'goal-reverse', label: 'Goal Reverse' },
     ],
   },
   {
     id: 'analytics', label: 'Analytics', Icon: BarChart2,
     sub: [
-      { id: 'metriques',      label: 'Métriques clés' },
-      { id: 'score-prod',     label: 'Score de productivité' },
-      { id: 'calibration',    label: 'Calibration Task DNA' },
+      { id: 'metriques', label: 'Métriques clés' },
+      { id: 'score-prod', label: 'Score de productivité' },
+      { id: 'calibration', label: 'Calibration Task DNA' },
     ],
   },
   {
     id: 'progression', label: 'Progression', Icon: Award,
     sub: [
-      { id: 'niveaux',   label: 'Niveaux · 10 paliers' },
-      { id: 'badges',    label: 'Badges · 4 piliers' },
-      { id: 'streaks',   label: 'Streaks & Streak Freeze' },
+      { id: 'niveaux', label: 'Niveaux · 10 paliers' },
+      { id: 'badges', label: 'Badges · 4 piliers' },
+      { id: 'streaks', label: 'Streaks & Streak Freeze' },
     ],
   },
   {
     id: 'integrations', label: 'Intégrations', Icon: Plug,
     sub: [
       { id: 'integ-calendar', label: 'Google Calendar' },
-      { id: 'integ-drive',    label: 'Google Drive' },
-      { id: 'integ-gmail',    label: 'Gmail' },
-      { id: 'integ-notion',   label: 'Notion' },
-      { id: 'integ-slack',    label: 'Slack' },
+      { id: 'integ-drive', label: 'Google Drive' },
+      { id: 'integ-gmail', label: 'Gmail' },
+      { id: 'integ-notion', label: 'Notion' },
+      { id: 'integ-slack', label: 'Slack' },
     ],
   },
   {
     id: 'reglages', label: 'Réglages', Icon: SettingsIcon,
     sub: [
-      { id: 'themes',     label: 'Thèmes · Parchemin / Graphite' },
-      { id: 'notifs',     label: 'Notifications push' },
-      { id: 'exports',    label: 'Exports de données' },
-      { id: 'securite',   label: 'Sécurité' },
+      { id: 'themes', label: 'Thèmes · Parchemin / Graphite' },
+      { id: 'notifs', label: 'Notifications push' },
+      { id: 'exports', label: 'Exports de données' },
+      { id: 'securite', label: 'Sécurité' },
     ],
   },
   {
     id: 'bonnes-pratiques', label: 'Bonnes pratiques', Icon: Lightbulb,
     sub: [
-      { id: 'bp-deep-work',    label: 'Maximiser le deep work' },
-      { id: 'bp-ia-prompts',   label: 'Tirer le max de l\'IA' },
-      { id: 'bp-progression',  label: 'Construire sa progression' },
+      { id: 'bp-deep-work', label: 'Maximiser le deep work' },
+      { id: 'bp-ia-prompts', label: "Tirer le max de l'IA" },
+      { id: 'bp-progression', label: 'Construire sa progression' },
     ],
   },
   {
@@ -493,31 +494,25 @@ function DocSection({ id, Icon, eyebrow, title, lead }) {
    FAQ DATA
    ═══════════════════════════════════════════════════════════════════ */
 
-const FAQ_ITEMS = [
-  { q: 'Mes données sont-elles privées ?',
-    r: 'Oui. Toutes les intégrations OAuth sont chiffrées avec une clé Fernet côté serveur. Les tokens ne sont jamais loggés. Tu peux supprimer ton compte à tout moment depuis Réglages → Sécurité.' },
-  { q: 'Pourquoi mon premier login peut prendre 30 secondes ?',
-    r: 'Le backend tourne sur Render (plan free) qui s\'endort après 15 min d\'inactivité. Un bot GitHub + UptimeRobot le pinge toutes les 14 minutes, mais il peut arriver qu\'il faille le réveiller.' },
-  { q: 'Comment fonctionne le système de points ?',
-    r: 'Chaque tâche complétée rapporte des points selon sa priorité : 30 pts pour Haute, 20 pts pour Moyenne, 10 pts pour Basse. Les points alimentent ton niveau global et tes badges (4 piliers).' },
-  { q: 'Puis-je utiliser GetShift hors ligne ?',
-    r: 'Partiellement. Une fois installée comme PWA, l\'app garde en cache l\'interface et les dernières données vues. La création/édition de tâches nécessite une connexion.' },
-  { q: 'Comment l\'IA accède à mon Calendar ?',
-    r: 'Lors de la connexion Google Calendar, tu autorises le scope calendar (read+write). GetShift lit tes events pour proposer des créneaux libres et peut créer des time blocks. Aucun accès aux contenus d\'événements privés sans cette autorisation.' },
-  { q: 'Qu\'est-ce que le Streak Freeze ?',
-    r: 'Un mécanisme qui protège ta série de jours actifs. Tu en gagnes 1 par semaine de productivité élevée (>70% des tâches Haute complétées). Stockable jusqu\'à 3. Si tu rates un jour, le freeze s\'utilise automatiquement.' },
-  { q: 'L\'extension Chrome existe-t-elle ?',
-    r: 'Pas encore. L\'extension est sur la roadmap pour capturer des tâches depuis n\'importe quelle page web.' },
-  { q: 'Puis-je exporter mes données ?',
-    r: 'Oui — Réglages → Compte → Télécharger (JSON). L\'export contient toutes tes données : tâches, objectifs, planning, badges et intégrations.' },
-]
+const FAQ_ITEMS_STATIC = null // moved to component (needs t())
 
 /* ═══════════════════════════════════════════════════════════════════
    COMPOSANT PRINCIPAL
    ═══════════════════════════════════════════════════════════════════ */
 
 export default function Help() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
+  const FAQ_ITEMS = useMemo(() => [
+    { q: t('help.faq_q1'), r: t('help.faq_a1') },
+    { q: t('help.faq_q2'), r: t('help.faq_a2') },
+    { q: t('help.faq_q3'), r: t('help.faq_a3') },
+    { q: t('help.faq_q4'), r: t('help.faq_a4') },
+    { q: t('help.faq_q5'), r: t('help.faq_a5') },
+    { q: t('help.faq_q6'), r: t('help.faq_a6') },
+    { q: t('help.faq_q7'), r: t('help.faq_a7') },
+    { q: t('help.faq_q8'), r: t('help.faq_a8') },
+  ], [t])
   const { T } = useTheme()
   const isMobile = useMediaQuery('(max-width: 900px)')
   const { user, niveau, points, streak, niveauActuel, pctNiveau } = useSidebarUser()
@@ -612,7 +607,7 @@ export default function Help() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher dans la documentation…"
+              placeholder={t('help.search_placeholder')}
               style={{
                 width: '100%', padding: '8px 12px 8px 34px',
                 background: 'var(--surface-1)',
@@ -644,10 +639,10 @@ export default function Help() {
             maxWidth: 760, margin: '0 auto',
           }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', letterSpacing: 1, marginBottom: 12 }}>
-              {filteredSections.length} RÉSULTAT{filteredSections.length > 1 ? 'S' : ''}
+              {filteredSections.length > 1 ? t('help.search_results_plural', { n: filteredSections.length }) : t('help.search_results', { n: filteredSections.length })}
             </div>
             {filteredSections.length === 0 && (
-              <P>Aucun résultat. Essaie un autre mot-clé.</P>
+              <P>{t('help.search_empty')}</P>
             )}
             {filteredSections.map(item => (
               <button key={`${item.sectionId}-${item.subId}`}
@@ -749,9 +744,9 @@ export default function Help() {
             }}>
 
               {/* ─── DÉMARRAGE ───────────────────────────────── */}
-              <DocSection id="demarrage" Icon={Rocket} eyebrow="01 · Démarrage"
-                title="Démarrer avec GetShift"
-                lead="GetShift est un assistant de productivité avec IA contextuelle. Cette section te fait passer de zéro à opérationnel en moins de 10 minutes." />
+              <DocSection id="demarrage" Icon={Rocket} eyebrow={t('help.eyebrow_1')}
+                title={t('help.title_1')}
+                lead={t('help.lead_1')} />
 
               <H3 id="qu-est-ce-que-getshift">Qu'est-ce que GetShift</H3>
               <P>
@@ -860,9 +855,9 @@ export default function Help() {
               </ul>
 
               {/* ─── TÂCHES ─────────────────────────────────── */}
-              <DocSection id="taches" Icon={CheckSquare} eyebrow="02 · Cœur du produit"
-                title="Tâches & projets"
-                lead="Chaque tâche est une unité atomique de travail avec priorité, deadline et estimation. Les points qu'elle rapporte alimentent ta progression." />
+              <DocSection id="taches" Icon={CheckSquare} eyebrow={t('help.eyebrow_2')}
+                title={t('help.title_2')}
+                lead={t('help.lead_2')} />
 
               <H3 id="creer-tache">Créer une tâche</H3>
               <P>Quatre façons :</P>
@@ -1025,9 +1020,9 @@ export default function Help() {
               </P>
 
               {/* ─── PLANIFICATION ──────────────────────────── */}
-              <DocSection id="planification" Icon={Calendar} eyebrow="03 · Time management"
-                title="Planification"
-                lead="Le calendrier de GetShift fusionne tes time blocks internes et tes événements Google Calendar. L'IA respecte tes meetings et te propose des créneaux libres — elle ne dicte jamais ta journée." />
+              <DocSection id="planification" Icon={Calendar} eyebrow={t('help.eyebrow_3')}
+                title={t('help.title_3')}
+                lead={t('help.lead_3')} />
 
               <H3 id="calendrier">Vue calendrier</H3>
               <P>
@@ -1085,9 +1080,9 @@ export default function Help() {
               <CTAButton to="/planification" navigate={navigate}>Ouvrir la Planification</CTAButton>
 
               {/* ─── POMODORO ───────────────────────────────── */}
-              <DocSection id="pomodoro" Icon={Timer} eyebrow="04 · Focus"
-                title="Pomodoro"
-                lead="Sessions de focus de 25 minutes alternées avec des pauses de 5 minutes. Intégré au Dashboard, pré-rempli avec ta tâche en cours." />
+              <DocSection id="pomodoro" Icon={Timer} eyebrow={t('help.eyebrow_4')}
+                title={t('help.title_4')}
+                lead={t('help.lead_4')} />
 
               <H3 id="pomodoro-sessions">Sessions de travail</H3>
               <P>
@@ -1104,9 +1099,9 @@ export default function Help() {
               </P>
 
               {/* ─── IA ─────────────────────────────────────── */}
-              <DocSection id="ia" Icon={Bot} eyebrow="05 · Le cœur du produit"
-                title="Assistant IA"
-                lead="Un agent IA avec des outils. Tu lui parles, il agit. L'IA propose toujours, n'impose jamais — le contrôle final reste avec toi." />
+              <DocSection id="ia" Icon={Bot} eyebrow={t('help.eyebrow_5')}
+                title={t('help.title_5')}
+                lead={t('help.lead_5')} />
 
               <H3 id="ia-comment">Comment lui parler</H3>
               <P>
@@ -1162,9 +1157,9 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               <CTAButton to="/ia" navigate={navigate}>Ouvrir le chat IA</CTAButton>
 
               {/* ─── BUILDERS ───────────────────────────────── */}
-              <DocSection id="builders" Icon={Sunrise} eyebrow="06 · Outils IA spécialisés"
-                title="Builders IA"
-                lead="Deux outils IA pré-cadrés pour des moments précis : préparer demain (Tomorrow Builder) et décomposer un objectif (Goal Reverse)." />
+              <DocSection id="builders" Icon={Sunrise} eyebrow={t('help.eyebrow_6')}
+                title={t('help.title_6')}
+                lead={t('help.lead_6')} />
 
               <H3 id="tomorrow-builder">Tomorrow Builder</H3>
               <P>
@@ -1187,9 +1182,9 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               <CTAButton to="/goals" navigate={navigate}>Ouvrir Goal Reverse</CTAButton>
 
               {/* ─── ANALYTICS ──────────────────────────────── */}
-              <DocSection id="analytics" Icon={BarChart2} eyebrow="07 · Mesure"
-                title="Analytics"
-                lead="Tout ce que tu mesures, tu peux l'améliorer. GetShift suit une douzaine de métriques productivité, sans bullshit." />
+              <DocSection id="analytics" Icon={BarChart2} eyebrow={t('help.eyebrow_7')}
+                title={t('help.title_7')}
+                lead={t('help.lead_7')} />
 
               <H3 id="metriques">Métriques clés</H3>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 8, marginTop: 14, marginBottom: 14 }}>
@@ -1227,9 +1222,9 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               <CTAButton to="/analytics" navigate={navigate}>Voir Analytics</CTAButton>
 
               {/* ─── PROGRESSION ────────────────────────────── */}
-              <DocSection id="progression" Icon={Award} eyebrow="08 · Gamification"
-                title="Progression"
-                lead="Niveaux globaux, 4 piliers de badges spécialisés, streaks avec mécanique de protection. Conçu pour t'engager sur la durée — pas pour t'enfermer dans des points stériles." />
+              <DocSection id="progression" Icon={Award} eyebrow={t('help.eyebrow_8')}
+                title={t('help.title_8')}
+                lead={t('help.lead_8')} />
 
               <H3 id="niveaux">Niveaux · 10 paliers</H3>
               <P>
@@ -1256,9 +1251,9 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               <CTAButton to="/profile" navigate={navigate}>Ouvrir ton Profil</CTAButton>
 
               {/* ─── INTÉGRATIONS ───────────────────────────── */}
-              <DocSection id="integrations" Icon={Plug} eyebrow="09 · Connexions OAuth"
-                title="Intégrations"
-                lead="GetShift se connecte à tes outils existants. Sans intégrations, c'est un Todoist amélioré — avec, c'est un poste de commande." />
+              <DocSection id="integrations" Icon={Plug} eyebrow={t('help.eyebrow_9')}
+                title={t('help.title_9')}
+                lead={t('help.lead_9')} />
 
               <H3 id="integ-calendar">Google Calendar</H3>
               <P>
@@ -1344,9 +1339,9 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               <CTAButton to="/settings" navigate={navigate}>Gérer mes intégrations</CTAButton>
 
               {/* ─── RÉGLAGES ───────────────────────────────── */}
-              <DocSection id="reglages" Icon={SettingsIcon} eyebrow="10 · Configuration"
-                title="Réglages"
-                lead="4 onglets : Apparence, Intégrations, Notifications, Compte." />
+              <DocSection id="reglages" Icon={SettingsIcon} eyebrow={t('help.eyebrow_10')}
+                title={t('help.title_10')}
+                lead={t('help.lead_10')} />
 
               <H3 id="themes">Thèmes · Parchemin / Graphite</H3>
               <P>Deux thèmes <strong>Graphite & Ember</strong> exclusivement, conçus pour le deep work :</P>
@@ -1384,9 +1379,9 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               <CTAButton to="/settings" navigate={navigate}>Ouvrir Réglages</CTAButton>
 
               {/* ─── BONNES PRATIQUES ───────────────────────── */}
-              <DocSection id="bonnes-pratiques" Icon={Lightbulb} eyebrow="11 · Tirer le max"
-                title="Bonnes pratiques"
-                lead="Quelques principes pour utiliser GetShift comme un outil de productivité, pas comme une todo-list de plus." />
+              <DocSection id="bonnes-pratiques" Icon={Lightbulb} eyebrow={t('help.eyebrow_11')}
+                title={t('help.title_11')}
+                lead={t('help.lead_11')} />
 
               <H3 id="bp-deep-work">Maximiser le deep work</H3>
               <P>
@@ -1429,9 +1424,9 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
               </Callout>
 
               {/* ─── FAQ ────────────────────────────────────── */}
-              <DocSection id="faq" Icon={HelpCircle} eyebrow="12 · Questions fréquentes"
-                title="FAQ"
-                lead="Les réponses aux questions qui reviennent souvent. Si tu ne trouves pas, écris-nous." />
+              <DocSection id="faq" Icon={HelpCircle} eyebrow={t('help.eyebrow_12')}
+                title={t('help.title_12')}
+                lead={t('help.lead_12')} />
 
               <div id="faq-list" style={{ marginTop: 24, scrollMarginTop: 100 }}>
                 {FAQ_ITEMS.map((item, i) => (
