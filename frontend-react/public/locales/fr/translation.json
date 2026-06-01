@@ -407,7 +407,13 @@
     "task_validating_hour": "Choisis l'heure",
     "templates_ready": "25 modèles prêts à l'emploi",
     "top_category": "Top catégorie :",
-    "date_start": "Date de début"
+    "date_start": "Date de début",
+    "focus_slot1": "1ère priorité",
+    "focus_slot2": "2ème priorité",
+    "focus_slot3": "3ème priorité",
+    "focus_choose_first": "Choisir ma première tâche",
+    "focus_pin_task": "Épingler une tâche",
+    "complete_btn": "Terminer"
   },
   "landing": {
     "nav_features": "Fonctionnalités",

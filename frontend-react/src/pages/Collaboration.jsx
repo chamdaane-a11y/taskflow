@@ -1669,13 +1669,13 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                   <AlertCircle size={14} color="#e05c5c" />
                   <p style={{ fontSize: 10, fontWeight: 700, color: '#e05c5c', letterSpacing: 1.2, margin: 0 }}>EN RETARD ({stats.en_retard.length})</p>
                 </div>
-                {stats.en_retard.map(t => (
-                  <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, padding: '8px 10px', background: 'rgba(224,92,92,0.04)', borderRadius: 8 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: PRIORITE_COLOR[t.priorite] || '#e05c5c', marginTop: 5, flexShrink: 0 }} />
+                {stats.en_retard.map(tk => (
+                  <div key={tk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, padding: '8px 10px', background: 'rgba(224,92,92,0.04)', borderRadius: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: PRIORITE_COLOR[tk.priorite] || '#e05c5c', marginTop: 5, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tk.titre}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {t.assignee_nom || t('collab.not_assigned_stat')} · {t.deadline ? new Date(t.deadline).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' }) : ''}
+                        {tk.assignee_nom || t('collab.not_assigned_stat')} · {tk.deadline ? new Date(tk.deadline).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' }) : ''}
                       </div>
                     </div>
                   </div>

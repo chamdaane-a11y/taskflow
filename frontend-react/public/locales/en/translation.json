@@ -407,7 +407,13 @@
     "task_validating_hour": "Choose the time",
     "templates_ready": "25 ready-to-use templates",
     "top_category": "Top category:",
-    "date_start": "Start date"
+    "date_start": "Start date",
+    "focus_slot1": "1st priority",
+    "focus_slot2": "2nd priority",
+    "focus_slot3": "3rd priority",
+    "focus_choose_first": "Choose my first task",
+    "focus_pin_task": "Pin a task",
+    "complete_btn": "Complete"
   },
   "landing": {
     "nav_features": "Features",

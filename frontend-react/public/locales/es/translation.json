@@ -407,7 +407,13 @@
     "task_validating_hour": "Elige la hora",
     "templates_ready": "25 plantillas listas para usar",
     "top_category": "Categoría principal:",
-    "date_start": "Fecha de inicio"
+    "date_start": "Fecha de inicio",
+    "focus_slot1": "1ª prioridad",
+    "focus_slot2": "2ª prioridad",
+    "focus_slot3": "3ª prioridad",
+    "focus_choose_first": "Elegir mi primera tarea",
+    "focus_pin_task": "Anclar una tarea",
+    "complete_btn": "Completar"
   },
   "landing": {
     "nav_features": "Funciones",

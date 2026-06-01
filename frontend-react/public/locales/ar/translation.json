@@ -407,7 +407,13 @@
     "task_validating_hour": "اختر الوقت",
     "templates_ready": "25 قالبًا جاهزًا للاستخدام",
     "top_category": "الفئة الأبرز:",
-    "date_start": "تاريخ البدء"
+    "date_start": "تاريخ البدء",
+    "focus_slot1": "الأولوية 1",
+    "focus_slot2": "الأولوية 2",
+    "focus_slot3": "الأولوية 3",
+    "focus_choose_first": "اختر أول مهمة",
+    "focus_pin_task": "تثبيت مهمة",
+    "complete_btn": "إنهاء"
   },
   "landing": {
     "nav_features": "الميزات",

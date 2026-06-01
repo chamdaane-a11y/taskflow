@@ -1598,10 +1598,10 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
       {/* Slots */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 6 : 10 }}>
         {slots.map(i => {
-          const t = focused[i]
-          const pts = t ? (t.priorite === 'haute' ? 30 : t.priorite === 'moyenne' ? 20 : 10) : 0
-          const slotLabel = ['1ère priorité', '2ème priorité', '3ème priorité'][i]
-          if (!t) {
+          const ft = focused[i]
+          const pts = ft ? (ft.priorite === 'haute' ? 30 : ft.priorite === 'moyenne' ? 20 : 10) : 0
+          const slotLabel = [t('dashboard.focus_slot1'), t('dashboard.focus_slot2'), t('dashboard.focus_slot3')][i]
+          if (!ft) {
             return (
               <motion.button
                 key={`empty-${i}`}
@@ -1622,7 +1622,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                   width: '100%',
                 }}>
                 <Plus size={14} strokeWidth={2} />
-                {isMobile ? slotLabel : (i === 0 ? 'Choisir ma première tâche' : 'Épingler une tâche')}
+                {isMobile ? slotLabel : (i === 0 ? t('dashboard.focus_choose_first') : t('dashboard.focus_pin_task'))}
               </motion.button>
             )
           }
@@ -1631,35 +1631,35 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
           if (isMobile) {
             return (
               <motion.div
-                key={t.id} layout
+                key={ft.id} layout
                 initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
                 style={{
                   position: 'relative',
                   background: 'var(--surface-2)',
-                  border: `1px solid ${pColor(t.priorite)}30`,
+                  border: `1px solid ${pColor(ft.priorite)}30`,
                   borderRadius: 10,
                   padding: '0 6px 0 14px',
                   display: 'flex', alignItems: 'center', gap: 6,
                   minHeight: 48,
                 }}>
-                <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, background: pColor(t.priorite), borderRadius: 99 }} />
+                <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, background: pColor(ft.priorite), borderRadius: 99 }} />
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                  {t.titre}
+                  {ft.titre}
                 </span>
-                {t.deadline && (
+                {ft.deadline && (
                   <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                    {labelDate(t.deadline)}
+                    {labelDate(ft.deadline)}
                   </span>
                 )}
                 <motion.button
-                  onClick={() => d.toggleTache(t.id, t.terminee, t.priorite, t.bloquee)}
+                  onClick={() => d.toggleTache(ft.id, ft.terminee, ft.priorite, ft.bloquee)}
                   whileTap={{ scale: 0.9 }}
                   title={t('dashboard.complete')}
                   style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <CheckCircle2 size={15} strokeWidth={2.2} />
                 </motion.button>
                 <motion.button
-                  onClick={() => d.togglerFocus(t.id, true)}
+                  onClick={() => d.togglerFocus(ft.id, true)}
                   whileTap={{ scale: 0.9 }}
                   title={t('dashboard.unpin')}
                   style={{ width: 36, height: 36, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1672,35 +1672,35 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
           // ── Desktop : carte verticale avec bouton Terminer ─────────
           return (
             <motion.div
-              key={t.id} layout
+              key={ft.id} layout
               initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
               style={{
                 position: 'relative',
                 background: 'var(--surface-2)',
-                border: `1px solid ${pColor(t.priorite)}30`,
+                border: `1px solid ${pColor(ft.priorite)}30`,
                 borderRadius: 12,
                 padding: '10px 12px 10px 14px',
                 display: 'flex', flexDirection: 'column', gap: 8,
                 minHeight: 70,
               }}>
-              <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, background: pColor(t.priorite), borderRadius: 99 }} />
+              <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, background: pColor(ft.priorite), borderRadius: 99 }} />
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {t.titre}
+                    {ft.titre}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
-                    {t.deadline && (
+                    {ft.deadline && (
                       <span style={{ fontSize: 10.5, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                         <Calendar size={9} strokeWidth={2} />
-                        {labelDate(t.deadline)}
+                        {labelDate(ft.deadline)}
                       </span>
                     )}
                     <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 700 }}>+{pts}</span>
                   </div>
                 </div>
                 <motion.button
-                  onClick={() => d.togglerFocus(t.id, true)}
+                  onClick={() => d.togglerFocus(ft.id, true)}
                   whileHover={{ background: 'rgba(224,92,92,0.12)', color: '#e05c5c' }} whileTap={{ scale: 0.9 }}
                   title={t('dashboard.unpin')}
                   style={{ width: 22, height: 22, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1708,7 +1708,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                 </motion.button>
               </div>
               <motion.button
-                onClick={() => d.toggleTache(t.id, t.terminee, t.priorite, t.bloquee)}
+                onClick={() => d.toggleTache(ft.id, ft.terminee, ft.priorite, ft.bloquee)}
                 whileHover={{ background: 'var(--ember-ring)' }} whileTap={{ scale: 0.97 }}
                 style={{
                   alignSelf: 'flex-start',
@@ -1716,7 +1716,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                   background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)',
                   cursor: 'pointer',
                 }}>
-                Terminer
+                {t('dashboard.complete_btn')}
               </motion.button>
             </motion.div>
           )
