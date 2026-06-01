@@ -1301,7 +1301,6 @@ export default function Analytics() {
   ]
 
   // Filtres (inutilisés dans analytics mais présents pour la sidebar identique)
-  const [filtre, setFiltre] = useState('toutes')
   const bloquees = 0
 
   // Profil + gamification — données RÉELLES du backend (avec fallback pendant le fetch)
@@ -1544,25 +1543,6 @@ export default function Analytics() {
         setSidebarOpen={setSidebarOpen}
         toggleSidebar={toggleSidebar}
         isMobile={isMobile}>
-        {/* Analytics-specific: FILTRES section */}
-        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
-        <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px' }}>FILTRES</p>
-        {[
-          { val: 'toutes',   label: t('analytics.filter_all') },
-          { val: 'haute',    label: t('analytics.filter_high') },
-          { val: 'bloquee',  label: `${t('analytics.filter_blocked')}${bloquees > 0 ? ` (${bloquees})` : ''}` },
-          { val: 'terminee', label: t('analytics.filter_done') },
-        ].map(f => (
-          <motion.button key={f.val}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 10, color: filtre === f.val ? 'var(--ember)' : 'var(--text-secondary)', background: filtre === f.val ? 'var(--ember-soft)' : 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: filtre === f.val ? 600 : 400, textAlign: 'left', marginBottom: 2 }}
-            onClick={() => { setFiltre(f.val); if (isMobile) setSidebarOpen(false) }} whileHover={{ x: 2 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {f.val === 'bloquee' && <IconLock size={12} color={filtre === f.val ? 'var(--ember)' : 'var(--text-secondary)'} />}
-              {f.label}
-            </span>
-            {filtre === f.val && <ChevronRight size={14} />}
-          </motion.button>
-        ))}
       </AppSidebar>
 
       <SidebarToggle T={T} sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={toggleSidebar} />
