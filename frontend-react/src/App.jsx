@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import CookieBanner from './components/CookieBanner'
+import GuidedTour from './components/GuidedTour'
 
 const Splash           = lazy(() => import('./pages/Splash'))
 const Login            = lazy(() => import('./pages/Login'))
@@ -66,6 +67,7 @@ function App() {
     <HashRouter>
       <CookieBanner />
       <UpdateBanner />
+      <GuidedTour />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/goal"              element={<GoalReverse />} />

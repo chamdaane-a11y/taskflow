@@ -266,6 +266,7 @@ export default function AppSidebar({
             const active = location.pathname === item.path
             return (
               <motion.button key={item.path}
+                data-tour={'nav-' + item.path.slice(1)}
                 onClick={() => { navigate(item.path); if (isMobile) setSidebarOpen(false) }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%',

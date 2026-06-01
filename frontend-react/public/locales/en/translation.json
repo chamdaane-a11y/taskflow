@@ -1466,5 +1466,33 @@
     "nova_optimal": "Optimal allocation: {{pct}}% of capacity used.",
     "nova_evening": "J+1 planning window open. Data ready.",
     "nova_ctx_default": "System ready. {{n}} tasks queued. What angle of analysis?"
+  },
+  "tour": {
+    "skip": "Skip",
+    "next": "Next",
+    "prev": "Back",
+    "done": "Let's go!",
+    "step": "Step {{cur}}/{{total}}",
+    "welcome_title": "Welcome to GetShift 👋",
+    "welcome_desc": "In 1 minute, I'll show you how the app helps you be more productive. You can skip anytime.",
+    "dashboard_title": "Your dashboard",
+    "dashboard_desc": "This is your HQ. You see today's tasks, your progress and your AI coach's advice.",
+    "create_title": "Create your first task",
+    "create_desc": "Write in plain language (\"report Friday 2pm, high priority\") — the AI detects the date, time and priority automatically.",
+    "ia_title": "Your AI assistant",
+    "ia_desc": "Talk to it naturally: it creates tasks, plans your week, analyzes your productivity and acts for you.",
+    "tomorrow_title": "Tomorrow Builder",
+    "tomorrow_desc": "Every evening, the AI builds your optimal plan for the next day based on your energy and priorities.",
+    "goal_title": "Goal Reverse",
+    "goal_desc": "Give a big goal — the AI breaks it down into milestones and concrete tasks up to the deadline.",
+    "analytics_title": "Your analytics",
+    "analytics_desc": "Track your velocity, focus, streaks and trends. Everything you measure, you improve.",
+    "planning_title": "Planning",
+    "planning_desc": "Organize your week by drag-and-drop or let the AI suggest slots around your calendar.",
+    "collab_title": "Collaboration",
+    "collab_desc": "Create a team, share tasks, and a team AI coach helps you distribute work better.",
+    "final_title": "You're ready! 🚀",
+    "final_desc": "Explore at your own pace. You can replay this tour anytime from Help.",
+    "replay": "Replay the guided tour"
   }
 }

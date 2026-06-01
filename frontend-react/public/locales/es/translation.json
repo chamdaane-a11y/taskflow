@@ -1466,5 +1466,33 @@
     "nova_optimal": "Asignación óptima: {{pct}}% de la capacidad usada.",
     "nova_evening": "Ventana de planificación J+1 abierta. Datos listos.",
     "nova_ctx_default": "Sistema listo. {{n}} tareas en cola. ¿Qué ángulo de análisis?"
+  },
+  "tour": {
+    "skip": "Saltar",
+    "next": "Siguiente",
+    "prev": "Atrás",
+    "done": "¡Vamos!",
+    "step": "Paso {{cur}}/{{total}}",
+    "welcome_title": "Bienvenido a GetShift 👋",
+    "welcome_desc": "En 1 minuto te muestro cómo la app te ayuda a ser más productivo. Puedes saltar cuando quieras.",
+    "dashboard_title": "Tu panel",
+    "dashboard_desc": "Es tu cuartel general. Ves tus tareas del día, tu progreso y los consejos de tu coach IA.",
+    "create_title": "Crea tu primera tarea",
+    "create_desc": "Escribe en lenguaje natural («informe viernes 14h, prioridad alta») — la IA detecta la fecha, la hora y la prioridad automáticamente.",
+    "ia_title": "Tu asistente IA",
+    "ia_desc": "Háblale con naturalidad: crea tareas, planifica tu semana, analiza tu productividad y actúa por ti.",
+    "tomorrow_title": "Tomorrow Builder",
+    "tomorrow_desc": "Cada noche, la IA construye tu planning óptimo para el día siguiente según tu energía y prioridades.",
+    "goal_title": "Goal Reverse",
+    "goal_desc": "Da un gran objetivo — la IA lo descompone en hitos y tareas concretas hasta la fecha límite.",
+    "analytics_title": "Tus estadísticas",
+    "analytics_desc": "Sigue tu velocidad, tu enfoque, tus rachas y tendencias. Todo lo que mides, lo mejoras.",
+    "planning_title": "Planificación",
+    "planning_desc": "Organiza tu semana arrastrando o deja que la IA te proponga huecos alrededor de tu agenda.",
+    "collab_title": "Colaboración",
+    "collab_desc": "Crea un equipo, comparte tareas, y un coach IA de equipo te ayuda a repartir mejor el trabajo.",
+    "final_title": "¡Estás listo! 🚀",
+    "final_desc": "Explora a tu ritmo. Puedes repetir este tour cuando quieras desde Ayuda.",
+    "replay": "Repetir el tour guiado"
   }
 }

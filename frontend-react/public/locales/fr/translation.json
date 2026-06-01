@@ -1466,5 +1466,33 @@
     "nova_optimal": "Allocation optimale : {{pct}}% de la capacité utilisée.",
     "nova_evening": "Fenêtre de planification J+1 ouverte. Données prêtes.",
     "nova_ctx_default": "Système prêt. {{n}} tâches en file. Quel angle d'analyse ?"
+  },
+  "tour": {
+    "skip": "Passer",
+    "next": "Suivant",
+    "prev": "Précédent",
+    "done": "C'est parti !",
+    "step": "Étape {{cur}}/{{total}}",
+    "welcome_title": "Bienvenue sur GetShift 👋",
+    "welcome_desc": "En 1 minute, je te montre comment l'app va t'aider à être plus productif. Tu peux passer à tout moment.",
+    "dashboard_title": "Ton tableau de bord",
+    "dashboard_desc": "C'est ton QG. Tu y vois tes tâches du jour, ta progression et les conseils de ton coach IA.",
+    "create_title": "Crée ta première tâche",
+    "create_desc": "Écris en langage naturel (« rapport vendredi 14h, priorité haute ») — l'IA détecte la date, l'heure et la priorité automatiquement.",
+    "ia_title": "Ton assistant IA",
+    "ia_desc": "Parle-lui normalement : il crée des tâches, planifie ta semaine, analyse ta productivité et agit pour toi.",
+    "tomorrow_title": "Tomorrow Builder",
+    "tomorrow_desc": "Chaque soir, l'IA construit ton planning optimal pour le lendemain selon ton énergie et tes priorités.",
+    "goal_title": "Goal Reverse",
+    "goal_desc": "Donne un grand objectif — l'IA le décompose en jalons et tâches concrètes jusqu'à la deadline.",
+    "analytics_title": "Tes statistiques",
+    "analytics_desc": "Suis ta vélocité, ton focus, tes séries et tes tendances. Tout ce que tu mesures, tu l'améliores.",
+    "planning_title": "Planification",
+    "planning_desc": "Organise ta semaine en glisser-déposer ou laisse l'IA te proposer des créneaux autour de ton agenda.",
+    "collab_title": "Collaboration",
+    "collab_desc": "Crée une équipe, partage des tâches, et un coach IA d'équipe t'aide à mieux répartir le travail.",
+    "final_title": "Tu es prêt ! 🚀",
+    "final_desc": "Explore à ton rythme. Tu peux relancer ce tour à tout moment depuis l'Aide.",
+    "replay": "Revoir le tour guidé"
   }
 }

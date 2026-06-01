@@ -1466,5 +1466,33 @@
     "nova_optimal": "Optimale Zuteilung: {{pct}}% der Kapazität genutzt.",
     "nova_evening": "Planungsfenster für morgen offen. Daten bereit.",
     "nova_ctx_default": "System bereit. {{n}} Aufgaben in der Warteschlange. Welcher Analysewinkel?"
+  },
+  "tour": {
+    "skip": "Überspringen",
+    "next": "Weiter",
+    "prev": "Zurück",
+    "done": "Los geht's!",
+    "step": "Schritt {{cur}}/{{total}}",
+    "welcome_title": "Willkommen bei GetShift 👋",
+    "welcome_desc": "In 1 Minute zeige ich dir, wie die App dir hilft, produktiver zu sein. Du kannst jederzeit überspringen.",
+    "dashboard_title": "Dein Dashboard",
+    "dashboard_desc": "Das ist deine Zentrale. Du siehst die heutigen Aufgaben, deinen Fortschritt und die Tipps deines KI-Coaches.",
+    "create_title": "Erstelle deine erste Aufgabe",
+    "create_desc": "Schreibe in natürlicher Sprache («Bericht Freitag 14 Uhr, hohe Priorität») — die KI erkennt Datum, Uhrzeit und Priorität automatisch.",
+    "ia_title": "Dein KI-Assistent",
+    "ia_desc": "Sprich normal mit ihm: er erstellt Aufgaben, plant deine Woche, analysiert deine Produktivität und handelt für dich.",
+    "tomorrow_title": "Tomorrow Builder",
+    "tomorrow_desc": "Jeden Abend erstellt die KI deinen optimalen Plan für den nächsten Tag basierend auf deiner Energie und deinen Prioritäten.",
+    "goal_title": "Goal Reverse",
+    "goal_desc": "Gib ein großes Ziel an — die KI zerlegt es in Meilensteine und konkrete Aufgaben bis zur Frist.",
+    "analytics_title": "Deine Statistiken",
+    "analytics_desc": "Verfolge deine Geschwindigkeit, deinen Fokus, deine Serien und Trends. Alles, was du misst, verbesserst du.",
+    "planning_title": "Planung",
+    "planning_desc": "Organisiere deine Woche per Drag-and-drop oder lass die KI Slots rund um deinen Kalender vorschlagen.",
+    "collab_title": "Zusammenarbeit",
+    "collab_desc": "Erstelle ein Team, teile Aufgaben, und ein Team-KI-Coach hilft dir, die Arbeit besser zu verteilen.",
+    "final_title": "Du bist bereit! 🚀",
+    "final_desc": "Erkunde in deinem Tempo. Du kannst diese Tour jederzeit über die Hilfe wiederholen.",
+    "replay": "Geführte Tour erneut ansehen"
   }
 }

@@ -290,7 +290,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
   const timeBorder = timeOk ? 'var(--ember)' : (touched ? '#e05c5c' : 'var(--border-subtle)')
 
   return (
-    <div className="smart-task-input" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
+    <div className="smart-task-input" data-tour="create-task" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
       {/* Input principal */}
       <div style={{ position: 'relative' }}>
         <input
@@ -3069,7 +3069,16 @@ export default function Dashboard() {
       {/* Onboarding */}
       {d.showOnboarding && (
         <Onboarding T={T} userId={d.user?.id} etapeInitiale={0}
-          onTerminer={() => { localStorage.setItem('onboarding_termine', 'true'); d.setShowOnboarding(false) }}
+          onTerminer={() => {
+            localStorage.setItem('onboarding_termine', 'true')
+            d.setShowOnboarding(false)
+            try {
+              if (localStorage.getItem('getshift_tour_done') !== '1') {
+                localStorage.setItem('getshift_start_tour', '1')
+                setTimeout(() => window.dispatchEvent(new Event('getshift:start-tour')), 700)
+              }
+            } catch {}
+          }}
           activerNotifications={d.activerNotifications} />
       )}
 

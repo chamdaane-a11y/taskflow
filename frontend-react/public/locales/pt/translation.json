@@ -1466,5 +1466,33 @@
     "nova_optimal": "Alocação ótima: {{pct}}% da capacidade usada.",
     "nova_evening": "Janela de planejamento J+1 aberta. Dados prontos.",
     "nova_ctx_default": "Sistema pronto. {{n}} tarefas na fila. Qual ângulo de análise?"
+  },
+  "tour": {
+    "skip": "Pular",
+    "next": "Próximo",
+    "prev": "Voltar",
+    "done": "Vamos lá!",
+    "step": "Passo {{cur}}/{{total}}",
+    "welcome_title": "Bem-vindo ao GetShift 👋",
+    "welcome_desc": "Em 1 minuto, mostro como o app te ajuda a ser mais produtivo. Você pode pular a qualquer momento.",
+    "dashboard_title": "Seu painel",
+    "dashboard_desc": "É o seu QG. Você vê suas tarefas do dia, seu progresso e os conselhos do seu coach IA.",
+    "create_title": "Crie sua primeira tarefa",
+    "create_desc": "Escreva em linguagem natural (\"relatório sexta 14h, prioridade alta\") — a IA detecta a data, a hora e a prioridade automaticamente.",
+    "ia_title": "Seu assistente IA",
+    "ia_desc": "Fale com ele naturalmente: cria tarefas, planeja sua semana, analisa sua produtividade e age por você.",
+    "tomorrow_title": "Tomorrow Builder",
+    "tomorrow_desc": "Toda noite, a IA monta seu planejamento ideal para o dia seguinte conforme sua energia e prioridades.",
+    "goal_title": "Goal Reverse",
+    "goal_desc": "Dê um grande objetivo — a IA o desmembra em marcos e tarefas concretas até o prazo.",
+    "analytics_title": "Suas estatísticas",
+    "analytics_desc": "Acompanhe sua velocidade, foco, sequências e tendências. Tudo o que você mede, você melhora.",
+    "planning_title": "Planejamento",
+    "planning_desc": "Organize sua semana arrastando ou deixe a IA sugerir horários em torno da sua agenda.",
+    "collab_title": "Colaboração",
+    "collab_desc": "Crie uma equipe, compartilhe tarefas, e um coach IA de equipe ajuda você a distribuir melhor o trabalho.",
+    "final_title": "Você está pronto! 🚀",
+    "final_desc": "Explore no seu ritmo. Você pode repetir este tour a qualquer momento na Ajuda.",
+    "replay": "Rever o tour guiado"
   }
 }

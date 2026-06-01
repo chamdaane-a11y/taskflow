@@ -630,6 +630,20 @@ export default function Help() {
               </button>
             )}
           </div>
+          <button
+            onClick={() => {
+              try { localStorage.removeItem('getshift_tour_done') } catch {}
+              navigate('/dashboard')
+              setTimeout(() => window.dispatchEvent(new Event('getshift:start-tour')), 600)
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+              background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))',
+              borderRadius: 8, color: 'var(--ember)', fontSize: 12.5, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'var(--font-ui)', whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+            <Sparkles size={14} strokeWidth={2} /> {t('tour.replay')}
+          </button>
         </header>
 
         {/* ─── SEARCH RESULTS ──────────────────────────────────── */}
