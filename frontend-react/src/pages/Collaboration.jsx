@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -25,8 +26,8 @@ const API = 'https://getshift-backend.onrender.com'
 const COLONNES = [
   { id: 'todo',          label: 'À faire',     couleur: 'var(--ember)', bg: 'var(--ember-ring)' },
   { id: 'en_cours',      label: 'En cours',    couleur: '#e08a3c', bg: '#e08a3c12' },
-  { id: 'en_validation', label: 'À valider',   couleur: '#f59e0b', bg: '#f59e0b14' },
-  { id: 'termine',       label: 'Terminé',     couleur: '#4caf82', bg: '#4caf8212' },
+  { id: 'en_validation', label: t('collab.status_validating'), couleur: '#f59e0b', bg: '#f59e0b14' },
+  { id: 'termine',       label: t('collab.status_done'), couleur: '#4caf82', bg: '#4caf8212' },
 ]
 const PRIORITE_COLOR = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
 
@@ -94,7 +95,7 @@ function ModalePartage({ T, equipe, onFermer }) {
           </motion.button>
         </div>
         <div style={{ display: 'flex', gap: 4, padding: '16px 24px 0' }}>
-          {[{ id: 'lien', label: 'Lien' }, { id: 'qr', label: 'QR Code' }, { id: 'reseaux', label: 'Réseaux' }].map(o => (
+          {[{ id: 'lien', label: t('collab.invite_link') }, { id: 'qr', label: t('collab.invite_qr') }, { id: 'reseaux', label: t('collab.invite_social') }].map(o => (
             <motion.button key={o.id}
               style={{ padding: '6px 14px', borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: onglet === o.id ? 700 : 500, background: onglet === o.id ? 'var(--ember)' : 'var(--surface-2)', color: onglet === o.id ? 'white' : 'var(--text-secondary)', transition: 'all 0.2s' }}
               onClick={() => setOnglet(o.id)} whileTap={{ scale: 0.95 }}>
@@ -114,7 +115,7 @@ function ModalePartage({ T, equipe, onFermer }) {
                     style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: copie ? '#4caf8220' : 'var(--ember-soft)', border: `1px solid ${copie ? '#4caf8240' : 'var(--ember-ring)'}`, borderRadius: 8, color: copie ? '#4caf82' : 'var(--ember)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                     onClick={copierLien} whileTap={{ scale: 0.95 }}>
                     {copie ? <Check size={12} /> : <Copy size={12} />}
-                    {copie ? 'Copié' : 'Copier'}
+                    {copie ? t('collab.copied') : t('collab.copy')}
                   </motion.button>
                 </div>
                 <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -186,7 +187,7 @@ function QuickAddInline({ T, col, onAdd }) {
           if (e.key === 'Enter') { e.preventDefault(); submit() }
           else if (e.key === 'Escape') { setTitre(''); setOpen(false) }
         }}
-        placeholder={`+ Tâche en ${col.label.toLowerCase()}…`}
+        placeholder={t('collab.add_task_placeholder', { status: col.label.toLowerCase() })}
         style={{
           width: '100%',
           padding: '9px 11px',
@@ -225,7 +226,7 @@ function QuickAddInline({ T, col, onAdd }) {
         marginBottom: 8,
         transition: 'all 0.15s',
       }}>
-      <Plus size={11} /> Ajouter une tâche
+      {t('collab.add_task_btn')}
     </motion.button>
   )
 }
@@ -236,7 +237,7 @@ function tempsRelatif(iso) {
   try {
     const d = new Date(iso)
     const diff = (Date.now() - d.getTime()) / 1000
-    if (diff < 60) return 'à l\'instant'
+    if (diff < 60) return t('collab.time_instant')
     if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`
     if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
     if (diff < 604800) return `il y a ${Math.floor(diff / 86400)}j`
@@ -257,9 +258,9 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
   const canValidate = isEnValidation && isCreateur
   // Couleur de la checkbox selon l'état
   const checkColor = isDone ? '#4caf82' : isEnValidation ? '#f59e0b' : '#4caf82'
-  const checkTitle = isDone ? 'Ré-ouvrir'
-    : isEnValidation ? (canValidate ? 'Valider la tâche ✓' : 'Annuler la proposition')
-    : 'Marquer terminée'
+  const checkTitle = isDone ? t('collab.check_reopen')
+    : isEnValidation ? (canValidate ? t('collab.check_validate') : t('collab.check_cancel_prop'))
+    : t('collab.check_done')
   // Stripe gauche selon statut — indicateur visuel rapide
   const statusStripe = isEnCours ? '#e08a3c'
     : isEnValidation ? '#f59e0b'
@@ -395,8 +396,8 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
             <Clock size={9} strokeWidth={3} />
             <span>
               {canValidate
-                ? `Proposé par ${tache.completed_by_nom} — à valider`
-                : `Proposé par ${tache.completed_by_nom} · ${tempsRelatif(tache.completed_at)}`
+                ? t('collab.proposed_validating', { nom: tache.completed_by_nom })
+                : t('collab.proposed_done', { nom: tache.completed_by_nom, time: tempsRelatif(tache.completed_at) })
               }
             </span>
           </div>
@@ -434,8 +435,8 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               whileTap={isAdmin ? { scale: 0.92 } : {}}
               title={
                 isAdmin
-                  ? (assignee ? `Assigné à ${assignee.nom} — cliquer pour changer` : 'Cliquer pour assigner')
-                  : (assignee ? `Assigné à ${assignee.nom} — admin requis pour modifier` : 'Non assigné — admin requis pour assigner')
+                  ? (assignee ? t('collab.assigned_change', { nom: assignee.nom }) : t('collab.not_assigned_you'))
+                  : (assignee ? t('collab.assigned_admin', { nom: assignee.nom }) : t('collab.not_assigned_admin'))
               }
               style={{
                 width: 36, height: 36, borderRadius: 9,
@@ -458,7 +459,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
             {/* Progrès sous-tâches */}
             {tache.nb_sous_taches > 0 && (
               <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}
-                title={`${tache.nb_sous_taches_done}/${tache.nb_sous_taches} sous-tâches`}>
+                title={t('collab.subtasks_title', { done: tache.nb_sous_taches_done, total: tache.nb_sous_taches })}>
                 <CheckSquare size={9} />
                 {tache.nb_sous_taches_done}/{tache.nb_sous_taches}
                 <span style={{ display: 'inline-block', width: 20, height: 3, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
@@ -479,7 +480,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
                 onClick={e => { e.stopPropagation(); onDemarrer?.(tache.id) }}
                 whileHover={{ scale: 1.05, background: '#e08a3c22' }}
                 whileTap={{ scale: 0.92 }}
-                title="Démarrer la tâche"
+                title={t('collab.start_task_title')}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 3,
                   padding: '3px 9px', borderRadius: 99,
@@ -490,7 +491,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
                 <motion.span style={{ display: 'inline-flex', marginLeft: -1 }}>
                   <svg width="8" height="8" viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9" fill="currentColor" /></svg>
                 </motion.span>
-                Démarrer
+                {t('collab.start_task_btn')}
               </motion.button>
             )}
           </div>
@@ -528,7 +529,7 @@ function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocke
               <div style={{ width: 20, height: 20, borderRadius: 6, border: '1px dashed var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <X size={9} color="var(--text-secondary)" />
               </div>
-              <span>Non assigné</span>
+              <span>{t('collab.not_assigned')}</span>
             </button>
             {membres.map(m => (
               <button
@@ -644,10 +645,10 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>STATUT</label>
               <select style={{ width: '100%', padding: '9px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, outline: 'none', cursor: 'pointer' }}
                 value={form.statut} onChange={e => setForm({ ...form, statut: e.target.value })}>
-                <option value="todo">À faire</option>
+                <option value="todo">{t('collab.option_todo')}</option>
                 <option value="en_cours">En cours</option>
-                <option value="en_validation">À valider</option>
-                <option value="termine">Terminé</option>
+                <option value="en_validation">{t('collab.option_validating')}</option>
+                <option value="termine">{t('collab.option_done')}</option>
               </select>
             </div>
           </div>
@@ -665,7 +666,7 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
                 opacity: isAdmin ? 1 : 0.55,
               }}
               value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
-              <option value="">Non assigné</option>
+              <option value="">{t('collab.option_not_assigned')}</option>
               {membres.map(m => <option key={m.id} value={m.id}>{m.nom}{m.id === user.id ? ' (moi)' : ''}</option>)}
             </select>
           </div>
@@ -765,7 +766,7 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
                   value={nouvelleST}
                   onChange={e => setNouvelleST(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !stLoading && nouvelleST.trim()) { e.preventDefault(); ajouterST() } }}
-                  placeholder="Ajouter une sous-tâche…"
+                  placeholder={t('collab.subtask_placeholder')}
                   disabled={stLoading}
                   style={{ flex: 1, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 12.5, outline: 'none' }}
                 />
@@ -793,7 +794,7 @@ function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], on
           <motion.button style={{ flex: 2, padding: '10px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             onClick={() => { if (form.titre.trim()) onSauvegarder({ ...form, assignee_id: form.assignee_id || null }) }}
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            {tache ? 'Enregistrer' : 'Créer'}
+            {tache ? t('collab.save_btn') : t('collab.create_btn')}
           </motion.button>
         </div>
       </motion.div>
@@ -1047,7 +1048,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea ref={textareaRef}
             style={{ flex: 1, padding: '10px 13px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 11, color: 'var(--text-primary)', fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "var(--font-ui)", lineHeight: 1.5 }}
-            placeholder="Écrire un commentaire… (@ pour mentionner)" value={texte}
+            placeholder={t('collab.comment_placeholder')} value={texte}
             onChange={handleTexteChange} onKeyDown={handleKeyDown} rows={1} />
           <motion.button style={{ width: 40, height: 40, borderRadius: 11, background: texte.trim() ? `linear-gradient(135deg, var(--ember), var(--ember-soft))` : 'var(--surface-2)', border: `1px solid ${texte.trim() ? 'transparent' : 'var(--border-subtle)'}`, color: texte.trim() ? 'white' : 'var(--text-secondary)', cursor: texte.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}
             onClick={envoyer} whileTap={texte.trim() ? { scale: 0.95 } : {}}>
@@ -1088,7 +1089,7 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
 
   const tempsRelatif = (iso) => {
     const diff = (Date.now() - new Date(iso)) / 1000
-    if (diff < 60) return 'à l\'instant'
+    if (diff < 60) return t('collab.time_instant')
     if (diff < 3600) return `il y a ${Math.floor(diff / 60)}min`
     if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
     return new Date(iso).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' })
@@ -1266,7 +1267,7 @@ function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, o
                   </div>
                   {!viewOnly && !isMe && !isCreateur && (
                     <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                      <motion.button title={m.role === 'admin' ? 'Rétrograder' : 'Promouvoir admin'}
+                      <motion.button title={m.role === 'admin' ? t('collab.admin_demote') : t('collab.admin_promote')}
                         style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: loadingAction === 'role-' + m.id ? 0.5 : 1 }}
                         onClick={() => changerRole(m.id, m.role === 'admin' ? 'membre' : 'admin')}
                         whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
@@ -1355,7 +1356,7 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
   }
 
   const supprimer = async (id) => {
-    if (!confirm('Supprimer ce label ? Il sera retiré de toutes les tâches.')) return
+    if (!confirm(t('collab.label_confirm_delete'))) return
     try {
       await axios.delete(`${API}/equipes/labels/${id}`)
       onLabelsChange(labels.filter(l => l.id !== id))
@@ -1435,7 +1436,7 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
               cursor: nouveauNom.trim() ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}>
-            <Plus size={13} /> Créer le label
+            {t('collab.label_create')}
           </motion.button>
         </div>
 
@@ -1443,7 +1444,7 @@ function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
         <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1.2, marginBottom: 10 }}>TOUS LES LABELS</p>
         {labels.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)', fontSize: 12, fontStyle: 'italic' }}>
-            Aucun label pour l'instant.<br />Crée-en un pour catégoriser tes tâches.
+            {t('collab.label_empty')}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1545,7 +1546,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
   }, [equipe_id])
 
   const STATUT_COLOR = { todo: 'var(--ember)', en_cours: '#e08a3c', termine: '#4caf82' }
-  const STATUT_LABEL = { todo: 'À faire', en_cours: 'En cours', termine: 'Terminé' }
+  const STATUT_LABEL = { todo: t('collab.status_todo'), en_cours: t('collab.status_inprogress'), termine: t('collab.status_done') }
 
   return (
     <motion.div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(400px, 100vw)', background: 'var(--surface-1)', borderLeft: '1px solid var(--border-subtle)', zIndex: 500, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 48px rgba(0,0,0,0.18)', overflowY: 'auto' }}
@@ -1581,7 +1582,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
             <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr 1fr' : '1fr 1fr 1fr', gap: 10 }}>
               {[
                 { label: 'Total', valeur: stats.total, couleur: 'var(--ember)' },
-                { label: 'Terminées', valeur: stats.par_statut?.termine || 0, couleur: '#4caf82' },
+                { label: t('collab.stat_done'), valeur: stats.par_statut?.termine || 0, couleur: '#4caf82' },
                 { label: 'En retard', valeur: stats.en_retard?.length || 0, couleur: stats.en_retard?.length > 0 ? '#e05c5c' : 'var(--text-secondary)' },
               ].map(k => (
                 <div key={k.label} style={{ padding: '12px 10px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 12, textAlign: 'center' }}>
@@ -1664,7 +1665,7 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titre}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {t.assignee_nom || 'Non assigné'} · {t.deadline ? new Date(t.deadline).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' }) : ''}
+                        {t.assignee_nom || t('collab.not_assigned_stat')} · {t.deadline ? new Date(t.deadline).toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' }) : ''}
                       </div>
                     </div>
                   </div>
@@ -1681,10 +1682,10 @@ function DrawerAnalytiques({ T, equipe_id, onFermer }) {
 
 // ===== DRAWER IA COACH D'ÉQUIPE =====
 const SUGGESTIONS_IA_EQUIPE = [
-  { icon: '🔍', text: 'Qui est surchargé dans l\'équipe ?' },
-  { icon: '⚡', text: 'Génère un sprint planning pour cette semaine' },
-  { icon: '⚠️', text: 'Quelles tâches sont en retard ?' },
-  { icon: '🔄', text: 'Comment répartir mieux les tâches ?' },
+  { icon: '🔍', text: t('collab.ia_prompt_1') },
+  { icon: '⚡', text: t('collab.ia_prompt_2') },
+  { icon: '⚠️', text: t('collab.ia_prompt_3') },
+  { icon: '🔄', text: t('collab.ia_prompt_4') },
 ]
 
 function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
@@ -1711,7 +1712,7 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
       })
       setMessages(p => [...p, { role: 'assistant', content: r.data.reponse }])
     } catch {
-      setMessages(p => [...p, { role: 'assistant', content: 'Désolé, une erreur s\'est produite.' }])
+      setMessages(p => [...p, { role: 'assistant', content: t('collab.ia_error') }])
     }
     setLoading(false)
   }
@@ -1800,7 +1801,7 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea ref={inputRef}
             style={{ flex: 1, padding: '10px 13px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 11, color: 'var(--text-primary)', fontSize: 13, outline: 'none', resize: 'none', minHeight: 42, maxHeight: 110, fontFamily: "var(--font-ui)", lineHeight: 1.5 }}
-            placeholder="Demande au Coach IA d'équipe…" value={input}
+            placeholder={t('collab.ia_chat_placeholder')} value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer() } }}
             rows={1} />
@@ -1817,6 +1818,7 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
 
 // ===== PAGE PRINCIPALE =====
 export default function Collaboration() {
+  const { t } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user'))
   const { T } = useTheme()
   const navigate = useNavigate()
@@ -1983,7 +1985,7 @@ export default function Collaboration() {
       // Détecter les changements
       if (anciennes.length > 0 && nouvelles.length !== anciennes.length) {
         const diff = nouvelles.length - anciennes.length
-        if (diff > 0) addToast(`${diff} nouvelle${diff > 1 ? 's' : ''} tâche${diff > 1 ? 's' : ''} ajoutée${diff > 1 ? 's' : ''}`, '✅', '#4caf82')
+        if (diff > 0) addToast(diff > 1 ? t('collab.toast_tasks_added_plural', { n: diff }) : t('collab.toast_tasks_added', { n: diff }), '✅', '#4caf82')
       } else if (anciennes.length > 0) {
         // Détecte spécifiquement les tâches qui me concernent en tant que créateur
         const maTacheProposee = nouvelles.find(n => {
@@ -1993,7 +1995,7 @@ export default function Collaboration() {
         })
         if (maTacheProposee) {
           addToast(
-            `📥 ${maTacheProposee.completed_by_nom} a terminé "${maTacheProposee.titre.slice(0, 30)}${maTacheProposee.titre.length > 30 ? '…' : ''}" — à valider`,
+            t('collab.toast_proposed', { nom: maTacheProposee.completed_by_nom, titre: maTacheProposee.titre.slice(0, 30) + (maTacheProposee.titre.length > 30 ? '…' : '') }),
             '📥',
             '#f59e0b'
           )
@@ -2005,7 +2007,7 @@ export default function Collaboration() {
           })
           if (maTacheTerminee) {
             addToast(
-              `🎉 ${maTacheTerminee.completed_by_nom} a terminé "${maTacheTerminee.titre.slice(0, 35)}${maTacheTerminee.titre.length > 35 ? '…' : ''}"`,
+              t('collab.toast_done', { nom: maTacheTerminee.completed_by_nom, titre: maTacheTerminee.titre.slice(0, 35) + (maTacheTerminee.titre.length > 35 ? '…' : '') }),
               '🎉',
               '#4caf82'
             )
@@ -2015,7 +2017,7 @@ export default function Collaboration() {
               return old && old.statut !== n.statut
             })
             if (changed) {
-              const labels = { todo: 'À faire', en_cours: 'En cours', en_validation: 'À valider', termine: 'Terminé' }
+              const labels = { todo: t('collab.status_todo'), en_cours: t('collab.status_inprogress'), en_validation: t('collab.status_validating'), termine: t('collab.status_done') }
               addToast(`"${changed.titre}" → ${labels[changed.statut]}`, '🔄', 'var(--ember)')
             }
           }
@@ -2034,9 +2036,9 @@ export default function Collaboration() {
       const anciens = membresRef.current
       if (anciens.length > 0) {
         const arrivants = nouveaux.filter(n => !anciens.some(a => a.id === n.id))
-        arrivants.forEach(m => addToast(`${m.nom} a rejoint l'équipe`, '👋', '#4caf82'))
+        arrivants.forEach(m => addToast(t('collab.toast_member_joined', { nom: m.nom }), '👋', '#4caf82'))
         const partis = anciens.filter(a => !nouveaux.some(n => n.id === a.id))
-        partis.forEach(m => addToast(`${m.nom} a quitté l'équipe`, '👋', '#888'))
+        partis.forEach(m => addToast(t('collab.toast_member_left', { nom: m.nom }), '👋', '#888'))
       }
       setMembres(nouveaux)
     } catch {}
@@ -2085,10 +2087,10 @@ export default function Collaboration() {
       await axios.put(`${API}/equipes/taches/${tacheId}`, {
         statut: 'en_cours', user_id: user.id, nom_user: user.nom,
       })
-      addToast('Tâche démarrée', '▶', '#e08a3c')
+      addToast(t('collab.toast_task_started'), '▶', '#e08a3c')
     } catch {
       setTaches(prev)
-      addToast('Erreur — réessaie', '❌', '#e05c5c')
+      addToast(t('collab.toast_error'), '❌', '#e05c5c')
     }
   }, [user, addToast])
 
@@ -2118,7 +2120,7 @@ export default function Collaboration() {
   }, [labels, equipeActive])
 
   const creerEquipe = async () => {
-    if (!nomEquipe.trim()) { setErreur("Donne un nom à l'équipe"); return }
+    if (!nomEquipe.trim()) { setErreur(t('collab.err_team_name')); return }
     setLoading(true)
     try {
       const r = await axios.post(`${API}/equipes`, { nom: nomEquipe, description: descEquipe, user_id: user.id })
@@ -2247,7 +2249,7 @@ export default function Collaboration() {
       addToast(...toastMsg)
     } catch {
       setTaches(prev)
-      addToast('Erreur — réessaie', '❌', '#e05c5c')
+      addToast(t('collab.toast_error'), '❌', '#e05c5c')
     }
   }, [user, addToast])
 

@@ -2,6 +2,7 @@
 // Self-contained : TOUS les imports sont dans CE fichier
 // Zéro dépendance sur Dashboard.jsx
 
+import { useTranslation } from 'react-i18next'
 import { useState, useCallback, memo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link2, Unlink, CheckCircle2, Wifi } from 'lucide-react'
@@ -101,7 +102,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0, background: 'transparent', border: '1.5px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
               whileHover={!isLoading ? { borderColor: 'rgba(239,68,68,0.4)', color: '#ef4444', background: 'rgba(239,68,68,0.05)' } : {}}>
               {isLoading ? <Spinner /> : <Unlink size={12} strokeWidth={2} />}
-              Déconnecter
+              {t('outils.disconnect')}
             </motion.button>
           ) : (
             <motion.button onClick={() => onConnect(integration)} disabled={isLoading}
@@ -122,7 +123,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.6 : 1, width: '100%', background: 'transparent', border: '1.5px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
               whileHover={!isLoading ? { borderColor: 'rgba(239,68,68,0.4)', color: '#ef4444' } : {}}>
               {isLoading ? <Spinner /> : <Unlink size={12} strokeWidth={2} />}
-              Déconnecter
+              {t('outils.disconnect')}
             </motion.button>
           ) : (
             <motion.button onClick={() => onConnect(integration)} disabled={isLoading}
@@ -140,6 +141,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
 })
 
 export default function OutilsIntegrations({ T, userId }) {
+  const { t } = useTranslation()
   const [connectes, setConnectes] = useState({})
   const [loading, setLoading] = useState(null)
   const [toast, setToast] = useState(null)
@@ -171,10 +173,10 @@ export default function OutilsIntegrations({ T, userId }) {
     const onMsg = (e) => {
       if (e.data?.type === 'oauth_success' && e.data?.integration === integration.id) {
         window.removeEventListener('message', onMsg); clearInterval(poll)
-        popup?.close(); setLoading(null); sauvegarder(integration.id, true); notifier(`${integration.nom} connecté`)
+        popup?.close(); setLoading(null); sauvegarder(integration.id, true); notifier(t('outils.toast_connected', { nom: integration.nom }))
       } else if (e.data?.type === 'oauth_error') {
         window.removeEventListener('message', onMsg); clearInterval(poll)
-        popup?.close(); setLoading(null); notifier(`Erreur ${integration.nom}: ${e.data?.error || 'annulé'}`, 'error')
+        popup?.close(); setLoading(null); notifier(t('outils.toast_error', { nom: integration.nom, err: e.data?.error || 'annulé' }), 'error')
       }
     }
     window.addEventListener('message', onMsg)
@@ -185,7 +187,7 @@ export default function OutilsIntegrations({ T, userId }) {
     setLoading(id)
     try { await fetch(`${API}/auth/disconnect/${id}?user_id=${userId}`, { method: 'DELETE', credentials: 'include' }) } catch {}
     sauvegarder(id, false); setLoading(null)
-    notifier(`Déconnecté de ${INTEGRATIONS.find(i => i.id === id)?.nom}`)
+    notifier(t('outils.toast_disconnected', { nom: INTEGRATIONS.find(i => i.id === id)?.nom }))
   }, [userId, sauvegarder, notifier])
 
   const categories = ['Tous', ...new Set(INTEGRATIONS.map(i => i.categorie))]
@@ -236,7 +238,7 @@ export default function OutilsIntegrations({ T, userId }) {
         <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, marginTop: 1 }}>
           <path fillRule="evenodd" clipRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"/>
         </svg>
-        GetShift ne stocke que les tokens nécessaires. Tes données restent privées.
+        {t('outils.privacy')}
       </div>
     </div>
   )
