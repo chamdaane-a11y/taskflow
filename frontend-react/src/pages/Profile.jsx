@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
@@ -62,18 +63,18 @@ const TIER_ORDER = { legendary: 0, epic: 1, rare: 2, common: 3 }
 
 // Helper : date relative en français ("il y a 3 jours")
 function dateRelative(iso) {
-  if (!iso || iso === 'now') return 'En cours'
+  if (!iso || iso === 'now') return i18n.t('common.ongoing')
   try {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return ''
     const diff = (Date.now() - d.getTime()) / 1000
-    if (diff < 60) return t('profile.just_now')
-    if (diff < 3600) { const m = Math.floor(diff / 60); return `il y a ${m} min` }
-    if (diff < 86400) { const h = Math.floor(diff / 3600); return `il y a ${h}h` }
-    if (diff < 604800) { const j = Math.floor(diff / 86400); return `il y a ${j}j` }
-    if (diff < 2592000) { const s = Math.floor(diff / 604800); return `il y a ${s} sem` }
-    if (diff < 31536000) { const mo = Math.floor(diff / 2592000); return `il y a ${mo} mois` }
-    const an = Math.floor(diff / 31536000); return `il y a ${an} an${an > 1 ? 's' : ''}`
+    if (diff < 60) return i18n.t('common.rel_now')
+    if (diff < 3600) { const m = Math.floor(diff / 60); return i18n.t('common.rel_min', { n: m }) }
+    if (diff < 86400) { const h = Math.floor(diff / 3600); return i18n.t('common.rel_hour', { n: h }) }
+    if (diff < 604800) { const j = Math.floor(diff / 86400); return i18n.t('common.rel_day', { n: j }) }
+    if (diff < 2592000) { const sem = Math.floor(diff / 604800); return i18n.t('common.rel_week', { n: sem }) }
+    if (diff < 31536000) { const mo = Math.floor(diff / 2592000); return i18n.t('common.rel_month', { n: mo }) }
+    const an = Math.floor(diff / 31536000); return an > 1 ? i18n.t('common.rel_year_plural', { n: an }) : i18n.t('common.rel_year', { n: an })
   } catch { return '' }
 }
 

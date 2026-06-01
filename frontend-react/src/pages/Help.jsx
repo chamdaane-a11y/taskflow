@@ -1495,7 +1495,7 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
                     fontSize: 13.5, fontWeight: 600, textDecoration: 'none',
                     boxShadow: 'var(--shadow-ember)',
                   }}>
-                  <Mail size={14} strokeWidth={2} /> hello@getshift.app
+                  <Mail size={14} strokeWidth={2} /> chamdaane@gmail.com
                 </a>
               </div>
 

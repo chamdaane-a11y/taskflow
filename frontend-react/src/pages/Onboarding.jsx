@@ -149,6 +149,7 @@ function BrandMark() {
 }
 
 function IntegrationRow({ integ, connectee, loading, onConnect }) {
+  const { t } = useTranslation()
   return (
     <motion.button
       onClick={() => !connectee && !loading && onConnect(integ)}

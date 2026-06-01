@@ -72,6 +72,7 @@ export const CoachFloat = memo(function CoachFloat({
   analyticsStats = null,
   defaultStyle = null,
 }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [style, setStyle] = useState(() => {
     try { return defaultStyle || localStorage.getItem('coach_style') || 'alex' } catch { return defaultStyle || 'alex' }

@@ -175,7 +175,7 @@ const SousTaches = memo(function SousTaches({ tache, T }) {
       {sousTaches.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>{terminees}/{sousTaches.length} sous-tâches</span>
+            <span>{t('dashboard.subtasks_count', { done: terminees, total: sousTaches.length })}</span>
             <span style={{ color: 'var(--ember)', fontWeight: 600 }}>{pct}%</span>
           </div>
           <div style={{ height: 3, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
@@ -206,7 +206,7 @@ const SousTaches = memo(function SousTaches({ tache, T }) {
       ) : (
         <motion.button style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6, padding: '4px 8px', background: 'transparent', border: '1px dashed var(--border-subtle)', borderRadius: 8, color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
           onClick={() => setAjoutVisible(true)} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
-          <Plus size={11} strokeWidth={2} />Ajouter une sous-tâche
+          {t('dashboard.add_subtask_btn')}
         </motion.button>
       )}
     </div>
@@ -363,7 +363,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
         <div style={{ flex: 1, minWidth: 130, display: 'flex', flexDirection: 'column', gap: 4 }}>
           <label style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Clock size={11} strokeWidth={2.2} color={timeOk ? 'var(--ember)' : 'var(--text-secondary)'} />
-            À quelle heure ? *
+            {t('dashboard.task_hour')} *
           </label>
           <input
             type="time"
@@ -391,7 +391,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
       {touched && !formValide && (
         <div style={{ fontSize: 12, color: '#e05c5c', display: 'flex', alignItems: 'center', gap: 6 }}>
           <AlertTriangle size={13} strokeWidth={2} />
-          {!titreOk ? 'Décris la tâche' : !dateOk && !timeOk ? 'Choisis le jour et l\'heure' : !dateOk ? 'Choisis le jour' : 'Choisis l\'heure'}
+          {!titreOk ? t('dashboard.task_validating') : !dateOk && !timeOk ? t('dashboard.task_validating_date') : !dateOk ? t('dashboard.task_validating_day') : t('dashboard.task_validating_hour')}
         </div>
       )}
 
@@ -414,12 +414,12 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}>
                 <Sparkles size={14} />
               </motion.div>
-              Création...
+              {t('dashboard.task_creating')}
             </>
           ) : (
             <>
               <Plus size={14} strokeWidth={2.5} />
-              Ajouter la tâche
+              {t('dashboard.task_add')}
               <kbd style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'var(--bg-base)', fontFamily: 'var(--font-mono)' }}>↵</kbd>
             </>
           )}
@@ -433,7 +433,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
             style={{ background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)' }}
             whileTap={{ scale: 0.97 }}>
             <Sparkles size={13} />
-            {d.iaLoading ? 'IA...' : 'Sous-tâches IA'}
+            {d.iaLoading ? t('dashboard.ia_loading') : t('dashboard.ia_subtasks')}
           </motion.button>
         )}
       </div>
@@ -442,7 +442,7 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
       {!compact && (
         <div className="smart-task-hint" style={{ background: 'var(--ember-soft)', color: 'var(--text-secondary)' }}>
           <Sparkles size={12} color="var(--ember)" strokeWidth={2} />
-          Le parser détecte automatiquement la priorité, le jour et l'heure.
+          {t('dashboard.ia_parser_hint')}
         </div>
       )}
     </div>
@@ -489,7 +489,7 @@ const BottomSheetAjout = memo(function BottomSheetAjout({ open, onClose, d, T })
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '0 4px' }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={14} color="var(--ember)" /></div>
-                Nouvelle tâche
+                {t('dashboard.new_task')}
               </h2>
               <motion.button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} whileHover={{ color: '#e05c5c' }}>
                 <X size={16} />
@@ -596,7 +596,7 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
                 {!isBloquee && (
                   <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: tache.terminee ? 'var(--text-secondary)' : '#4caf82', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
                     onClick={() => { d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee); setMenuOpen(false) }}>
-                    <CheckSquare size={14} strokeWidth={1.8} />{tache.terminee ? 'Rouvrir' : 'Marquer terminée'}
+                    <CheckSquare size={14} strokeWidth={1.8} />{tache.terminee ? t('dashboard.task_reopen') : t('dashboard.task_done')}
                   </button>
                 )}
                 {canPin && (
@@ -605,11 +605,11 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: isFocused ? 'var(--ember)' : focusFull ? `var(--text-secondary)80` : 'var(--text-primary)', fontSize: 13, cursor: focusFull ? 'not-allowed' : 'pointer', textAlign: 'left' }}
                     onClick={() => { if (!focusFull) { d.togglerFocus(tache.id, isFocused); setMenuOpen(false) } }}>
                     <Star size={14} strokeWidth={1.8} fill={isFocused ? 'var(--ember)' : 'none'} />
-                    {isFocused ? 'Désépingler du focus' : focusFull ? 'Focus complet (3/3)' : 'Épingler au focus'}
+                    {isFocused ? t('dashboard.focus_unpin') : focusFull ? t('dashboard.focus_full') : t('dashboard.focus_pin')}
                   </button>
                 )}
                 <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', textAlign: 'left' }} onClick={() => toggleExpand('sousTaches')}>
-                  <ChevronDown size={14} strokeWidth={1.8} />Sous-tâches
+                  <ChevronDown size={14} strokeWidth={1.8} />{t('dashboard.subtasks_label')}
                 </button>
                 <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', textAlign: 'left' }} onClick={() => toggleExpand('dependances')}>
                   <IconLink size={14} color="var(--text-primary)" />Prérequis
@@ -713,7 +713,7 @@ const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, na
           maxWidth: 540,
         }}>
           GetShift va te rendre <strong style={{ color: 'var(--text-primary)' }}>3× plus productif</strong> grâce à l'IA.
-          Démarre en 30 secondes — choisis comment tu commences&nbsp;:
+          {t('dashboard.welcome_start')}
         </p>
 
         {/* 3 actions rapides — grille */}
@@ -898,7 +898,7 @@ const StarterTemplates = memo(function StarterTemplates({ d, T, isMobile }) {
                 {tmpl.titre}
               </div>
               <div style={{ fontSize: 10.5, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                {tmpl.taches?.length || 0} tâches · {tmpl.categorie}
+                {t('dashboard.template_tasks', { n: tmpl.taches?.length || 0, cat: tmpl.categorie })}
               </div>
             </div>
           </motion.button>
@@ -1019,7 +1019,7 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
           {loading && !message ? (
             <motion.div animate={{ opacity: [0.4, 0.8, 0.4] }} transition={{ duration: 1.4, repeat: Infinity }}
               style={{ fontSize: isMobile ? 12.5 : 13, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-              {coach?.nom || 'Le coach'} prépare ton message…
+              {t('dashboard.coach_loading', { name: coach?.nom || 'Coach' })}
             </motion.div>
           ) : (
             <p style={{
@@ -1068,7 +1068,7 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}>
-                <Sparkles size={10} strokeWidth={2.4} /> {isMobile ? '' : 'Régénérer'}
+                <Sparkles size={10} strokeWidth={2.4} /> {isMobile ? '' : t('dashboard.regenerate')}
               </motion.button>
             </div>
           )}

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -23,11 +24,11 @@ import { useSidebarUser } from '../components/useSidebarUser'
 
 const API = 'https://getshift-backend.onrender.com'
 
-const COLONNES = [
-  { id: 'todo',          label: 'À faire',     couleur: 'var(--ember)', bg: 'var(--ember-ring)' },
-  { id: 'en_cours',      label: 'En cours',    couleur: '#e08a3c', bg: '#e08a3c12' },
-  { id: 'en_validation', label: 'À valider',   couleur: '#f59e0b', bg: '#f59e0b14' },
-  { id: 'termine',       label: 'Terminé',     couleur: '#4caf82', bg: '#4caf8212' },
+const COLONNES_BASE = [
+  { id: 'todo',          key: 'collab.col_todo',        couleur: 'var(--ember)', bg: 'var(--ember-ring)' },
+  { id: 'en_cours',      key: 'collab.col_inprogress',  couleur: '#e08a3c',      bg: '#e08a3c12' },
+  { id: 'en_validation', key: 'collab.col_validating',  couleur: '#f59e0b',      bg: '#f59e0b14' },
+  { id: 'termine',       key: 'collab.col_done',        couleur: '#4caf82',      bg: '#4caf8212' },
 ]
 const PRIORITE_COLOR = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
 
@@ -61,6 +62,7 @@ function QRCode({ value, size = 160 }) {
 
 // ===== MODALE PARTAGE =====
 function ModalePartage({ T, equipe, onFermer }) {
+  const { t } = useTranslation()
   const [copie, setCopie] = useState(false)
   const [onglet, setOnglet] = useState('lien')
   const isTablet = useMediaQuery('(max-width: 1100px)')
@@ -162,6 +164,7 @@ function ModalePartage({ T, equipe, onFermer }) {
 
 // ===== QUICK ADD INLINE (en haut de chaque colonne) =====
 function QuickAddInline({ T, col, onAdd }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [titre, setTitre] = useState('')
   const inputRef = useRef(null)
@@ -237,15 +240,16 @@ function tempsRelatif(iso) {
   try {
     const d = new Date(iso)
     const diff = (Date.now() - d.getTime()) / 1000
-    if (diff < 60) return t('collab.time_instant')
-    if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`
-    if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
-    if (diff < 604800) return `il y a ${Math.floor(diff / 86400)}j`
+    if (diff < 60) return i18n.t('common.rel_now')
+    if (diff < 3600) return i18n.t('common.rel_min', { n: Math.floor(diff / 60) })
+    if (diff < 86400) return i18n.t('common.rel_hour', { n: Math.floor(diff / 3600) })
+    if (diff < 604800) return i18n.t('common.rel_day', { n: Math.floor(diff / 86400) })
     return d.toLocaleDateString(navigator.language, { day: '2-digit', month: 'short' })
   } catch { return '' }
 }
 
 function CarteTache({ T, tache, membres, user, isAdmin, onAssign, onAssignBlocked, onModifier, onOuvrir, onToggleFait, onDemarrer, isDragOverlay = false }) {
+  const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(tache.id) })
   const [assignOpen, setAssignOpen] = useState(false)
   const [checkHover, setCheckHover] = useState(false)
@@ -580,6 +584,7 @@ function ColonneDroppable({ T, col, children, isOver }) {
 
 // ===== MODALE TÂCHE =====
 function ModaleTache({ T, membres, tache, user, isAdmin = false, labels = [], onToggleLabel, onFermer, onSauvegarder }) {
+  const { t } = useTranslation()
   const isTablet = useMediaQuery('(max-width: 1100px)')
   const [form, setForm] = useState({ titre: tache?.titre || '', description: tache?.description || '', priorite: tache?.priorite || 'moyenne', statut: tache?.statut || 'todo', assignee_id: tache?.assignee_id || '' })
   const [sousTaches, setSousTaches] = useState([])
@@ -818,6 +823,7 @@ function HighlightMentions({ texte, T }) {
 
 // ===== PANNEAU COMMENTAIRES avec @mentions =====
 function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
+  const { t } = useTranslation()
   const [commentaires, setCommentaires] = useState([])
   const [texte, setTexte] = useState('')
   const [mentionQuery, setMentionQuery] = useState(null)
@@ -1062,6 +1068,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
 
 // ===== DRAWER ACTIVITÉ =====
 function DrawerActivite({ T, equipe_id, onFermer }) {
+  const { t } = useTranslation()
   const [activites, setActivites] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -1157,6 +1164,7 @@ function DrawerActivite({ T, equipe_id, onFermer }) {
 
 // ===== DRAWER ÉQUIPE — vue admin (mutations) + vue membre (lecture seule) =====
 function DrawerGestion({ T, equipe, membres, user, onFermer, onEquipeRenommee, onMembreExclu, onRoleChange, viewOnly = false }) {
+  const { t } = useTranslation()
   const [nomEdit, setNomEdit] = useState(equipe.nom)
   const [editingNom, setEditingNom] = useState(false)
   const [confirmKick, setConfirmKick] = useState(null)
@@ -1322,6 +1330,7 @@ const LABEL_PALETTE = [
 
 // ===== DRAWER LABELS — gérer les étiquettes d'une équipe =====
 function DrawerLabels({ T, equipe_id, labels, onFermer, onLabelsChange }) {
+  const { t } = useTranslation()
   const [nouveauNom, setNouveauNom] = useState('')
   const [nouvelleCouleur, setNouvelleCouleur] = useState(LABEL_PALETTE[0])
   const [editingId, setEditingId] = useState(null)
@@ -1533,6 +1542,7 @@ function MiniBar({ valeur, max, couleur, label, T }) {
 
 // ===== DRAWER ANALYTICS ÉQUIPE =====
 function DrawerAnalytiques({ T, equipe_id, onFermer }) {
+  const { t } = useTranslation()
   const isTablet = useMediaQuery('(max-width: 1100px)')
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1821,6 +1831,7 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
 // ===== PAGE PRINCIPALE =====
 export default function Collaboration() {
   const { t } = useTranslation()
+  const COLONNES = useMemo(() => COLONNES_BASE.map(c => ({ ...c, label: t(c.key) })), [t])
   const STATUTS_TR = useMemo(() => STATUTS.map(s => ({
     ...s,
     label: s.id === 'todo' ? t('collab.status_todo')

@@ -670,6 +670,7 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
 
 // ---- Composant event Google Calendar (read-only, non-draggable) ----
 function CalendarEventCard({ event, index, T }) {
+  const { t } = useTranslation()
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -738,6 +739,7 @@ function AlerteProcrastination({ alerte, T }) {
 
 // ---- Composant card check-in tâche ----
 function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOnly }) {
+  const { t } = useTranslation()
   const statut = reponse?.statut || null
   const couleur = statut === 'fait' ? '#4caf82' : statut === 'partiel' ? '#e08a3c' : statut === 'pas_fait' ? '#e05c5c' : 'var(--border-subtle)'
 
@@ -811,6 +813,7 @@ function CheckinTacheCard({ tache, index, reponse, onChange, T, isMobile, readOn
 
 // ---- Composant slider énergie ressentie ----
 function EnergySliderCheckin({ value, onChange, T }) {
+  const { t } = useTranslation()
   const emoji = value >= 80 ? '⚡' : value >= 60 ? '🌤' : value >= 40 ? '😐' : value >= 20 ? '😴' : '💀'
   const label = value >= 80 ? t('tomorrow.slider_fire') : value >= 60 ? t('tomorrow.slider_good') : value >= 40 ? t('tomorrow.slider_ok') : value >= 20 ? t('tomorrow.slider_tired') : t('tomorrow.slider_flat')
   const color = value >= 70 ? '#4caf82' : value >= 40 ? '#e08a3c' : '#e05c5c'

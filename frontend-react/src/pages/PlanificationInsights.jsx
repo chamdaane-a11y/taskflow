@@ -4,6 +4,7 @@
 //   • InsightCard   — carte contextuelle proactive (IA propose)
 // ══════════════════════════════════════════════════════════════════════
 import { useEffect, useMemo, useState, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Play, CheckCircle2, Clock, Flame,
@@ -157,6 +158,7 @@ export const DailyScore = memo(function DailyScore({
 export const FocusBar = memo(function FocusBar({
   planification, taches, T, isMobile, onComplete
 }) {
+  const { t } = useTranslation()
   const [tick, setTick] = useState(0)
 
   // Re-render toutes les 30s pour update countdown
@@ -380,6 +382,7 @@ const insightKey = () => `planification_insight_dismiss_${new Date().toISOString
 export const InsightCard = memo(function InsightCard({
   taches, planification, T, isMobile, heuresDispo, onPlanIA, loadingIA
 }) {
+  const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem(insightKey()) === '1' }
     catch { return false }

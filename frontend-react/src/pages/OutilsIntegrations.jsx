@@ -40,6 +40,7 @@ function Spinner({ color = 'currentColor' }) {
 }
 
 const CarteIntegration = memo(function CarteIntegration({ integration, connecte, loading, onConnect, onDisconnect, T, isMobile }) {
+  const { t } = useTranslation()
   const { id, nom, description, Logo, couleur } = integration
   const isLoading = loading === id
 

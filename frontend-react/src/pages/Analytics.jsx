@@ -100,6 +100,7 @@ function useAnalyticsData(userId, jours) {
 // HOOK: useStatistics — All computed stats (memoized)
 // ══════════════════════════════════════════════════════════════════════
 function useStatistics(data, jours) {
+  const { t } = useTranslation()
   return useMemo(() => {
     if (!data) return null
 
@@ -261,6 +262,7 @@ const Skeleton = memo(({ width = '100%', height = 20, radius = 8, style = {} }) 
 // DAY DRILL-DOWN MODAL — liste tâches d'un jour (cliqué sur heatmap)
 // ══════════════════════════════════════════════════════════════════════
 const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
+  const { t } = useTranslation()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -370,6 +372,7 @@ const DayDrillModal = memo(({ userId, date, T, isMobile, onClose }) => {
 })
 
 const GitHubHeatmap = memo(({ parJour, T, onDayClick }) => {
+  const { t } = useTranslation()
   const weeks = 18
 
   // Formatte une date en YYYY-MM-DD en heure LOCALE (pas UTC)
@@ -667,6 +670,7 @@ function useCalibration(userId) {
 }
 
 const TaskDNACard = memo(({ calibration, T, isMobile }) => {
+  const { t } = useTranslation()
   if (!calibration) return null
   const { calibrationGlobale, sousEstimes = [], surEstimes = [], totalAnalyses, message } = calibration
 
@@ -787,6 +791,7 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
 // WEEK RECAP — phrase storytelling en haut, action contextuelle
 // ══════════════════════════════════════════════════════════════════════
 const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) => {
+  const { t } = useTranslation()
   if (!stats) return null
   const total = stats.total || 0
   const velocity = stats.velocity || 0
@@ -928,6 +933,7 @@ const WeekRecap = memo(({ stats, gamification, T, isMobile, navigate, jours }) =
 // GAMIFICATION BAR — niveau, XP, streak, focus ring
 // ══════════════════════════════════════════════════════════════════════
 const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, T, loading, isMobile }) => {
+  const { t } = useTranslation()
   const streak = stats?.streak || 0
   const focusScore = stats?.focusScore || 0
 
@@ -1028,6 +1034,7 @@ const GamificationBar = memo(({ stats, points, niveau, niveauActuel, pctNiveau, 
 // ALERT BANNER — burnout / 80-20, dismissable par jour
 // ══════════════════════════════════════════════════════════════════════
 const AlertBanner = memo(({ stats, T, isMobile }) => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const todayKey = new Date().toISOString().split('T')[0]
   const [dismissed, setDismissed] = useState(() => {

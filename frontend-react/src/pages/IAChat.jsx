@@ -261,6 +261,7 @@ const CarteAction = memo(function CarteAction({ action, T }) {
 
 // ── Bulle message memoïsé ─────────────────────────────────────────────
 const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, isMobile, copie, onCopy, onEnvoyer, onCreerTache, onForceSearch, onPin, isPinned, T, coach }) {
+  const { t } = useTranslation()
   if (msg.role === 'systeme') return (
     <div style={{ display: 'flex', justifyContent: 'center' }}>
       <div style={{ padding: '5px 14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 99, fontSize: 11, color: '#10b981', fontWeight: 600 }}>
