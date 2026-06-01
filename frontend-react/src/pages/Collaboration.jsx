@@ -24,11 +24,11 @@ import { useSidebarUser } from '../components/useSidebarUser'
 
 const API = 'https://getshift-backend.onrender.com'
 
-const COLONNES_BASE = [
-  { id: 'todo',          key: 'collab.col_todo',        couleur: 'var(--ember)', bg: 'var(--ember-ring)' },
-  { id: 'en_cours',      key: 'collab.col_inprogress',  couleur: '#e08a3c',      bg: '#e08a3c12' },
-  { id: 'en_validation', key: 'collab.col_validating',  couleur: '#f59e0b',      bg: '#f59e0b14' },
-  { id: 'termine',       key: 'collab.col_done',        couleur: '#4caf82',      bg: '#4caf8212' },
+const COLONNES = [
+  { id: 'todo',          label: 'À faire',     couleur: 'var(--ember)', bg: 'var(--ember-ring)' },
+  { id: 'en_cours',      label: 'En cours',    couleur: '#e08a3c', bg: '#e08a3c12' },
+  { id: 'en_validation', label: 'À valider',   couleur: '#f59e0b', bg: '#f59e0b14' },
+  { id: 'termine',       label: 'Terminé',     couleur: '#4caf82', bg: '#4caf8212' },
 ]
 const PRIORITE_COLOR = { haute: '#e05c5c', moyenne: '#e08a3c', basse: '#4caf82' }
 
@@ -190,7 +190,7 @@ function QuickAddInline({ T, col, onAdd }) {
           if (e.key === 'Enter') { e.preventDefault(); submit() }
           else if (e.key === 'Escape') { setTitre(''); setOpen(false) }
         }}
-        placeholder={t('collab.add_task_placeholder', { status: col.label.toLowerCase() })}
+        placeholder={t('collab.add_task_placeholder', { status: t('collab.col_' + (col.id === 'en_cours' ? 'inprogress' : col.id === 'en_validation' ? 'validating' : col.id === 'termine' ? 'done' : 'todo')).toLowerCase() })}
         style={{
           width: '100%',
           padding: '9px 11px',
@@ -970,7 +970,7 @@ function PanneauCommentaires({ T, tache, user, membres, onFermer }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITE_COLOR[tache.priorite] }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: col?.couleur, letterSpacing: 0.6 }}>{col?.label.toUpperCase()}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: col?.couleur, letterSpacing: 0.6 }}>{col ? t('collab.col_' + (col.id === 'en_cours' ? 'inprogress' : col.id === 'en_validation' ? 'validating' : col.id === 'termine' ? 'done' : 'todo')).toUpperCase() : ''}</span>
             </div>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3, fontFamily: "var(--font-ui)" }}>{tache.titre}</h3>
             {tache.description && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.6 }}>{tache.description}</p>}
@@ -1831,14 +1831,6 @@ function DrawerIAEquipe({ T, equipe_id, equipe_nom, user, onFermer }) {
 // ===== PAGE PRINCIPALE =====
 export default function Collaboration() {
   const { t } = useTranslation()
-  const COLONNES = useMemo(() => COLONNES_BASE.map(c => ({ ...c, label: t(c.key) })), [t])
-  const STATUTS_TR = useMemo(() => STATUTS.map(s => ({
-    ...s,
-    label: s.id === 'todo' ? t('collab.status_todo')
-      : s.id === 'en_cours' ? t('collab.status_inprogress')
-      : s.id === 'en_validation' ? t('collab.status_validating')
-      : s.id === 'termine' ? t('collab.status_done') : s.label
-  })), [t])
   const user = JSON.parse(localStorage.getItem('user'))
   const { T } = useTheme()
   const navigate = useNavigate()
@@ -2691,7 +2683,7 @@ export default function Collaboration() {
                     <div style={{ padding: '13px 14px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.couleur }} />
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{col.label}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{t('collab.col_' + (col.id === 'en_cours' ? 'inprogress' : col.id === 'en_validation' ? 'validating' : col.id === 'termine' ? 'done' : 'todo'))}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: col.bg, color: col.couleur }}>{loadingEquipe ? '·' : tachesCol(col.id).length}</span>
                       </div>
                       <motion.button style={{ width: 24, height: 24, borderRadius: 7, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
