@@ -15,25 +15,23 @@ const COACHES = {
   nova: { label: 'Nova', tagline: 'Analytique',    Icon: Brain,    grad: ['#6366f1', '#4f46e5'] },
 }
 
-const greetingFor = (style, ctx, analyticsStats = null) => {
+const greetingFor = (t, style, ctx, analyticsStats = null) => {
   // Greeting analytics — Nova voit les vraies métriques
   if (analyticsStats) {
     const { streak, focusScore, burnoutRisk, wow, velocity, lowRatio } = analyticsStats
     if (style === 'nova') {
-      if (burnoutRisk) return `⚠️ Anomalie détectée : pattern burnout. Focus ${focusScore}/100. Streak ${streak}j. Recommandation : réduction de charge immédiate.`
-      if (lowRatio > 70) return `Alerte 80/20 : ${lowRatio}% de tes tâches sont à faible priorité. Streak ${streak}j. Que veux-tu rééquilibrer ?`
-      if (wow > 20) return `+${wow}% vs période précédente. Vélocité : ${velocity}/j. Streak : ${streak}j. Trajectory positive — quel aspect décortiquer ?`
-      if (streak >= 5) return `Streak exceptionnel : ${streak} jours. Focus ${focusScore}/100. Vélocité ${velocity}/j. Les données parlent d'elles-mêmes.`
-      return `Données chargées. Streak ${streak}j · Focus ${focusScore}/100 · Vélocité ${velocity}/j. ${burnoutRisk ? '⚠️ Burnout' : '✓ Rythme OK'}. Que veux-tu analyser ?`
+      if (burnoutRisk) return t('coach.nova_burnout', { focus: focusScore, streak })
+      if (lowRatio > 70) return t('coach.nova_lowratio', { ratio: lowRatio, streak })
+      if (wow > 20) return t('coach.nova_wow', { wow, velocity, streak })
+      if (streak >= 5) return t('coach.nova_streak', { streak, focus: focusScore, velocity })
+      return t('coach.nova_default', { streak, focus: focusScore, velocity, health: burnoutRisk ? t('coach.nova_health_burnout') : t('coach.nova_health_ok') })
     }
     if (style === 'alex') {
-      if (streak >= 3) return `${streak} jours de suite, c'est super ! 🎉 Comment tu te sens dans ce rythme ?`
-      return `Tes données analytiques sont là ! Comment tu vis ta productivité en ce moment ?`
+      if (streak >= 3) return t('coach.alex_streak3', { streak })
+      return t('coach.alex_analytics_default')
     }
     if (style === 'max') {
-      return wow > 0
-        ? `+${wow}% cette période — les chiffres confirment : tu déchires ! On pousse encore ?`
-        : `Les données sont là, l'heure du bilan. Qu'est-ce qu'on optimise en premier ?`
+      return wow > 0 ? t('coach.max_wow', { wow }) : t('coach.max_analytics_default')
     }
   }
 
@@ -42,28 +40,28 @@ const greetingFor = (style, ctx, analyticsStats = null) => {
   const pct = capaciteMin > 0 ? Math.round(chargeMin / capaciteMin * 100) : 0
 
   if (style === 'alex') {
-    if (overdue >= 2) return `Hey ${overdue} tâches en retard — pas de panique, on les replanifie ensemble ?`
-    if (chargeMin === 0 && nowH < 19) return nowH < 12 ? "Bonjour ! Prêt(e) à structurer ta journée ? Je peux t'aider." : "Tu n'as encore rien planifié — veux-tu qu'on s'y mette ?"
-    if (pct > 120) return `${h}h prévues, c'est beaucoup. Pense à reporter le moins urgent.`
-    if (pct >= 50) return `Bon rythme aujourd'hui (${pct}%). Une pause de 5min toutes les 90min ?`
-    if (nowH >= 19) return "La journée s'achève — bravo. On prépare demain ?"
-    return `${unplanned > 0 ? `${unplanned} tâches en attente. ` : ''}Comment je peux t'aider ?`
+    if (overdue >= 2) return t('coach.alex_overdue', { n: overdue })
+    if (chargeMin === 0 && nowH < 19) return nowH < 12 ? t('coach.alex_empty_morning') : t('coach.alex_empty_day')
+    if (pct > 120) return t('coach.alex_overload', { h })
+    if (pct >= 50) return t('coach.alex_goodpace', { pct })
+    if (nowH >= 19) return t('coach.alex_evening')
+    return t('coach.alex_default', { prefix: unplanned > 0 ? t('coach.alex_default_prefix', { n: unplanned }) : '' })
   }
   if (style === 'max') {
-    if (overdue >= 2) return `${overdue} retards ?! Allez, on attaque, je te trouve des créneaux.`
-    if (chargeMin === 0) return "Aucun plan ? Let's go ! Je t'organise ça maintenant."
-    if (pct > 120) return `${h}h ?! T'es une machine. Mais respire entre chaque sprint.`
-    if (pct >= 50) return `${pct}% de capacité — tu déchires ! Continue.`
-    if (nowH >= 19) return "Fin de journée — fais le bilan, prépare demain à fond."
-    return "Prêt à exploser tes objectifs ? Dis-moi par où on commence."
+    if (overdue >= 2) return t('coach.max_overdue', { n: overdue })
+    if (chargeMin === 0) return t('coach.max_empty')
+    if (pct > 120) return t('coach.max_overload', { h })
+    if (pct >= 50) return t('coach.max_goodpace', { pct })
+    if (nowH >= 19) return t('coach.max_evening')
+    return t('coach.max_default')
   }
   // Nova — planification
-  if (overdue >= 2) return `Donnée : ${overdue} tâches en retard. Recommandation : replanification immédiate.`
-  if (chargeMin === 0) return `Charge actuelle : 0h. ${unplanned} tâches non planifiées détectées.`
-  if (pct > 120) return `Charge ${h}h vs capacité ${(capaciteMin/60).toFixed(0)}h → surcharge ${pct}%. Risque de burnout.`
-  if (pct >= 50) return `Allocation optimale : ${pct}% de la capacité utilisée.`
-  if (nowH >= 19) return `Fenêtre de planification J+1 ouverte. Données prêtes.`
-  return `Système prêt. ${unplanned} tâches en file. Quel angle d'analyse ?`
+  if (overdue >= 2) return t('coach.nova_overdue', { n: overdue })
+  if (chargeMin === 0) return t('coach.nova_empty', { n: unplanned })
+  if (pct > 120) return t('coach.nova_overload', { h, cap: (capaciteMin/60).toFixed(0), pct })
+  if (pct >= 50) return t('coach.nova_optimal', { pct })
+  if (nowH >= 19) return t('coach.nova_evening')
+  return t('coach.nova_ctx_default', { n: unplanned })
 }
 
 export const CoachFloat = memo(function CoachFloat({
@@ -110,7 +108,7 @@ export const CoachFloat = memo(function CoachFloat({
     let greeted = false
     try { greeted = localStorage.getItem(greetedKey) === '1' } catch {}
     if (greeted && messages.length > 0) return
-    const greeting = greetingFor(style, ctx, analyticsStats)
+    const greeting = greetingFor(t, style, ctx, analyticsStats)
     setMessages(m => m.length === 0 ? [{ role: 'assistant', content: greeting }] : m)
     try { localStorage.setItem(greetedKey, '1') } catch {}
     setHasNotif(false)
@@ -161,6 +159,7 @@ export const CoachFloat = memo(function CoachFloat({
   }
 
   const coach = COACHES[style] || COACHES.alex
+  const coachTagline = t(`coach.${style === 'max' ? 'max' : style === 'nova' ? 'nova' : 'alex'}_tagline`)
   const Icon = coach.Icon
   const [c1, c2] = coach.grad
 
@@ -197,7 +196,7 @@ export const CoachFloat = memo(function CoachFloat({
               boxShadow: `0 8px 24px ${c1}55, 0 0 0 4px var(--bg-base)`,
               zIndex: 130,
             }}
-            title={`${coach.label} — ${coach.tagline}`}
+            title={`${coach.label} — ${coachTagline}`}
           >
             <Icon size={isMobile ? 22 : 26} color="#fff" strokeWidth={2.4} />
 
@@ -278,7 +277,7 @@ export const CoachFloat = memo(function CoachFloat({
                   {coach.label}
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  Coach · {coach.tagline}
+                  Coach · {coachTagline}
                 </div>
               </div>
 
