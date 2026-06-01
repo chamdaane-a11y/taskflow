@@ -902,7 +902,22 @@
     "coach_cta_plan": "J+1 planen",
     "coach_cta_aim": "Höher zielen",
     "ai_close_today": "Heute ausblenden",
-    "settings_title": "Einstellungen"
+    "settings_title": "Einstellungen",
+    "dna_empty_hint": "Schließe mehr Aufgaben ab und erfasse die reale Zeit, um zu aktivieren.",
+    "level_beginner": "Anfänger",
+    "stat_total_period": "Zeitraum gesamt",
+    "recap_identity_title": "👑 {{streak}} Tage Identität — du bist kein Anfänger mehr",
+    "recap_identity_text": "Das ist selten. Was du heute aufbaust, schaffen wenige. Mach weiter.",
+    "recap_accel_title": "🚀 +{{wow}}% diese Woche — du beschleunigst stark",
+    "recap_accel_text": "Dieses Momentum ist kostbar. Halte das Tempo und geh zur nächsten Schwelle.",
+    "recap_burnout_title": "⚠️ Burnout-Muster: du drückst falsch",
+    "recap_burnout_text": "Du sprintest 3 Tage und brichst dann ein. Verteile die Intensität — halte den Rhythmus, nicht die Erschöpfung.",
+    "recap_vanity_title": "⚡ {{ratio}}% Vanity — der echte Impact ist woanders",
+    "recap_vanity_text": "Du hakst leichte Kästchen ab, kommst aber bei dem, was zählt, nicht voran. Greif deine hohen Prioritäten JETZT an.",
+    "recap_streak_title": "🔥 {{streak}}-Tage-Serie — brich die Kette nicht",
+    "recap_streak_text": "Du hast {{streak}} Tage Identität aufgebaut. Ein leerer Tag und alles startet bei null. Plane morgen JETZT.",
+    "recap_down_title": "📉 {{wow}}% vs. letzte Woche — du fällst ab",
+    "recap_down_text": "Finde heraus, was sich geändert hat, und übernimm heute wieder die Kontrolle. Nicht morgen. Heute."
   },
   "planification": {
     "page_title": "Planung",

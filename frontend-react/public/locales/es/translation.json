@@ -902,7 +902,22 @@
     "coach_cta_plan": "Planificar J+1",
     "coach_cta_aim": "Apuntar más alto",
     "ai_close_today": "Ocultar por hoy",
-    "settings_title": "Ajustes"
+    "settings_title": "Ajustes",
+    "dna_empty_hint": "Completa más tareas anotando el tiempo real para activar.",
+    "level_beginner": "Principiante",
+    "stat_total_period": "Total del período",
+    "recap_identity_title": "👑 {{streak}} días de identidad — ya no eres principiante",
+    "recap_identity_text": "Es raro. Lo que construyes hoy, pocos lo logran. Sigue así.",
+    "recap_accel_title": "🚀 +{{wow}}% esta semana — aceleras fuerte",
+    "recap_accel_text": "Este impulso es valioso. Mantén el ritmo y pasa al siguiente nivel.",
+    "recap_burnout_title": "⚠️ Patrón de agotamiento: empujas mal",
+    "recap_burnout_text": "Esprintas 3 días y luego te derrumbas. Reparte la intensidad — mantén el ritmo, no el agotamiento.",
+    "recap_vanity_title": "⚡ {{ratio}}% de vanidad — el impacto real está en otra parte",
+    "recap_vanity_text": "Marcas casillas fáciles pero no avanzas en lo que importa. Ataca tus prioridades altas AHORA.",
+    "recap_streak_title": "🔥 Racha de {{streak}}d — no rompas la cadena",
+    "recap_streak_text": "Has construido {{streak}} días de identidad. Un día vacío y todo vuelve a cero. Planifica mañana AHORA.",
+    "recap_down_title": "📉 {{wow}}% vs la semana pasada — estás bajando",
+    "recap_down_text": "Identifica qué cambió y retoma el control hoy. No mañana. Hoy."
   },
   "planification": {
     "page_title": "Planificación",

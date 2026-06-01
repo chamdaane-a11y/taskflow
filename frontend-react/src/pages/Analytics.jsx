@@ -689,7 +689,7 @@ const TaskDNACard = memo(({ calibration, T, isMobile }) => {
         </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>Task DNA — Calibration</div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{message || 'Termine plus de tâches en notant le temps réel pour activer.'}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{message || t('analytics.dna_empty_hint')}</div>
         </div>
       </motion.div>
     )
@@ -1049,32 +1049,32 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
     if (stats.streak >= 14) {
       alert = {
         Icon: Crown, color: '#a855f7',
-        title: `👑 ${stats.streak} jours d'identité — tu n'es plus un débutant`,
-        text: 'C\'est rare. Ce que tu construis aujourd\'hui, peu de gens y arrivent. Continue.',
+        title: t('analytics.recap_identity_title', { streak: stats.streak }),
+        text: t('analytics.recap_identity_text'),
         ctaLabel: t('analytics.coach_cta_continue'),
         ctaAction: () => navigate('/dashboard'),
       }
     } else if (stats.wow >= 30 && stats.streak >= 3) {
       alert = {
         Icon: TrendingUp, color: '#4caf82',
-        title: `🚀 +${stats.wow}% cette semaine — tu accélères fort`,
-        text: 'Ce momentum est précieux. Garde le rythme et passe au seuil suivant.',
+        title: t('analytics.recap_accel_title', { wow: stats.wow }),
+        text: t('analytics.recap_accel_text'),
         ctaLabel: t('analytics.coach_cta_push') + ' →',
         ctaAction: () => navigate('/planification'),
       }
     } else if (stats.burnoutRisk) {
       alert = {
         Icon: Flame, color: '#e05c5c',
-        title: '⚠️ Pattern burnout : tu pousses mal',
-        text: 'Tu sprintes 3 jours puis tu craches. Étale l\'intensité — garde le rythme, pas l\'épuisement.',
+        title: t('analytics.recap_burnout_title'),
+        text: t('analytics.recap_burnout_text'),
         ctaLabel: t('analytics.coach_cta_reorg') + ' →',
         ctaAction: () => navigate('/planification'),
       }
     } else if (stats.lowRatio > 70) {
       alert = {
         Icon: AlertTriangle, color: '#e08a3c',
-        title: `⚡ ${stats.lowRatio}% de vanité — le vrai impact est ailleurs`,
-        text: 'Tu coches des cases faciles mais tu n\'avances pas sur ce qui compte. Attaque tes haute prio MAINTENANT.',
+        title: t('analytics.recap_vanity_title', { ratio: stats.lowRatio }),
+        text: t('analytics.recap_vanity_text'),
         ctaLabel: t('analytics.coach_cta_attack') + ' →',
         ctaAction: () => {
           try { sessionStorage.setItem('dashboard_init_filter', 'haute') } catch {}
@@ -1084,16 +1084,16 @@ const AlertBanner = memo(({ stats, T, isMobile }) => {
     } else if (stats.streak >= 5) {
       alert = {
         Icon: Flame, color: '#e08a3c',
-        title: `🔥 Streak ${stats.streak}j — ne casse pas la chaîne`,
-        text: `Tu as construit ${stats.streak} jours d'identité. Une journée vide et tout repart de zéro. Planifie demain MAINTENANT.`,
+        title: t('analytics.recap_streak_title', { streak: stats.streak }),
+        text: t('analytics.recap_streak_text', { streak: stats.streak }),
         ctaLabel: t('analytics.coach_cta_plan') + ' →',
         ctaAction: () => navigate('/planification'),
       }
     } else if (stats.wow < -15) {
       alert = {
         Icon: TrendingDown, color: '#e05c5c',
-        title: `📉 ${stats.wow}% vs semaine dernière — tu redescends`,
-        text: 'Identifie ce qui a changé et reprends le contrôle aujourd\'hui. Pas demain. Aujourd\'hui.',
+        title: t('analytics.recap_down_title', { wow: stats.wow }),
+        text: t('analytics.recap_down_text'),
         ctaLabel: t('analytics.coach_cta_resume') + ' →',
         ctaAction: () => navigate('/planification'),
       }
@@ -1311,7 +1311,7 @@ export default function Analytics() {
   const sb = useSidebarUser()
   const points = sb.points
   const niveau = sb.niveau
-  const niveauActuel = { label: sb.niveauActuel?.label || gamification?.label || 'Débutant' }
+  const niveauActuel = { label: sb.niveauActuel?.label || gamification?.label || t('analytics.level_beginner') }
   const pctNiveau = sb.pctNiveau
   const streak = sb.streak ?? gamification?.streak ?? (stats?.streak || 0)
 
@@ -1870,7 +1870,7 @@ export default function Analytics() {
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: 14, marginTop: 16 }}>
                 {[
-                  { label: 'Total période', value: stats?.total || 0, icon: CheckSquare, color: 'var(--ember)' },
+                  { label: t('analytics.stat_total_period'), value: stats?.total || 0, icon: CheckSquare, color: 'var(--ember)' },
                   { label: t('analytics.metric_bestday'), value: stats?.maxVal || 0, icon: Star,        color: '#e08a3c' },
                   { label: 'Jours actifs',  value: loading ? '—' : `${stats?.current?.filter(v => v > 0).length || 0}/${jours}`, icon: Activity, color: '#4caf82' },
                 ].map((m, i) => {

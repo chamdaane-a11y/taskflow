@@ -902,7 +902,22 @@
     "coach_cta_plan": "Plan J+1",
     "coach_cta_aim": "Aim higher",
     "ai_close_today": "Hide for today",
-    "settings_title": "Settings"
+    "settings_title": "Settings",
+    "dna_empty_hint": "Complete more tasks while logging actual time to activate.",
+    "level_beginner": "Beginner",
+    "stat_total_period": "Period total",
+    "recap_identity_title": "👑 {{streak}} days of identity — you're no longer a beginner",
+    "recap_identity_text": "It's rare. What you're building today, few people achieve. Keep going.",
+    "recap_accel_title": "🚀 +{{wow}}% this week — you're accelerating hard",
+    "recap_accel_text": "This momentum is precious. Keep the pace and move to the next threshold.",
+    "recap_burnout_title": "⚠️ Burnout pattern: you're pushing wrong",
+    "recap_burnout_text": "You sprint 3 days then crash. Spread the intensity — keep the rhythm, not the exhaustion.",
+    "recap_vanity_title": "⚡ {{ratio}}% vanity — the real impact is elsewhere",
+    "recap_vanity_text": "You're ticking easy boxes but not advancing on what matters. Attack your high priorities NOW.",
+    "recap_streak_title": "🔥 {{streak}}-day streak — don't break the chain",
+    "recap_streak_text": "You've built {{streak}} days of identity. One empty day and it all resets. Plan tomorrow NOW.",
+    "recap_down_title": "📉 {{wow}}% vs last week — you're slipping",
+    "recap_down_text": "Identify what changed and take back control today. Not tomorrow. Today."
   },
   "planification": {
     "page_title": "Planning",

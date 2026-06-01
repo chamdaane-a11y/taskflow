@@ -902,7 +902,22 @@
     "coach_cta_plan": "Planifier J+1",
     "coach_cta_aim": "Viser haut",
     "ai_close_today": "Masquer pour aujourd'hui",
-    "settings_title": "Paramètres"
+    "settings_title": "Paramètres",
+    "dna_empty_hint": "Termine plus de tâches en notant le temps réel pour activer.",
+    "level_beginner": "Débutant",
+    "stat_total_period": "Total période",
+    "recap_identity_title": "👑 {{streak}} jours d'identité — tu n'es plus un débutant",
+    "recap_identity_text": "C'est rare. Ce que tu construis aujourd'hui, peu de gens y arrivent. Continue.",
+    "recap_accel_title": "🚀 +{{wow}}% cette semaine — tu accélères fort",
+    "recap_accel_text": "Ce momentum est précieux. Garde le rythme et passe au seuil suivant.",
+    "recap_burnout_title": "⚠️ Pattern burnout : tu pousses mal",
+    "recap_burnout_text": "Tu sprintes 3 jours puis tu craches. Étale l'intensité — garde le rythme, pas l'épuisement.",
+    "recap_vanity_title": "⚡ {{ratio}}% de vanité — le vrai impact est ailleurs",
+    "recap_vanity_text": "Tu coches des cases faciles mais tu n'avances pas sur ce qui compte. Attaque tes haute prio MAINTENANT.",
+    "recap_streak_title": "🔥 Streak {{streak}}j — ne casse pas la chaîne",
+    "recap_streak_text": "Tu as construit {{streak}} jours d'identité. Une journée vide et tout repart de zéro. Planifie demain MAINTENANT.",
+    "recap_down_title": "📉 {{wow}}% vs semaine dernière — tu redescends",
+    "recap_down_text": "Identifie ce qui a changé et reprends le contrôle aujourd'hui. Pas demain. Aujourd'hui."
   },
   "planification": {
     "page_title": "Planification",
