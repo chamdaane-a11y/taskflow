@@ -161,6 +161,18 @@ const PAGE_GUIDES = {
         ar: 'اضغط «توليد» للحصول على خطتك، ثم اسحب الفترات أو أزِحها. مساءً، أجرِ مراجعتك.',
       },
     },
+    {
+      target: '[data-guide="tb-tabs"]',
+      title: { fr: 'Énergie & check-in', en: 'Energy & check-in', es: 'Energía y check-in', pt: 'Energia e check-in', de: 'Energie & Check-in', ar: 'الطاقة والمراجعة' },
+      desc: {
+        fr: "Une fois ton plan généré, ces onglets montrent ta courbe d'énergie, tes alertes de procrastination, et le check-in du soir pour boucler ta journée.",
+        en: 'Once your plan is generated, these tabs show your energy curve, procrastination alerts, and the evening check-in to close your day.',
+        es: 'Una vez generado tu plan, estas pestañas muestran tu curva de energía, alertas de procrastinación y el check-in nocturno.',
+        pt: 'Depois de gerar o plano, estas abas mostram sua curva de energia, alertas de procrastinação e o check-in noturno.',
+        de: 'Sobald dein Plan erstellt ist, zeigen diese Tabs deine Energiekurve, Aufschiebe-Warnungen und das Abend-Check-in.',
+        ar: 'بعد توليد خطتك، تُظهر هذه التبويبات منحنى طاقتك، وتنبيهات التسويف، ومراجعة المساء لإغلاق يومك.',
+      },
+    },
   ],
   '/goal': [
     {
@@ -292,12 +304,21 @@ export default function PageGuide() {
         }
       }
       tries += 1
-      if (tries > 40) { setRect(null); return }
+      if (tries > 40) {
+        // Élément ciblé absent (section non rendue dans cet état de page) → on
+        // SAUTE l'étape au lieu de la centrer (évite la « récitation »). Si c'était
+        // la dernière, on termine. Les étapes intro (target:null) restent centrées.
+        setIdx(i => {
+          if (!steps || i >= steps.length - 1) { finish(location.pathname); return i }
+          return i + 1
+        })
+        return
+      }
       rafRef.current = requestAnimationFrame(locate)
     }
     locate()
     return () => { cancelled = true; if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [running, idx, steps])
+  }, [running, idx, steps, finish, location.pathname])
 
   const next = useCallback(() => {
     setIdx(i => {

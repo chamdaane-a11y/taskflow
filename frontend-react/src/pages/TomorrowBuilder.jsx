@@ -1465,7 +1465,7 @@ export default function TomorrowBuilder() {
             </div>
 
             {/* TABS */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: 'var(--surface-1)', padding: 6, borderRadius: 12, border: '1px solid var(--border-subtle)', width: 'fit-content', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+            <div data-guide="tb-tabs" style={{ display: 'flex', gap: 6, marginBottom: 20, background: 'var(--surface-1)', padding: 6, borderRadius: 12, border: '1px solid var(--border-subtle)', width: 'fit-content', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
               {[
                 ['planning', t('tomorrow.tab_planning'), Sparkles],
                 ['energie', t('tomorrow.tab_energy'), Zap],
