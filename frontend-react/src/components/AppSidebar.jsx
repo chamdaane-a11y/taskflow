@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import GetShiftMark from './GetShiftMark'
 import {
   LayoutDashboard, Bot, BarChart2, Calendar, Users, HelpCircle, Sparkles, Flag,
-  PanelLeftClose, PanelLeftOpen, ChevronUp, User, Settings, Star, LogOut
+  PanelLeftClose, PanelLeftOpen, ChevronUp, User, Settings, Star, LogOut, Shield
 } from 'lucide-react'
 
 export const SIDEBAR_W = 248
@@ -258,8 +258,8 @@ export default function AppSidebar({
         {/* Nav label */}
         <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px', textTransform: 'uppercase' }}>Navigation</p>
 
-        {/* Nav items */}
-        {NAV_ITEMS
+        {/* Nav items (+ lien Console réservé au fondateur) */}
+        {[...NAV_ITEMS, ...(user?.is_founder ? [{ icon: Shield, label: 'Console', path: '/admin' }] : [])]
           .filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path))
           .map(item => {
             const Icon = item.icon
@@ -282,7 +282,7 @@ export default function AppSidebar({
                 }}
                 whileHover={{ x: 2, color: 'var(--ember)' }}>
                 <Icon size={16} strokeWidth={active ? 2.5 : 1.8} />
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t(item.labelKey)}</span>
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label || t(item.labelKey)}</span>
               </motion.button>
             )
           })

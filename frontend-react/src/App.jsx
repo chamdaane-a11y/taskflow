@@ -22,6 +22,7 @@ const MentionsLegales        = lazy(() => import('./pages/MentionsLegales'))
 const TomorrowBuilder  = lazy(() => import('./pages/TomorrowBuilder'))
 const Settings         = lazy(() => import('./pages/Settings'))
 const GoalReverse      = lazy(() => import('./pages/GoalReverse'))
+const FounderConsole   = lazy(() => import('./pages/FounderConsole'))
 
 const PageLoader = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-base)' }}>
@@ -88,6 +89,7 @@ function App() {
           <Route path="/planification"     element={<Planification />} />
           <Route path="/collaboration"     element={<Collaboration />} />
           <Route path="/settings"          element={<Settings />} />
+          <Route path="/admin"             element={<FounderConsole />} />
           <Route path="/help"              element={<Help />} />
           <Route path="*"                  element={<Navigate to="/" />} />
         </Routes>

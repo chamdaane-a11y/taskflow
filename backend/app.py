@@ -131,6 +131,64 @@ def erreur_500(e):
 def _handle_500(e):
     return jsonify({"erreur": "Erreur interne"}), 500
 
+# ── Identité fondateur (Console admin) ────────────────────────────────
+# Le fondateur est identifié par une variable d'env (non falsifiable, contrairement
+# à un flag en base). Si FOUNDER_USER_ID n'est pas défini → personne n'est fondateur
+# → toutes les routes /admin renvoient 403.
+FOUNDER_USER_ID = os.getenv('FOUNDER_USER_ID')
+
+def _is_founder(uid):
+    return FOUNDER_USER_ID is not None and str(uid) == str(FOUNDER_USER_ID)
+
+# ── Journal de sécurité (alimente la Console Fondateur) ───────────────
+def _ensure_security_log(cur):
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS security_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            event_type VARCHAR(40),
+            detail VARCHAR(255),
+            ip VARCHAR(45),
+            user_id INT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_sec_created (created_at),
+            INDEX idx_sec_type (event_type, created_at)
+        )
+    """)
+
+def _log_security(event_type, detail='', user_id=None):
+    """Best-effort : journalise un événement de sécurité (login échoué, accès
+    refusé, rate-limit). Ne lève jamais."""
+    try:
+        ip = None
+        try:
+            ip = get_client_ip()
+        except Exception:
+            pass
+        db = connecter(); cur = db.cursor()
+        _ensure_security_log(cur)
+        cur.execute("INSERT INTO security_log (event_type, detail, ip, user_id) VALUES (%s, %s, %s, %s)",
+                    (event_type, str(detail)[:255], ip, user_id))
+        db.commit(); cur.close(); db.close()
+    except Exception:
+        pass
+
+@app.errorhandler(403)
+def _handle_403(e):
+    # Tout 403 = tentative d'accès non autorisé (IDOR, route admin, etc.)
+    try:
+        _log_security('access_denied', request.path)
+    except Exception:
+        pass
+    return jsonify({"erreur": "Accès refusé"}), 403
+
+@app.errorhandler(429)
+def _handle_429(e):
+    try:
+        _log_security('rate_limit', request.path)
+    except Exception:
+        pass
+    return jsonify({"erreur": "Trop de requêtes, réessayez plus tard"}), 429
+
 def current_uid():
     """ID utilisateur authentifié issu du JWT (cookie). Suppose @jwt_required()."""
     return int(get_jwt_identity())
@@ -299,6 +357,12 @@ def _enforce_auth():
     if ep in JWT_NO_OWNERSHIP:
         return  # JWT vérifié, pas d'ownership à checker
     uid = current_uid()
+
+    # Console Fondateur : toute route /admin/* exige l'identité fondateur.
+    # Tout autre utilisateur → 403 (le handler 403 journalise la tentative).
+    rule_admin = getattr(request.url_rule, 'rule', '') or ''
+    if rule_admin.startswith('/admin') and not _is_founder(uid):
+        abort(403)
 
     # Anti-IDOR body : forcer user_id du body à l'identité authentifiée. Flask met
     # en cache le JSON parsé → l'écrasement ici se propage à tous les handlers qui
@@ -2041,6 +2105,104 @@ def watchdog_run():
     return jsonify({'overall': overall, 'checks': checks, 'healed': healed, 'alerted': alerted}), 200
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  CONSOLE FONDATEUR — endpoints /admin/* (founder-only)
+#  La garde founder est centralisée dans _enforce_auth (rule.startswith('/admin')
+#  → 403 si pas le fondateur). Ici on ne fait que les requêtes.
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/admin/overview', methods=['GET'])
+def admin_overview():
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        out = {}
+        cur.execute("SELECT COUNT(*) AS n FROM users"); out['total_users'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM users WHERE email_verifie=TRUE"); out['verified_users'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM users WHERE DATE(created_at)=CURDATE()"); out['signups_today'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['signups_7d'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"); out['signups_30d'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM users WHERE derniere_activite >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['active_7d'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM taches"); out['total_taches'] = cur.fetchone()['n']
+        try:
+            cur.execute("SELECT COUNT(*) AS n FROM push_subscriptions"); out['push_subscriptions'] = cur.fetchone()['n']
+        except Exception:
+            out['push_subscriptions'] = None
+        try:
+            cur.execute("SELECT COUNT(*) AS n FROM equipes"); out['total_equipes'] = cur.fetchone()['n']
+        except Exception:
+            out['total_equipes'] = None
+        # Activité sécurité des dernières 24h
+        try:
+            _ensure_security_log(cur)
+            cur.execute("SELECT COUNT(*) AS n FROM security_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)")
+            out['security_events_24h'] = cur.fetchone()['n']
+        except Exception:
+            out['security_events_24h'] = 0
+        cur.close(); db.close()
+        return jsonify(out), 200
+    except Exception as e:
+        return erreur_500(e)
+
+@app.route('/admin/signups', methods=['GET'])
+def admin_signups():
+    try:
+        days = request.args.get('days', default=30, type=int)
+        days = max(1, min(days, 365))
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("""
+            SELECT id, nom, email,
+                   DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:%%i') AS created_at,
+                   email_verifie
+            FROM users
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+            ORDER BY created_at DESC
+            LIMIT 300
+        """, (days,))
+        rows = cur.fetchall()
+        cur.close(); db.close()
+        return jsonify({'days': days, 'count': len(rows), 'signups': rows}), 200
+    except Exception as e:
+        return erreur_500(e)
+
+@app.route('/admin/security', methods=['GET'])
+def admin_security():
+    try:
+        limit = request.args.get('limit', default=100, type=int)
+        limit = max(1, min(limit, 500))
+        db = connecter(); cur = db.cursor(dictionary=True)
+        _ensure_security_log(cur)
+        cur.execute("""
+            SELECT event_type, detail, ip, user_id,
+                   DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:%%i:%%s') AS created_at
+            FROM security_log
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (limit,))
+        events = cur.fetchall()
+        # Compteurs par type sur 24h
+        cur.execute("""
+            SELECT event_type, COUNT(*) AS n
+            FROM security_log
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            GROUP BY event_type
+        """)
+        counts = {r['event_type']: r['n'] for r in cur.fetchall()}
+        cur.close(); db.close()
+        return jsonify({'events': events, 'counts_24h': counts}), 200
+    except Exception as e:
+        return erreur_500(e)
+
+@app.route('/admin/system', methods=['GET'])
+def admin_system():
+    try:
+        checks, healed = _watchdog_run_checks()
+        overall = 'red' if any(c['status'] == 'red' for c in checks) else \
+                  'warn' if any(c['status'] == 'warn' for c in checks) else 'ok'
+        return jsonify({'overall': overall, 'checks': checks, 'healed': healed}), 200
+    except Exception as e:
+        return erreur_500(e)
+
+
 @app.route('/debug/gcal-status', methods=['GET'])
 def debug_gcal_status():
     """Diagnose complet Google Calendar pour un user.
@@ -2233,7 +2395,7 @@ def auth_google():
         _enregistrer_session(user_id, access_token)
         response = make_response(jsonify({
             "message": "Connexion Google réussie",
-            "user": {"id": user_id, "nom": nom_final, "email": email, "niveau": niveau, "points": points, "theme": theme, "avatar": avatar_url},
+            "user": {"id": user_id, "nom": nom_final, "email": email, "niveau": niveau, "points": points, "theme": theme, "avatar": avatar_url, "is_founder": _is_founder(user_id)},
             "equipes_rejointes": equipes_rejointes,
             "access_token": access_token,  # voie header Bearer (cookie tiers bloqué sur mobile)
         }))
@@ -2330,6 +2492,7 @@ def login():
         user = curseur.fetchone()
         curseur.close(); db.close()
         if not user or not verify_password(password, user.get('password'), user['id']):
+            _log_security('login_failed', email)
             return jsonify({"erreur": "Email ou mot de passe incorrect !"}), 401
         user.pop('password', None)  # ne jamais propager le hash
         if not user.get('email_verifie'):
@@ -2365,7 +2528,7 @@ def login():
         _enregistrer_session(user['id'], access_token)
         response = make_response(jsonify({
             "message": "Connecté !",
-            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'light')},
+            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'light'), "is_founder": _is_founder(user['id'])},
             "equipes_rejointes": equipes_rejointes,
             "access_token": access_token,  # voie header Bearer (cookie tiers bloqué sur mobile)
         }))
@@ -3085,7 +3248,7 @@ def login_totp():
         _enregistrer_session(user['id'], access_token)
         response = make_response(jsonify({
             "message": "Connecté !",
-            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'light')},
+            "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'light'), "is_founder": _is_founder(user['id'])},
             "equipes_rejointes": equipes_rejointes,
             "access_token": access_token,  # voie header Bearer (cookie tiers bloqué sur mobile)
         }))
