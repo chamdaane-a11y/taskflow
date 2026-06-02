@@ -1,0 +1,33 @@
+name: Watchdog GetShift
+
+# Surveillance continue de l'app. Toutes les ~20 min, on tape /watchdog/run :
+# le backend exécute ses checks (DB, push, email, crons, erreurs, backup),
+# applique l'auto-fix sûr (purge subs invalides) et alerte le fondateur par
+# email UNIQUEMENT si un check est rouge (dédup 6h côté backend).
+# Minutes décalées hors du ':00' (créneau cron le plus saturé chez GitHub).
+on:
+  schedule:
+    - cron: '7,27,47 * * * *'
+  workflow_dispatch:
+
+jobs:
+  watchdog-tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Wake up Render backend
+        run: |
+          for i in 1 2 3; do
+            if curl -sf --max-time 30 https://getshift-backend.onrender.com/health; then
+              echo "Backend awake (try $i)"; break
+            fi
+            sleep 20
+          done
+
+      - name: Run watchdog tick
+        run: |
+          echo "-> /watchdog/run"
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${{ secrets.JOB_SECRET }}" \
+            --max-time 60 \
+            https://getshift-backend.onrender.com/watchdog/run || echo "fail watchdog tick"

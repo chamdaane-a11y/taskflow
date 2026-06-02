@@ -90,10 +90,41 @@ CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.g
 # ═══════════════════════════════════════════════════════════════════
 from flask import abort
 
+def _ensure_error_log(cur):
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS error_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            route VARCHAR(200),
+            method VARCHAR(10),
+            message TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_created (created_at)
+        )
+    """)
+
+def _log_error(e):
+    """Best-effort : persiste une erreur pour le watchdog (taux d'erreurs).
+    Ne lève jamais — un échec de log ne doit pas masquer l'erreur d'origine."""
+    try:
+        route = None; method = None
+        try:
+            route = (request.path or '')[:200]; method = request.method
+        except Exception:
+            pass
+        db = connecter(); cur = db.cursor()
+        _ensure_error_log(cur)
+        cur.execute("INSERT INTO error_log (route, method, message) VALUES (%s, %s, %s)",
+                    (route, method, str(e)[:2000]))
+        db.commit(); cur.close(); db.close()
+    except Exception:
+        pass
+
 def erreur_500(e):
     """Réponse 500 générique. La trace complète va dans les logs serveur
-    UNIQUEMENT — jamais renvoyée au client (fuite d'info / fingerprinting)."""
+    UNIQUEMENT — jamais renvoyée au client (fuite d'info / fingerprinting).
+    On persiste aussi l'erreur (best-effort) pour que le watchdog suive le taux."""
     app.logger.error("Exception non gérée: %s", e, exc_info=True)
+    _log_error(e)
     return jsonify({"erreur": "Erreur interne"}), 500
 
 @app.errorhandler(500)
@@ -219,7 +250,7 @@ JOB_ENDPOINTS = {
     'trigger_email_rappel_veille', 'trigger_email_rappel_jour_j',
     'trigger_email_taches_retard', 'trigger_email_resume_hebdo',
     'trigger_lifecycle', 'trigger_daily_matin', 'trigger_daily_midi', 'trigger_daily_soir',
-    'trigger_backup', 'get_backup_historique', 'telecharger_backup',
+    'trigger_backup', 'get_backup_historique', 'telecharger_backup', 'watchdog_run',
     'broadcast_email',
 }
 
@@ -429,12 +460,14 @@ def envoyer_email_verification(email, nom, token):
 # PUSH NOTIFICATIONS
 # ============================================
 
-def envoyer_push(subscription_json, titre, body, url="/dashboard", tag=None, image=None, require_interaction=False, renotify=False):
+def envoyer_push(subscription_json, titre, body, url="/dashboard", tag=None, image=None, require_interaction=False, renotify=False, db=None, sub_id=None):
     """Envoie une push notification. Options optionnelles pour branding/UX :
     - tag : groupe les notifs (ex: 'deadline', 'team', 'system'). Même tag = remplace.
     - image : URL d'une bannière riche (Android Chrome only).
     - require_interaction : la notif reste affichée jusqu'à action user.
-    - renotify : true = re-notifie même si même tag (par défaut false)."""
+    - renotify : true = re-notifie même si même tag (par défaut false).
+    Self-heal : si db+sub_id sont fournis et que le service push répond 404/410
+    (subscription expirée/révoquée), on supprime la ligne morte de la BDD."""
     try:
         payload = {"title": titre, "body": body, "url": url}
         if tag: payload["tag"] = tag
@@ -450,6 +483,16 @@ def envoyer_push(subscription_json, titre, body, url="/dashboard", tag=None, ima
         return True
     except WebPushException as e:
         print(f"[Push] Erreur: {e}")
+        # 404 Not Found / 410 Gone = endpoint mort → on purge la subscription.
+        status = getattr(getattr(e, 'response', None), 'status_code', None)
+        if db is not None and sub_id is not None and status in (404, 410):
+            try:
+                cur = db.cursor()
+                cur.execute("DELETE FROM push_subscriptions WHERE id=%s", (sub_id,))
+                db.commit(); cur.close()
+                print(f"[Push] Subscription morte purgée (id={sub_id}, status={status})")
+            except Exception as _e:
+                print(f"[Push] Purge sub échouée: {_e}")
         return False
 
 
@@ -560,14 +603,18 @@ def envoyer_push_smart(curseur, db, user_id, type_notif, titre, body, url="/dash
     _ensure_notif_table(curseur)
     if deja_envoyee(curseur, user_id, type_notif, intervalle_jours):
         return False
-    curseur.execute("SELECT subscription FROM push_subscriptions WHERE user_id=%s", (user_id,))
+    curseur.execute("SELECT id, subscription FROM push_subscriptions WHERE user_id=%s", (user_id,))
     rows = curseur.fetchall()
     if not rows:
         return False  # pas de subscription = pas de push
     envoyé = False
     for r in rows:
-        sub = r['subscription'] if isinstance(r, dict) else r[0]
-        if envoyer_push(sub, titre, body, url):
+        if isinstance(r, dict):
+            sub_id, sub = r['id'], r['subscription']
+        else:
+            sub_id, sub = r[0], r[1]
+        # db+sub_id → self-heal : une subscription morte (410) est purgée.
+        if envoyer_push(sub, titre, body, url, db=db, sub_id=sub_id):
             envoyé = True
     if envoyé:
         curseur.execute(
@@ -1827,6 +1874,171 @@ def debug_push_status():
     except Exception as e:
         info['db_error'] = str(e)
     return jsonify(info), 200
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  WATCHDOG — surveillance continue + alerte email fondateur + auto-fix sûr
+#  Appelé par GitHub Actions (watchdog.yml) toutes les ~20 min, protégé par
+#  JOB_SECRET. N'alerte QUE le fondateur (env FOUNDER_ALERT_EMAIL), et
+#  uniquement quand un check est en défaut, avec dédup (cooldown) anti-spam.
+#  Auto-fix limité à une whitelist sûre (purge subs push invalides). Jamais
+#  de modification de code.
+# ═══════════════════════════════════════════════════════════════════
+
+FOUNDER_ALERT_EMAIL = os.getenv('FOUNDER_ALERT_EMAIL')
+
+def _ensure_watchdog_table(cur):
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS watchdog_alerts (
+            issue_key VARCHAR(120) PRIMARY KEY,
+            last_sent DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    """)
+
+def _watchdog_should_alert(cur, db, issue_key, cooldown_h=6):
+    """True si on n'a pas déjà alerté pour cette issue dans cooldown_h heures.
+    Pose/MAJ l'horodatage quand on décide d'alerter (anti-spam)."""
+    _ensure_watchdog_table(cur)
+    cur.execute("SELECT last_sent FROM watchdog_alerts WHERE issue_key=%s", (issue_key,))
+    row = cur.fetchone()
+    last = (row.get('last_sent') if isinstance(row, dict) else row[0]) if row else None
+    if last and (datetime.now() - last) < timedelta(hours=cooldown_h):
+        return False
+    cur.execute("INSERT INTO watchdog_alerts (issue_key, last_sent) VALUES (%s, NOW()) "
+                "ON DUPLICATE KEY UPDATE last_sent=NOW()", (issue_key,))
+    db.commit()
+    return True
+
+def _watchdog_run_checks():
+    """Exécute tous les checks + l'auto-fix sûr. Renvoie (checks, healed).
+    checks : liste de {key, label, status(ok|warn|red), detail}. healed : actions faites."""
+    checks = []
+    healed = []
+    db = connecter()
+    cur = db.cursor(dictionary=True)
+    try:
+        # 1. DB — si connecter() avait échoué, on serait déjà dans l'except global
+        checks.append({'key': 'db', 'label': 'Base de données', 'status': 'ok', 'detail': 'connexion OK'})
+
+        # 2. Pipeline push (VAPID + subscriptions) + auto-fix subs invalides
+        if not (VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY):
+            checks.append({'key': 'vapid', 'label': 'Clés VAPID', 'status': 'red',
+                           'detail': 'VAPID manquante(s) — aucun push possible'})
+        else:
+            cur.execute("SELECT id, subscription FROM push_subscriptions")
+            subs = cur.fetchall()
+            bad = []
+            for r in subs:
+                try:
+                    json.loads(r['subscription'])
+                except Exception:
+                    bad.append(r['id'])
+            if bad:
+                ph = ",".join(["%s"] * len(bad))
+                cur.execute(f"DELETE FROM push_subscriptions WHERE id IN ({ph})", tuple(bad))
+                db.commit()
+                healed.append(f"{len(bad)} subscription(s) push invalide(s) purgée(s)")
+            vivantes = len(subs) - len(bad)
+            checks.append({'key': 'push', 'label': 'Subscriptions push',
+                           'status': 'warn' if vivantes == 0 else 'ok',
+                           'detail': f'{vivantes} subscription(s) vivante(s)'})
+
+        # 3. Config email (Brevo)
+        checks.append({'key': 'email', 'label': 'Service email',
+                       'status': 'ok' if os.getenv('BREVO_API_KEY') else 'red',
+                       'detail': 'Brevo OK' if os.getenv('BREVO_API_KEY') else 'BREVO_API_KEY absente'})
+
+        # 4. Crons notifs — dernière notif envoyée (silence > 30h = anormal)
+        try:
+            _ensure_notif_table(cur)
+            cur.execute("SELECT MAX(sent_at) AS last FROM notifications_envoyees")
+            last = cur.fetchone()['last']
+            if last is None:
+                checks.append({'key': 'cron', 'label': 'Crons notifs', 'status': 'warn',
+                               'detail': 'aucune notif jamais envoyée'})
+            else:
+                h = (datetime.now() - last).total_seconds() / 3600
+                checks.append({'key': 'cron', 'label': 'Crons notifs',
+                               'status': 'warn' if h > 30 else 'ok',
+                               'detail': f'dernière notif il y a {h:.0f}h'})
+        except Exception as e:
+            checks.append({'key': 'cron', 'label': 'Crons notifs', 'status': 'warn', 'detail': f'indéterminé ({e})'})
+
+        # 5. Taux d'erreurs backend (dernière heure)
+        try:
+            _ensure_error_log(cur)
+            cur.execute("SELECT COUNT(*) AS n FROM error_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)")
+            errs = cur.fetchone()['n']
+            checks.append({'key': 'errors', 'label': "Taux d'erreurs",
+                           'status': 'red' if errs >= 25 else 'warn' if errs >= 8 else 'ok',
+                           'detail': f'{errs} erreur(s) sur la dernière heure'})
+        except Exception as e:
+            checks.append({'key': 'errors', 'label': "Taux d'erreurs", 'status': 'warn', 'detail': f'indéterminé ({e})'})
+
+        # 6. Backup quotidien (dernier succès)
+        try:
+            cur.execute("SELECT MAX(cree_le) AS last FROM backups_log WHERE statut='succes'")
+            last = cur.fetchone()['last']
+            if last is None:
+                checks.append({'key': 'backup', 'label': 'Backup', 'status': 'warn', 'detail': 'aucun backup réussi enregistré'})
+            else:
+                h = (datetime.now() - last).total_seconds() / 3600
+                checks.append({'key': 'backup', 'label': 'Backup',
+                               'status': 'red' if h > 50 else 'warn' if h > 26 else 'ok',
+                               'detail': f'dernier backup il y a {h:.0f}h'})
+        except Exception:
+            checks.append({'key': 'backup', 'label': 'Backup', 'status': 'warn', 'detail': 'table backups_log absente'})
+    finally:
+        cur.close(); db.close()
+    return checks, healed
+
+def _watchdog_email_html(reds, warns, healed):
+    t = EMAIL_TOKENS
+    def _line(c, color):
+        return (f'<tr><td style="padding:10px 14px;border-bottom:1px solid {t["border"]};">'
+                f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{color};margin-right:10px;"></span>'
+                f'<strong style="color:{t["text"]};font-size:13.5px;">{c["label"]}</strong>'
+                f'<span style="color:{t["text_2"]};font-size:12.5px;"> — {c["detail"]}</span></td></tr>')
+    rows = "".join(_line(c, t['danger']) for c in reds) + "".join(_line(c, t['warning']) for c in warns)
+    healed_html = ""
+    if healed:
+        items = "".join(f'<li style="margin:0 0 4px;">{h}</li>' for h in healed)
+        healed_html = (f'<p style="color:{t["text_2"]};margin:22px 0 6px;font-size:13px;font-weight:600;">Réparé automatiquement</p>'
+                       f'<ul style="color:{t["success"]};margin:0;padding-left:18px;font-size:13px;line-height:1.6;">{items}</ul>')
+    contenu = f"""
+    <h1 style="color:{t['text']};margin:0 0 6px;font-size:21px;font-weight:700;letter-spacing:-0.3px;">Alerte watchdog GetShift</h1>
+    <p style="color:{t['text_2']};margin:0 0 22px;font-size:14px;line-height:1.6;">Le surveillant a détecté un ou plusieurs problèmes sur l'application.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['surface_2']};border-radius:12px;border:1px solid {t['border']};overflow:hidden;">{rows}</table>
+    {healed_html}
+    <p style="color:{t['text_3']};margin:24px 0 0;font-size:12px;line-height:1.6;">Tu reçois cette alerte car tu es l'administrateur de GetShift. Pas de nouvel email pour le même problème avant 6h.</p>
+    """
+    return _base_email(contenu, "Alerte watchdog GetShift")
+
+@app.route('/watchdog/run', methods=['POST'])
+def watchdog_run():
+    """Tick de surveillance (cron ~20 min). Lance les checks + auto-fix, et alerte
+    le fondateur par email si un check est rouge (dédup 6h par signature d'incident)."""
+    checks, healed = _watchdog_run_checks()
+    reds = [c for c in checks if c['status'] == 'red']
+    warns = [c for c in checks if c['status'] == 'warn']
+    alerted = False
+    if reds:
+        if not FOUNDER_ALERT_EMAIL:
+            print("[Watchdog] Problèmes détectés mais FOUNDER_ALERT_EMAIL non définie — pas d'alerte")
+        else:
+            try:
+                db = connecter(); cur = db.cursor(dictionary=True)
+                issue_key = "red:" + ",".join(sorted(c['key'] for c in reds))
+                if _watchdog_should_alert(cur, db, issue_key, cooldown_h=6):
+                    html = _watchdog_email_html(reds, warns, healed)
+                    threading.Thread(target=envoyer_email,
+                                     args=(FOUNDER_ALERT_EMAIL, "Alerte watchdog — GetShift", html)).start()
+                    alerted = True
+                cur.close(); db.close()
+            except Exception as e:
+                print(f"[Watchdog] Envoi alerte échoué: {e}")
+    overall = 'red' if reds else 'warn' if warns else 'ok'
+    return jsonify({'overall': overall, 'checks': checks, 'healed': healed, 'alerted': alerted}), 200
 
 
 @app.route('/debug/gcal-status', methods=['GET'])
