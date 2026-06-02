@@ -2156,6 +2156,7 @@ export default function Collaboration() {
       if (codeErr === 'USER_INVALID' || codeErr === 'AUTH_REQUIRED' || e.response?.status === 410 || e.response?.status === 401) {
         try { localStorage.setItem('pending_invite_code', codeRejoint.trim()) } catch {}
         localStorage.removeItem('user')
+        localStorage.removeItem('access_token')
         setErreur(e.response?.data?.erreur || 'Reconnecte-toi pour rejoindre l\'équipe')
         setTimeout(() => navigate('/'), 1500)
       } else {
@@ -2868,7 +2869,7 @@ export default function Collaboration() {
               </div>
               <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                  onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
+                  onClick={() => { localStorage.removeItem('user'); localStorage.removeItem('access_token'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
                   <LogOut size={16} strokeWidth={1.8} />Se déconnecter
                 </motion.button>
               </div>

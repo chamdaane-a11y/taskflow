@@ -379,6 +379,7 @@ export default function Settings() {
     try {
       await axios.delete(`${API}/users/${user.id}`, { data: { confirmation, password } })
       localStorage.removeItem('user')
+      localStorage.removeItem('access_token')
       localStorage.removeItem('theme')
       localStorage.removeItem('notif_prefs')
       navigate('/')
@@ -1007,7 +1008,7 @@ export default function Settings() {
                   <motion.button onClick={() => setShowLogoutConfirm(false)}
                     style={{ flex: 1, padding: '10px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                     whileTap={{ scale: 0.97 }}>{t('common.cancel')}</motion.button>
-                  <motion.button onClick={() => { localStorage.removeItem('user'); navigate('/') }}
+                  <motion.button onClick={() => { localStorage.removeItem('user'); localStorage.removeItem('access_token'); navigate('/') }}
                     style={{ flex: 1, padding: '10px', background: '#e05c5c', border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
                     whileTap={{ scale: 0.97 }}>{t('settings.logout')}</motion.button>
                 </div>

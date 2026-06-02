@@ -201,7 +201,7 @@ function ProfileMenu({ user, niveau, points, streak, niveauActuel, pctNiveau, sh
               </div>
               <div style={{ height: 1, background: 'var(--border-subtle)' }} />
               <div style={{ padding: 6 }}>
-                <motion.button onClick={() => { localStorage.removeItem('user'); navigate('/') }}
+                <motion.button onClick={() => { localStorage.removeItem('user'); localStorage.removeItem('access_token'); navigate('/') }}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-ui)' }}
                   whileHover={{ background: 'var(--danger-soft)' }}>
                   <LogOut size={15} strokeWidth={1.8} />{t('nav.logout')}

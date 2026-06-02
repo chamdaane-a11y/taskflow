@@ -56,6 +56,7 @@ function RegisterInner() {
           avatar: userInfo.data.picture,
           invite_code: pendingCode || undefined,
         }, { withCredentials: true })
+        if (res.data.access_token) localStorage.setItem('access_token', res.data.access_token)
         localStorage.setItem('user', JSON.stringify(res.data.user))
         applyTheme(res.data.user.theme || 'light')
         if (res.data.equipes_rejointes && res.data.equipes_rejointes.length > 0) {

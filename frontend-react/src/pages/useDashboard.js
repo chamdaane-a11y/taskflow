@@ -21,10 +21,16 @@ const API = 'https://getshift-backend.onrender.com'
 const api = axios.create({ baseURL: API, timeout: 8000 })
 
 // Même cache-buster que main.jsx — les instances axios.create() n'héritent pas
-// des interceptors globaux d'axios, il faut le réappliquer.
+// des interceptors globaux d'axios, il faut le réappliquer. Idem pour le token
+// JWT (header Authorization Bearer) : voie d'auth principale, cf. main.jsx.
 api.interceptors.request.use(config => {
   if ((config.method || 'get').toLowerCase() === 'get') {
     config.params = { ...(config.params || {}), _t: Date.now() }
+  }
+  let token = null
+  try { token = localStorage.getItem('access_token') } catch {}
+  if (token && !config.headers?.Authorization) {
+    config.headers = { ...(config.headers || {}), Authorization: `Bearer ${token}` }
   }
   return config
 })
@@ -33,7 +39,7 @@ export function useDashboard() {
   const navigate = useNavigate()
   const user = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('user')) }
-    catch { localStorage.removeItem('user'); return null }
+    catch { localStorage.removeItem('user'); localStorage.removeItem('access_token'); return null }
   }, [])
 
   // ── Profil ─────────────────────────────────────────────────────────

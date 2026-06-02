@@ -25,6 +25,13 @@ export function getCsrfToken() {
   return m ? decodeURIComponent(m[1]) : null
 }
 
+// Token JWT en localStorage → header Authorization Bearer. C'est la voie d'auth
+// principale : les cookies tiers (github.io ↔ onrender.com) sont bloqués par
+// Safari/iOS et Android Chrome, ce qui cassait l'app sur mobile.
+export function getAuthToken() {
+  try { return localStorage.getItem('access_token') } catch { return null }
+}
+
 axios.interceptors.request.use(config => {
   const method = (config.method || 'get').toLowerCase()
   if (method === 'get') {
@@ -32,6 +39,11 @@ axios.interceptors.request.use(config => {
   } else {
     const csrf = getCsrfToken()
     if (csrf) config.headers = { ...(config.headers || {}), 'X-CSRF-TOKEN': csrf }
+  }
+  // N'écrase pas un Authorization déjà posé (ex. appel userinfo Google OAuth).
+  const token = getAuthToken()
+  if (token && !config.headers?.Authorization) {
+    config.headers = { ...(config.headers || {}), Authorization: `Bearer ${token}` }
   }
   return config
 })
