@@ -7,10 +7,6 @@
 
 html {
   background: var(--bg-base);
-  /* `clip` (et pas `hidden`) : clippe le débordement horizontal SANS créer de
-     conteneur de scroll — donc le scroll vertical n'est jamais bloqué.
-     `hidden` sur html forcerait overflow-y:auto et cassait le scroll mobile. */
-  overflow-x: clip;
 }
 
 body {
