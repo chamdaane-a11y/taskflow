@@ -1440,22 +1440,6 @@ export default function TomorrowBuilder() {
               )}
             </AnimatePresence>
 
-            {/* RÉSUMÉ GLOBAL */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              style={{ background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover)08)`, border: `1px solid var(--ember-soft)`, borderRadius: 16, padding: '20px 24px', marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Brain size={20} color="var(--ember)" />
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 1, marginBottom: 4 }}>{t('tomorrow.ia_analysis')}</div>
-                  <p style={{ fontSize: 14, color: 'var(--text-primary)', margin: 0, lineHeight: 1.6 }}>{planning.resume_global}</p>
-                  {planning.conseil_journee && (
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, marginTop: 8, fontStyle: 'italic' }}>💡 {planning.conseil_journee}</p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
 
             {/* STATS ROW */}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>

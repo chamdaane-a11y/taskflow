@@ -109,7 +109,7 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, onOpenC
       </motion.button>
 
       {renderItem('plan',  { Icon: Calendar,  label: 'Planning', active: isOnPlanning,  onClick: () => navigate('/planification') })}
-      {renderItem('stats', { Icon: BarChart2, label: 'Stats',    active: isOnAnalytics, onClick: () => navigate('/analytics') })}
+      {renderItem('stats', { Icon: BarChart2, label: 'Analytics', active: isOnAnalytics, onClick: () => navigate('/analytics') })}
     </motion.nav>
   )
 })

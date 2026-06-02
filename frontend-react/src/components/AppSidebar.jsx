@@ -16,7 +16,7 @@ export const NAV_ITEMS = [
   { icon: Bot,             labelKey: 'nav.ai',            path: '/ia' },
   { icon: Sparkles,        label: 'Tomorrow Builder',     path: '/tomorrow' },
   { icon: Flag,            label: 'Goal',                 path: '/goal' },
-  { icon: BarChart2,       labelKey: 'nav.analytics',     path: '/analytics' },
+  { icon: BarChart2,       label: 'Analytics',           path: '/analytics' },
   { icon: Calendar,        labelKey: 'nav.planning',      path: '/planification' },
   { icon: Users,           labelKey: 'nav.collaboration', path: '/collaboration' },
   { icon: HelpCircle,      labelKey: 'nav.help',          path: '/help' },
