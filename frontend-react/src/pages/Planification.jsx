@@ -757,7 +757,7 @@ export default function Planification() {
           )}
 
           {/* View switcher — scrollable, always labeled */}
-          <div style={{
+          <div data-guide="planif-views" style={{
             display: 'flex',
             background: 'var(--surface-1)',
             border: '1px solid var(--border-subtle)',

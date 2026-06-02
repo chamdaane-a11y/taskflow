@@ -1246,6 +1246,7 @@ export default function IAChat() {
 
               <textarea
                 ref={textareaRef}
+                data-guide="ia-composer"
                 style={{ width: '100%', padding: '13px 16px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 14, color: 'var(--text-primary)', fontSize: 14, outline: 'none', resize: 'none', minHeight: 50, maxHeight: 160, fontFamily: "var(--font-ui)", lineHeight: 1.55, backdropFilter: 'blur(20px)', transition: 'border-color 0.2s', caretColor: accent }}
                 placeholder={
                   forceSearch       ? 'Que veux-tu rechercher sur le web ?' :

@@ -1570,7 +1570,7 @@ export default function Analytics() {
           </div>
 
           {/* Période selector */}
-          <div style={{ display: 'flex', gap: 4, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 4 }}>
+          <div data-guide="analytics-period" style={{ display: 'flex', gap: 4, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 4 }}>
             {periodes.map(p => (
               <motion.button key={p.id}
                 style={{ padding: '6px 14px', borderRadius: 7, background: periode === p.id ? 'var(--ember)' : 'transparent', color: periode === p.id ? '#fff' : 'var(--text-secondary)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}

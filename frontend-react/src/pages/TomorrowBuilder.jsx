@@ -1329,6 +1329,7 @@ export default function TomorrowBuilder() {
           </div>
         )}
         <motion.button
+          data-guide="tb-generate"
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', background: loading ? 'var(--surface-2)' : `linear-gradient(135deg, var(--ember), var(--ember-hover))`, border: 'none', borderRadius: 12, color: loading ? 'var(--text-secondary)' : 'var(--bg-base)', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 13 }}
           onClick={genererPlanning} disabled={loading}
           whileHover={!loading ? { scale: 1.03 } : {}} whileTap={!loading ? { scale: 0.97 } : {}}>

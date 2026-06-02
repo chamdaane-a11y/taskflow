@@ -86,15 +86,9 @@ const PAGE_GUIDES = {
       },
     },
   ],
-}
-
-// ── À ANCRER ensuite : recevront le même traitement spotlight que /dashboard
-// (ancres data-guide sur chaque section). Désactivé tant que les ancres ne sont
-// pas posées — on ne veut pas de cartes centrées « récitation ».
-// eslint-disable-next-line no-unused-vars
-const PAGE_GUIDES_TODO = {
   '/ia': [
     {
+      target: '[data-guide="ia-composer"]',
       title: { fr: "L'assistant GetShift", en: 'The GetShift assistant', es: 'El asistente GetShift', pt: 'O assistente GetShift', de: 'Der GetShift-Assistent', ar: 'مساعد GetShift' },
       desc: {
         fr: "Discute en langage naturel : il crée tes tâches, planifie ta journée, te conseille. Demande-lui simplement ce que tu veux faire.",
@@ -106,6 +100,7 @@ const PAGE_GUIDES_TODO = {
       },
     },
     {
+      target: '[data-guide="ia-composer"]',
       title: { fr: 'Il agit pour toi', en: 'It acts for you', es: 'Actúa por ti', pt: 'Ele age por você', de: 'Er handelt für dich', ar: 'يتصرّف نيابةً عنك' },
       desc: {
         fr: "L'assistant peut naviguer dans l'app et exécuter des actions. Essaie : « ajoute 3 tâches pour mon projet de demain ».",
@@ -119,6 +114,7 @@ const PAGE_GUIDES_TODO = {
   ],
   '/tomorrow': [
     {
+      target: '[data-guide="tb-generate"]',
       title: { fr: 'Prépare ta journée de demain', en: 'Plan tomorrow', es: 'Prepara tu mañana', pt: 'Prepare seu amanhã', de: 'Plane deinen morgigen Tag', ar: 'خطّط ليوم غد' },
       desc: {
         fr: "Tomorrow Builder construit un planning intelligent : il place tes tâches selon tes pics d'énergie et tes priorités.",
@@ -130,6 +126,7 @@ const PAGE_GUIDES_TODO = {
       },
     },
     {
+      target: '[data-guide="tb-generate"]',
       title: { fr: 'Génère puis ajuste', en: 'Generate then adjust', es: 'Genera y ajusta', pt: 'Gere e ajuste', de: 'Generieren, dann anpassen', ar: 'وَلِّد ثم عدّل' },
       desc: {
         fr: 'Clique sur Générer pour obtenir ton plan, puis glisse-dépose les créneaux ou décale-les. Le soir, fais ton check-in.',
@@ -143,6 +140,7 @@ const PAGE_GUIDES_TODO = {
   ],
   '/goal': [
     {
+      target: '[data-guide="goal-input"]',
       title: { fr: 'Transforme un objectif en plan', en: 'Turn a goal into a plan', es: 'Convierte una meta en plan', pt: 'Transforme uma meta em plano', de: 'Mach aus einem Ziel einen Plan', ar: 'حوّل هدفًا إلى خطة' },
       desc: {
         fr: "Décris un grand objectif : GetShift le décompose en étapes concrètes et datées, prêtes à devenir des tâches.",
@@ -156,6 +154,7 @@ const PAGE_GUIDES_TODO = {
   ],
   '/analytics': [
     {
+      target: '[data-guide="analytics-period"]',
       title: { fr: 'Comprends ta productivité', en: 'Understand your productivity', es: 'Entiende tu productividad', pt: 'Entenda sua produtividade', de: 'Verstehe deine Produktivität', ar: 'افهم إنتاجيتك' },
       desc: {
         fr: "Visualise tes complétions, tes heures les plus productives et tes tendances. Le coach te livre des insights chaque semaine.",
@@ -169,6 +168,7 @@ const PAGE_GUIDES_TODO = {
   ],
   '/planification': [
     {
+      target: '[data-guide="planif-views"]',
       title: { fr: 'Organise tes tâches dans le temps', en: 'Schedule your tasks', es: 'Organiza tus tareas en el tiempo', pt: 'Organize suas tarefas no tempo', de: 'Plane deine Aufgaben zeitlich', ar: 'نظّم مهامك زمنيًا' },
       desc: {
         fr: 'Place tes tâches sur le calendrier, synchronise avec Google Calendar et garde une vue claire de ta semaine.',
@@ -182,6 +182,7 @@ const PAGE_GUIDES_TODO = {
   ],
   '/collaboration': [
     {
+      target: '[data-guide="collab-create"]',
       title: { fr: 'Travaille en équipe', en: 'Work as a team', es: 'Trabaja en equipo', pt: 'Trabalhe em equipe', de: 'Arbeite im Team', ar: 'اعمل ضمن فريق' },
       desc: {
         fr: 'Crée une équipe, invite des membres et partagez des tâches. Chacun voit sa part et l\'avancement commun.',

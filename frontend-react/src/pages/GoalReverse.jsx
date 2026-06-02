@@ -329,6 +329,7 @@ export default function GoalReverse() {
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.8, display: 'block', marginBottom: 8 }}>{t('goal.objective_label')}</label>
             <textarea
+              data-guide="goal-input"
               value={objectif}
               onChange={e => setObjectif(e.target.value)}
               placeholder="Ex: Lancer mon SaaS GetShift avec 100 utilisateurs payants..."

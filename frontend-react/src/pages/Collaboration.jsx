@@ -2555,7 +2555,7 @@ export default function Collaboration() {
                 onClick={() => { setShowRejoindre(true); setErreur('') }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                 Rejoindre une équipe
               </motion.button>
-              <motion.button style={{ padding: '10px 18px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 14px var(--ember-soft)` }}
+              <motion.button data-guide="collab-create" style={{ padding: '10px 18px', background: `linear-gradient(135deg, var(--ember), var(--ember-soft))`, border: 'none', borderRadius: 10, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 14px var(--ember-soft)` }}
                 onClick={() => { setShowCreer(true); setErreur('') }} whileHover={{ scale: 1.02 }}>
                 Créer une équipe
               </motion.button>
