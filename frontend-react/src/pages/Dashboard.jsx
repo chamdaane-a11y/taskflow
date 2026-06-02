@@ -655,6 +655,7 @@ const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, na
 
   return (
     <motion.div
+      data-guide="dash-hero"
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
       style={{
         position: 'relative',
@@ -718,7 +719,7 @@ const WelcomeHero = memo(function WelcomeHero({ d, T, isMobile, onCreateTask, na
         </p>
 
         {/* 3 actions rapides — grille */}
-        <div style={{
+        <div data-guide="dash-actions" style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
           gap: 10,
@@ -1558,6 +1559,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
 
   return (
     <motion.div
+      data-guide="dash-focus"
       initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
       style={{
         position: 'relative',
@@ -2858,7 +2860,7 @@ export default function Dashboard() {
           )}
 
           {/* Filtres */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
+          <div data-guide="dash-filters" style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
             {[['toutes', 'Toutes'], ['haute', 'Haute'], ['moyenne', 'Moyenne'], ['basse', 'Basse'], ['bloquee', 'Bloquées'], ['terminee', 'Terminées']].map(([val, label]) => (
               <motion.button key={val}
                 style={{ display: 'flex', alignItems: 'center', gap: 4, padding: isMobile ? '5px 10px' : '5px 14px', background: d.filtre === val ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${d.filtre === val ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 99, color: d.filtre === val ? 'var(--ember)' : 'var(--text-secondary)', fontSize: isMobile ? 11 : 12, fontWeight: d.filtre === val ? 600 : 400, cursor: 'pointer', flexShrink: 0 }}

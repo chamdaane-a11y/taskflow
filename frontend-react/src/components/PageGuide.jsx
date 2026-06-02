@@ -24,6 +24,75 @@ const UI = {
 // ── Contenu par page : 2 étapes max, titre + description en 6 langues ──
 // target optionnel : sélecteur CSS d'un élément à mettre en lumière (sinon carte centrée).
 const PAGE_GUIDES = {
+  '/dashboard': [
+    {
+      target: '[data-guide="dash-hero"]',
+      title: { fr: 'Ton tableau de bord', en: 'Your dashboard', es: 'Tu panel', pt: 'Seu painel', de: 'Dein Dashboard', ar: 'لوحتك' },
+      desc: {
+        fr: "C'est ton QG. Tout part d'ici : tes tâches du jour, ton focus, tes raccourcis. Je te montre chaque zone en 30 secondes.",
+        en: "This is your HQ. Everything starts here: today's tasks, your focus, your shortcuts. Let me show you each area in 30 seconds.",
+        es: 'Es tu central. Todo empieza aquí: tus tareas del día, tu enfoque, tus accesos. Te muestro cada zona en 30 segundos.',
+        pt: 'É o seu QG. Tudo começa aqui: tarefas do dia, seu foco, seus atalhos. Vou mostrar cada área em 30 segundos.',
+        de: 'Das ist deine Zentrale. Alles beginnt hier: heutige Aufgaben, dein Fokus, deine Shortcuts. Ich zeige dir jeden Bereich in 30 Sekunden.',
+        ar: 'هذه قاعدتك. كل شيء يبدأ من هنا: مهام اليوم وتركيزك واختصاراتك. سأريك كل منطقة في 30 ثانية.',
+      },
+    },
+    {
+      target: '[data-guide="dash-actions"]',
+      title: { fr: 'Démarre ici', en: 'Start here', es: 'Empieza aquí', pt: 'Comece aqui', de: 'Hier starten', ar: 'ابدأ هنا' },
+      desc: {
+        fr: "Trois façons de lancer : créer ta 1ère tâche, partir d'un modèle prêt, ou transformer un grand objectif en plan. Clique l'une d'elles.",
+        en: 'Three ways to begin: create your first task, start from a ready template, or turn a big goal into a plan. Click one.',
+        es: 'Tres formas de empezar: crea tu primera tarea, parte de una plantilla o convierte una gran meta en plan. Pulsa una.',
+        pt: 'Três formas de começar: crie sua primeira tarefa, use um modelo pronto ou transforme uma meta em plano. Clique numa.',
+        de: 'Drei Wege zu starten: erste Aufgabe erstellen, eine Vorlage nutzen oder ein großes Ziel in einen Plan verwandeln. Klick eine an.',
+        ar: 'ثلاث طرق للبدء: أنشئ مهمتك الأولى، أو ابدأ من قالب جاهز، أو حوّل هدفًا كبيرًا إلى خطة. اضغط واحدة.',
+      },
+    },
+    {
+      target: '[data-tour="create-task"]',
+      title: { fr: 'Crée une tâche', en: 'Create a task', es: 'Crea una tarea', pt: 'Crie uma tarefa', de: 'Aufgabe erstellen', ar: 'أنشئ مهمة' },
+      desc: {
+        fr: "Écris en langage normal — « rendre le rapport vendredi 17h, urgent ». L'IA détecte la date et la priorité toute seule.",
+        en: 'Write in plain language — "submit report Friday 5pm, urgent". The AI detects the date and priority for you.',
+        es: 'Escribe en lenguaje normal — «entregar informe viernes 17h, urgente». La IA detecta fecha y prioridad sola.',
+        pt: 'Escreva naturalmente — "entregar relatório sexta 17h, urgente". A IA detecta data e prioridade sozinha.',
+        de: 'Schreib in normaler Sprache — „Bericht Freitag 17 Uhr abgeben, dringend". Die KI erkennt Datum und Priorität automatisch.',
+        ar: 'اكتب بلغة عادية — «تسليم التقرير الجمعة 5 مساءً، عاجل». يكتشف الذكاء الاصطناعي التاريخ والأولوية تلقائيًا.',
+      },
+    },
+    {
+      target: '[data-guide="dash-focus"]',
+      title: { fr: 'Focus du jour', en: "Today's focus", es: 'Enfoque del día', pt: 'Foco do dia', de: 'Fokus des Tages', ar: 'تركيز اليوم' },
+      desc: {
+        fr: "Épingle jusqu'à 3 tâches prioritaires ici. C'est ce sur quoi tu te concentres aujourd'hui — le reste peut attendre.",
+        en: 'Pin up to 3 priority tasks here. This is what you focus on today — the rest can wait.',
+        es: 'Fija hasta 3 tareas prioritarias aquí. Es en lo que te concentras hoy — el resto puede esperar.',
+        pt: 'Fixe até 3 tarefas prioritárias aqui. É o seu foco de hoje — o resto pode esperar.',
+        de: 'Pinne bis zu 3 Prioritätsaufgaben hier an. Darauf konzentrierst du dich heute — der Rest kann warten.',
+        ar: 'ثبّت حتى 3 مهام ذات أولوية هنا. هذا ما تركّز عليه اليوم — والبقية تنتظر.',
+      },
+    },
+    {
+      target: '[data-tour="nav-ia"]',
+      title: { fr: 'Navigue partout', en: 'Navigate everywhere', es: 'Navega por todo', pt: 'Navegue por tudo', de: 'Überall navigieren', ar: 'تنقّل في كل مكان' },
+      desc: {
+        fr: "Depuis ce menu tu accèdes à tout : l'assistant IA, Tomorrow Builder, tes objectifs, tes analytics. Explore quand tu veux.",
+        en: 'From this menu you reach everything: the AI assistant, Tomorrow Builder, your goals, your analytics. Explore anytime.',
+        es: 'Desde este menú llegas a todo: el asistente IA, Tomorrow Builder, tus metas, tus analytics. Explora cuando quieras.',
+        pt: 'Por este menu você acessa tudo: o assistente IA, o Tomorrow Builder, suas metas, seus analytics. Explore quando quiser.',
+        de: 'Über dieses Menü erreichst du alles: den KI-Assistenten, Tomorrow Builder, deine Ziele, deine Analytics. Erkunde jederzeit.',
+        ar: 'من هذه القائمة تصل إلى كل شيء: مساعد الذكاء الاصطناعي، Tomorrow Builder، أهدافك، تحليلاتك. استكشف متى شئت.',
+      },
+    },
+  ],
+}
+
+// ── À ANCRER ensuite : recevront le même traitement spotlight que /dashboard
+// (ancres data-guide sur chaque section). Désactivé tant que les ancres ne sont
+// pas posées — on ne veut pas de cartes centrées « récitation ».
+// eslint-disable-next-line no-unused-vars
+const PAGE_GUIDES_TODO = {
   '/ia': [
     {
       title: { fr: "L'assistant GetShift", en: 'The GetShift assistant', es: 'El asistente GetShift', pt: 'O assistente GetShift', de: 'Der GetShift-Assistent', ar: 'مساعد GetShift' },
