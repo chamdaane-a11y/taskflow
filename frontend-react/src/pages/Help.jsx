@@ -7,7 +7,6 @@ import { useMediaQuery } from '../useMediaQuery'
 import GetShiftMark from '../components/GetShiftMark'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
-import MobileBackButton from '../components/MobileBackButton'
 import { useSidebarUser } from '../components/useSidebarUser'
 import { GoogleCalendarLogo, GoogleDriveLogo, GmailLogo, NotionLogo } from '../components/BrandLogos'
 import {
@@ -569,7 +568,6 @@ export default function Help() {
         toggleSidebar={() => setSidebarOpen(o => !o)} isMobile={isMobile} />
       {!isMobile && <SidebarToggle sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={() => setSidebarOpen(!sidebarOpen)} T={T} />}
       {!isMobile && <FloatingLogo sidebarOpen={sidebarOpen} isMobile={isMobile} onClick={() => setSidebarOpen(true)} T={T} />}
-      {isMobile && <MobileBackButton T={T} />}
 
       <div style={{
         marginLeft: !isMobile && sidebarOpen ? SIDEBAR_W : 0,

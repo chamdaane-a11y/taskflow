@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import { themes } from '../themes'
 import {
-  ArrowLeft, Sparkles, Zap, Clock, AlertTriangle, CheckCircle,
+  Sparkles, Zap, Clock, AlertTriangle, CheckCircle,
   Coffee, Brain, Target, TrendingUp, ChevronDown, ChevronUp,
   RefreshCw, Moon, Sun, Flame, Battery, BatteryLow, BatteryMedium,
   SkipForward, Info, CheckSquare, Square, Minus, Send, Pencil, MessageSquare,
@@ -20,7 +20,6 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
-import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import { useSidebarUser } from '../components/useSidebarUser'
 import {
@@ -1314,14 +1313,9 @@ export default function TomorrowBuilder() {
 
       {/* HEADER */}
       <div style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--border-subtle)', padding: isMobile ? '14px 16px' : '16px 32px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 100 }}>
-        <motion.button
-          style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => navigate('/dashboard')} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
-          <ArrowLeft size={16} />
-        </motion.button>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Sparkles size={14} color={'var(--bg-base)'} />
             </div>
             <h1 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Tomorrow Builder</h1>
@@ -1474,12 +1468,12 @@ export default function TomorrowBuilder() {
                 const Icon = s.icon
                 return (
                   <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                    style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <Icon size={15} color={s.color} />
-                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>{s.label}</span>
+                    style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '14px 16px', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, minWidth: 0 }}>
+                      <Icon size={15} color={s.color} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
                     </div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.5px' }}>{s.val}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.5px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.val}</div>
                   </motion.div>
                 )
               })}
@@ -1503,8 +1497,8 @@ export default function TomorrowBuilder() {
 
             {/* TAB PLANNING */}
             {activeTab === 'planning' && (
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: 20 }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: 20, minWidth: 0 }}>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                     <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                       Planning de {demainStr}
@@ -1998,7 +1992,6 @@ export default function TomorrowBuilder() {
         )}
       </div>
       </motion.div>
-      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </>
   )

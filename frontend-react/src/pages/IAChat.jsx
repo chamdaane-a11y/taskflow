@@ -16,7 +16,6 @@ import {
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
-import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import { useSidebarUser } from '../components/useSidebarUser'
 
@@ -1467,7 +1466,6 @@ export default function IAChat() {
         )}
       </AnimatePresence>
 
-      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </div>
   )

@@ -10,14 +10,13 @@ import 'react-datepicker/dist/react-datepicker.css'
 import { registerLocale } from 'react-datepicker'
 import fr from 'date-fns/locale/fr'
 import {
-  Flag, ChevronLeft, Sparkles, Target, Calendar,
+  Flag, Sparkles, Target, Calendar,
   CheckCircle2, AlertCircle, Clock, Zap, ArrowRight,
   Download, ChevronDown, ChevronUp, Layers, AlertTriangle,
   Wand2, BookOpen, Send, Lightbulb, X
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
-import MobileBackButton from '../components/MobileBackButton'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import { useSidebarUser } from '../components/useSidebarUser'
 
@@ -252,15 +251,6 @@ export default function GoalReverse() {
   margin: isMobile ? '0 auto' : `0 auto 0 ${sidebarOpen ? SIDEBAR_W : 0}px`
 }}>
  
-    {isMobile && (
-  <motion.button
-    onClick={() => navigate('/dashboard')}
-    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', marginBottom: 20, position: 'fixed', top: 16, left: 16, zIndex: 100 }}
-    whileHover={{ color: 'var(--ember)' }}>
-    <ChevronLeft size={16} />Dashboard
-  </motion.button>
-)}
-
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: isMobile ? 22 : 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 12, marginBottom: 8 }}>
@@ -807,7 +797,6 @@ export default function GoalReverse() {
         )}
       </AnimatePresence>
 
-      {isMobile && <MobileBackButton T={T} label="Dashboard" />}
       {isMobile && <BottomNavMobile T={T} />}
     </div>
   )

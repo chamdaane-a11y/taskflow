@@ -23,7 +23,6 @@ const LANGUAGES = [
 ]
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
-import MobileBackButton from '../components/MobileBackButton'
 import OutilsIntegrations from './OutilsIntegrations'
 
 const API = 'https://getshift-backend.onrender.com'
