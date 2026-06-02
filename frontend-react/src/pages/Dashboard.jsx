@@ -574,7 +574,7 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
             {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
               <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_email')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GmailLogo size={13} /></a>
             )}
-            {tache.source_url && tache.source_url.includes('drive.google.com') && (
+            {tache.source_url && (tache.source_url.includes('drive.google.com') || tache.source_url.includes('docs.google.com')) && (
               <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_drive_file')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleDriveLogo size={13} /></a>
             )}
             {tache.source_url && tache.source_url.includes('notion.so') && (
@@ -1597,7 +1597,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
       )}
 
       {/* Slots */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 6 : 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 6 : 10, minWidth: 0 }}>
         {slots.map(i => {
           const ft = focused[i]
           const pts = ft ? (ft.priorite === 'haute' ? 30 : ft.priorite === 'moyenne' ? 20 : 10) : 0
@@ -1642,6 +1642,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                   padding: '0 6px 0 14px',
                   display: 'flex', alignItems: 'center', gap: 6,
                   minHeight: 48,
+                  minWidth: 0, maxWidth: '100%', overflow: 'hidden',
                 }}>
                 <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, background: pColor(ft.priorite), borderRadius: 99 }} />
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
@@ -2968,7 +2969,7 @@ export default function Dashboard() {
                           {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
                             <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_email')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={12} /></a>
                           )}
-                          {tache.source_url && tache.source_url.includes('drive.google.com') && (
+                          {tache.source_url && (tache.source_url.includes('drive.google.com') || tache.source_url.includes('docs.google.com')) && (
                             <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_drive_file')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={12} /></a>
                           )}
                           {tache.source_url && tache.source_url.includes('notion.so') && (
@@ -3263,7 +3264,7 @@ export default function Dashboard() {
               </div>
               <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <motion.button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 12, color: '#e05c5c', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                  onClick={() => { localStorage.removeItem('user'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
+                  onClick={() => { localStorage.removeItem('user'); localStorage.removeItem('access_token'); navigate('/') }} whileHover={{ background: 'rgba(224,92,92,0.12)' }}>
                   <LogOut size={16} strokeWidth={1.8} />Se déconnecter
                 </motion.button>
               </div>
