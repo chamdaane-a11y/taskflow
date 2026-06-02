@@ -71,7 +71,10 @@ if not _SECRET_KEY or not _JWT_SECRET_KEY:
 app.secret_key = _SECRET_KEY
 
 app.config['JWT_SECRET_KEY'] = _JWT_SECRET_KEY
-app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+# 'headers' ET 'cookies' : le header Authorization Bearer est la voie principale
+# (les cookies tiers github.io↔onrender.com sont bloqués par Safari/iOS et Android
+# Chrome). Le cookie reste accepté en parallèle pour rétrocompat / clients où il passe.
+app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
 app.config['JWT_COOKIE_SECURE'] = True
 app.config['JWT_COOKIE_SAMESITE'] = 'None'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
@@ -80,7 +83,7 @@ jwt = JWTManager(app)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
-CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type", "X-CSRF-TOKEN"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type", "X-CSRF-TOKEN", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 
 # ═══════════════════════════════════════════════════════════════════
 #  Sécurité — helpers transverses (auth, ownership, jobs, erreurs)
@@ -2020,6 +2023,7 @@ def auth_google():
             "message": "Connexion Google réussie",
             "user": {"id": user_id, "nom": nom_final, "email": email, "niveau": niveau, "points": points, "theme": theme, "avatar": avatar_url},
             "equipes_rejointes": equipes_rejointes,
+            "access_token": access_token,  # voie header Bearer (cookie tiers bloqué sur mobile)
         }))
         set_access_cookies(response, access_token)
         return response, 200
@@ -2151,6 +2155,7 @@ def login():
             "message": "Connecté !",
             "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'light')},
             "equipes_rejointes": equipes_rejointes,
+            "access_token": access_token,  # voie header Bearer (cookie tiers bloqué sur mobile)
         }))
         set_access_cookies(response, access_token)
         return response
@@ -2870,6 +2875,7 @@ def login_totp():
             "message": "Connecté !",
             "user": {"id": user['id'], "nom": user['nom'], "email": user['email'], "theme": user.get('theme', 'light')},
             "equipes_rejointes": equipes_rejointes,
+            "access_token": access_token,  # voie header Bearer (cookie tiers bloqué sur mobile)
         }))
         set_access_cookies(response, access_token)
         return response
@@ -5866,6 +5872,7 @@ def job_notifs_daily_midi():
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
             SELECT u.id, u.nom,
+                DATEDIFF(NOW(), u.derniere_activite) AS jours_inactif,
                 (SELECT COUNT(*) FROM taches t WHERE t.user_id=u.id AND t.terminee=TRUE AND DATE(COALESCE(t.terminee_le, t.updated_at))=CURDATE()) AS faites_today,
                 (SELECT COUNT(*) FROM planification p JOIN taches t ON p.tache_id=t.id WHERE p.user_id=u.id AND DATE(p.date_planifiee)=CURDATE() AND t.terminee=FALSE) AS restantes_today
             FROM users u
@@ -5877,6 +5884,7 @@ def job_notifs_daily_midi():
         for u in users:
             faites = u['faites_today'] or 0
             restantes = u['restantes_today'] or 0
+            inactif = u['jours_inactif'] if u['jours_inactif'] is not None else 999
             if faites >= 5:
                 titre = f"🔥 Déjà {faites} tâches — tu déchires"
                 body = "Mi-journée et tu cartonnes. Garde le rythme."
@@ -5886,8 +5894,13 @@ def job_notifs_daily_midi():
             elif faites == 0 and restantes >= 1:
                 titre = f"⚡ Midi — il te reste {restantes} tâche{'s' if restantes > 1 else ''}"
                 body = "Ne laisse pas l'aprem te dépasser. 1 tâche maintenant."
+            elif inactif <= 1:
+                # Jour calme mais user présent : nudge léger plutôt que silence.
+                # Réservé aux actifs récents — les churned ont la logique win-back du soir.
+                titre = "🎯 Aprèm libre — choisis ton focus"
+                body = "Rien de planifié pour aujourd'hui. Décide 1 chose à avancer."
             else:
-                continue  # rien à pousser, on saute
+                continue  # user inactif sans rien à pousser → on laisse le soir gérer
             if envoyer_push_smart(cursor, db, u['id'], "daily_midi", titre, body, "/dashboard", intervalle_jours=1):
                 sent += 1
         cursor.close(); db.close()
@@ -5947,6 +5960,17 @@ def job_notifs_daily_soir():
                 titre = f"✓ {faites} tâches aujourd'hui"
                 body = "Bonne journée. Planifie demain pour enchaîner."
                 if envoyer_push_smart(cursor, db, u['id'], "daily_evening_bilan", titre, body, "/planification", intervalle_jours=1):
+                    sent += 1
+            elif inactif <= 1:
+                # User présent aujourd'hui mais journée calme : mot de clôture
+                # plutôt qu'un silence total. (Churned → géré par le win-back ci-dessus.)
+                if faites >= 1:
+                    titre = f"✓ {faites} tâche{'s' if faites > 1 else ''} bouclée{'s' if faites > 1 else ''}"
+                    body = "Pose 2 min : qu'est-ce qui compte demain ? Planifie-le."
+                else:
+                    titre = "Journée presque finie"
+                    body = "Pas encore avancé ? 1 tâche en 5 min, ou planifie demain."
+                if envoyer_push_smart(cursor, db, u['id'], "daily_evening_soft", titre, body, "/planification", intervalle_jours=1):
                     sent += 1
         cursor.close(); db.close()
         print(f"[Daily-Soir] {sent} notifs envoyées")
