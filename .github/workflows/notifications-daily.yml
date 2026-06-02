@@ -1,14 +1,20 @@
 name: Notifications quotidiennes
 
 # 3 ticks par jour pour le système de notifs Notion-style
-# Matin 7h UTC (8h Paris hiver / 9h été)
-# Midi 11h UTC (12h Paris hiver / 13h été)
-# Soir 18h UTC (19h Paris hiver / 20h été)
+# Matin ~6h37 UTC (7h37 Paris hiver / 8h37 été)
+# Midi  ~11h11 UTC (12h Paris hiver / 13h été)
+# Soir  ~18h23 UTC (19h Paris hiver / 20h été)
+#
+# IMPORTANT : minutes décalées hors du ':00' pile — les crons à l'heure ronde
+# sont le créneau le plus saturé chez GitHub, donc les plus souvent retardés
+# voire droppés. Et le moment est dérivé du cron déclencheur (github.event.schedule),
+# PAS de l'horloge du run : ainsi un tick matin retardé exécute quand même le job
+# matin au lieu d'être requalifié en midi.
 on:
   schedule:
-    - cron: '0 7 * * *'   # matin
-    - cron: '0 11 * * *'  # midi
-    - cron: '0 18 * * *'  # soir
+    - cron: '37 6 * * *'   # matin
+    - cron: '11 11 * * *'  # midi
+    - cron: '23 18 * * *'  # soir
   workflow_dispatch:
     inputs:
       moment:
@@ -24,15 +30,28 @@ jobs:
     steps:
       - name: Détecter le moment de la journée
         id: heure
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "moment=${{ github.event.inputs.moment }}" >> $GITHUB_OUTPUT
           else
-            H=$(date -u +%H)
-            if [ "$H" -lt 10 ]; then echo "moment=matin" >> $GITHUB_OUTPUT
-            elif [ "$H" -lt 15 ]; then echo "moment=midi" >> $GITHUB_OUTPUT
-            else echo "moment=soir" >> $GITHUB_OUTPUT
-            fi
+            # Moment dérivé du cron déclencheur, pas de l'heure réelle du run.
+            # Un run retardé garde donc son identité (matin reste matin).
+            case "$SCHEDULE" in
+              "37 6 * * *")  echo "moment=matin" >> $GITHUB_OUTPUT ;;
+              "11 11 * * *") echo "moment=midi"  >> $GITHUB_OUTPUT ;;
+              "23 18 * * *") echo "moment=soir"  >> $GITHUB_OUTPUT ;;
+              *)
+                # Filet de sécurité si un cron change sans MAJ de ce case : on
+                # retombe sur l'heure du run plutôt que de ne rien envoyer.
+                H=$(date -u +%H)
+                if [ "$H" -lt 10 ]; then echo "moment=matin" >> $GITHUB_OUTPUT
+                elif [ "$H" -lt 15 ]; then echo "moment=midi" >> $GITHUB_OUTPUT
+                else echo "moment=soir" >> $GITHUB_OUTPUT
+                fi
+                ;;
+            esac
           fi
 
       - name: Wake up Render backend
