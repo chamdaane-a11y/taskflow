@@ -154,11 +154,17 @@ export default function FounderConsole() {
           {/* ── CROISSANCE ── */}
           {tab === 'growth' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
                 <KpiCard icon={Users} label="Utilisateurs" value={overview?.total_users} sub={`${overview?.verified_users ?? '—'} vérifiés`} />
-                <KpiCard icon={UserPlus} label="Inscrits aujourd'hui" value={overview?.signups_today} sub={`${overview?.signups_7d ?? '—'} sur 7j`} />
-                <KpiCard icon={Activity} label="Actifs (7j)" value={overview?.active_7d} />
-                <KpiCard icon={ListChecks} label="Tâches totales" value={overview?.total_taches} />
+                <KpiCard icon={UserPlus} label="Inscrits aujourd'hui" value={overview?.signups_today} sub={`${overview?.signups_7d ?? '—'} sur 7j · ${overview?.signups_30d ?? '—'} sur 30j`} />
+                <KpiCard icon={Activity} label="Actifs aujourd'hui" value={overview?.active_today} sub={`${overview?.active_7d ?? '—'} sur 7j · ${overview?.active_30d ?? '—'} sur 30j`} />
+                <KpiCard icon={ListChecks} label="Tâches totales" value={overview?.total_taches} sub={`${overview?.avg_taches_per_user ?? '—'} / utilisateur`} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
+                <KpiCard icon={CheckCircle2} label="Tâches faites" value={overview?.taches_done_total} sub={`${overview?.taches_done_today ?? '—'} aujourd'hui`} />
+                <KpiCard icon={TrendingUp} label="Faites (7j)" value={overview?.taches_done_7d} sub={`${overview?.taches_created_7d ?? '—'} créées (7j)`} />
+                <KpiCard icon={Activity} label="Taux de complétion" value={overview != null ? `${overview.completion_rate}%` : undefined} />
+                <KpiCard icon={Shield} label="Événements sécu (24h)" value={overview?.security_events_24h} />
               </div>
 
               <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px' }}>Inscriptions récentes (30j)</h3>

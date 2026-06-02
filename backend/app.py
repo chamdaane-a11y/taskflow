@@ -2121,8 +2121,17 @@ def admin_overview():
         cur.execute("SELECT COUNT(*) AS n FROM users WHERE DATE(created_at)=CURDATE()"); out['signups_today'] = cur.fetchone()['n']
         cur.execute("SELECT COUNT(*) AS n FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['signups_7d'] = cur.fetchone()['n']
         cur.execute("SELECT COUNT(*) AS n FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"); out['signups_30d'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM users WHERE DATE(derniere_activite)=CURDATE()"); out['active_today'] = cur.fetchone()['n']
         cur.execute("SELECT COUNT(*) AS n FROM users WHERE derniere_activite >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['active_7d'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM users WHERE derniere_activite >= DATE_SUB(NOW(), INTERVAL 30 DAY)"); out['active_30d'] = cur.fetchone()['n']
         cur.execute("SELECT COUNT(*) AS n FROM taches"); out['total_taches'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE"); out['taches_done_total'] = cur.fetchone()['n']
+        # Complétions : on date sur COALESCE(terminee_le, updated_at) — JAMAIS updated_at nu (cf. CLAUDE.md)
+        cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE AND DATE(COALESCE(terminee_le, updated_at))=CURDATE()"); out['taches_done_today'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['taches_done_7d'] = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM taches WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['taches_created_7d'] = cur.fetchone()['n']
+        out['completion_rate'] = round(100 * out['taches_done_total'] / out['total_taches']) if out['total_taches'] else 0
+        out['avg_taches_per_user'] = round(out['total_taches'] / out['total_users'], 1) if out['total_users'] else 0
         try:
             cur.execute("SELECT COUNT(*) AS n FROM push_subscriptions"); out['push_subscriptions'] = cur.fetchone()['n']
         except Exception:
