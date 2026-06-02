@@ -14,8 +14,8 @@ export const SIDEBAR_W = 248
 export const NAV_ITEMS = [
   { icon: LayoutDashboard, labelKey: 'nav.dashboard',     path: '/dashboard' },
   { icon: Bot,             labelKey: 'nav.ai',            path: '/ia' },
-  { icon: Sparkles,        labelKey: 'nav.tomorrow',      path: '/tomorrow' },
-  { icon: Flag,            labelKey: 'nav.goal',          path: '/goal' },
+  { icon: Sparkles,        label: 'Tomorrow Builder',     path: '/tomorrow' },
+  { icon: Flag,            label: 'Goal',                 path: '/goal' },
   { icon: BarChart2,       labelKey: 'nav.analytics',     path: '/analytics' },
   { icon: Calendar,        labelKey: 'nav.planning',      path: '/planification' },
   { icon: Users,           labelKey: 'nav.collaboration', path: '/collaboration' },

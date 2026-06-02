@@ -7,22 +7,15 @@
 
 html {
   background: var(--bg-base);
-  /* overflow-x sur body SEUL ne suffit pas sur mobile : le scroll horizontal se
-     reporte sur html. On clippe aux deux niveaux + #root pour éliminer tout
-     débordement horizontal quelle qu'en soit la source. */
-  overflow-x: hidden;
-  width: 100%;
-}
-
-#root {
-  overflow-x: hidden;
-  max-width: 100%;
+  /* `clip` (et pas `hidden`) : clippe le débordement horizontal SANS créer de
+     conteneur de scroll — donc le scroll vertical n'est jamais bloqué.
+     `hidden` sur html forcerait overflow-y:auto et cassait le scroll mobile. */
+  overflow-x: clip;
 }
 
 body {
   margin: 0;
   overflow-x: hidden;
-  max-width: 100%;
   font-family: var(--font-ui);
   font-feature-settings: 'cv11', 'ss01', 'ss03';  /* Geist features pour caractères distinctifs */
   font-synthesis: none;
