@@ -38,6 +38,18 @@ const PAGE_GUIDES = {
       },
     },
     {
+      target: '[data-guide="dash-coach"]',
+      title: { fr: 'Ton coach', en: 'Your coach', es: 'Tu coach', pt: 'Seu coach', de: 'Dein Coach', ar: 'مدرّبك' },
+      desc: {
+        fr: "Chaque jour il t'envoie un mot : encouragement, rappel ou conseil adapté à ton rythme. Clique dessus pour discuter avec lui.",
+        en: 'Every day it sends you a note: encouragement, reminder or advice tailored to your pace. Click it to chat.',
+        es: 'Cada día te envía una nota: ánimo, recordatorio o consejo según tu ritmo. Pulsa para hablar con él.',
+        pt: 'Todo dia ele te envia uma nota: incentivo, lembrete ou conselho no seu ritmo. Clique para conversar.',
+        de: 'Jeden Tag schickt er dir eine Nachricht: Ermutigung, Erinnerung oder Tipp passend zu deinem Rhythmus. Klick zum Chatten.',
+        ar: 'كل يوم يرسل لك رسالة: تشجيع أو تذكير أو نصيحة تناسب إيقاعك. اضغط للدردشة معه.',
+      },
+    },
+    {
       target: '[data-guide="dash-actions"]',
       title: { fr: 'Démarre ici', en: 'Start here', es: 'Empieza aquí', pt: 'Comece aqui', de: 'Hier starten', ar: 'ابدأ هنا' },
       desc: {
@@ -71,6 +83,18 @@ const PAGE_GUIDES = {
         pt: 'Fixe até 3 tarefas prioritárias aqui. É o seu foco de hoje — o resto pode esperar.',
         de: 'Pinne bis zu 3 Prioritätsaufgaben hier an. Darauf konzentrierst du dich heute — der Rest kann warten.',
         ar: 'ثبّت حتى 3 مهام ذات أولوية هنا. هذا ما تركّز عليه اليوم — والبقية تنتظر.',
+      },
+    },
+    {
+      target: '[data-guide="dash-filters"]',
+      title: { fr: 'Filtre et organise', en: 'Filter & organize', es: 'Filtra y organiza', pt: 'Filtre e organize', de: 'Filtern & ordnen', ar: 'صفِّ ونظّم' },
+      desc: {
+        fr: "Trie tes tâches par priorité, ou affiche celles qui sont bloquées ou déjà terminées. Ta liste reste toujours claire.",
+        en: 'Sort your tasks by priority, or show the blocked or completed ones. Your list stays clear at all times.',
+        es: 'Ordena tus tareas por prioridad, o muestra las bloqueadas o terminadas. Tu lista siempre clara.',
+        pt: 'Ordene suas tarefas por prioridade, ou mostre as bloqueadas ou concluídas. Sua lista sempre clara.',
+        de: 'Sortiere Aufgaben nach Priorität oder zeige blockierte/erledigte an. Deine Liste bleibt immer übersichtlich.',
+        ar: 'رتّب مهامك حسب الأولوية، أو اعرض المحظورة أو المكتملة. تبقى قائمتك واضحة دائمًا.',
       },
     },
     {
@@ -149,6 +173,18 @@ const PAGE_GUIDES = {
         pt: 'Descreva uma grande meta: o GetShift a divide em etapas concretas e datadas, prontas para virar tarefas.',
         de: 'Beschreibe ein großes Ziel: GetShift zerlegt es in konkrete, datierte Schritte, bereit als Aufgaben.',
         ar: 'صِف هدفًا كبيرًا: يقسّمه GetShift إلى خطوات ملموسة ومؤرّخة جاهزة لتصبح مهام.',
+      },
+    },
+    {
+      target: '[data-guide="goal-decompose"]',
+      title: { fr: 'Lance la décomposition', en: 'Run the breakdown', es: 'Inicia la descomposición', pt: 'Inicie a decomposição', de: 'Aufschlüsselung starten', ar: 'ابدأ التفكيك' },
+      desc: {
+        fr: "Clique ici : l'IA génère le plan étape par étape. Tu pourras ensuite l'ajuster et envoyer les étapes dans tes tâches.",
+        en: 'Click here: the AI generates the step-by-step plan. You can then adjust it and push the steps into your tasks.',
+        es: 'Pulsa aquí: la IA genera el plan paso a paso. Luego puedes ajustarlo y enviar los pasos a tus tareas.',
+        pt: 'Clique aqui: a IA gera o plano passo a passo. Depois você ajusta e envia as etapas para suas tarefas.',
+        de: 'Klick hier: Die KI erstellt den Schritt-für-Schritt-Plan. Du kannst ihn anpassen und die Schritte in deine Aufgaben übernehmen.',
+        ar: 'اضغط هنا: يولّد الذكاء الاصطناعي الخطة خطوة بخطوة. ثم يمكنك تعديلها وإرسال الخطوات إلى مهامك.',
       },
     },
   ],

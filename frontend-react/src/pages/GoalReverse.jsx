@@ -378,6 +378,7 @@ export default function GoalReverse() {
 
           {/* Bouton */}
           <motion.button
+            data-guide="goal-decompose"
             onClick={decomposer}
             disabled={loading}
             style={{ width: '100%', padding: '13px', background: loading ? 'var(--surface-2)' : 'linear-gradient(135deg, var(--ember), var(--ember-hover))', border: 'none', borderRadius: 12, color: loading ? 'var(--text-secondary)' : 'var(--bg-base)', fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: loading ? 'none' : `0 4px 20px var(--ember-soft)` }}
