@@ -1,10 +1,10 @@
 {
-  "id": "/taskflow/",
+  "id": "/",
   "name": "GetShift - Gestionnaire de tâches",
   "short_name": "GetShift",
   "description": "Organize. Automate. Perform.",
-  "start_url": "/taskflow/",
-  "scope": "/taskflow/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0E1011",
@@ -24,7 +24,7 @@
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "share_target": {
-    "action": "/taskflow/#/dashboard",
+    "action": "/#/dashboard",
     "method": "GET",
     "params": {
       "title": "titre",
@@ -37,14 +37,14 @@
       "name": "Nouvelle tâche",
       "short_name": "Ajouter",
       "description": "Ajouter une nouvelle tâche",
-      "url": "/taskflow/#/dashboard",
+      "url": "/#/dashboard",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     },
     {
       "name": "Assistant IA",
       "short_name": "GetShift AI",
       "description": "Ouvrir GetShift AI",
-      "url": "/taskflow/#/ia",
+      "url": "/#/ia",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     }
   ],

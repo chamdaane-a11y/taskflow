@@ -66,7 +66,7 @@ function ModalePartage({ T, equipe, onFermer }) {
   const [copie, setCopie] = useState(false)
   const [onglet, setOnglet] = useState('lien')
   const isTablet = useMediaQuery('(max-width: 1100px)')
-  const lien = `${window.location.origin}/taskflow/#/collaboration?code=${equipe.code_invitation}`
+  const lien = `${window.location.origin}/#/collaboration?code=${equipe.code_invitation}`
   const texteEnc = encodeURIComponent(`Rejoins mon équipe "${equipe.nom}" sur GetShift !`)
   const lienEnc = encodeURIComponent(lien)
 

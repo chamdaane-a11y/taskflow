@@ -716,7 +716,7 @@ export function useDashboard() {
   const activerNotifications = useCallback(async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
     try {
-      const reg = await navigator.serviceWorker.register('/taskflow/sw.js')
+      const reg = await navigator.serviceWorker.register('/sw.js')
       if (await Notification.requestPermission() !== 'granted') return
       const res = await api.get(`/push/vapid-public-key`)
       const pad = '='.repeat((4 - res.data.public_key.length % 4) % 4)

@@ -83,7 +83,7 @@ jwt = JWTManager(app)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
-CORS(app, origins=["https://chamdaane-a11y.github.io", "https://chamdaane-a11y.github.io/taskflow"], supports_credentials=True, allow_headers=["Content-Type", "X-CSRF-TOKEN", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+CORS(app, origins=["https://chamdaane-a11y.github.io", "https://usegetshift.com", "https://www.usegetshift.com"], supports_credentials=True, allow_headers=["Content-Type", "X-CSRF-TOKEN", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 
 # ═══════════════════════════════════════════════════════════════════
 #  Sécurité — helpers transverses (auth, ownership, jobs, erreurs)
@@ -838,7 +838,7 @@ EMAIL_TOKENS = {
 def _email_logo_html(size=40):
     """Logo GetShift dans l'email : le vrai PNG hosté sur GitHub Pages.
     Source-of-truth identique à l'app (PWA icon 192x192, design 'plaques décalées')."""
-    url = "https://chamdaane-a11y.github.io/taskflow/icons/icon-192.png"
+    url = "https://usegetshift.com/icons/icon-192.png"
     return f'<img src="{url}" alt="GetShift" width="{size}" height="{size}" style="display:block;border:0;outline:none;border-radius:{int(size*0.22)}px;">'
 
 def _base_email(contenu_html, titre_preheader="GetShift"):
@@ -880,9 +880,9 @@ def _base_email(contenu_html, titre_preheader="GetShift"):
       <tr><td style="padding:20px 32px 24px;border-top:1px solid {t['border']};background:{t['bg']};">
         <p style="margin:0;font-size:11px;color:{t['text_3']};text-align:center;line-height:1.6;">
           Tu reçois cet email car tu as un compte GetShift.<br>
-          <a href="https://chamdaane-a11y.github.io/taskflow" style="color:{t['ember']};text-decoration:none;font-weight:600;">Ouvrir GetShift</a>
+          <a href="https://usegetshift.com" style="color:{t['ember']};text-decoration:none;font-weight:600;">Ouvrir GetShift</a>
           &nbsp;·&nbsp;
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/settings" style="color:{t['text_2']};text-decoration:none;">Préférences</a>
+          <a href="https://usegetshift.com/#/settings" style="color:{t['text_2']};text-decoration:none;">Préférences</a>
         </p>
       </td></tr>
 
@@ -918,7 +918,7 @@ def _html_rappel_veille(nom, taches):
     contenu = f"""<h1 style="color:{t['text']};margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Deadline demain</h1>
     <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Bonjour <strong style="color:{t['text']};">{nom}</strong>. Tu as <strong style="color:{t['ember']};">{len(taches)} tâche{'s' if len(taches)>1 else ''}</strong> à rendre demain.</p>
     <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['bg']};border-radius:12px;border:1px solid {t['border']};margin-bottom:24px;">{lignes}</table>
-    {_email_cta_btn("Ouvrir le Dashboard", "https://chamdaane-a11y.github.io/taskflow/#/dashboard")}"""
+    {_email_cta_btn("Ouvrir le Dashboard", "https://usegetshift.com/#/dashboard")}"""
     return _base_email(contenu, "Rappel deadline demain — GetShift")
 
 def _html_rappel_jour_j(nom, taches):
@@ -929,7 +929,7 @@ def _html_rappel_jour_j(nom, taches):
     contenu = f"""<h1 style="color:{t['text']};margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Deadline aujourd'hui</h1>
     <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Bonjour <strong style="color:{t['text']};">{nom}</strong>. <strong style="color:{t['danger']};">{len(taches)} tâche{'s' if len(taches)>1 else ''}</strong> à rendre aujourd'hui.</p>
     <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['bg']};border-radius:12px;border:1px solid {t['border']};margin-bottom:24px;">{lignes}</table>
-    {_email_cta_btn("Terminer maintenant", "https://chamdaane-a11y.github.io/taskflow/#/dashboard")}"""
+    {_email_cta_btn("Terminer maintenant", "https://usegetshift.com/#/dashboard")}"""
     return _base_email(contenu, "Deadline aujourd'hui — GetShift")
 
 def _html_taches_retard(nom, taches):
@@ -941,7 +941,7 @@ def _html_taches_retard(nom, taches):
     contenu = f"""<h1 style="color:{t['text']};margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Tâches en retard</h1>
     <p style="color:{t['text_2']};margin:0 0 24px;font-size:14px;line-height:1.6;">Bonjour <strong style="color:{t['text']};">{nom}</strong>. <strong style="color:{t['danger']};">{len(taches)} tâche{'s' if len(taches)>1 else ''} en retard</strong> à rattraper.</p>
     <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['bg']};border-radius:12px;border:1px solid {t['border']};margin-bottom:24px;">{lignes}</table>
-    {_email_cta_btn("Rattraper le retard", "https://chamdaane-a11y.github.io/taskflow/#/dashboard")}"""
+    {_email_cta_btn("Rattraper le retard", "https://usegetshift.com/#/dashboard")}"""
     return _base_email(contenu, "Tâches en retard — GetShift")
 
 def _html_resume_hebdo(nom, stats):
@@ -1258,7 +1258,7 @@ def _html_resume_hebdo(nom, stats):
             """
         section_objectifs = section_card(
             section_label("Tes objectifs en cours") + rows_obj +
-            f'<a href="https://chamdaane-a11y.github.io/taskflow/#/goal" style="display:inline-block;margin-top:4px;font-size:11.5px;color:{t["ember"]};text-decoration:none;font-weight:600;">Voir tous mes objectifs →</a>'
+            f'<a href="https://usegetshift.com/#/goal" style="display:inline-block;margin-top:4px;font-size:11.5px;color:{t["ember"]};text-decoration:none;font-weight:600;">Voir tous mes objectifs →</a>'
         )
 
     # ── CTAs finaux ──
@@ -1266,14 +1266,14 @@ def _html_resume_hebdo(nom, stats):
     <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-top:24px;">
       <tr>
         <td width="50%" style="padding-right:4px;">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/dashboard" style="display:block;text-align:center;background:{t['ember']};color:#1A1A1B;padding:13px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.2px;">Ouvrir le Dashboard</a>
+          <a href="https://usegetshift.com/#/dashboard" style="display:block;text-align:center;background:{t['ember']};color:#1A1A1B;padding:13px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.2px;">Ouvrir le Dashboard</a>
         </td>
         <td width="50%" style="padding-left:4px;">
-          <a href="https://chamdaane-a11y.github.io/taskflow/#/analytics" style="display:block;text-align:center;background:{t['surface_2']};color:{t['text']};padding:13px;border-radius:10px;text-decoration:none;font-weight:600;font-size:13px;border:1px solid {t['border']};">Voir les analytics</a>
+          <a href="https://usegetshift.com/#/analytics" style="display:block;text-align:center;background:{t['surface_2']};color:{t['text']};padding:13px;border-radius:10px;text-decoration:none;font-weight:600;font-size:13px;border:1px solid {t['border']};">Voir les analytics</a>
         </td>
       </tr>
       <tr><td colspan="2" style="padding-top:8px;">
-        <a href="https://chamdaane-a11y.github.io/taskflow/#/planification" style="display:block;text-align:center;background:transparent;color:{t['text_2']};padding:11px;border-radius:10px;text-decoration:none;font-weight:500;font-size:12px;border:1px solid {t['border']};">Planifier la semaine prochaine →</a>
+        <a href="https://usegetshift.com/#/planification" style="display:block;text-align:center;background:transparent;color:{t['text_2']};padding:11px;border-radius:10px;text-decoration:none;font-weight:500;font-size:12px;border:1px solid {t['border']};">Planifier la semaine prochaine →</a>
       </td></tr>
     </table>
     """
@@ -2461,7 +2461,7 @@ def verify_email(token):
             db.close()
             return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
                 <h1 style="color:#e05c5c">Lien invalide ou expiré</h1>
-                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
+                <a href="https://usegetshift.com" style="color:#6c63ff">Retour à GetShift</a>
             </body></html>""", 400
         curseur.execute("UPDATE users SET email_verifie=TRUE, verification_token=NULL WHERE id=%s", (user['id'],))
         db.commit()
@@ -2481,7 +2481,7 @@ def verify_email(token):
             <h1 style="color:#6c63ff">Email vérifié !</h1>
             <p>Votre compte GetShift est maintenant actif.</p>
             {bonus_msg}
-            <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">Se connecter →</a>
+            <a href="https://usegetshift.com" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">Se connecter →</a>
         </body></html>"""
     except Exception as e:
         return erreur_500(e)
@@ -2601,7 +2601,7 @@ def forgot_password():
         expiry = datetime.now() + timedelta(hours=1)
         curseur.execute("UPDATE users SET reset_token=%s, reset_token_expiry=%s WHERE id=%s", (reset_token, expiry, user['id']))
         db.commit(); db.close()
-        lien = f"https://chamdaane-a11y.github.io/taskflow/#/reset-password/{reset_token}"
+        lien = f"https://usegetshift.com/#/reset-password/{reset_token}"
         t = EMAIL_TOKENS
         contenu = f"""
         <h1 style="color:{t['text']};margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Réinitialisation du mot de passe</h1>
@@ -2760,7 +2760,7 @@ def confirm_email_change(token):
             cur.close(); db.close()
             return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
                 <h1 style="color:#e05c5c">Lien invalide ou déjà utilisé</h1>
-                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
+                <a href="https://usegetshift.com" style="color:#6c63ff">Retour à GetShift</a>
             </body></html>""", 400
         if user.get('email_change_expiry') and datetime.now() > user['email_change_expiry']:
             cur.execute(
@@ -2771,7 +2771,7 @@ def confirm_email_change(token):
             return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
                 <h1 style="color:#e05c5c">Ce lien a expiré</h1>
                 <p>Demande un nouveau changement d'email depuis ton profil.</p>
-                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
+                <a href="https://usegetshift.com" style="color:#6c63ff">Retour à GetShift</a>
             </body></html>""", 400
         # Vérifier que personne d'autre n'a pris cet email entre-temps
         cur.execute("SELECT id FROM users WHERE email=%s AND id!=%s", (user['email_change_new'], user['id']))
@@ -2779,7 +2779,7 @@ def confirm_email_change(token):
             cur.close(); db.close()
             return """<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
                 <h1 style="color:#e05c5c">Cet email est déjà utilisé</h1>
-                <a href="https://chamdaane-a11y.github.io/taskflow" style="color:#6c63ff">Retour à GetShift</a>
+                <a href="https://usegetshift.com" style="color:#6c63ff">Retour à GetShift</a>
             </body></html>""", 409
         cur.execute(
             "UPDATE users SET email=%s, email_verifie=TRUE, email_change_token=NULL, email_change_new=NULL, email_change_expiry=NULL WHERE id=%s",
@@ -2790,7 +2790,7 @@ def confirm_email_change(token):
             <h1 style="color:#6c63ff">Email mis à jour !</h1>
             <p>Ton nouvel email est <strong>{user['email_change_new']}</strong>.</p>
             <p style="color:#888;font-size:13px">Reconnecte-toi avec cette nouvelle adresse.</p>
-            <a href="https://chamdaane-a11y.github.io/taskflow" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">Se connecter →</a>
+            <a href="https://usegetshift.com" style="display:inline-block;background:linear-gradient(90deg,#6c63ff,#a855f7);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px">Se connecter →</a>
         </body></html>"""
     except Exception as e:
         return f"""<html><body style="font-family:Arial;text-align:center;background:#0f0f13;color:#f0f0f5;padding:60px">
@@ -5577,7 +5577,7 @@ def ajouter_commentaire_equipe():
                         <h1 style="color:{et['text']};margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Nouvelle mention</h1>
                         <p style="color:{et['text_2']};margin:0 0 20px;font-size:14px;line-height:1.6;"><strong style="color:{et['text']};">{auteur}</strong> t'a mentionné dans un commentaire sur la tâche <strong style="color:{et['text']};">« {tache_titre} »</strong>.</p>
                         <div style="background:{et['bg']};border:1px solid {et['border']};border-left:3px solid {et['ember']};border-radius:10px;padding:14px 16px;color:{et['text']};font-size:13.5px;line-height:1.6;margin-bottom:24px;">{contenu_safe}</div>
-                        {_email_cta_btn("Répondre dans GetShift", "https://chamdaane-a11y.github.io/taskflow/#/collaboration")}
+                        {_email_cta_btn("Répondre dans GetShift", "https://usegetshift.com/#/collaboration")}
                         """
                         envoyer_email(mentionné['email'], f"{auteur} t'a mentionné — GetShift", _base_email(mention_contenu, "Nouvelle mention"))
         db.close()
@@ -6474,7 +6474,7 @@ def broadcast_email():
             "Notifications push mises à jour — réactivez-les dans Paramètres si besoin",
         ])
         cta_label = data.get('cta_label', "Ouvrir GetShift")
-        cta_href  = data.get('cta_href',  "https://chamdaane-a11y.github.io/taskflow")
+        cta_href  = data.get('cta_href',  "https://usegetshift.com")
         subject   = data.get('subject',   f"[GetShift] {titre}")
 
         sent, skipped = 0, 0
@@ -6744,7 +6744,7 @@ def _task_to_gcal_body(task, mode, start=None, end=None):
     body = {
         'summary': f"{emoji} {titre}",
         'description': f"Tâche GetShift (priorité : {priorite or 'normale'})\nID interne : {task.get('id')}",
-        'source': {'title': 'GetShift', 'url': 'https://chamdaane-a11y.github.io/taskflow'},
+        'source': {'title': 'GetShift', 'url': 'https://usegetshift.com'},
     }
     if mode == 'deadline':
         deadline = task.get('deadline')

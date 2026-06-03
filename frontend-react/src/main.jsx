@@ -58,7 +58,7 @@ if ('serviceWorker' in navigator) {
   })
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/taskflow/sw.js').then(reg => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
       reg.addEventListener('updatefound', () => {
         const next = reg.installing
         next.addEventListener('statechange', () => {

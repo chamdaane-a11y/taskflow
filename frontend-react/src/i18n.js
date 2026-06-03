@@ -16,7 +16,7 @@ i18n
       lookupLocalStorage: 'getshift_lang',
     },
     backend: {
-      loadPath: '/taskflow/locales/{{lng}}/translation.json?v=20260601',
+      loadPath: '/locales/{{lng}}/translation.json?v=20260601',
     },
     interpolation: { escapeValue: false },
     react: { useSuspense: true },

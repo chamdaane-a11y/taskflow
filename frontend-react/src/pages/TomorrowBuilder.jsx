@@ -238,7 +238,7 @@ function PushMatinBloc({ user, T, isMobile }) {
   const activer = async () => {
     setBusy(true)
     try {
-      const reg = await navigator.serviceWorker.register('/taskflow/sw.js')
+      const reg = await navigator.serviceWorker.register('/sw.js')
       await navigator.serviceWorker.ready
       const perm = await Notification.requestPermission()
       if (perm !== 'granted') { setState('denied'); setBusy(false); return }
@@ -258,7 +258,7 @@ function PushMatinBloc({ user, T, isMobile }) {
   const desactiver = async () => {
     setBusy(true)
     try {
-      const reg = await navigator.serviceWorker.getRegistration('/taskflow/sw.js')
+      const reg = await navigator.serviceWorker.getRegistration('/sw.js')
       const sub = await reg?.pushManager.getSubscription()
       if (sub) await sub.unsubscribe()
       await axios.delete(`${API}/push/unsubscribe/${user.id}`)
