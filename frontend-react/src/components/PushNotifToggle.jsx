@@ -82,9 +82,8 @@ export default function PushNotifToggle({ user, onToast }) {
     setBusy(true)
     try {
       const { data } = await axios.post(`${API}/push/test/${user.id}`)
-      // Si l'abonnement était mort, le backend l'a purgé → on repasse inactif.
-      if (data?.sent === 0) setState('inactive')
-      onToast?.(data?.message || 'Test envoyé.', data?.sent ? 'success' : 'error')
+      const errDetail = (data?.errors && data.errors.length) ? ' — ' + data.errors[0] : ''
+      onToast?.((data?.message || 'Test envoyé.') + errDetail, data?.sent ? 'success' : 'error')
     } catch (e) {
       onToast?.(e?.response?.data?.detail ? `Erreur : ${e.response.data.detail}` : "Échec de l'envoi du test.", 'error')
     } finally {

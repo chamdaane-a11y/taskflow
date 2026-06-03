@@ -542,7 +542,10 @@ def envoyer_push(subscription_json, titre, body, url="/dashboard", tag=None, ima
             subscription_info=json.loads(subscription_json),
             data=json.dumps(payload),
             vapid_private_key=VAPID_PRIVATE_KEY,
-            vapid_claims=VAPID_CLAIMS
+            # COPIE FRAÎCHE obligatoire : pywebpush mute le dict de claims (il y
+            # injecte 'aud' et 'exp'). Réutiliser le dict global figeait l'exp →
+            # une fois expiré, TOUS les pushs échouaient en 401 (bug du "+100h").
+            vapid_claims=dict(VAPID_CLAIMS)
         )
         return True
     except WebPushException as e:
@@ -6037,25 +6040,33 @@ def push_test(user_id):
             return jsonify({"sent": 0, "subscriptions": 0,
                             "message": "Aucun abonnement push sur ce compte. Active les notifications, puis réessaie."}), 200
         sent = 0
+        errors = []
+        payload = json.dumps({"title": "Test GetShift", "body": "Si tu vois ceci, tes notifications fonctionnent.", "url": "/dashboard"})
         for r in rows:
-            # db+sub_id → self-heal : une subscription morte (404/410) est purgée.
-            # try/except : un JSON d'abonnement corrompu ne fait pas planter l'endpoint.
             try:
-                if envoyer_push(r['subscription'], "Test GetShift",
-                                "Si tu vois ceci, tes notifications fonctionnent.",
-                                "/dashboard", db=db, sub_id=r['id']):
-                    sent += 1
-            except Exception as pe:
-                app.logger.error("push_test sub %s: %s", r.get('id'), pe)
-                # Abonnement illisible → on le purge pour repartir propre.
-                try:
-                    cursor.execute("DELETE FROM push_subscriptions WHERE id=%s", (r['id'],)); db.commit()
-                except Exception:
-                    pass
+                # claims COPIE fraîche (pywebpush mute le dict). Envoi direct pour
+                # capturer l'erreur exacte du service push (diagnostic).
+                webpush(subscription_info=json.loads(r['subscription']), data=payload,
+                        vapid_private_key=VAPID_PRIVATE_KEY, vapid_claims=dict(VAPID_CLAIMS))
+                sent += 1
+            except WebPushException as e:
+                status = getattr(getattr(e, 'response', None), 'status_code', None)
+                detail = ''
+                try: detail = (e.response.text or '')[:160]
+                except Exception: detail = str(e)[:160]
+                errors.append(f"HTTP {status}: {detail}")
+                # On ne purge QUE si l'endpoint est vraiment mort (404/410).
+                if status in (404, 410):
+                    try:
+                        cursor.execute("DELETE FROM push_subscriptions WHERE id=%s", (r['id'],)); db.commit()
+                    except Exception:
+                        pass
+            except Exception as e:
+                errors.append(f"{type(e).__name__}: {str(e)[:160]}")
         cursor.close(); db.close()
         msg = (f"{sent} notification(s) envoyée(s) — vérifie ton écran." if sent
-               else "Aucun envoi : abonnement(s) expiré(s) et purgé(s). Désactive puis réactive les notifications.")
-        return jsonify({"sent": sent, "subscriptions": len(rows), "message": msg}), 200
+               else "Aucun envoi. Détail technique ci-dessous (à m'envoyer).")
+        return jsonify({"sent": sent, "subscriptions": len(rows), "message": msg, "errors": errors}), 200
     except Exception as e:
         app.logger.error("push_test: %s", e, exc_info=True); _log_error(e)
         return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
