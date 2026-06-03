@@ -24,6 +24,7 @@ const LANGUAGES = [
 import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import OutilsIntegrations from './OutilsIntegrations'
+import PushNotifToggle from '../components/PushNotifToggle'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -583,6 +584,9 @@ export default function Settings() {
       case 'notifications': return (
         <motion.div key="notifications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <SectionTitle>{t('settings.notifications')}</SectionTitle>
+
+          {/* Bouton maître : (ré)abonnement push de cet appareil */}
+          <PushNotifToggle user={user} onToast={afficherNotification} />
 
           {/* Rappel install — l'install card complète est dans Apparence */}
           {!appInstalled && (
