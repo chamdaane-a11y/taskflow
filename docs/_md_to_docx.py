@@ -27,6 +27,18 @@ def add_inline(paragraph, text):
             paragraph.add_run(part)
 
 
+def _absorb_continuation(lines, i, buf):
+    """Absorbe les lignes de continuation indentées d'un item de liste
+    (markdown : une puce peut être enroulée sur plusieurs lignes indentées)."""
+    while i < len(lines):
+        cur = lines[i].rstrip()
+        if (not cur.strip() or not cur.startswith(' ')
+                or re.match(r'^\s*[-*] ', cur) or re.match(r'^\s*\d+\. ', cur)):
+            break
+        buf.append(cur.strip()); i += 1
+    return i
+
+
 def convert(md_path):
     docx_path = md_path.rsplit('.', 1)[0] + '.docx'
     lines = open(md_path, encoding='utf-8').read().split('\n')
@@ -65,29 +77,61 @@ def convert(md_path):
         if not line.strip():
             i += 1
             continue
+        # Bloc de code clôturé ``` ... ``` → rendu monospace encadré (sans les ```).
+        if line.lstrip().startswith('```'):
+            i += 1
+            code = []
+            while i < len(lines) and not lines[i].lstrip().startswith('```'):
+                code.append(lines[i]); i += 1
+            i += 1  # saute le ``` de fermeture
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Pt(12)
+            r = p.add_run('\n'.join(code))
+            r.font.name = 'Consolas'; r.font.size = Pt(9.5); r.font.color.rgb = RGBColor(0x33, 0x33, 0x33)
+            continue
         if line.strip() == '---':
             doc.add_paragraph('─' * 40).alignment = WD_ALIGN_PARAGRAPH.CENTER
             i += 1
             continue
         if line.startswith('### '):
-            doc.add_heading(line[4:], level=3)
+            doc.add_heading(line[4:], level=3); i += 1
         elif line.startswith('## '):
-            doc.add_heading(line[3:], level=2)
+            doc.add_heading(line[3:], level=2); i += 1
         elif line.startswith('# '):
-            doc.add_heading(line[2:], level=1)
+            doc.add_heading(line[2:], level=1); i += 1
         elif line.startswith('> '):
+            # Regroupe les lignes de citation consécutives en un paragraphe.
+            buf = []
+            while i < len(lines) and lines[i].rstrip().startswith('>'):
+                buf.append(lines[i].rstrip().lstrip('>').strip()); i += 1
             p = doc.add_paragraph(); p.paragraph_format.left_indent = Pt(18)
-            r = p.add_run(line[2:]); r.italic = True; r.font.color.rgb = GREY
+            add_inline(p, ' '.join(buf))
+            for r in p.runs:
+                r.italic = True
+                if not r.bold: r.font.color.rgb = GREY
         elif re.match(r'^\s*[-*] ', line):
-            p = doc.add_paragraph(style='List Bullet')
-            add_inline(p, re.sub(r'^\s*[-*] ', '', line))
+            buf = [re.sub(r'^\s*[-*] ', '', line)]; i += 1
+            i = _absorb_continuation(lines, i, buf)
+            p = doc.add_paragraph(style='List Bullet'); add_inline(p, ' '.join(buf))
         elif re.match(r'^\s*\d+\. ', line):
-            p = doc.add_paragraph(style='List Number')
-            add_inline(p, re.sub(r'^\s*\d+\. ', '', line))
+            buf = [re.sub(r'^\s*\d+\. ', '', line)]; i += 1
+            i = _absorb_continuation(lines, i, buf)
+            p = doc.add_paragraph(style='List Number'); add_inline(p, ' '.join(buf))
         else:
+            # Consomme TOUJOURS la ligne courante (évite la boucle infinie sur une
+            # ligne type '#hashtag' qui n'est pas un titre), puis regroupe les
+            # lignes adjacentes en un paragraphe (corrige le gras sur 2 lignes).
+            buf = [line.strip()]; i += 1
+            while i < len(lines):
+                cur = lines[i].rstrip()
+                if (not cur.strip() or cur.startswith('#') or cur.startswith('>')
+                        or cur.strip() == '---' or cur.startswith('|')
+                        or cur.lstrip().startswith('```')
+                        or re.match(r'^\s*[-*] ', cur) or re.match(r'^\s*\d+\. ', cur)):
+                    break
+                buf.append(cur.strip()); i += 1
             p = doc.add_paragraph()
-            add_inline(p, line)
-        i += 1
+            add_inline(p, ' '.join(buf))
 
     doc.save(docx_path)
     print('OK ->', docx_path)
