@@ -722,6 +722,22 @@ export function useDashboard() {
       const pad = '='.repeat((4 - res.data.public_key.length % 4) % 4)
       const b64 = (res.data.public_key + pad).replace(/-/g, '+').replace(/_/g, '/')
       const key = Uint8Array.from([...window.atob(b64)].map(c => c.charCodeAt(0)))
+      // Self-heal : si une subscription existe déjà mais avec une clé VAPID différente
+      // (ex. rotation des clés), subscribe() lèverait et on resterait bloqué sur une
+      // subscription morte → plus aucune notif. On la révoque d'abord pour se ré-abonner
+      // proprement avec la clé courante.
+      const existing = await reg.pushManager.getSubscription()
+      if (existing) {
+        let sameKey = false
+        try {
+          const ek = existing.options?.applicationServerKey
+          if (ek) {
+            const a = new Uint8Array(ek)
+            sameKey = a.length === key.length && a.every((v, i) => v === key[i])
+          }
+        } catch {}
+        if (!sameKey) { try { await existing.unsubscribe() } catch {} }
+      }
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
       await api.post(`/push/subscribe`, { user_id: user.id, subscription: sub.toJSON() })
     } catch {}

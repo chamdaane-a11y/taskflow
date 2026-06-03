@@ -35,7 +35,9 @@ export function useSidebarState() {
 }
 
 export function FloatingLogo({ sidebarOpen, isMobile, onClick, T }) {
-  if (sidebarOpen) return null
+  // Masqué sur mobile : redondant avec le hamburger (SidebarToggle) et gênant
+  // sur petit écran. La nav mobile passe par le hamburger + la bottom-nav.
+  if (sidebarOpen || isMobile) return null
   return (
     <motion.button
       onClick={onClick}
