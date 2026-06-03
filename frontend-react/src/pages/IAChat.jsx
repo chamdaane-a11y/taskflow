@@ -1063,7 +1063,7 @@ export default function IAChat() {
               </div>
 
               {/* Suggestions DYNAMIQUES (rules-based backend) avec fallback statique */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 10, width: '100%', maxWidth: 580 }}>
+              <div data-guide="ia-suggestions" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 10, width: '100%', maxWidth: 580 }}>
                 {(suggestions && suggestions.length > 0 ? suggestions : SUGGESTIONS).slice(0, 4).map((s, i) => {
                   // Suggestions backend = string icon name ; fallback statique = composant
                   const iconMap = { Brain, Globe, Plus, Zap, AlertCircle, Target, Flame, Calendar, Sparkles, CheckCircle }

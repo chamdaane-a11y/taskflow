@@ -2551,7 +2551,7 @@ export default function Collaboration() {
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 300 }}>{t('collab.no_team_sub')}</p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <motion.button style={{ padding: '10px 18px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}
+              <motion.button data-guide="collab-join" style={{ padding: '10px 18px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}
                 onClick={() => { setShowRejoindre(true); setErreur('') }} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
                 Rejoindre une équipe
               </motion.button>

@@ -1101,7 +1101,7 @@ export default function Planification() {
 
           {/* KANBAN */}
           {vue === 'kanban' && (
-            <motion.div key="kanban" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div key="kanban" data-guide="planif-board" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
 
               {/* Mobile: onglets de colonnes */}

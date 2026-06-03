@@ -135,6 +135,18 @@ const PAGE_GUIDES = {
         ar: 'يمكن للمساعد التنقّل في التطبيق وتنفيذ الإجراءات. جرّب: «أضف 3 مهام لمشروعي غدًا».',
       },
     },
+    {
+      target: '[data-guide="ia-suggestions"]',
+      title: { fr: 'Des idées pour démarrer', en: 'Ideas to get started', es: 'Ideas para empezar', pt: 'Ideias para começar', de: 'Ideen zum Loslegen', ar: 'أفكار للبدء' },
+      desc: {
+        fr: "Pas sûr de quoi demander ? Ces suggestions s'adaptent à ton activité. Clique-en une pour voir l'assistant en action.",
+        en: "Not sure what to ask? These suggestions adapt to your activity. Click one to see the assistant in action.",
+        es: '¿No sabes qué pedir? Estas sugerencias se adaptan a tu actividad. Pulsa una para ver al asistente en acción.',
+        pt: 'Não sabe o que pedir? Estas sugestões se adaptam à sua atividade. Clique numa para ver o assistente em ação.',
+        de: 'Unsicher, was du fragen sollst? Diese Vorschläge passen sich deiner Aktivität an. Klick einen an, um den Assistenten in Aktion zu sehen.',
+        ar: 'لست متأكدًا ممّا تطلبه؟ تتكيّف هذه الاقتراحات مع نشاطك. اضغط واحدًا لترى المساعد أثناء العمل.',
+      },
+    },
   ],
   '/tomorrow': [
     {
@@ -227,6 +239,18 @@ const PAGE_GUIDES = {
         ar: 'ضَع مهامك على التقويم، وزامِن مع Google Calendar، واحتفظ برؤية واضحة لأسبوعك.',
       },
     },
+    {
+      target: '[data-guide="planif-board"]',
+      title: { fr: 'Ton tableau Kanban', en: 'Your Kanban board', es: 'Tu tablero Kanban', pt: 'Seu quadro Kanban', de: 'Dein Kanban-Board', ar: 'لوحة كانبان' },
+      desc: {
+        fr: 'Glisse tes tâches entre les colonnes (à faire, en cours, terminé). Une vue claire de l\'avancement, en un coup d\'œil.',
+        en: 'Drag your tasks between columns (to do, in progress, done). A clear view of progress at a glance.',
+        es: 'Arrastra tus tareas entre columnas (por hacer, en curso, hecho). Una vista clara del avance de un vistazo.',
+        pt: 'Arraste suas tarefas entre as colunas (a fazer, em curso, feito). Uma visão clara do progresso num relance.',
+        de: 'Zieh deine Aufgaben zwischen den Spalten (zu erledigen, in Arbeit, fertig). Fortschritt auf einen Blick.',
+        ar: 'اسحب مهامك بين الأعمدة (للقيام به، قيد التنفيذ، منجز). رؤية واضحة للتقدّم بنظرة واحدة.',
+      },
+    },
   ],
   '/collaboration': [
     {
@@ -239,6 +263,18 @@ const PAGE_GUIDES = {
         pt: 'Crie uma equipe, convide membros e compartilhem tarefas. Cada um vê sua parte e o progresso comum.',
         de: 'Erstelle ein Team, lade Mitglieder ein und teilt Aufgaben. Jeder sieht seinen Teil und den gemeinsamen Fortschritt.',
         ar: 'أنشئ فريقًا وادعُ أعضاء وشاركوا المهام. يرى كل فرد نصيبه والتقدّم المشترك.',
+      },
+    },
+    {
+      target: '[data-guide="collab-join"]',
+      title: { fr: 'Ou rejoins une équipe', en: 'Or join a team', es: 'O únete a un equipo', pt: 'Ou entre numa equipe', de: 'Oder tritt einem Team bei', ar: 'أو انضمّ إلى فريق' },
+      desc: {
+        fr: "Déjà invité ? Entre le code d'invitation reçu pour rejoindre l'équipe de quelqu'un d'autre et collaborer immédiatement.",
+        en: "Already invited? Enter the invite code you received to join someone else's team and collaborate right away.",
+        es: '¿Ya invitado? Introduce el código de invitación recibido para unirte al equipo de otra persona y colaborar al instante.',
+        pt: 'Já convidado? Insira o código de convite recebido para entrar na equipe de outra pessoa e colaborar na hora.',
+        de: 'Schon eingeladen? Gib den erhaltenen Einladungscode ein, um dem Team einer anderen Person beizutreten und sofort mitzuarbeiten.',
+        ar: 'مدعوّ مسبقًا؟ أدخل رمز الدعوة الذي تلقّيته للانضمام إلى فريق شخص آخر والتعاون فورًا.',
       },
     },
   ],
