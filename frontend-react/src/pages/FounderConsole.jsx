@@ -81,7 +81,12 @@ export default function FounderConsole() {
       const r = await axios.post(`${API}/admin/test-push`)
       setTestMsg(r.data?.message || 'Test envoyé.')
     } catch (e) {
-      setTestMsg(e?.response?.status === 403 ? 'Réservé au fondateur.' : "Erreur lors de l'envoi du test.")
+      const d = e?.response?.data
+      setTestMsg(
+        e?.response?.status === 403 ? 'Réservé au fondateur.'
+        : d?.detail ? `Erreur : ${d.detail}`
+        : `Erreur lors de l'envoi (${e?.response?.status || 'réseau'}).`
+      )
     }
     setTesting(false)
   }, [])
@@ -109,7 +114,12 @@ export default function FounderConsole() {
         setSystem(r.data)
       }
     } catch (err) {
-      setErreur(err?.response?.status === 403 ? 'Accès réservé au fondateur.' : 'Erreur de chargement.')
+      const d = err?.response?.data
+      setErreur(
+        err?.response?.status === 403 ? 'Accès réservé au fondateur.'
+        : d?.detail ? `Erreur : ${d.detail}`
+        : `Erreur de chargement (${err?.response?.status || 'réseau'}).`
+      )
     }
     setLoading(false)
   }, [])

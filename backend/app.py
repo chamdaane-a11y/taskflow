@@ -2180,13 +2180,15 @@ def admin_security():
         limit = max(1, min(limit, 500))
         db = connecter(); cur = db.cursor(dictionary=True)
         _ensure_security_log(cur)
-        cur.execute("""
+        # LIMIT en littéral (limit déjà clampé int) — le LIMIT %s paramétré pose
+        # problème avec ce connecteur (cf. admin_signups qui utilise un littéral).
+        cur.execute(f"""
             SELECT event_type, detail, ip, user_id,
-                   DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:%%i:%%s') AS created_at
+                   DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at
             FROM security_log
             ORDER BY created_at DESC
-            LIMIT %s
-        """, (limit,))
+            LIMIT {limit}
+        """)
         events = cur.fetchall()
         # Compteurs par type sur 24h
         cur.execute("""
@@ -2199,7 +2201,9 @@ def admin_security():
         cur.close(); db.close()
         return jsonify({'events': events, 'counts_24h': counts}), 200
     except Exception as e:
-        return erreur_500(e)
+        # Endpoint founder-only → on expose le détail dans la console (diagnostic).
+        app.logger.error("admin_security: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:400]}"}), 500
 
 @app.route('/admin/system', methods=['GET'])
 def admin_system():
@@ -2253,7 +2257,8 @@ def admin_timeseries():
         return jsonify({'days': days, 'labels': labels,
                         'signups': s_arr, 'tasks_created': c_arr, 'tasks_done': d_arr}), 200
     except Exception as e:
-        return erreur_500(e)
+        app.logger.error("admin_timeseries: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:400]}"}), 500
 
 
 @app.route('/admin/test-push', methods=['POST'])
@@ -2272,10 +2277,13 @@ def admin_test_push():
                             'message': "Aucun abonnement push sur ton compte. Active les notifications (Réglages → Notifications) sur cet appareil, puis réessaie."}), 200
         sent = 0
         for r in rows:
-            if envoyer_push(r['subscription'], "Test GetShift",
-                            "Si tu vois ceci, le pipeline de notifications fonctionne.",
-                            "/dashboard", db=db, sub_id=r['id']):
-                sent += 1
+            try:
+                if envoyer_push(r['subscription'], "Test GetShift",
+                                "Si tu vois ceci, le pipeline de notifications fonctionne.",
+                                "/dashboard", db=db, sub_id=r['id']):
+                    sent += 1
+            except Exception as pe:
+                app.logger.error("test-push sub %s: %s", r.get('id'), pe)
         if sent:
             try:
                 _ensure_notif_table(cur)
@@ -2289,7 +2297,8 @@ def admin_test_push():
                if sent else "Échec d'envoi : l'abonnement push est peut-être expiré. Réactive les notifications dans Réglages.")
         return jsonify({'sent': sent, 'subscriptions': len(rows), 'message': msg}), 200
     except Exception as e:
-        return erreur_500(e)
+        app.logger.error("admin_test_push: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:400]}"}), 500
 
 
 @app.route('/debug/gcal-status', methods=['GET'])
