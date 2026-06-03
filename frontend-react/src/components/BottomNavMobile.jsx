@@ -61,6 +61,7 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, onOpenC
 
   return (
     <motion.nav
+      data-guide="mobile-nav"
       initial={{ y: 80 }} animate={{ y: 0 }}
       transition={{ type: 'spring', damping: 28, stiffness: 280 }}
       style={{

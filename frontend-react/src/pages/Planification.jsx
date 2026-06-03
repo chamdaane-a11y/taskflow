@@ -730,7 +730,7 @@ export default function Planification() {
         <div style={{
           flexShrink: 0,
           padding: isMobile ? '10px 14px 8px' : 'clamp(16px,3vw,28px) clamp(16px,3vw,32px) 10px',
-          paddingTop: isMobile ? 54 : 'clamp(20px,3vh,32px)',
+          paddingTop: isMobile ? 'calc(54px + env(safe-area-inset-top))' : 'clamp(20px,3vh,32px)',
         }}>
 
         {/* Header — masqué sur mobile en vue calendrier pour libérer la grille */}

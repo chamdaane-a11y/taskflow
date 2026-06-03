@@ -244,11 +244,11 @@ export default function GoalReverse() {
   transition: 'margin-left 0.3s ease',
   flex: 1,
   padding: isMobile ? '16px' : '40px',
-  paddingTop: isMobile ? '70px' : '40px',
+  paddingTop: isMobile ? 'calc(70px + env(safe-area-inset-top))' : '40px',
   paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : '40px',
   minWidth: 0,
   maxWidth: 900,
-  margin: isMobile ? '0 auto' : `0 auto 0 ${sidebarOpen ? SIDEBAR_W : 0}px`
+  margin: isMobile ? '0 auto' : `0 auto 0 max(${sidebarOpen ? SIDEBAR_W : 0}px, calc(${(sidebarOpen ? SIDEBAR_W : 0) / 2}px + 50vw - 450px))`
 }}>
  
         {/* Header */}

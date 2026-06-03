@@ -2634,12 +2634,12 @@ export default function Dashboard() {
       {/* ══════════════════════════════════════════════════════════════
           MAIN
       ══════════════════════════════════════════════════════════════ */}
-      <motion.main animate={{ marginLeft: mainMarginL }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: 1440, overflowX: 'hidden' }}>
+      <motion.main animate={{ marginLeft: isMobile ? 0 : `max(${mainMarginL}px, calc(${mainMarginL / 2}px + 50vw - 720px))` }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: 1440, overflowX: 'hidden', marginRight: isMobile ? undefined : 'auto' }}>
 
         {/* ── BARRE D'ACTIONS MOBILE (toujours visible) ── */}
         {isMobile && (
-          <div style={{ position: 'sticky', top: 0, zIndex: 100, paddingTop: 52 }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 100, paddingTop: 'calc(52px + env(safe-area-inset-top))' }}>
             <MobileActionBar
               d={d} T={T}
               onOpenTemplates={d.ouvrirTemplates}

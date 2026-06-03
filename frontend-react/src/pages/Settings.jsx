@@ -1123,7 +1123,7 @@ export default function Settings() {
             </div>
 
             {/* Navigation sections */}
-            <nav style={{ flex: 1 }}>
+            <nav data-guide="settings-sections" style={{ flex: 1 }}>
               {SECTIONS.map(({ id, label, icon: Icon }) => (
                 <motion.button key={id}
                   onClick={() => setActiveSection(id)}
@@ -1142,7 +1142,7 @@ export default function Settings() {
         )}
 
         {/* ── CONTENU PRINCIPAL ── */}
-        <main style={{ flex: 1, padding: isMobile ? '16px' : isTablet ? '24px 24px' : '40px 48px', maxWidth: 720, minWidth: 0, paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : undefined }}>
+        <main style={{ flex: 1, padding: isMobile ? 'calc(16px + env(safe-area-inset-top)) 16px 16px' : isTablet ? '24px 24px' : '40px 48px', maxWidth: 720, minWidth: 0, marginLeft: 'auto', marginRight: 'auto', paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : undefined }}>
 
           {/* Header mobile */}
           {isMobile && (
@@ -1158,7 +1158,7 @@ export default function Settings() {
 
           {/* Tabs mobile */}
           {isMobile && (
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 24, paddingBottom: 2, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div data-guide="settings-tabs" style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 24, paddingBottom: 2, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {SECTIONS.map(({ id, label, icon: Icon }) => (
                 <motion.button key={id}
                   onClick={() => setActiveSection(id)}

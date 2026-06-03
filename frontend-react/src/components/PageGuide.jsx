@@ -3,7 +3,8 @@
 // Quand un user découvre une page pour la première fois, un mini-tour
 // (cartes spotlight) lui explique quoi faire. Flag localStorage par page
 // → ne se redéclenche jamais. Contenu multilingue inline (6 langues).
-// Moteur autonome (n'altère pas le GuidedTour global du Dashboard).
+// Système UNIQUE de guidage (l'ancien GuidedTour cross-page a été retiré).
+// Rejouable via l'event 'getshift:start-tour' (bouton Help + post-onboarding).
 // ══════════════════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
@@ -98,7 +99,7 @@ const PAGE_GUIDES = {
       },
     },
     {
-      target: '[data-tour="nav-ia"]',
+      target: ['[data-tour="nav-ia"]', '[data-guide="mobile-nav"]'],
       title: { fr: 'Navigue partout', en: 'Navigate everywhere', es: 'Navega por todo', pt: 'Navegue por tudo', de: 'Überall navigieren', ar: 'تنقّل في كل مكان' },
       desc: {
         fr: "Depuis ce menu tu accèdes à tout : l'assistant IA, Tomorrow Builder, tes objectifs, tes analytics. Explore quand tu veux.",
@@ -278,6 +279,46 @@ const PAGE_GUIDES = {
       },
     },
   ],
+  '/settings': [
+    {
+      target: ['[data-guide="settings-sections"]', '[data-guide="settings-tabs"]'],
+      title: { fr: 'Tes réglages, par section', en: 'Your settings, by section', es: 'Tus ajustes, por sección', pt: 'Suas configurações, por seção', de: 'Deine Einstellungen, nach Bereich', ar: 'إعداداتك، حسب القسم' },
+      desc: {
+        fr: 'Compte, apparence, notifications, intégrations, sécurité, langue : tout se règle ici. Choisis une section pour la configurer.',
+        en: 'Account, appearance, notifications, integrations, security, language: it all lives here. Pick a section to set it up.',
+        es: 'Cuenta, apariencia, notificaciones, integraciones, seguridad, idioma: todo está aquí. Elige una sección para configurarla.',
+        pt: 'Conta, aparência, notificações, integrações, segurança, idioma: está tudo aqui. Escolha uma seção para configurar.',
+        de: 'Konto, Aussehen, Benachrichtigungen, Integrationen, Sicherheit, Sprache: alles ist hier. Wähle einen Bereich zum Einrichten.',
+        ar: 'الحساب، المظهر، الإشعارات، التكاملات، الأمان، اللغة: كل شيء هنا. اختر قسمًا لإعداده.',
+      },
+    },
+  ],
+  '/profile': [
+    {
+      target: '[data-guide="profile-level"]',
+      title: { fr: 'Ton niveau et ta progression', en: 'Your level & progress', es: 'Tu nivel y progreso', pt: 'Seu nível e progresso', de: 'Dein Level & Fortschritt', ar: 'مستواك وتقدّمك' },
+      desc: {
+        fr: 'Chaque tâche terminée te rapporte des points et fait monter ton niveau. La barre montre ta progression vers le palier suivant.',
+        en: 'Every completed task earns points and raises your level. The bar shows your progress to the next tier.',
+        es: 'Cada tarea completada da puntos y sube tu nivel. La barra muestra tu progreso al siguiente nivel.',
+        pt: 'Cada tarefa concluída dá pontos e sobe seu nível. A barra mostra seu progresso até o próximo nível.',
+        de: 'Jede erledigte Aufgabe bringt Punkte und steigert dein Level. Der Balken zeigt deinen Fortschritt zur nächsten Stufe.',
+        ar: 'كل مهمة منجزة تكسبك نقاطًا وترفع مستواك. يُظهر الشريط تقدّمك نحو المستوى التالي.',
+      },
+    },
+    {
+      target: '[data-guide="profile-badges"]',
+      title: { fr: 'Tes badges', en: 'Your badges', es: 'Tus insignias', pt: 'Suas conquistas', de: 'Deine Abzeichen', ar: 'شاراتك' },
+      desc: {
+        fr: 'Débloque des badges en gardant ton streak, en finissant des tâches et en atteignant des paliers. Une preuve visible de ta régularité.',
+        en: 'Unlock badges by keeping your streak, finishing tasks and hitting milestones. A visible proof of your consistency.',
+        es: 'Desbloquea insignias manteniendo tu racha, terminando tareas y alcanzando hitos. Una prueba visible de tu constancia.',
+        pt: 'Desbloqueie conquistas mantendo seu streak, concluindo tarefas e atingindo marcos. Uma prova visível da sua consistência.',
+        de: 'Schalte Abzeichen frei, indem du deine Serie hältst, Aufgaben erledigst und Meilensteine erreichst. Ein sichtbarer Beweis deiner Beständigkeit.',
+        ar: 'افتح الشارات بالحفاظ على تتابعك، وإنهاء المهام، وبلوغ المحطات. دليل مرئي على انتظامك.',
+      },
+    },
+  ],
 }
 
 const flagKey = (path) => 'gs_pageguide_' + path
@@ -316,6 +357,23 @@ export default function PageGuide() {
     return () => clearTimeout(id)
   }, [location.pathname])
 
+  // ── Replay manuel (bouton « revoir le guide » dans Help) + démarrage
+  //    post-onboarding : on écoute l'event historique 'getshift:start-tour'.
+  //    On réarme tous les guides de page et on relance celui de la page courante.
+  useEffect(() => {
+    const onReplay = () => {
+      try {
+        Object.keys(localStorage).forEach(k => { if (k.startsWith('gs_pageguide_')) localStorage.removeItem(k) })
+        localStorage.removeItem('getshift_start_tour')
+        localStorage.removeItem('getshift_tour_done')
+      } catch {}
+      const guide = PAGE_GUIDES[location.pathname]
+      if (guide) { setSteps(guide); setIdx(0); setTimeout(() => setRunning(true), 300) }
+    }
+    window.addEventListener('getshift:start-tour', onReplay)
+    return () => window.removeEventListener('getshift:start-tour', onReplay)
+  }, [location.pathname])
+
   // ── Localiser l'ancre de l'étape (polling robuste, fallback centré) ──
   useEffect(() => {
     if (!running || !steps) return
@@ -323,10 +381,18 @@ export default function PageGuide() {
     if (!step) return
     let cancelled = false
     let tries = 0
+    // target peut être un sélecteur OU un tableau de sélecteurs (fallbacks
+    // desktop/mobile) : on prend le premier élément présent.
+    const queryTarget = (target) => {
+      if (!target) return null
+      const sels = Array.isArray(target) ? target : [target]
+      for (const s of sels) { const el = document.querySelector(s); if (el) return el }
+      return null
+    }
     const locate = () => {
       if (cancelled) return
       if (!step.target) { setRect(null); return }
-      const el = document.querySelector(step.target)
+      const el = queryTarget(step.target)
       if (el) {
         const r = el.getBoundingClientRect()
         if (r.width > 0 && r.height > 0) {

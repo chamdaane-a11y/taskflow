@@ -2406,7 +2406,7 @@ export default function Collaboration() {
         style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', overflowX: 'hidden', minWidth: 0, paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT : 0 }}>
 
         {/* HEADER */}
-        <div style={{ padding: '13px clamp(14px,3vw,24px)', paddingLeft: isMobile ? 62 : undefined, borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>
+        <div style={{ padding: '13px clamp(14px,3vw,24px)', paddingLeft: isMobile ? 62 : undefined, paddingTop: isMobile ? 'calc(13px + env(safe-area-inset-top))' : undefined, borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, position: 'relative' }}>
           {equipeActive ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, var(--ember), var(--ember-hover))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0 }}>

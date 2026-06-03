@@ -750,7 +750,7 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? '56px 16px 24px' : 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 32px)', position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? 'calc(56px + env(safe-area-inset-top)) 16px 24px' : 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 32px)', position: 'relative', zIndex: 1 }}>
 
         {/* Retour */}
         <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} style={{ marginBottom: 32 }}>
@@ -775,7 +775,7 @@ export default function Profile() {
               style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', width: 320, height: 320, borderRadius: '50%', filter: 'blur(80px)', background: `radial-gradient(circle, ${niveauInfo.couleur}, transparent 70%)`, pointerEvents: 'none' }} />
           )}
 
-          <div className="pf-hero" style={{ display: 'flex', alignItems: 'center', gap: 28, marginBottom: 28, position: 'relative' }}>
+          <div className="pf-hero" data-guide="profile-level" style={{ display: 'flex', alignItems: 'center', gap: 28, marginBottom: 28, position: 'relative' }}>
             {/* Avatar — anneau gradient animé pour les niveaux ≥ 7 */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
               {(user.niveau || 1) >= 7 && (
@@ -855,12 +855,14 @@ export default function Profile() {
         </motion.div>
 
         {/* ══ VITRINE BADGES ══ */}
-        <BadgesShowcase
-          T={T} cardBg={cardBg} cardBorder={cardBorder} isLight={isLight}
-          text={text} text2={text2} accent={accent} bg3={bg3}
-          badges={badgesData.badges}
-          points={pointsActuels} streak={user.streak || 0} nbTerminees={user.taches_count || 0}
-          navigate={navigate} />
+        <div data-guide="profile-badges">
+          <BadgesShowcase
+            T={T} cardBg={cardBg} cardBorder={cardBorder} isLight={isLight}
+            text={text} text2={text2} accent={accent} bg3={bg3}
+            badges={badgesData.badges}
+            points={pointsActuels} streak={user.streak || 0} nbTerminees={user.taches_count || 0}
+            navigate={navigate} />
+        </div>
 
         {/* ══ TIMELINE PARCOURS ══ */}
         <TimelineSection

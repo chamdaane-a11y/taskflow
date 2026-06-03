@@ -933,7 +933,7 @@ export default function IAChat() {
         )}
 
         {/* Header — padding-left mobile pour le hamburger fixe (left:12, 36px) */}
-        <div style={{ padding: isMobile ? '12px 16px 12px 58px' : '12px clamp(16px,4vw,28px)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: 'var(--surface-1)', backdropFilter: 'blur(30px)' }}>
+        <div style={{ padding: isMobile ? 'calc(12px + env(safe-area-inset-top)) 16px 12px 58px' : '12px clamp(16px,4vw,28px)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0, background: 'var(--surface-1)', backdropFilter: 'blur(30px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: `${coach.color}14`, border: `1px solid ${coach.color}40`, borderRadius: 99 }}>
               <motion.div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} />

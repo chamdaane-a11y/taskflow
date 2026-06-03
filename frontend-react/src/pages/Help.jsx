@@ -695,7 +695,7 @@ export default function Help() {
               zIndex: isMobile ? 50 : 1,
               background: isMobile ? 'var(--bg-base)' : 'transparent',
               overflowY: 'auto',
-              padding: isMobile ? '60px 20px 20px' : 0,
+              padding: isMobile ? 'calc(60px + env(safe-area-inset-top)) 20px 20px' : 0,
               transform: isMobile ? (tocOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
               transition: 'transform 220ms var(--ease-out-quart)',
               borderRight: isMobile ? '1px solid var(--border-subtle)' : 'none',
