@@ -559,8 +559,8 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
                 </div>
             }
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{item.titre}</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4, overflowWrap: 'anywhere' }}>{item.titre}</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: isEnCours ? '#4caf82' : 'var(--ember)', fontWeight: 600 }}>
                   <Clock size={11} />{item.heure_debut} → {item.heure_fin}
                 </span>
@@ -685,10 +685,10 @@ function CalendarEventCard({ event, index, T }) {
         overflow: 'hidden',
       }}
       whileHover={event.html_link ? { borderColor: 'rgba(26,115,232,0.55)' } : {}}>
-      <div style={{ display: 'flex' }}>
+      <div style={{ display: 'flex', minWidth: 0 }}>
         <div style={{ width: 4, background: '#1A73E8', flexShrink: 0 }} />
-        <div style={{ flex: 1, padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>
               📅
             </div>
@@ -1562,7 +1562,7 @@ export default function TomorrowBuilder() {
                 </div>
 
                 {/* SIDEBAR droite */}
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <EnergyGauge score={energieCourbe?.score_global || planning.score_energie || 60} T={T} />
 
                   {/* Heure productive */}
