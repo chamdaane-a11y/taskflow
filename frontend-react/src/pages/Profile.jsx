@@ -750,7 +750,7 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 32px)', position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? '56px 16px 24px' : 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 32px)', position: 'relative', zIndex: 1 }}>
 
         {/* Retour */}
         <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} style={{ marginBottom: 32 }}>
