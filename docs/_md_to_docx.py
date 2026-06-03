@@ -15,7 +15,7 @@ GREY = RGBColor(0x55, 0x55, 0x55)
 
 def add_inline(paragraph, text):
     """Ajoute du texte avec gras (**...**) et code (`...`)."""
-    parts = re.split(r'(\*\*.+?\*\*|`.+?`)', text)
+    parts = re.split(r'(\*\*.+?\*\*|`.+?`|\*[^*\n]+?\*)', text)
     for part in parts:
         if not part:
             continue
@@ -23,6 +23,8 @@ def add_inline(paragraph, text):
             r = paragraph.add_run(part[2:-2]); r.bold = True
         elif part.startswith('`') and part.endswith('`'):
             r = paragraph.add_run(part[1:-1]); r.font.name = 'Consolas'; r.font.color.rgb = EMBER
+        elif len(part) > 2 and part.startswith('*') and part.endswith('*'):
+            r = paragraph.add_run(part[1:-1]); r.italic = True
         else:
             paragraph.add_run(part)
 
