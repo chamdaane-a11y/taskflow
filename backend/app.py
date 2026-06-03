@@ -2162,9 +2162,7 @@ def admin_signups():
         days = max(1, min(days, 365))
         db = connecter(); cur = db.cursor(dictionary=True)
         cur.execute("""
-            SELECT id, nom, email,
-                   DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:%%i') AS created_at,
-                   email_verifie
+            SELECT id, nom, email, created_at, email_verifie
             FROM users
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
             ORDER BY created_at DESC
@@ -2172,6 +2170,11 @@ def admin_signups():
         """, (days,))
         rows = cur.fetchall()
         cur.close(); db.close()
+        # Formatage en Python (le connecteur ne déséchappe pas %% dans DATE_FORMAT
+        # quand il y a des paramètres → la chaîne de format ressortait littéralement).
+        for r in rows:
+            d = r.get('created_at')
+            r['created_at'] = d.strftime('%Y-%m-%d %H:%M') if hasattr(d, 'strftime') else (str(d) if d else None)
         return jsonify({'days': days, 'count': len(rows), 'signups': rows}), 200
     except Exception as e:
         return erreur_500(e)
