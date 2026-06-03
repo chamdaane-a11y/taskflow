@@ -546,8 +546,8 @@ function PlanningCard({ item, index, T, statut, onLancer, onDecaler, onSkip, sho
               style={{ width: '100%', height: '30%', background: 'rgba(255,255,255,0.4)', borderRadius: 99 }} />
           )}
         </div>
-        <div style={{ flex: 1, padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
             {/* Badge En cours / Numéro */}
             {isEnCours
               ? <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.4, repeat: Infinity }}
@@ -1484,11 +1484,11 @@ export default function TomorrowBuilder() {
             {activeTab === 'planning' && (
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: 20, minWidth: 0 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, minWidth: 0 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       Planning de {demainStr}
                     </h3>
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{planning.planning?.length} créneaux</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>{planning.planning?.length} créneaux</span>
                   </div>
                   <DndContext
                     sensors={sensors}
