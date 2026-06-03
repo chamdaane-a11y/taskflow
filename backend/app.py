@@ -6269,7 +6269,7 @@ LIFECYCLE_MESSAGES = {
         "body": "1 tâche aujourd'hui = +1 jour de streak. Vas-y."},
     2: {"titre": "Découvre Tomorrow Builder ⚡",
         "body": "Planifie ta journée parfaite en 1 clic — l'IA s'occupe de tout."},
-    3: {"titre": "Coach Alex est là pour toi 🤗",
+    3: {"titre": "GetShift AI est là pour toi 🤗",
         "body": "Il analyse ta semaine et te dit ce qui marche. Discute avec lui."},
     5: {"titre": "Tu as commencé — ne lâche pas 🔥",
         "body": "Les 7 premiers jours sont les plus durs. Tu y es presque."},
@@ -9192,9 +9192,9 @@ def trigger_tomorrow_builder_notif():
 # ============================================
 
 COACH_STYLES = {
-    "bienveillant": {"nom": "Alex", "emoji": "🤗", "description": "Doux, encourageant, toujours positif", "persona": "Tu es Alex, un coach bienveillant et empathique. Tu encourages toujours, tu celebres chaque petite victoire, tu utilises un langage chaleureux et positif."},
-    "motivateur":   {"nom": "Max",  "emoji": "🔥", "description": "Energique, challengeant, pousse à se dépasser", "persona": "Tu es Max, un coach motivateur et dynamique. Tu challenges l'utilisateur, tu utilises un langage energique et direct."},
-    "analytique":   {"nom": "Nova", "emoji": "📊", "description": "Précis, basé sur les données, factuel", "persona": "Tu es Nova, un coach analytique et precis. Tu bases tes conseils sur les donnees et les faits."},
+    "bienveillant": {"nom": "GetShift AI", "emoji": "🤗", "description": "Doux, encourageant, toujours positif", "persona": "Tu es GetShift AI, l'assistant IA de GetShift. Ton ton est bienveillant et empathique : tu encourages toujours, tu celebres chaque petite victoire, tu utilises un langage chaleureux et positif. Tu ne portes pas de prenom, tu es GetShift AI."},
+    "motivateur":   {"nom": "GetShift AI", "emoji": "🔥", "description": "Energique, challengeant, pousse à se dépasser", "persona": "Tu es GetShift AI, l'assistant IA de GetShift. Ton ton est motivateur et dynamique : tu challenges l'utilisateur, tu utilises un langage energique et direct. Tu ne portes pas de prenom, tu es GetShift AI."},
+    "analytique":   {"nom": "GetShift AI", "emoji": "📊", "description": "Précis, basé sur les données, factuel", "persona": "Tu es GetShift AI, l'assistant IA de GetShift. Ton ton est analytique et precis : tu bases tes conseils sur les donnees et les faits. Tu ne portes pas de prenom, tu es GetShift AI."},
 }
 
 def get_coach_context(user_id, curseur):
@@ -10269,7 +10269,7 @@ Tu connais la date et l'heure exactes. Si on te demande "on est quel jour ?" ou 
 
 ━━━ À PROPOS DE GETSHIFT ━━━
 GetShift est une application SaaS de productivité IA, fondée par Hamdaane CHITOU (étudiant en data science).
-Mission : aider les étudiants et travailleurs à performer davantage grâce à l'IA. Différenciateurs clés : Task DNA (scoring IA), Bin Packing AI, Coach IA (Alex/Max/Nova), gamification (points/niveaux/streak), sync Google Calendar, vues Kanban/Gantt/Calendrier.
+Mission : aider les étudiants et travailleurs à performer davantage grâce à l'IA. Différenciateurs clés : Task DNA (scoring IA), Bin Packing AI, GetShift AI (assistant à ton réglable : bienveillant/énergique/analytique), gamification (points/niveaux/streak), sync Google Calendar, vues Kanban/Gantt/Calendrier.
 Si l'utilisateur te demande qui a créé GetShift, qui est le fondateur, ou des infos sur l'app, réponds avec ces informations.
 
 ━━━ PROFIL ━━━
@@ -10292,7 +10292,7 @@ Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours
 6. SOURCES — Si tu utilises des données web, tu cites ("Selon [source]...")
 7. LANGUE — Français par défaut
 8. LONGUEUR — Question simple = réponse percutante ; complexe = analyse complète mais sans bavardage
-9. PERSONA — Si tu joues un coach (Alex/Max/Nova), garde son ton dans CHAQUE phrase, pas seulement la première
+9. PERSONA — Tu es GetShift AI. Si un ton de coach est demandé (bienveillant/énergique/analytique), garde-le dans CHAQUE phrase, pas seulement la première. Tu ne portes jamais de prénom (pas Alex/Max/Nova).
 10. DATE — Tu connais toujours la date et l'heure actuelles (voir bloc DATE & HEURE ci-dessus). Ne jamais prétendre l'ignorer.
 11. AGENT — Tu n'expliques pas ce que tu vas faire avec des phrases comme "je vais créer la tâche". Tu APPELLES directement les outils disponibles (creer_tache, terminer_tache, lister_membres_equipe, creer_tache_equipe, assigner_tache_equipe, naviguer_vers, etc.) puis tu confirmes en une phrase le résultat.
 

@@ -54,10 +54,11 @@ const PRIORITES = [
   { val: 'basse', label: 'Basse', bg: 'rgba(76,175,130,0.12)', color: '#4caf82' },
 ]
 
+// Une seule IA — « GetShift AI » — avec 3 tons réglables (plus de personnages Alex/Max/Nova).
 const COACH_STYLES_LIST = [
-  { id: 'bienveillant', nom: 'Alex', emoji: 'heart', desc: 'Doux & encourageant' },
-  { id: 'motivateur', nom: 'Max', emoji: 'flame', desc: 'Energique & challengeant' },
-  { id: 'analytique', nom: 'Nova', emoji: 'chart', desc: 'Précis & factuel' },
+  { id: 'bienveillant', nom: 'GetShift AI', ton: 'Bienveillant', emoji: 'heart', desc: 'Doux & encourageant' },
+  { id: 'motivateur', nom: 'GetShift AI', ton: 'Énergique', emoji: 'flame', desc: 'Energique & challengeant' },
+  { id: 'analytique', nom: 'GetShift AI', ton: 'Analytique', emoji: 'chart', desc: 'Précis & factuel' },
 ]
 
 // ── Icons SVG ─────────────────────────────────────────────────────────────────
@@ -912,9 +913,9 @@ const StarterTemplates = memo(function StarterTemplates({ d, T, isMobile }) {
 
 // ── CoachDailyMessage — Message personnalisé du coach (Alex/Max/Nova) ────────
 const COACH_WELCOME_MESSAGES = {
-  bienveillant: (prenom) => `Hey ${prenom || 'toi'} ! Je suis Alex, ton coach perso. On va bâtir ta routine pas à pas, sans pression. Crée ta première tâche — je te guide.`,
-  motivateur:   (prenom) => `${prenom || 'Toi'}, c'est l'heure ! Je suis Max et on va passer à l'action ensemble. Une seule règle : crée ta première tâche dans les 60 secondes. Go.`,
-  analytique:   (prenom) => `Bienvenue ${prenom || ''}. Je suis Nova. Pour t'aider à devenir plus performant, j'ai besoin de données. Crée ta première tâche pour calibrer mes recommandations.`,
+  bienveillant: (prenom) => `Hey ${prenom || 'toi'} ! Je suis GetShift AI, ton assistant perso. On va bâtir ta routine pas à pas, sans pression. Crée ta première tâche — je te guide.`,
+  motivateur:   (prenom) => `${prenom || 'Toi'}, c'est l'heure ! GetShift AI avec toi, on passe à l'action. Une seule règle : crée ta première tâche dans les 60 secondes. Go.`,
+  analytique:   (prenom) => `Bienvenue ${prenom || ''}. Je suis GetShift AI. Pour t'aider à devenir plus performant, j'ai besoin de données. Crée ta première tâche pour calibrer mes recommandations.`,
 }
 
 const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNewUser }) {
@@ -936,9 +937,9 @@ const CoachDailyMessage = memo(function CoachDailyMessage({ d, T, isMobile, isNe
 
   const styleId = cdm?.coach?.style || d.coachStyle || 'bienveillant'
   const coachLabels = {
-    bienveillant: { nom: 'Alex', emoji: '🤗' },
-    motivateur:   { nom: 'Max',  emoji: '🔥' },
-    analytique:   { nom: 'Nova', emoji: '📊' },
+    bienveillant: { nom: 'GetShift AI', emoji: '🤗' },
+    motivateur:   { nom: 'GetShift AI', emoji: '🔥' },
+    analytique:   { nom: 'GetShift AI', emoji: '📊' },
   }
   let coach = cdm?.coach || coachLabels[styleId]
   let message = cdm?.message
@@ -3490,7 +3491,7 @@ export default function Dashboard() {
                       <div style={{ width: 26, height: 26, borderRadius: 7, background: d.coachStyle === style.id ? 'var(--ember-soft)' : 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <CoachIcon style={style} size={14} />
                       </div>
-                      <span style={{ fontSize: 10, fontWeight: d.coachStyle === style.id ? 700 : 400, color: d.coachStyle === style.id ? 'var(--ember)' : 'var(--text-secondary)' }}>{style.nom}</span>
+                      <span style={{ fontSize: 10, fontWeight: d.coachStyle === style.id ? 700 : 400, color: d.coachStyle === style.id ? 'var(--ember)' : 'var(--text-secondary)' }}>{style.ton}</span>
                     </motion.button>
                   ))}
                 </div>

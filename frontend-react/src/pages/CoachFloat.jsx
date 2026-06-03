@@ -196,7 +196,7 @@ export const CoachFloat = memo(function CoachFloat({
               boxShadow: `0 8px 24px ${c1}55, 0 0 0 4px var(--bg-base)`,
               zIndex: 130,
             }}
-            title={`${coach.label} — ${coachTagline}`}
+            title={`GetShift AI — ${coachTagline}`}
           >
             <Icon size={isMobile ? 22 : 26} color="#fff" strokeWidth={2.4} />
 
@@ -274,10 +274,10 @@ export const CoachFloat = memo(function CoachFloat({
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
-                  {coach.label}
+                  GetShift AI
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  Coach · {coachTagline}
+                  {coachTagline}
                 </div>
               </div>
 
@@ -291,7 +291,7 @@ export const CoachFloat = memo(function CoachFloat({
                       key={k}
                       onClick={() => switchCoach(k)}
                       whileTap={{ scale: 0.9 }}
-                      title={c.label}
+                      title={c.tagline}
                       style={{
                         width: 26, height: 26,
                         borderRadius: 7,
@@ -388,7 +388,7 @@ export const CoachFloat = memo(function CoachFloat({
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
-                placeholder={t('coach.placeholder', { name: coach.label })}
+                placeholder={t('coach.placeholder', { name: 'GetShift AI' })}
                 disabled={sending}
                 style={{
                   flex: 1,

@@ -44,10 +44,11 @@ const INTENTION_META = {
 }
 
 // ── Personas Coach (lien avec le drawer Coach du Dashboard) ────────────
+// Une seule IA — « GetShift AI » — le 'tag' est le TON réglable (plus de prénoms).
 const COACHES = {
-  bienveillant: { id: 'bienveillant', nom: 'Alex',  Icon: Heart,    color: '#ec4899', tag: 'Bienveillant', accroche: 'Doux, encourageant, à ton écoute' },
-  motivateur:   { id: 'motivateur',   nom: 'Max',   Icon: Flame,    color: '#f97316', tag: 'Motivateur', accroche: 'Énergique, challengeant, on passe à l\'action' },
-  analytique:   { id: 'analytique',   nom: 'Nova',  Icon: BarChart, color: '#3b82f6', tag: 'Analytique', accroche: 'Précis, factuel, basé sur tes données' },
+  bienveillant: { id: 'bienveillant', nom: 'GetShift AI', Icon: Heart,    color: '#ec4899', tag: 'Bienveillant', accroche: 'Doux, encourageant, à ton écoute' },
+  motivateur:   { id: 'motivateur',   nom: 'GetShift AI', Icon: Flame,    color: '#f97316', tag: 'Énergique', accroche: 'Énergique, challengeant, on passe à l\'action' },
+  analytique:   { id: 'analytique',   nom: 'GetShift AI', Icon: BarChart, color: '#3b82f6', tag: 'Analytique', accroche: 'Précis, factuel, basé sur tes données' },
 }
 const getCoach = (style) => COACHES[style] || COACHES.bienveillant
 
@@ -1040,7 +1041,7 @@ export default function IAChat() {
                       cursor: 'pointer',
                     }}>
                     <c.Icon size={11} fill={c.id === coach.id && c.id === 'motivateur' ? c.color : 'none'} />
-                    {c.nom}
+                    {c.tag}
                   </motion.button>
                 ))}
               </div>
