@@ -79,6 +79,8 @@ app.config['JWT_COOKIE_SECURE'] = True
 app.config['JWT_COOKIE_SAMESITE'] = 'None'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # TODO: réactiver après debug cookie csrf_access_token
+# Anti-DoS : plafonne la taille des uploads (sinon f.read() charge tout en RAM).
+app.config['MAX_CONTENT_LENGTH'] = 12 * 1024 * 1024  # 12 Mo
 jwt = JWTManager(app)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
@@ -464,6 +466,11 @@ def parse_device(ua):
     return f"{device_type} · {browser}"
 
 def envoyer_notification_slack(webhook_url, message):
+    # Anti-SSRF : on n'accepte QUE les vrais webhooks Slack. Sans ça, un user
+    # pourrait faire poster le serveur vers une adresse interne (metadata cloud, etc.).
+    if not (webhook_url or '').startswith('https://hooks.slack.com/'):
+        print(f"[Slack] URL refusée (non-Slack) : {str(webhook_url)[:60]!r}")
+        return
     try:
         http_requests.post(webhook_url, json={"text": message}, timeout=5)
     except Exception as e:
@@ -5045,8 +5052,7 @@ def get_membres_equipe(equipe_id):
         db.close()
         return jsonify(membres)
     except Exception as e:
-        app.logger.error("get_membres_equipe: %s", e, exc_info=True); _log_error(e)
-        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:200]}"}), 500
+        return erreur_500(e)
 
 def _ensure_taches_equipe_columns(curseur):
     """Ajoute completed_at + completed_by si absents (migration lazy)."""
