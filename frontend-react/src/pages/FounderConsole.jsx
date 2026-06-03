@@ -10,9 +10,16 @@ import axios from 'axios'
 import { motion } from 'framer-motion'
 import {
   TrendingUp, Shield, Server, Users, UserPlus, Activity,
-  AlertTriangle, CheckCircle2, RefreshCw, ListChecks,
+  AlertTriangle, CheckCircle2, RefreshCw, ListChecks, Bell,
 } from 'lucide-react'
+import { Line } from 'react-chartjs-2'
+import {
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement,
+  LineElement, Tooltip, Legend, Filler,
+} from 'chart.js'
 import { themes } from '../themes'
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler)
 import { useMediaQuery } from '../useMediaQuery'
 import { useSidebarUser } from '../components/useSidebarUser'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
@@ -60,10 +67,24 @@ export default function FounderConsole() {
   const [tab, setTab] = useState('growth')
   const [overview, setOverview] = useState(null)
   const [signups, setSignups] = useState(null)
+  const [timeseries, setTimeseries] = useState(null)
   const [security, setSecurity] = useState(null)
   const [system, setSystem] = useState(null)
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState(null)
+  const [testing, setTesting] = useState(false)
+  const [testMsg, setTestMsg] = useState(null)
+
+  const testPush = useCallback(async () => {
+    setTesting(true); setTestMsg(null)
+    try {
+      const r = await axios.post(`${API}/admin/test-push`)
+      setTestMsg(r.data?.message || 'Test envoyé.')
+    } catch (e) {
+      setTestMsg(e?.response?.status === 403 ? 'Réservé au fondateur.' : "Erreur lors de l'envoi du test.")
+    }
+    setTesting(false)
+  }, [])
 
   // Garde client (cosmétique — le backend renvoie 403 de toute façon)
   useEffect(() => {
@@ -74,11 +95,12 @@ export default function FounderConsole() {
     setLoading(true); setErreur(null)
     try {
       if (which === 'growth') {
-        const [o, s] = await Promise.all([
+        const [o, s, ts] = await Promise.all([
           axios.get(`${API}/admin/overview`),
           axios.get(`${API}/admin/signups?days=30`),
+          axios.get(`${API}/admin/timeseries?days=30`),
         ])
-        setOverview(o.data); setSignups(s.data)
+        setOverview(o.data); setSignups(s.data); setTimeseries(ts.data)
       } else if (which === 'security') {
         const r = await axios.get(`${API}/admin/security?limit=150`)
         setSecurity(r.data)
@@ -167,6 +189,33 @@ export default function FounderConsole() {
                 <KpiCard icon={Shield} label="Événements sécu (24h)" value={overview?.security_events_24h} />
               </div>
 
+              {timeseries && (
+                <>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px' }}>Tendance sur 30 jours</h3>
+                  <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '16px 16px 12px', marginBottom: 22, height: 260 }}>
+                    <Line
+                      data={{
+                        labels: timeseries.labels.map(d => d.slice(5)),
+                        datasets: [
+                          { label: 'Inscriptions', data: timeseries.signups, borderColor: '#E07A3E', backgroundColor: 'rgba(224,122,62,0.14)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
+                          { label: 'Tâches complétées', data: timeseries.tasks_done, borderColor: '#5BA46F', backgroundColor: 'rgba(91,164,111,0.10)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
+                          { label: 'Tâches créées', data: timeseries.tasks_created, borderColor: '#8A8F98', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 1.5, borderDash: [4, 4] },
+                        ],
+                      }}
+                      options={{
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { legend: { labels: { color: '#9aa0a6', boxWidth: 12, boxHeight: 3, font: { size: 11 } } } },
+                        scales: {
+                          x: { grid: { display: false }, ticks: { color: '#9aa0a6', maxTicksLimit: 8, font: { size: 10 } } },
+                          y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: '#9aa0a6', precision: 0, font: { size: 10 } } },
+                        },
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
               <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px' }}>Inscriptions récentes (30j)</h3>
               <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, overflow: 'hidden' }}>
                 {!signups?.signups?.length && <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>Aucune inscription sur la période.</div>}
@@ -215,6 +264,21 @@ export default function FounderConsole() {
           {/* ── SYSTÈME ── */}
           {tab === 'system' && (
             <>
+              {/* Test notif : envoie un push réel au fondateur + remet le check "Crons notifs" au vert */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18, padding: '14px 16px', borderRadius: 12, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>Tester les notifications</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Envoie un push de test sur tes appareils abonnés.</div>
+                </div>
+                <motion.button onClick={testPush} disabled={testing} whileTap={{ scale: 0.97 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 10, border: 'none', background: 'var(--ember)', color: 'var(--text-on-ember, #fff)', fontSize: 13, fontWeight: 700, cursor: testing ? 'wait' : 'pointer', flexShrink: 0, opacity: testing ? 0.7 : 1 }}>
+                  <Bell size={14} /> {testing ? 'Envoi…' : 'Tester une notif'}
+                </motion.button>
+              </div>
+              {testMsg && (
+                <div style={{ marginBottom: 18, padding: '11px 16px', borderRadius: 10, background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))', color: 'var(--text-primary)', fontSize: 12.5 }}>{testMsg}</div>
+              )}
+
               {system && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '12px 16px', borderRadius: 12, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
                   <span style={{ width: 12, height: 12, borderRadius: '50%', background: STATUS_COLOR[system.overall] || 'var(--text-secondary)', flexShrink: 0 }} />

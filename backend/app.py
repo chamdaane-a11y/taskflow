@@ -2212,6 +2212,86 @@ def admin_system():
         return erreur_500(e)
 
 
+@app.route('/admin/timeseries', methods=['GET'])
+def admin_timeseries():
+    """Séries quotidiennes (N derniers jours) pour les graphes de la console :
+    inscriptions, tâches créées, tâches complétées. Founder-only (gate /admin centrale).
+    Trous remplis à 0 → courbe continue côté front."""
+    try:
+        days = request.args.get('days', default=30, type=int)
+        days = max(7, min(days, 90))
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("""
+            SELECT DATE(created_at) AS d, COUNT(*) AS n FROM users
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            GROUP BY DATE(created_at)
+        """, (days,))
+        signups = {str(r['d']): r['n'] for r in cur.fetchall()}
+        cur.execute("""
+            SELECT DATE(created_at) AS d, COUNT(*) AS n FROM taches
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            GROUP BY DATE(created_at)
+        """, (days,))
+        created = {str(r['d']): r['n'] for r in cur.fetchall()}
+        # Complétions datées sur COALESCE(terminee_le, updated_at) — JAMAIS updated_at nu (cf. CLAUDE.md)
+        cur.execute("""
+            SELECT DATE(COALESCE(terminee_le, updated_at)) AS d, COUNT(*) AS n FROM taches
+            WHERE terminee=TRUE AND COALESCE(terminee_le, updated_at) >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            GROUP BY DATE(COALESCE(terminee_le, updated_at))
+        """, (days,))
+        done = {str(r['d']): r['n'] for r in cur.fetchall()}
+        cur.close(); db.close()
+        from datetime import date, timedelta
+        labels, s_arr, c_arr, d_arr = [], [], [], []
+        today = date.today()
+        for i in range(days - 1, -1, -1):
+            k = (today - timedelta(days=i)).isoformat()
+            labels.append(k)
+            s_arr.append(signups.get(k, 0))
+            c_arr.append(created.get(k, 0))
+            d_arr.append(done.get(k, 0))
+        return jsonify({'days': days, 'labels': labels,
+                        'signups': s_arr, 'tasks_created': c_arr, 'tasks_done': d_arr}), 200
+    except Exception as e:
+        return erreur_500(e)
+
+
+@app.route('/admin/test-push', methods=['POST'])
+def admin_test_push():
+    """Envoie un push de test au fondateur (toutes ses subscriptions) et trace
+    l'envoi dans notifications_envoyees → le check 'Crons notifs' repasse au vert.
+    Founder-only (gate /admin centrale). Toujours envoyé (pas de dédup _smart)."""
+    try:
+        uid = current_uid()
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT id, subscription FROM push_subscriptions WHERE user_id=%s", (uid,))
+        rows = cur.fetchall()
+        if not rows:
+            cur.close(); db.close()
+            return jsonify({'sent': 0, 'subscriptions': 0,
+                            'message': "Aucun abonnement push sur ton compte. Active les notifications (Réglages → Notifications) sur cet appareil, puis réessaie."}), 200
+        sent = 0
+        for r in rows:
+            if envoyer_push(r['subscription'], "Test GetShift",
+                            "Si tu vois ceci, le pipeline de notifications fonctionne.",
+                            "/dashboard", db=db, sub_id=r['id']):
+                sent += 1
+        if sent:
+            try:
+                _ensure_notif_table(cur)
+                cur.execute("INSERT INTO notifications_envoyees (user_id, type, titre, body) VALUES (%s, %s, %s, %s)",
+                            (uid, 'admin_test', 'Test GetShift', 'Pipeline OK'))
+                db.commit()
+            except Exception:
+                pass
+        cur.close(); db.close()
+        msg = (f"{sent} notification(s) envoyée(s) sur {len(rows)} appareil(s) — vérifie ton écran."
+               if sent else "Échec d'envoi : l'abonnement push est peut-être expiré. Réactive les notifications dans Réglages.")
+        return jsonify({'sent': sent, 'subscriptions': len(rows), 'message': msg}), 200
+    except Exception as e:
+        return erreur_500(e)
+
+
 @app.route('/debug/gcal-status', methods=['GET'])
 def debug_gcal_status():
     """Diagnose complet Google Calendar pour un user.
