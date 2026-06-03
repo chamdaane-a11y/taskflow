@@ -6030,18 +6030,35 @@ def push_test(user_id):
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT subscription FROM push_subscriptions WHERE user_id=%s", (user_id,))
+        cursor.execute("SELECT id, subscription FROM push_subscriptions WHERE user_id=%s", (user_id,))
         rows = cursor.fetchall()
-        cursor.close(); db.close()
         if not rows:
-            return jsonify({"erreur": "Aucun abonnement"}), 404
+            cursor.close(); db.close()
+            return jsonify({"sent": 0, "subscriptions": 0,
+                            "message": "Aucun abonnement push sur ce compte. Active les notifications, puis réessaie."}), 200
         sent = 0
         for r in rows:
-            if envoyer_push(r['subscription'], "🧪 Test GetShift", "Si tu vois ceci, tes notifs 7h sont opérationnelles", "/tomorrow"):
-                sent += 1
-        return jsonify({"sent": sent})
+            # db+sub_id → self-heal : une subscription morte (404/410) est purgée.
+            # try/except : un JSON d'abonnement corrompu ne fait pas planter l'endpoint.
+            try:
+                if envoyer_push(r['subscription'], "Test GetShift",
+                                "Si tu vois ceci, tes notifications fonctionnent.",
+                                "/dashboard", db=db, sub_id=r['id']):
+                    sent += 1
+            except Exception as pe:
+                app.logger.error("push_test sub %s: %s", r.get('id'), pe)
+                # Abonnement illisible → on le purge pour repartir propre.
+                try:
+                    cursor.execute("DELETE FROM push_subscriptions WHERE id=%s", (r['id'],)); db.commit()
+                except Exception:
+                    pass
+        cursor.close(); db.close()
+        msg = (f"{sent} notification(s) envoyée(s) — vérifie ton écran." if sent
+               else "Aucun envoi : abonnement(s) expiré(s) et purgé(s). Désactive puis réactive les notifications.")
+        return jsonify({"sent": sent, "subscriptions": len(rows), "message": msg}), 200
     except Exception as e:
-        return erreur_500(e)
+        app.logger.error("push_test: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
 
 @app.route('/push/send-rappels', methods=['POST'])
 def send_rappels():

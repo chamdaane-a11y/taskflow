@@ -81,10 +81,12 @@ export default function PushNotifToggle({ user, onToast }) {
   const tester = useCallback(async () => {
     setBusy(true)
     try {
-      await axios.post(`${API}/push/test/${user.id}`)
-      onToast?.('Notification de test envoyée — vérifie ton écran.')
-    } catch {
-      onToast?.("Échec de l'envoi du test.", 'error')
+      const { data } = await axios.post(`${API}/push/test/${user.id}`)
+      // Si l'abonnement était mort, le backend l'a purgé → on repasse inactif.
+      if (data?.sent === 0) setState('inactive')
+      onToast?.(data?.message || 'Test envoyé.', data?.sent ? 'success' : 'error')
+    } catch (e) {
+      onToast?.(e?.response?.data?.detail ? `Erreur : ${e.response.data.detail}` : "Échec de l'envoi du test.", 'error')
     } finally {
       setBusy(false)
     }

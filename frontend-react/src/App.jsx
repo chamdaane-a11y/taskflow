@@ -68,7 +68,9 @@ function App() {
     <HashRouter>
       <CookieBanner />
       <UpdateBanner />
-      <PageGuide />
+      {/* Guide désactivé : à refaire mobile-first (gigotait + s'affichait sur l'onboarding).
+          Réactiver via <PageGuide /> une fois la refonte validée sur téléphone. */}
+      {/* <PageGuide /> */}
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/goal"              element={<GoalReverse />} />
