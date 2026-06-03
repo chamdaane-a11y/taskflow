@@ -5015,16 +5015,35 @@ def get_mes_equipes(user_id):
         return erreur_500(e)
 
 @app.route('/equipes/<int:equipe_id>/membres', methods=['GET'])
+def _ensure_equipe_membres_columns(curseur):
+    """Migration paresseuse : garantit role + rejoint_le sur equipe_membres
+    (certaines bases anciennes n'avaient pas ces colonnes → 500 sur les SELECT)."""
+    try:
+        curseur.execute("SHOW COLUMNS FROM equipe_membres LIKE 'rejoint_le'")
+        if not curseur.fetchone():
+            curseur.execute("ALTER TABLE equipe_membres ADD COLUMN rejoint_le DATETIME DEFAULT CURRENT_TIMESTAMP")
+    except Exception:
+        pass
+    try:
+        curseur.execute("SHOW COLUMNS FROM equipe_membres LIKE 'role'")
+        if not curseur.fetchone():
+            curseur.execute("ALTER TABLE equipe_membres ADD COLUMN role VARCHAR(20) DEFAULT 'membre'")
+    except Exception:
+        pass
+
+
 def get_membres_equipe(equipe_id):
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
+        _ensure_equipe_membres_columns(curseur)
         curseur.execute("SELECT u.id, u.nom, u.email, em.role, em.rejoint_le FROM equipe_membres em JOIN users u ON em.user_id=u.id WHERE em.equipe_id=%s ORDER BY em.rejoint_le ASC", (equipe_id,))
         membres = curseur.fetchall()
         db.close()
         return jsonify(membres)
     except Exception as e:
-        return erreur_500(e)
+        app.logger.error("get_membres_equipe: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:200]}"}), 500
 
 def _ensure_taches_equipe_columns(curseur):
     """Ajoute completed_at + completed_by si absents (migration lazy)."""
@@ -10671,14 +10690,15 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
 
         elif nom_fonction == "lister_taches":
             filtre = arguments.get('filtre', 'actives')
-            limite = min(arguments.get('limite', 10), 30)
+            try: limite = max(1, min(int(arguments.get('limite') or 10), 30))
+            except (TypeError, ValueError): limite = 10
             where = "user_id=%s"
             if filtre == "actives":     where += " AND terminee=0"
             elif filtre == "terminees": where += " AND terminee=1"
             elif filtre == "haute":     where += " AND terminee=0 AND priorite='haute'"
             elif filtre == "en_retard": where += " AND terminee=0 AND deadline < NOW()"
             elif filtre == "focus_jour":where += " AND focus_date=CURDATE() AND terminee=0"
-            cur.execute(f"SELECT id, titre, priorite, deadline, terminee, focus_date FROM taches WHERE {where} ORDER BY created_at DESC LIMIT %s", (user_id, limite))
+            cur.execute(f"SELECT id, titre, priorite, deadline, terminee, focus_date FROM taches WHERE {where} ORDER BY created_at DESC LIMIT {limite}", (user_id,))
             rows = cur.fetchall()
             for r in rows:
                 if r.get('deadline'): r['deadline'] = str(r['deadline'])
@@ -10738,6 +10758,7 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
             result.update({"requete": requete, "results": results_web, "nb": len(results_web)})
 
         elif nom_fonction == "lister_membres_equipe":
+            _ensure_equipe_membres_columns(cur)
             equipe_id, _ = resoudre_equipe_user(cur, user_id, arguments.get('equipe_id'))
             if not equipe_id:
                 cur.execute("SELECT e.id, e.nom FROM equipe_membres em JOIN equipes e ON em.equipe_id=e.id WHERE em.user_id=%s", (user_id,))
@@ -10831,8 +10852,10 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
     except Exception as e:
         try: db.close()
         except: pass
-        import traceback
-        return {"tool": nom_fonction, "ok": False, "erreur": "Erreur interne"}
+        import traceback; traceback.print_exc()
+        # On remonte la vraie erreur (outil interne, session de l'user) pour ne plus
+        # diagnostiquer à l'aveugle. À resserrer une fois les outils stabilisés.
+        return {"tool": nom_fonction, "ok": False, "erreur": f"{type(e).__name__}: {str(e)[:200]}"}
 
 
 @app.route('/ia/assistant', methods=['POST'])
