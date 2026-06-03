@@ -46,27 +46,97 @@
   <meta property="og:locale" content="fr_FR" />
   <meta property="og:title" content="GetShift — Gestionnaire de tâches IA, planning & collaboration" />
   <meta property="og:description" content="Planifie ta journée avec l'IA, décompose tes objectifs en étapes, collabore en équipe et suis ta productivité. Gratuit et multilingue." />
-  <meta property="og:image" content="https://usegetshift.com/icons/icon-512.png" />
+  <meta property="og:image" content="https://usegetshift.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="GetShift — Organise. Performe. Évolue." />
   <meta property="og:url" content="https://usegetshift.com/" />
 
   <!-- ===== TWITTER CARD ===== -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="GetShift — Gestionnaire de tâches IA" />
   <meta name="twitter:description" content="Planifie ta journée avec l'IA, décompose tes objectifs, collabore en équipe. Gratuit et multilingue." />
-  <meta name="twitter:image" content="https://usegetshift.com/icons/icon-512.png" />
+  <meta name="twitter:image" content="https://usegetshift.com/og-image.png" />
 
   <!-- ===== DONNÉES STRUCTURÉES (JSON-LD) — aide Google à comprendre que c'est une app ===== -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "GetShift",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web, Android, iOS",
-    "url": "https://usegetshift.com/",
-    "description": "Application de gestion de tâches dopée à l'IA : planning intelligent de la journée, objectifs décomposés en étapes, collaboration d'équipe et analytics de productivité.",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
-    "inLanguage": ["fr", "en", "es", "pt", "de", "ar"]
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://usegetshift.com/#app",
+        "name": "GetShift",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web, Android, iOS",
+        "url": "https://usegetshift.com/",
+        "description": "Application de gestion de tâches dopée à l'IA : planning intelligent de la journée, objectifs décomposés en étapes, collaboration d'équipe et analytics de productivité.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "inLanguage": ["fr", "en", "es", "pt", "de", "ar"],
+        "publisher": { "@id": "https://usegetshift.com/#org" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://usegetshift.com/#org",
+        "name": "GetShift",
+        "url": "https://usegetshift.com/",
+        "logo": "https://usegetshift.com/icons/icon-512.png"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://usegetshift.com/#website",
+        "name": "GetShift",
+        "url": "https://usegetshift.com/",
+        "publisher": { "@id": "https://usegetshift.com/#org" },
+        "inLanguage": "fr"
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://usegetshift.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "GetShift est-il gratuit ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. GetShift est gratuit, sans carte bancaire ni engagement. Tu peux organiser tes tâches, planifier ta journée avec l'IA et suivre ta productivité sans payer."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce que GetShift fait avec l'IA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "L'IA de GetShift planifie ta journée, priorise tes tâches et transforme un objectif en étapes concrètes et planifiées. Elle s'appuie sur tes tâches, ton agenda et tes habitudes."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Sur quels appareils GetShift fonctionne-t-il ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GetShift fonctionne sur le web (ordinateur), Android et iOS. C'est une application installable (PWA) qui se synchronise sur tous tes appareils."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "GetShift s'intègre-t-il à d'autres outils ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. GetShift se connecte à Google Agenda, Gmail, Google Drive et Notion pour importer et synchroniser tes tâches et événements."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "En quelles langues GetShift est-il disponible ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GetShift est disponible en 6 langues : français, anglais, espagnol, portugais, allemand et arabe."
+            }
+          }
+        ]
+      }
+    ]
   }
   </script>
 
@@ -104,7 +174,8 @@
   ═══════════════════════════════════════════════════════════ -->
   <script>
     (function () {
-      var BASE = '/taskflow';
+      // Domaine racine (usegetshift.com) : base = '/'. (Ancien : '/taskflow'.)
+      var BASE = '';
       var search = window.location.search;
       if (!search) return;
 
@@ -126,8 +197,8 @@
         var query = params.q ? '?' + params.q.replace(/~and~/g, '&') : '';
         var hash = window.location.hash;
 
-        // Reconstruit l'URL complète avec le base /taskflow
-        var newUrl = BASE + path + query + hash;
+        // Reconstruit l'URL complète depuis la racine
+        var newUrl = (BASE + path || '/') + query + hash;
         window.history.replaceState(null, null, newUrl);
       }
     })();
@@ -136,6 +207,32 @@
 
 <body>
   <div id="root"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Contenu indexable de secours (sans JavaScript)
+       Vu par les crawlers qui n'exécutent pas le JS (réseaux sociaux,
+       agrégateurs, certains bots). React remplace #root, ce bloc reste
+       invisible pour les vrais visiteurs (JS activé).
+  ═══════════════════════════════════════════════════════════ -->
+  <noscript>
+    <main style="max-width:760px;margin:0 auto;padding:48px 24px;font-family:system-ui,sans-serif;line-height:1.6;color:#1a1a1a;">
+      <h1>GetShift — Organise. Performe. Évolue.</h1>
+      <p>GetShift combine gestion de tâches, IA personnelle et analytics avancés
+         pour t'aider à accomplir plus — chaque jour. Gratuit, multilingue,
+         sur mobile et web.</p>
+      <h2>Ce que fait GetShift</h2>
+      <ul>
+        <li><strong>Planning IA</strong> — l'IA organise ta journée et priorise tes tâches.</li>
+        <li><strong>Objectifs décomposés</strong> — transforme un objectif en étapes concrètes et planifiées.</li>
+        <li><strong>Collaboration d'équipe</strong> — partage, assigne et avance ensemble.</li>
+        <li><strong>Analytics de productivité</strong> — mesure tes progrès et tes habitudes.</li>
+        <li><strong>Intégrations</strong> — Google Agenda, Gmail, Drive, Notion et plus.</li>
+      </ul>
+      <p>Aucune carte bancaire · Sans engagement · Gratuit pour toujours.</p>
+      <p><a href="https://usegetshift.com/">Accéder à GetShift</a></p>
+    </main>
+  </noscript>
+
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
