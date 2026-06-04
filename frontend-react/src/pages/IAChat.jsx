@@ -292,10 +292,9 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
         {/* Avatar persona Coach + meta */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9 }}>
           <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${bColor}, ${bColor}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 14px ${bColor}55` }}>
-            <BubbleIcon size={13} color="#fff" strokeWidth={2.2} fill={bubbleCoach.id === 'motivateur' ? '#fff' : 'none'} />
+            <BubbleIcon size={13} color="#fff" strokeWidth={2.2} />
           </div>
           <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.2px', fontFamily: "'Clash Display', sans-serif" }}>{bubbleCoach.nom}</span>
-          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: `${bColor}18`, color: bColor, letterSpacing: 0.4, textTransform: 'uppercase' }}>Coach</span>
           {meta && (
             <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 9px', background: `${meta.color}14`, border: `1px solid ${meta.color}30`, borderRadius: 99 }}>
