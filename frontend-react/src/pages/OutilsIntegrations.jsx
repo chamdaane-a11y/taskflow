@@ -24,9 +24,9 @@ const INTEGRATIONS = [
   { id: 'gmail',           nom: 'Gmail',           description: 'L\'IA extrait les vraies tâches de tes emails.', Logo: LogoGmail,           categorie: 'Google', oauthPath: '/auth/gmail',           couleur: '#EA4335' },
   { id: 'google_drive',    nom: 'Google Drive',    description: 'Attache des fichiers Drive à tes tâches.', Logo: LogoGoogleDrive,    categorie: 'Google', oauthPath: '/auth/google/drive',    couleur: '#00AC47' },
   { id: 'notion',          nom: 'Notion',          description: 'Importe tes pages comme tâches GetShift.',Logo: LogoNotion,          categorie: 'Productivité',  oauthPath: '/auth/notion',      couleur: '#1C1C1C' },
-  { id: 'slack',           nom: 'Slack',           description: 'Rappels de deadlines dans ton canal.',    Logo: LogoSlack,           categorie: 'Communication', oauthPath: '/auth/slack/oauth', couleur: '#E01E5A' },
-  { id: 'zoom',            nom: 'Zoom',            description: 'Crée des tâches de préparation auto.',    Logo: LogoZoom,            categorie: 'Communication', oauthPath: '/auth/zoom',        couleur: '#2D8CFF' },
-  { id: 'discord',         nom: 'Discord',         description: 'Notifications pour tes tâches urgentes.', Logo: LogoDiscord,         categorie: 'Communication', oauthPath: '/auth/discord',     couleur: '#5865F2' },
+  { id: 'slack',           nom: 'Slack',           description: 'Rappels de deadlines dans ton canal.',    Logo: LogoSlack,           categorie: 'Communication', oauthPath: '/auth/slack/oauth', couleur: '#E01E5A', bientot: true },
+  { id: 'zoom',            nom: 'Zoom',            description: 'Crée des tâches de préparation auto.',    Logo: LogoZoom,            categorie: 'Communication', oauthPath: '/auth/zoom',        couleur: '#2D8CFF', bientot: true },
+  { id: 'discord',         nom: 'Discord',         description: 'Notifications pour tes tâches urgentes.', Logo: LogoDiscord,         categorie: 'Communication', oauthPath: '/auth/discord',     couleur: '#5865F2', bientot: true },
 ]
 
 function Spinner({ color = 'currentColor' }) {
@@ -41,7 +41,10 @@ function Spinner({ color = 'currentColor' }) {
 
 const CarteIntegration = memo(function CarteIntegration({ integration, connecte, loading, onConnect, onDisconnect, T, isMobile }) {
   const { t } = useTranslation()
-  const { id, nom, description, Logo, couleur } = integration
+  const { id, nom, description, Logo, couleur, bientot } = integration
+  const BadgeBientot = () => (
+    <span style={{ fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 9, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>Bientôt</span>
+  )
   const isLoading = loading === id
 
   return (
@@ -98,6 +101,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
         </div>
 
         {!isMobile && (
+          bientot ? <BadgeBientot /> :
           connecte ? (
             <motion.button onClick={() => onDisconnect(id)} disabled={isLoading}
               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0, background: 'transparent', border: '1.5px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
@@ -119,7 +123,7 @@ const CarteIntegration = memo(function CarteIntegration({ integration, connecte,
 
       {isMobile && (
         <div style={{ marginTop: 10 }}>
-          {connecte ? (
+          {bientot ? <BadgeBientot /> : connecte ? (
             <motion.button onClick={() => onDisconnect(id)} disabled={isLoading}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.6 : 1, width: '100%', background: 'transparent', border: '1.5px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
               whileHover={!isLoading ? { borderColor: 'rgba(239,68,68,0.4)', color: '#ef4444' } : {}}>
