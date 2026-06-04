@@ -158,7 +158,10 @@ export function useDashboard() {
     if (filtre === 'haute')    return t.priorite === 'haute' && !t.terminee
     if (filtre === 'bloquee')  return t.bloquee && !t.terminee
     return t.priorite === filtre
-  }), [taches, filtre])
+  }).sort((a, b) => (b.id || 0) - (a.id || 0)),
+  // Tri déterministe (plus récent d'abord, = ordre serveur) appliqué AUSSI au cache
+  // localStorage → l'ordre ne "saute" plus quand les données API arrivent.
+  [taches, filtre])
 
   const statsTaches = useMemo(() => {
     const total     = taches.length
