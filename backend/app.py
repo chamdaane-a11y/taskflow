@@ -6271,6 +6271,18 @@ def push_test(user_id):
                             "message": "Aucun abonnement push sur ce compte. Active les notifications, puis réessaie."}), 200
         sent = 0
         errors = []
+        # Diagnostic VAPID intégré : la clé privée se charge-t-elle et correspond-elle
+        # à la clé publique servie ? (pour pinpointer "Could not deserialize").
+        vapid_diag = ""
+        try:
+            from cryptography.hazmat.primitives.serialization import load_pem_private_key as _lpk
+            from cryptography.hazmat.primitives import serialization as _ser
+            import base64 as _b64
+            _k = _lpk(VAPID_PRIVATE_KEY.encode(), password=None)
+            _dp = _b64.urlsafe_b64encode(_k.public_key().public_bytes(_ser.Encoding.X962, _ser.PublicFormat.UncompressedPoint)).decode().rstrip('=')
+            vapid_diag = "privée OK · match publique=" + ("OUI" if _dp == (VAPID_PUBLIC_KEY or '') else "NON")
+        except Exception as _e:
+            vapid_diag = f"privée ILLISIBLE ({type(_e).__name__}, len={len(VAPID_PRIVATE_KEY or '')}, PEM={'-----BEGIN' in (VAPID_PRIVATE_KEY or '')})"
         payload = json.dumps({"title": "Test GetShift", "body": "Si tu vois ceci, tes notifications fonctionnent.", "url": "/dashboard"})
         for r in rows:
             try:
@@ -6304,8 +6316,8 @@ def push_test(user_id):
                 pass
         cursor.close(); db.close()
         msg = (f"{sent} notification(s) envoyée(s) — vérifie ton écran." if sent
-               else "Aucun envoi. Détail technique ci-dessous (à m'envoyer).")
-        return jsonify({"sent": sent, "subscriptions": len(rows), "message": msg, "errors": errors}), 200
+               else f"Aucun envoi. [VAPID {vapid_diag}] Détail ci-dessous (à m'envoyer).")
+        return jsonify({"sent": sent, "subscriptions": len(rows), "message": msg, "errors": errors, "vapid": vapid_diag}), 200
     except Exception as e:
         app.logger.error("push_test: %s", e, exc_info=True); _log_error(e)
         return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
