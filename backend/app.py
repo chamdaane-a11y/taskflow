@@ -433,16 +433,28 @@ def _normalize_pem_private_key(raw):
     if not raw:
         return raw
     s = raw.strip().replace('\\n', '\n')
-    if '-----BEGIN' not in s:
-        return s  # peut-être une clé brute (non-PEM) → laissée telle quelle
-    import re as _re
-    m = _re.search(r'-----BEGIN ([A-Z0-9 ]+?)-----(.*?)-----END \1-----', s, _re.S)
-    if not m:
+    if '-----BEGIN' in s:
+        import re as _re
+        m = _re.search(r'-----BEGIN ([A-Z0-9 ]+?)-----(.*?)-----END \1-----', s, _re.S)
+        if not m:
+            return s
+        label = m.group(1).strip()
+        b64 = ''.join(m.group(2).split())  # retire TOUS les espaces/newlines du corps
+        body = '\n'.join(b64[i:i + 64] for i in range(0, len(b64), 64))
+        return f"-----BEGIN {label}-----\n{body}\n-----END {label}-----\n"
+    # Pas de PEM → on suppose une clé EC brute base64url (format VAPID "raw", une
+    # seule ligne, impossible à mal coller) → on la reconstruit en PEM.
+    try:
+        import base64 as _b64
+        from cryptography.hazmat.primitives.asymmetric import ec as _ec
+        from cryptography.hazmat.primitives import serialization as _ser
+        token = ''.join(s.split())
+        token += '=' * (-len(token) % 4)
+        rawk = _b64.urlsafe_b64decode(token)
+        priv = _ec.derive_private_key(int.from_bytes(rawk, 'big'), _ec.SECP256R1())
+        return priv.private_bytes(_ser.Encoding.PEM, _ser.PrivateFormat.PKCS8, _ser.NoEncryption()).decode()
+    except Exception:
         return s
-    label = m.group(1).strip()
-    b64 = ''.join(m.group(2).split())  # retire TOUS les espaces/newlines du corps
-    body = '\n'.join(b64[i:i + 64] for i in range(0, len(b64), 64))
-    return f"-----BEGIN {label}-----\n{body}\n-----END {label}-----\n"
 
 
 VAPID_PRIVATE_KEY = _normalize_pem_private_key(os.getenv('VAPID_PRIVATE_KEY', ''))
