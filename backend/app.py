@@ -427,34 +427,32 @@ def _enforce_auth():
             break
 
 def _normalize_pem_private_key(raw):
-    """Rend une clé privée PEM robuste quelle que soit la façon dont elle a été
-    collée sur Render : \\n échappés, vrais newlines, PEM aplati sur une ligne,
-    ou espaces parasites dans le corps base64. Reconstruit un PEM propre."""
+    """Retourne la clé privée VAPID au format BRUT base64url — c'est CE que
+    py_vapid/pywebpush attend via Vapid.from_string(). py_vapid REFUSE un PEM PKCS8
+    ('Could not deserialize key data'), d'où ce normaliseur. Accepte en entrée :
+    un PEM (PKCS8/SEC1, même aplati/avec espaces) OU déjà du base64url brut."""
     if not raw:
         return raw
     s = raw.strip().replace('\\n', '\n')
     if '-----BEGIN' in s:
-        import re as _re
-        m = _re.search(r'-----BEGIN ([A-Z0-9 ]+?)-----(.*?)-----END \1-----', s, _re.S)
-        if not m:
+        # PEM → on extrait le scalaire privé et on renvoie du base64url brut.
+        try:
+            import base64 as _b64, re as _re
+            from cryptography.hazmat.primitives.serialization import load_pem_private_key as _lpk
+            m = _re.search(r'-----BEGIN ([A-Z0-9 ]+?)-----(.*?)-----END \1-----', s, _re.S)
+            if m:
+                label = m.group(1).strip()
+                body = ''.join(m.group(2).split())
+                pem = f"-----BEGIN {label}-----\n" + '\n'.join(body[i:i + 64] for i in range(0, len(body), 64)) + f"\n-----END {label}-----\n"
+            else:
+                pem = s
+            key = _lpk(pem.encode(), password=None)
+            scalar = key.private_numbers().private_value.to_bytes(32, 'big')
+            return _b64.urlsafe_b64encode(scalar).decode().rstrip('=')
+        except Exception:
             return s
-        label = m.group(1).strip()
-        b64 = ''.join(m.group(2).split())  # retire TOUS les espaces/newlines du corps
-        body = '\n'.join(b64[i:i + 64] for i in range(0, len(b64), 64))
-        return f"-----BEGIN {label}-----\n{body}\n-----END {label}-----\n"
-    # Pas de PEM → on suppose une clé EC brute base64url (format VAPID "raw", une
-    # seule ligne, impossible à mal coller) → on la reconstruit en PEM.
-    try:
-        import base64 as _b64
-        from cryptography.hazmat.primitives.asymmetric import ec as _ec
-        from cryptography.hazmat.primitives import serialization as _ser
-        token = ''.join(s.split())
-        token += '=' * (-len(token) % 4)
-        rawk = _b64.urlsafe_b64decode(token)
-        priv = _ec.derive_private_key(int.from_bytes(rawk, 'big'), _ec.SECP256R1())
-        return priv.private_bytes(_ser.Encoding.PEM, _ser.PrivateFormat.PKCS8, _ser.NoEncryption()).decode()
-    except Exception:
-        return s
+    # Déjà du base64url brut → on retire juste les espaces parasites.
+    return ''.join(s.split())
 
 
 VAPID_PRIVATE_KEY = _normalize_pem_private_key(os.getenv('VAPID_PRIVATE_KEY', ''))
@@ -6275,14 +6273,15 @@ def push_test(user_id):
         # à la clé publique servie ? (pour pinpointer "Could not deserialize").
         vapid_diag = ""
         try:
-            from cryptography.hazmat.primitives.serialization import load_pem_private_key as _lpk
+            # MÊME chemin que pywebpush (py_vapid) — sinon le diag ne reflète pas la réalité.
+            from py_vapid import Vapid01 as _Vapid
             from cryptography.hazmat.primitives import serialization as _ser
             import base64 as _b64
-            _k = _lpk(VAPID_PRIVATE_KEY.encode(), password=None)
-            _dp = _b64.urlsafe_b64encode(_k.public_key().public_bytes(_ser.Encoding.X962, _ser.PublicFormat.UncompressedPoint)).decode().rstrip('=')
-            vapid_diag = "privée OK · match publique=" + ("OUI" if _dp == (VAPID_PUBLIC_KEY or '') else "NON")
+            _v = _Vapid.from_string(private_key=VAPID_PRIVATE_KEY)
+            _dp = _b64.urlsafe_b64encode(_v.public_key.public_bytes(_ser.Encoding.X962, _ser.PublicFormat.UncompressedPoint)).decode().rstrip('=')
+            vapid_diag = "privée OK (py_vapid) · match publique=" + ("OUI" if _dp == (VAPID_PUBLIC_KEY or '') else "NON")
         except Exception as _e:
-            vapid_diag = f"privée ILLISIBLE ({type(_e).__name__}, len={len(VAPID_PRIVATE_KEY or '')}, PEM={'-----BEGIN' in (VAPID_PRIVATE_KEY or '')})"
+            vapid_diag = f"privée ILLISIBLE par py_vapid ({type(_e).__name__}, len={len(VAPID_PRIVATE_KEY or '')})"
         payload = json.dumps({"title": "Test GetShift", "body": "Si tu vois ceci, tes notifications fonctionnent.", "url": "/dashboard"})
         for r in rows:
             try:
