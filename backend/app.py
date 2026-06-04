@@ -2966,6 +2966,9 @@ def get_user(id):
         user['email_verifie'] = bool(user.get('email_verifie'))
         user['google_id'] = user.get('google_id') or None
         user['has_password'] = bool(user.pop('password', None))  # ne jamais exposer le hash
+        # is_founder DOIT être renvoyé : le front écrase l'objet user avec cette réponse
+        # (Profile.jsx) → sans ça le lien Console disparaît de la sidebar.
+        user['is_founder'] = _is_founder(id)
     db.close()
     return jsonify(user)
 
