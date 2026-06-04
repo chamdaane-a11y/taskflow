@@ -2595,8 +2595,8 @@ export default function Dashboard() {
       {/* BADGE */}
       <AnimatePresence>
         {d.badgeNotif && (
-          <motion.div initial={{ opacity: 0, y: 80 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 80 }}
-            style={{ position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', zIndex: 1001, background: 'var(--surface-1)', border: '2px solid var(--ember)', borderRadius: 20, padding: '16px 28px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: `0 8px 40px var(--ember-soft)`, minWidth: 280 }}>
+          <motion.div initial={{ opacity: 0, y: 80, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: 80, x: '-50%' }}
+            style={{ position: 'fixed', bottom: 100, left: '50%', zIndex: 1001, background: 'var(--surface-1)', border: '2px solid var(--ember)', borderRadius: 20, padding: '16px 28px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: `0 8px 40px var(--ember-soft)`, minWidth: 280 }}>
             <motion.span animate={{ rotate: [0, -15, 15, -10, 10, 0], scale: [1, 1.3, 1.3, 1.1, 1] }} transition={{ duration: 0.6 }} style={{ fontSize: 32 }}>{d.badgeNotif.icon}</motion.span>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 1, marginBottom: 2 }}>{t('dashboard.badge_unlocked')}</div>
@@ -3447,8 +3447,8 @@ export default function Dashboard() {
       {/* TOAST UNDO */}
       <AnimatePresence>
         {d.undoToast && (
-          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
-            style={{ position: 'fixed', bottom: isMobile ? 100 : 90, left: '50%', transform: 'translateX(-50%)', zIndex: 1200, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.3)', whiteSpace: 'nowrap' }}>
+          <motion.div initial={{ opacity: 0, y: 40, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: 40, x: '-50%' }}
+            style={{ position: 'fixed', bottom: isMobile ? 100 : 90, left: '50%', zIndex: 1200, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.3)', whiteSpace: 'nowrap' }}>
             <Trash2 size={15} color="#e05c5c" />
             <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{t('dashboard.task_deleted')}</span>
             <div style={{ width: 60, height: 3, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
@@ -3606,8 +3606,8 @@ export default function Dashboard() {
       <AnimatePresence>
         {d.dnaLoading && !d.showDnaPopup && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            style={{ position: 'fixed', top: isMobile ? 60 : 24, left: '50%', transform: 'translateX(-50%)', zIndex: 1095, background: 'var(--surface-1)', border: `1px solid var(--ember-soft)`, borderRadius: 99, padding: '10px 18px', boxShadow: `0 8px 28px var(--ember-soft)`, display: 'flex', alignItems: 'center', gap: 10 }}>
+            initial={{ opacity: 0, y: -20, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: -20, x: '-50%' }}
+            style={{ position: 'fixed', top: isMobile ? 60 : 24, left: '50%', zIndex: 1095, background: 'var(--surface-1)', border: `1px solid var(--ember-soft)`, borderRadius: 99, padding: '10px 18px', boxShadow: `0 8px 28px var(--ember-soft)`, display: 'flex', alignItems: 'center', gap: 10 }}>
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
               <Sparkles size={14} color="var(--ember)" strokeWidth={2.2} />
             </motion.div>
