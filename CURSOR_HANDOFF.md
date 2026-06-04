@@ -83,11 +83,21 @@ Fondateur solo : Hamdaane CHITOU (étudiant data science, Bénin). 6 langues
 - Auth : un **interceptor axios global** (`src/main.jsx`) ajoute `Authorization: Bearer <token>`
   depuis localStorage. Re-login requis après un changement de domaine/origin.
 
-### 4.4 Push notifications (VAPID)
-- `pywebpush` **mute** le dict `vapid_claims` (il y injecte `aud`/`exp`). **Toujours passer une
-  copie fraîche** : `vapid_claims=dict(VAPID_CLAIMS)`. Sinon l'`exp` se fige → tous les pushs
-  échouent en 401 après expiration (bug du « +100h sans notif »).
-- Clés VAPID dans les env Render (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` en PEM `\n`-échappé).
+### 4.4 Push notifications (VAPID) — DEUX pièges majeurs déjà rencontrés
+- **Format de clé privée** : `pywebpush` charge la clé via `py_vapid Vapid.from_string()`,
+  qui **REFUSE un PEM PKCS8** (`ValueError: Could not deserialize key data`) et veut le
+  **base64url BRUT** (le scalaire 32 octets, une ligne, ex. `5vVML9Nw...`). `VAPID_PRIVATE_KEY`
+  est normalisée en brut par `_normalize_pem_private_key` (accepte PEM en entrée → ressort du brut).
+  NE PAS reconvertir en PEM. Pour générer : `vapid --gen` puis `vapid --applicationServerKey`,
+  ou voir le script EC dans l'historique.
+- **claims muté** : `pywebpush` mute le dict `vapid_claims` (ajoute `aud`/`exp`). **Toujours
+  passer une copie fraîche** : `vapid_claims=dict(VAPID_CLAIMS)`. Sinon l'`exp` se fige → tous
+  les pushs échouent en 401 après expiration (bug du « +100h sans notif »).
+- **Abonnement** : à la (ré)activation, désabonner l'ancien PUIS re-souscrire (clé publique
+  changée → l'ancien sub est invalide). `/push/subscribe` fait DELETE+INSERT (1 sub/user).
+- Diag intégré : `/push/test` affiche `[VAPID privée OK/ILLISIBLE · match publique=OUI/NON]`
+  via py_vapid (le même chemin que pywebpush) — utile pour pinpointer.
+- Clés VAPID dans les env Render : `VAPID_PUBLIC_KEY` (base64url) + `VAPID_PRIVATE_KEY` (base64url BRUT).
 
 ---
 
@@ -144,13 +154,26 @@ soffice --headless --norestore "-env:UserInstallation=file:///tmp/lo" --convert-
 
 ## 9. État actuel & chantiers ouverts
 
-- ✅ Migration domaine usegetshift.com, SEO de base (meta, JSON-LD, robots, sitemap, og-image, favicon).
-- ✅ IA unifiée « GetShift AI » (3 tons réglables, plus de personas Alex/Max/Nova). Page /ia épurée.
-- ✅ Console Fondateur complète (6 onglets). Mémoire IA réparée (schéma user_memory).
-- ✅ Push notifs réparées (claims VAPID + rotation clés). Sécurité durcie (IDOR, secrets fail-closed).
-- 🟡 **GROQ_API_KEY à roter** (cf. §5). Render 512 Mo (surveiller l'onglet Erreurs de la console).
-  GCal : import auto au chargement du dashboard (le webhook expire) — vérifier la reconnexion OAuth.
+- ✅ Migration domaine usegetshift.com, SEO de base (meta, JSON-LD, robots, sitemap, og-image, **favicon.ico**).
+- ✅ IA unifiée « GetShift AI » (3 tons réglables, plus de personas Alex/Max/Nova ; avatar Sparkles).
+  Page /ia épurée. Sidebar = « GetShift AI ». Outils agent : erreurs réelles surfacées (plus d'« Erreur interne » muette).
+- ✅ Console Fondateur complète : onglets Croissance / Activité / Adoption / Erreurs / **Message
+  (broadcast email)** / Sécurité / Système + détail utilisateur. Mémoire IA réparée (schéma user_memory).
+- ✅ Push notifs : **réparées** (claims copie fraîche + clé VAPID en format BRUT base64url +
+  ré-abonnement frais). Clés VAPID **rotées** (les anciennes étaient dans l'historique git public).
+- ✅ Dashboard : icônes source dans Focus du jour, ordre des tâches stable (tri déterministe),
+  centrage statique (plus de glissement), salut « Bonjour/Bonsoir » traduit (6 langues).
+  Toasts/bannières centrés mobile (fix translateX vs framer `x:'-50%'`).
+- ✅ GCal : import auto au chargement du dashboard (throttle 60s) — le webhook expirait.
+  Si pas d'events : reconnecter Google Calendar (Réglages → Intégrations) + events dans today→+30j.
+- 🟡 **GROQ_API_KEY à roter** (cf. §5) — toujours en attente (dans l'historique git public).
+- 🟡 **Render 512 Mo : OOM récurrent** mitigé (gunicorn threads 4, max-requests 250, upload 6 Mo)
+  mais pas guéri — si ça persiste, le vrai remède = instance avec plus de RAM. Surveiller l'onglet Erreurs.
+- 🟡 **i18n INCOMPLÈTE** : la détection de langue (navigator) marche, la Landing est 100% traduite,
+  MAIS ~170 chaînes restent **codées en dur en français** dans l'app connectée (Help ~49, Dashboard ~38,
+  Collaboration ~34, IAChat ~23, TomorrowBuilder, Settings…). À finir page par page (clés × 6 langues).
 - 🟡 Intégrations Zoom / Slack / Discord : à faire (Discord en priorité — public étudiant).
+- 🟡 Guide (PageGuide) **désactivé** dans App.jsx — à refaire mobile-first avant réactivation.
 - 🟡 Lancement LinkedIn en cours (cf. `docs/LINKEDIN_LANCEMENT.md`, `docs/PITCH_GETSHIFT.md`,
   `docs/GETSHIFT_DIFFERENCIATION_MONETISATION.md`, `docs/PLAN_ARGENT_EN_LIGNE_17ANS.md`).
 
