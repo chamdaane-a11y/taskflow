@@ -45,11 +45,12 @@ export default function PushNotifToggle({ user, onToast }) {
       if (perm !== 'granted') { setState('denied'); onToast?.('Notifications refusées.', 'error'); return }
       const { data } = await axios.get(`${API}/push/vapid-public-key`)
       const key = urlB64ToUint8(data.public_key)
-      // Réutilise une subscription existante si compatible, sinon (ré)abonne.
-      let sub = await reg.pushManager.getSubscription()
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
-      }
+      // TOUJOURS repartir d'un abonnement FRAIS : on désabonne l'ancien (qui peut
+      // être lié à une ancienne clé VAPID ou avoir un p256dh illisible) puis on
+      // re-souscrit avec la clé actuelle. Évite le "Could not deserialize key data".
+      const ancien = await reg.pushManager.getSubscription()
+      if (ancien) { try { await ancien.unsubscribe() } catch { /* ignore */ } }
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
       await axios.post(`${API}/push/subscribe`, { user_id: user.id, subscription: sub.toJSON() })
       setState('active')
       onToast?.('Notifications activées sur cet appareil.')
