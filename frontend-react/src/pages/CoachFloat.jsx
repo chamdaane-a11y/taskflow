@@ -160,7 +160,7 @@ export const CoachFloat = memo(function CoachFloat({
 
   const coach = COACHES[style] || COACHES.alex
   const coachTagline = t(`coach.${style === 'max' ? 'max' : style === 'nova' ? 'nova' : 'alex'}_tagline`)
-  const Icon = coach.Icon
+  const Icon = Sparkles  // avatar IA neutre (le ton garde son icône dans le sélecteur)
   const [c1, c2] = coach.grad
 
   // Position : éviter le bottom nav mobile

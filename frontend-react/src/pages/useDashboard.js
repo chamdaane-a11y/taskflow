@@ -231,6 +231,7 @@ export function useDashboard() {
       chargerSlackWebhook(),
     ]).finally(() => {
       activerNotifications()
+      syncGcalImport()
     })
   }, [])
 
@@ -335,6 +336,18 @@ export function useDashboard() {
     }
     setLoading(false)
   }, [user?.id])
+
+  // Import Google Calendar au chargement (ne dépend plus du webhook, qui expire).
+  // Throttlé 5 min pour ne pas spammer l'API GCal ; rafraîchit si de nouveaux events.
+  const syncGcalImport = useCallback(async () => {
+    try {
+      const k = `gcal_sync_${user.id}`
+      if (Date.now() - Number(localStorage.getItem(k) || 0) < 5 * 60 * 1000) return
+      const r = await api.post(`/integrations/google-calendar/import-events/${user.id}`)
+      localStorage.setItem(k, String(Date.now()))
+      if (r.data?.created > 0) chargerTaches()
+    } catch { /* GCal non connecté (400) → on ignore silencieusement */ }
+  }, [user?.id, chargerTaches])
 
   const chargerRappels = useCallback(async () => {
     try {

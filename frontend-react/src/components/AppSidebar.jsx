@@ -13,7 +13,7 @@ export const SIDEBAR_W = 248
 // Les labels sont des clés i18n — traduits dynamiquement dans le rendu
 export const NAV_ITEMS = [
   { icon: LayoutDashboard, labelKey: 'nav.dashboard',     path: '/dashboard' },
-  { icon: Bot,             labelKey: 'nav.ai',            path: '/ia' },
+  { icon: Bot,             label: 'GetShift AI',          path: '/ia' },
   { icon: Sparkles,        label: 'Tomorrow Builder',     path: '/tomorrow' },
   { icon: Flag,            label: 'Goal',                 path: '/goal' },
   { icon: BarChart2,       label: 'Analytics',           path: '/analytics' },

@@ -2643,8 +2643,8 @@ export default function Dashboard() {
       {/* ══════════════════════════════════════════════════════════════
           MAIN
       ══════════════════════════════════════════════════════════════ */}
-      <motion.main animate={{ marginLeft: isMobile ? 0 : `max(${mainMarginL}px, calc(${mainMarginL / 2}px + 50vw - 720px))` }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: 1440, overflowX: 'hidden', marginRight: isMobile ? undefined : 'auto' }}>
+      <motion.main animate={{ marginLeft: mainMarginL }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowX: 'hidden' }}>
 
         {/* ── BARRE D'ACTIONS MOBILE (toujours visible) ── */}
         {isMobile && (
@@ -2658,7 +2658,7 @@ export default function Dashboard() {
         )}
 
         {/* Contenu scrollable */}
-        <div style={{ flex: 1, width: '100%', padding: isMobile ? '12px 16px 120px' : 'clamp(16px,3vw,40px)', paddingTop: isMobile ? 12 : 60, boxSizing: 'border-box' }}>
+        <div style={{ flex: 1, width: '100%', maxWidth: 1440, marginLeft: 'auto', marginRight: 'auto', padding: isMobile ? '12px 16px 120px' : 'clamp(16px,3vw,40px)', paddingTop: isMobile ? 12 : 60, boxSizing: 'border-box' }}>
 
           {/* Bannière guide */}
           <AnimatePresence>

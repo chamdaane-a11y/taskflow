@@ -1550,9 +1550,7 @@ export default function Analytics() {
 
       {/* MAIN */}
       <motion.main
-        animate={{ marginLeft: isMobile ? 0 : `max(${mainMargin}px, calc(${mainMargin / 2}px + 50vw - 720px))` }}
-        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{ flex: 1, padding: 'clamp(20px,4vw,36px)', paddingTop: isMobile ? 'calc(56px + env(safe-area-inset-top))' : 'clamp(20px,4vw,36px)', paddingBottom: isMobile ? 90 : 'clamp(20px,4vw,36px)', overflowX: 'hidden', maxWidth: 1440, marginRight: isMobile ? undefined : 'auto' }}>
+        style={{ flex: 1, padding: 'clamp(20px,4vw,36px)', paddingTop: isMobile ? 'calc(56px + env(safe-area-inset-top))' : 'clamp(20px,4vw,36px)', paddingBottom: isMobile ? 90 : 'clamp(20px,4vw,36px)', overflowX: 'hidden', maxWidth: 1440, marginRight: isMobile ? undefined : 'auto', marginLeft: isMobile ? 0 : `max(${mainMargin}px, calc(${mainMargin / 2}px + 50vw - 720px))`, transition: 'margin-left 0.3s ease' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>

@@ -284,7 +284,7 @@ const MessageBubble = memo(function MessageBubble({ msg, idx, accent, accent2, i
   const bubbleCoachStyle = msg.coach_style || coach?.id || 'bienveillant'
   const bubbleCoach = COACHES[bubbleCoachStyle] || coach || COACHES.bienveillant
   const bColor = bubbleCoach.color
-  const BubbleIcon = bubbleCoach.Icon
+  const BubbleIcon = Sparkles  // avatar IA neutre (plus d'icône de ton)
 
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
@@ -940,7 +940,7 @@ export default function IAChat() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: `${coach.color}14`, border: `1px solid ${coach.color}40`, borderRadius: 99 }}>
               <motion.div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} />
-              <coach.Icon size={11} color={coach.color} strokeWidth={2.4} fill={coach.id === 'motivateur' ? coach.color : 'none'} />
+              <Sparkles size={11} color={coach.color} strokeWidth={2.4} />
               <span style={{ fontSize: 11, fontWeight: 700, color: coach.color, whiteSpace: 'nowrap', fontFamily: "'Clash Display', sans-serif" }}>{coach.nom}</span>
             </div>
             <AnimatePresence>
@@ -1009,7 +1009,7 @@ export default function IAChat() {
               <motion.div style={{ position: 'relative', marginBottom: 28 }}>
                 <motion.div style={{ width: 84, height: 84, borderRadius: '50%', background: `linear-gradient(135deg, ${coach.color}, ${coach.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 60px ${coach.color}55, 0 0 120px ${coach.color}30` }}
                   animate={{ y: [0, -8, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}>
-                  <coach.Icon size={36} color="#fff" strokeWidth={2} fill={coach.id === 'motivateur' ? '#fff' : 'none'} />
+                  <Sparkles size={36} color="#fff" strokeWidth={2} />
                 </motion.div>
                 <motion.div style={{ position: 'absolute', inset: -8, borderRadius: '50%', border: `1px solid ${coach.color}40` }}
                   animate={{ opacity: [0.3, 0.8, 0.3], scale: [1, 1.05, 1] }} transition={{ duration: 2.5, repeat: Infinity }} />
@@ -1111,7 +1111,7 @@ export default function IAChat() {
               <motion.div style={{ display: 'flex' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${coach.color}, ${coach.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 14px ${coach.color}55` }}>
-                    <coach.Icon size={13} color="#fff" strokeWidth={2.2} fill={coach.id === 'motivateur' ? '#fff' : 'none'} />
+                    <Sparkles size={13} color="#fff" strokeWidth={2.2} />
                   </div>
                   <div style={{ padding: '12px 18px', borderRadius: '4px 16px 16px 16px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
