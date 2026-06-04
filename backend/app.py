@@ -10026,6 +10026,21 @@ def init_user_memory_table(curseur):
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     """)
+    # Auto-réparation : d'anciennes bases ont créé user_memory SANS updated_at ni
+    # clé unique (schéma divergent) → ORDER BY/ON DUPLICATE KEY plantaient et la
+    # mémoire restait vide. On ajoute ce qui manque.
+    try:
+        curseur.execute("SHOW COLUMNS FROM user_memory LIKE 'updated_at'")
+        if not curseur.fetchone():
+            curseur.execute("ALTER TABLE user_memory ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    except Exception:
+        pass
+    try:
+        curseur.execute("SHOW INDEX FROM user_memory WHERE Key_name='unique_user_cle'")
+        if not curseur.fetchone():
+            curseur.execute("ALTER TABLE user_memory ADD UNIQUE KEY unique_user_cle (user_id, categorie, cle)")
+    except Exception:
+        pass
 
 def sauvegarder_memoire(user_id: int, observations: list):
     if not observations:
@@ -11334,8 +11349,8 @@ def get_user_memory_full(user_id):
     try:
         db = connecter()
         cur = db.cursor(dictionary=True)
-        cur.execute("CREATE TABLE IF NOT EXISTS user_memory (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, categorie VARCHAR(50), cle VARCHAR(150), valeur TEXT, poids INT DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
-        cur.execute("SELECT id, categorie, cle, valeur, poids, created_at FROM user_memory WHERE user_id=%s ORDER BY poids DESC, created_at DESC LIMIT 100", (user_id,))
+        init_user_memory_table(cur)  # schéma canonique unique (updated_at + clé unique)
+        cur.execute("SELECT id, categorie, cle, valeur, poids, updated_at AS created_at FROM user_memory WHERE user_id=%s ORDER BY poids DESC, updated_at DESC LIMIT 100", (user_id,))
         rows = cur.fetchall()
         for r in rows:
             if r.get('created_at'): r['created_at'] = str(r['created_at'])

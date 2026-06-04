@@ -939,7 +939,7 @@ export default function IAChat() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: `${coach.color}14`, border: `1px solid ${coach.color}40`, borderRadius: 99 }}>
               <motion.div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} />
               <coach.Icon size={11} color={coach.color} strokeWidth={2.4} fill={coach.id === 'motivateur' ? coach.color : 'none'} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: coach.color, whiteSpace: 'nowrap', fontFamily: "'Clash Display', sans-serif" }}>{coach.nom} · {coach.tag}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: coach.color, whiteSpace: 'nowrap', fontFamily: "'Clash Display', sans-serif" }}>{coach.nom}</span>
             </div>
             <AnimatePresence>
               {forceSearch && (
@@ -1015,36 +1015,15 @@ export default function IAChat() {
 
               {/* Salutation personnalisée par le coach */}
               <h1 style={{ fontSize: 'clamp(22px,5vw,32px)', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.8px', marginBottom: 6, fontFamily: "'Clash Display', sans-serif", lineHeight: 1.2 }}>
-                {coach.nom} — coach <span style={{ color: coach.color }}>{coach.tag.toLowerCase()}</span>
+                GetShift AI
               </h1>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 18, maxWidth: 440, lineHeight: 1.6, fontStyle: 'italic' }}>
-                « {coach.accroche} »
+                Ton assistant de productivité.
               </p>
               <p style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 14, maxWidth: 480, lineHeight: 1.65 }}>
                 Salut <strong>{user?.nom?.split(' ')[0]}</strong>. Je connais tes tâches, ton focus du jour, ton streak et tes patterns. On commence par quoi ?
               </p>
 
-              {/* Switch coach rapide */}
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 18 }}>
-                {Object.values(COACHES).map(c => (
-                  <motion.button key={c.id}
-                    onClick={() => setCoachStyle(c.id)}
-                    whileTap={{ scale: 0.94 }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '5px 11px',
-                      background: c.id === coach.id ? `${c.color}18` : 'transparent',
-                      border: `1px solid ${c.id === coach.id ? c.color : 'var(--border-subtle)'}`,
-                      borderRadius: 99,
-                      color: c.id === coach.id ? c.color : 'var(--text-secondary)',
-                      fontSize: 11, fontWeight: c.id === coach.id ? 700 : 500,
-                      cursor: 'pointer',
-                    }}>
-                    <c.Icon size={11} fill={c.id === coach.id && c.id === 'motivateur' ? c.color : 'none'} />
-                    {c.tag}
-                  </motion.button>
-                ))}
-              </div>
 
               {/* Capacités */}
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 28 }}>
