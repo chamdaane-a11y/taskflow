@@ -11,6 +11,7 @@ import { motion } from 'framer-motion'
 import {
   TrendingUp, Shield, Server, Users, UserPlus, Activity,
   AlertTriangle, CheckCircle2, RefreshCw, ListChecks, Bell,
+  Bug, BarChart3, Zap, X,
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -70,6 +71,11 @@ export default function FounderConsole() {
   const [timeseries, setTimeseries] = useState(null)
   const [security, setSecurity] = useState(null)
   const [system, setSystem] = useState(null)
+  const [activity, setActivity] = useState(null)
+  const [errors, setErrors] = useState(null)
+  const [adoption, setAdoption] = useState(null)
+  const [userDetail, setUserDetail] = useState(null)
+  const [userLoading, setUserLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState(null)
   const [testing, setTesting] = useState(false)
@@ -112,6 +118,15 @@ export default function FounderConsole() {
       } else if (which === 'system') {
         const r = await axios.get(`${API}/admin/system`)
         setSystem(r.data)
+      } else if (which === 'activity') {
+        const r = await axios.get(`${API}/admin/activity`)
+        setActivity(r.data)
+      } else if (which === 'errors') {
+        const r = await axios.get(`${API}/admin/errors`)
+        setErrors(r.data)
+      } else if (which === 'adoption') {
+        const r = await axios.get(`${API}/admin/adoption`)
+        setAdoption(r.data)
       }
     } catch (err) {
       const d = err?.response?.data
@@ -128,8 +143,22 @@ export default function FounderConsole() {
 
   if (!user?.is_founder) return null
 
+  const ouvrirUser = useCallback(async (uid) => {
+    setUserLoading(true); setUserDetail({ id: uid })
+    try {
+      const r = await axios.get(`${API}/admin/user/${uid}`)
+      setUserDetail(r.data)
+    } catch (e) {
+      setUserDetail({ id: uid, erreur: e?.response?.data?.detail || 'Erreur de chargement' })
+    }
+    setUserLoading(false)
+  }, [])
+
   const TABS = [
     ['growth', 'Croissance', TrendingUp],
+    ['activity', 'Activité', Activity],
+    ['adoption', 'Adoption', BarChart3],
+    ['errors', 'Erreurs', Bug],
     ['security', 'Sécurité', Shield],
     ['system', 'Système', Server],
   ]
@@ -230,13 +259,78 @@ export default function FounderConsole() {
               <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, overflow: 'hidden' }}>
                 {!signups?.signups?.length && <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>Aucune inscription sur la période.</div>}
                 {signups?.signups?.map((u, i) => (
-                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none', minWidth: 0 }}>
+                  <div key={u.id} onClick={() => ouvrirUser(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none', minWidth: 0, cursor: 'pointer' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.nom || '(sans nom)'}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
                     </div>
                     {!u.email_verifie && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(194,135,72,0.15)', color: '#C28748', flexShrink: 0 }}>non vérifié</span>}
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>{u.created_at}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ── ACTIVITÉ ── */}
+          {tab === 'activity' && (
+            <>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px' }}>Activité récente</h3>
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, overflow: 'hidden' }}>
+                {!activity?.events?.length && <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>Aucune activité récente.</div>}
+                {activity?.events?.map((e, i) => {
+                  const cmap = { signup: '#7A9778', task_created: 'var(--ember)', task_done: '#4caf82', ia: '#a855f7', integration: '#3b82f6' }
+                  const c = cmap[e.type] || 'var(--text-secondary)'
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none', minWidth: 0 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.label}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>{e.at}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {/* ── ADOPTION ── */}
+          {tab === 'adoption' && adoption && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+                <KpiCard icon={Activity} label="Utilisateurs IA" value={adoption.ia_users} sub={`${adoption.ia_messages ?? '—'} messages`} />
+                <KpiCard icon={Zap} label="Tomorrow Builder" value={adoption.tb_users} sub={`${adoption.tb_plans ?? '—'} plans générés`} />
+                <KpiCard icon={ListChecks} label="Objectifs (Goal)" value={adoption.goal_users} sub={`${adoption.goals ?? '—'} objectifs`} />
+                <KpiCard icon={Bell} label="Abonnés push" value={adoption.push_subs} sub={`${adoption.teams ?? '—'} équipe(s)`} />
+              </div>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '6px 0 12px' }}>Intégrations connectées</h3>
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, overflow: 'hidden' }}>
+                {!adoption.integrations?.length && <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>Aucune intégration connectée.</div>}
+                {adoption.integrations?.map((it, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{it.type}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{it.users} utilisateur(s)</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ── ERREURS ── */}
+          {tab === 'errors' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '12px 16px', borderRadius: 12, background: errors?.count_24h ? 'rgba(184,89,63,0.12)' : 'var(--surface-1)', border: `1px solid ${errors?.count_24h ? 'rgba(184,89,63,0.4)' : 'var(--border-subtle)'}` }}>
+                <Bug size={16} color={errors?.count_24h ? '#B8593F' : 'var(--text-secondary)'} />
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{errors?.count_24h || 0} erreur(s) sur les dernières 24h</span>
+              </div>
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, overflow: 'hidden' }}>
+                {!errors?.errors?.length && <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>Aucune erreur enregistrée. ✓</div>}
+                {errors?.errors?.map((e, i) => (
+                  <div key={i} style={{ padding: '11px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#B8593F', fontFamily: 'var(--font-mono, monospace)' }}>{e.method} {e.route}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 'auto', flexShrink: 0 }}>{e.created_at}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono, monospace)', wordBreak: 'break-word', lineHeight: 1.5 }}>{e.message}</div>
                   </div>
                 ))}
               </div>
@@ -318,6 +412,49 @@ export default function FounderConsole() {
           )}
         </div>
       </motion.div>
+
+      {/* ── DÉTAIL UTILISATEUR (modale) ── */}
+      {userDetail && (
+        <div onClick={() => setUserDetail(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '20px 22px', width: 'min(420px, 100%)', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Users size={18} color="var(--ember)" />
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>Détail utilisateur</span>
+              <button onClick={() => setUserDetail(null)} style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface-2)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={15} /></button>
+            </div>
+            {userLoading && <div style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', padding: 20 }}>Chargement…</div>}
+            {!userLoading && userDetail.erreur && <div style={{ fontSize: 13, color: '#B8593F' }}>{userDetail.erreur}</div>}
+            {!userLoading && !userDetail.erreur && userDetail.email && (
+              <>
+                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{userDetail.nom || '(sans nom)'}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>{userDetail.email} {userDetail.email_verifie ? '· vérifié' : '· non vérifié'}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+                  {[
+                    ['Niveau', userDetail.niveau], ['Points', userDetail.points], ['Streak', `${userDetail.streak || 0}j`],
+                    ['Tâches', userDetail.taches_total], ['Faites', userDetail.taches_done], ['Msgs IA', userDetail.ia_messages],
+                  ].map(([l, v]) => (
+                    <div key={l} style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>{v ?? '—'}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>Inscrit le {userDetail.created_at || '—'} · dernière activité {userDetail.derniere_activite || '—'}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>Push : {userDetail.has_push ? 'activé' : 'non'}</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  {(userDetail.integrations || []).length === 0 && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Aucune intégration</span>}
+                  {(userDetail.integrations || []).map(it => (
+                    <span key={it} style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)' }}>{it}</span>
+                  ))}
+                </div>
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
+
       {isMobile && <BottomNavMobile T={T} />}
     </>
   )

@@ -2314,6 +2314,141 @@ def admin_test_push():
         return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:400]}"}), 500
 
 
+def _fmt_dt(d, withsec=False):
+    if hasattr(d, 'strftime'):
+        return d.strftime('%Y-%m-%d %H:%M:%S' if withsec else '%Y-%m-%d %H:%M')
+    return str(d) if d else None
+
+
+@app.route('/admin/activity', methods=['GET'])
+def admin_activity():
+    """Fil d'activité récente : derniers événements de l'app. Founder-only."""
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        ev = []
+        cur.execute("SELECT nom, email, created_at AS at FROM users ORDER BY created_at DESC LIMIT 15")
+        for r in cur.fetchall():
+            ev.append({'type': 'signup', 'label': f"Inscription : {r['nom'] or r['email']}", 'who': r['nom'], 'at': r['at']})
+        cur.execute("SELECT t.titre, u.nom, t.created_at AS at FROM taches t JOIN users u ON t.user_id=u.id ORDER BY t.created_at DESC LIMIT 15")
+        for r in cur.fetchall():
+            ev.append({'type': 'task_created', 'label': f"Tâche créée : « {r['titre']} »", 'who': r['nom'], 'at': r['at']})
+        # Complétions datées sur COALESCE(terminee_le, updated_at) — cf. CLAUDE.md
+        cur.execute("SELECT t.titre, u.nom, COALESCE(t.terminee_le, t.updated_at) AS at FROM taches t JOIN users u ON t.user_id=u.id WHERE t.terminee=1 ORDER BY COALESCE(t.terminee_le, t.updated_at) DESC LIMIT 15")
+        for r in cur.fetchall():
+            ev.append({'type': 'task_done', 'label': f"Tâche terminée : « {r['titre']} »", 'who': r['nom'], 'at': r['at']})
+        cur.execute("SELECT h.prompt, u.nom, h.created_at AS at FROM historique_ia h JOIN users u ON h.user_id=u.id ORDER BY h.created_at DESC LIMIT 15")
+        for r in cur.fetchall():
+            ev.append({'type': 'ia', 'label': f"IA : « {(r['prompt'] or '')[:60]} »", 'who': r['nom'], 'at': r['at']})
+        try:
+            cur.execute("SELECT i.type, u.nom, i.cree_le AS at FROM integrations i JOIN users u ON i.user_id=u.id ORDER BY i.cree_le DESC LIMIT 10")
+            for r in cur.fetchall():
+                ev.append({'type': 'integration', 'label': f"Intégration : {r['type']}", 'who': r['nom'], 'at': r['at']})
+        except Exception:
+            pass
+        cur.close(); db.close()
+        ev = [e for e in ev if e['at'] is not None]
+        ev.sort(key=lambda e: e['at'], reverse=True)
+        for e in ev:
+            e['at'] = _fmt_dt(e['at'])
+        return jsonify({'events': ev[:50]}), 200
+    except Exception as e:
+        app.logger.error("admin_activity: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
+
+
+@app.route('/admin/errors', methods=['GET'])
+def admin_errors():
+    """Dernières erreurs backend (error_log). Founder-only."""
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        _ensure_error_log(cur)
+        cur.execute("SELECT route, method, message, created_at FROM error_log ORDER BY created_at DESC LIMIT 60")
+        rows = cur.fetchall()
+        cur.execute("SELECT COUNT(*) AS n FROM error_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)")
+        n24 = (cur.fetchone() or {}).get('n', 0)
+        cur.close(); db.close()
+        for r in rows:
+            r['created_at'] = _fmt_dt(r['created_at'], withsec=True)
+            if r.get('message'):
+                r['message'] = r['message'][:300]
+        return jsonify({'errors': rows, 'count_24h': n24}), 200
+    except Exception as e:
+        app.logger.error("admin_errors: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
+
+
+@app.route('/admin/adoption', methods=['GET'])
+def admin_adoption():
+    """Adoption des fonctionnalités. Founder-only."""
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        def scal(sql):
+            try:
+                cur.execute(sql); return (cur.fetchone() or {}).get('n', 0)
+            except Exception:
+                return None
+        out = {
+            'users_total': scal("SELECT COUNT(*) AS n FROM users"),
+            'users_verified': scal("SELECT COUNT(*) AS n FROM users WHERE email_verifie=TRUE"),
+            'ia_users': scal("SELECT COUNT(DISTINCT user_id) AS n FROM historique_ia"),
+            'ia_messages': scal("SELECT COUNT(*) AS n FROM historique_ia"),
+            'tb_users': scal("SELECT COUNT(DISTINCT user_id) AS n FROM tomorrow_plans"),
+            'tb_plans': scal("SELECT COUNT(*) AS n FROM tomorrow_plans"),
+            'goal_users': scal("SELECT COUNT(DISTINCT user_id) AS n FROM objectifs"),
+            'goals': scal("SELECT COUNT(*) AS n FROM objectifs"),
+            'push_subs': scal("SELECT COUNT(*) AS n FROM push_subscriptions"),
+            'teams': scal("SELECT COUNT(*) AS n FROM equipes"),
+        }
+        integ = []
+        try:
+            cur.execute("SELECT type, COUNT(DISTINCT user_id) AS n FROM integrations GROUP BY type ORDER BY n DESC")
+            integ = [{'type': r['type'], 'users': r['n']} for r in cur.fetchall()]
+        except Exception:
+            pass
+        cur.close(); db.close()
+        out['integrations'] = integ
+        return jsonify(out), 200
+    except Exception as e:
+        app.logger.error("admin_adoption: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
+
+
+@app.route('/admin/user/<int:uid>', methods=['GET'])
+def admin_user_detail(uid):
+    """Détail d'un utilisateur (activité, intégrations, niveau). Founder-only."""
+    try:
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT id, nom, email, niveau, points, streak, email_verifie, created_at, derniere_activite FROM users WHERE id=%s", (uid,))
+        u = cur.fetchone()
+        if not u:
+            cur.close(); db.close()
+            return jsonify({"erreur": "Utilisateur introuvable"}), 404
+        u['created_at'] = _fmt_dt(u.get('created_at'))
+        u['derniere_activite'] = _fmt_dt(u.get('derniere_activite'))
+        u['email_verifie'] = bool(u.get('email_verifie'))
+        def scal(sql):
+            try:
+                cur.execute(sql, (uid,)); return (cur.fetchone() or {}).get('n', 0)
+            except Exception:
+                return None
+        u['taches_total'] = scal("SELECT COUNT(*) AS n FROM taches WHERE user_id=%s")
+        u['taches_done'] = scal("SELECT COUNT(*) AS n FROM taches WHERE user_id=%s AND terminee=1")
+        u['ia_messages'] = scal("SELECT COUNT(*) AS n FROM historique_ia WHERE user_id=%s")
+        u['has_push'] = (scal("SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id=%s") or 0) > 0
+        integ = []
+        try:
+            cur.execute("SELECT DISTINCT type FROM integrations WHERE user_id=%s", (uid,))
+            integ = [r['type'] for r in cur.fetchall()]
+        except Exception:
+            pass
+        cur.close(); db.close()
+        u['integrations'] = integ
+        return jsonify(u), 200
+    except Exception as e:
+        app.logger.error("admin_user_detail: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
+
+
 @app.route('/debug/gcal-status', methods=['GET'])
 def debug_gcal_status():
     """Diagnose complet Google Calendar pour un user.
