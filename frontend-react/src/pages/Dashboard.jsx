@@ -48,6 +48,14 @@ const labelDate = (deadline) => {
   return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })
 }
 
+// Heure d'une tâche : heure_debut (events GCal timed) sinon l'heure du deadline
+// si elle existe et n'est pas minuit (sinon rien — ce sont les tâches "toute la journée").
+const labelHeure = (tache) => {
+  if (tache?.heure_debut) return tache.heure_debut
+  const m = String(tache?.deadline || '').match(/[T ](\d{2}:\d{2})/)
+  return (m && m[1] !== '00:00') ? m[1] : ''
+}
+
 const PRIORITES = [
   { val: 'haute', label: 'Haute', bg: 'rgba(224,92,92,0.12)', color: '#e05c5c' },
   { val: 'moyenne', label: 'Moyenne', bg: 'rgba(224,138,60,0.12)', color: '#e08a3c' },
@@ -581,7 +589,7 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
             {tache.source_url && tache.source_url.includes('notion.so') && (
               <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><NotionLogo size={13} /></a>
             )}
-            {tache.deadline && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}</span>}
+            {tache.deadline && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}{labelHeure(tache) ? ` · ${labelHeure(tache)}` : ''}</span>}
             {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
             {isBloquee && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 99, background: 'rgba(224,92,92,0.12)', color: '#e05c5c', fontWeight: 600 }}>{t('dashboard.blocked')}</span>}
           </div>
