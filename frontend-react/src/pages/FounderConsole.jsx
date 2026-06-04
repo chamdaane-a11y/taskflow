@@ -11,7 +11,7 @@ import { motion } from 'framer-motion'
 import {
   TrendingUp, Shield, Server, Users, UserPlus, Activity,
   AlertTriangle, CheckCircle2, RefreshCw, ListChecks, Bell,
-  Bug, BarChart3, Zap, X,
+  Bug, BarChart3, Zap, X, Mail, Send,
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -76,6 +76,30 @@ export default function FounderConsole() {
   const [adoption, setAdoption] = useState(null)
   const [userDetail, setUserDetail] = useState(null)
   const [userLoading, setUserLoading] = useState(false)
+  // Message aux utilisateurs (broadcast email)
+  const [bcSubject, setBcSubject] = useState('')
+  const [bcTitre, setBcTitre] = useState('')
+  const [bcMsg, setBcMsg] = useState('')
+  const [bcItems, setBcItems] = useState('')
+  const [bcBusy, setBcBusy] = useState(false)
+  const [bcResult, setBcResult] = useState(null)
+  const [bcCount, setBcCount] = useState(null)
+
+  const bcEnvoyer = useCallback(async (dryRun) => {
+    setBcBusy(true); setBcResult(null)
+    try {
+      const items = bcItems.split('\n').map(s => s.trim()).filter(Boolean)
+      const { data } = await axios.post(`${API}/admin/broadcast`, {
+        subject: bcSubject, titre: bcTitre || bcSubject, intro: bcMsg, items, dry_run: !!dryRun,
+      })
+      if (dryRun) { setBcCount(data?.total ?? 0); setBcResult(`${data?.total ?? 0} destinataire(s) vérifié(s).`) }
+      else setBcResult(`✅ Envoyé à ${data?.sent ?? 0} / ${data?.total ?? 0} utilisateur(s).`)
+    } catch (e) {
+      const d = e?.response?.data
+      setBcResult(d?.erreur ? `Erreur : ${d.erreur}${d.detail ? ' — ' + d.detail : ''}` : `Erreur (${e?.response?.status || 'réseau'}).`)
+    }
+    setBcBusy(false)
+  }, [bcSubject, bcTitre, bcMsg, bcItems])
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState(null)
   const [testing, setTesting] = useState(false)
@@ -159,6 +183,7 @@ export default function FounderConsole() {
     ['activity', 'Activité', Activity],
     ['adoption', 'Adoption', BarChart3],
     ['errors', 'Erreurs', Bug],
+    ['message', 'Message', Mail],
     ['security', 'Sécurité', Shield],
     ['system', 'Système', Server],
   ]
@@ -333,6 +358,53 @@ export default function FounderConsole() {
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono, monospace)', wordBreak: 'break-word', lineHeight: 1.5 }}>{e.message}</div>
                   </div>
                 ))}
+              </div>
+            </>
+          )}
+
+          {/* ── MESSAGE AUX UTILISATEURS ── */}
+          {tab === 'message' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '12px 16px', borderRadius: 12, background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))' }}>
+                <Mail size={16} color="var(--ember)" />
+                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Email envoyé à <strong>tous les utilisateurs vérifiés</strong>. Rédige, compte les destinataires, puis envoie.</span>
+              </div>
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Objet de l'email</label>
+                  <input value={bcSubject} onChange={e => setBcSubject(e.target.value)} placeholder="Petit souci résolu — merci de ta patience 🙏"
+                    style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Titre (gros, dans l'email — optionnel)</label>
+                  <input value={bcTitre} onChange={e => setBcTitre(e.target.value)} placeholder="Toutes nos excuses pour la gêne"
+                    style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Message</label>
+                  <textarea value={bcMsg} onChange={e => setBcMsg(e.target.value)} rows={5} placeholder="Bonjour, nous avons rencontré un souci technique qui a pu perturber les notifications. C'est désormais corrigé. Merci de ta confiance et de ta patience."
+                    style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Points (optionnel — un par ligne)</label>
+                  <textarea value={bcItems} onChange={e => setBcItems(e.target.value)} rows={3} placeholder={"Notifications réparées\nPenser à les réactiver dans Réglages → Notifications"}
+                    style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+                  <motion.button onClick={() => bcEnvoyer(true)} disabled={bcBusy} whileTap={{ scale: 0.97 }}
+                    style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid var(--ember)', background: 'transparent', color: 'var(--ember)', fontSize: 13, fontWeight: 600, cursor: bcBusy ? 'wait' : 'pointer' }}>
+                    Compter les destinataires
+                  </motion.button>
+                  <motion.button
+                    onClick={() => { if (bcSubject && bcMsg && window.confirm(`Envoyer cet email à ${bcCount != null ? bcCount + ' ' : 'TOUS les '}utilisateur(s) vérifié(s) ?`)) bcEnvoyer(false) }}
+                    disabled={bcBusy || !bcSubject || !bcMsg} whileTap={{ scale: 0.97 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: 'none', background: 'var(--ember)', color: 'var(--text-on-ember, #fff)', fontSize: 13, fontWeight: 700, cursor: (bcBusy || !bcSubject || !bcMsg) ? 'not-allowed' : 'pointer', opacity: (bcBusy || !bcSubject || !bcMsg) ? 0.6 : 1 }}>
+                    <Send size={14} /> {bcBusy ? 'Envoi…' : 'Envoyer à tous'}
+                  </motion.button>
+                </div>
+                {bcResult && (
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', padding: '10px 14px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)' }}>{bcResult}</div>
+                )}
               </div>
             </>
           )}

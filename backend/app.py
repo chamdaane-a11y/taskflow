@@ -2469,6 +2469,41 @@ def admin_user_detail(uid):
         return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
 
 
+@app.route('/admin/broadcast', methods=['POST'])
+def admin_broadcast():
+    """Envoie un message (email) à tous les utilisateurs vérifiés. Founder-only.
+    dry_run=true → ne fait que compter les destinataires (aperçu)."""
+    try:
+        data = request.get_json() or {}
+        subject = (data.get('subject') or '').strip()
+        intro = (data.get('intro') or '').strip()
+        if not subject or not intro:
+            return jsonify({"erreur": "Objet et message requis"}), 400
+        titre = (data.get('titre') or subject).strip()
+        items = [s.strip() for s in (data.get('items') or []) if s and s.strip()]
+        cta_label = (data.get('cta_label') or 'Ouvrir GetShift').strip()
+        cta_href = (data.get('cta_href') or 'https://usegetshift.com').strip()
+        dry_run = bool(data.get('dry_run'))
+        db = connecter(); cur = db.cursor(dictionary=True)
+        cur.execute("SELECT nom, email FROM users WHERE email_verifie=TRUE ORDER BY id")
+        users = cur.fetchall()
+        cur.close(); db.close()
+        if dry_run:
+            return jsonify({'sent': 0, 'total': len(users), 'dry_run': True}), 200
+        sent = 0
+        for u in users:
+            try:
+                html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href)
+                if envoyer_email(u['email'], subject, html):
+                    sent += 1
+            except Exception as ee:
+                app.logger.error("admin_broadcast -> %s: %s", u.get('email'), ee)
+        return jsonify({'sent': sent, 'total': len(users)}), 200
+    except Exception as e:
+        app.logger.error("admin_broadcast: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
+
+
 @app.route('/debug/gcal-status', methods=['GET'])
 def debug_gcal_status():
     """Diagnose complet Google Calendar pour un user.
