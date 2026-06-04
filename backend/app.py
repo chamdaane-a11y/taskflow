@@ -79,8 +79,9 @@ app.config['JWT_COOKIE_SECURE'] = True
 app.config['JWT_COOKIE_SAMESITE'] = 'None'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # TODO: réactiver après debug cookie csrf_access_token
-# Anti-DoS : plafonne la taille des uploads (sinon f.read() charge tout en RAM).
-app.config['MAX_CONTENT_LENGTH'] = 12 * 1024 * 1024  # 12 Mo
+# Anti-DoS + mémoire : plafonne la taille des uploads (l'extraction PDF/OCR charge
+# plusieurs fois le fichier en RAM → 6 Mo pour ménager l'instance 512 Mo Render).
+app.config['MAX_CONTENT_LENGTH'] = 6 * 1024 * 1024  # 6 Mo
 jwt = JWTManager(app)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")

@@ -1,1 +1,1 @@
-web: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 8 --max-requests 600 --max-requests-jitter 60 --preload --log-level info --capture-output --enable-stdio-inheritance
+web: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 4 --max-requests 250 --max-requests-jitter 40 --preload --log-level info --capture-output --enable-stdio-inheritance
