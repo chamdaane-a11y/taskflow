@@ -413,7 +413,10 @@
     "focus_slot3": "3. Priorität",
     "focus_choose_first": "Meine erste Aufgabe wählen",
     "focus_pin_task": "Aufgabe anheften",
-    "complete_btn": "Abschließen"
+    "complete_btn": "Abschließen",
+    "salut_morning": "Guten Morgen",
+    "salut_afternoon": "Guten Tag",
+    "salut_evening": "Guten Abend"
   },
   "landing": {
     "nav_features": "Funktionen",

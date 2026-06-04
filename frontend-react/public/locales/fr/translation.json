@@ -413,7 +413,10 @@
     "focus_slot3": "3ème priorité",
     "focus_choose_first": "Choisir ma première tâche",
     "focus_pin_task": "Épingler une tâche",
-    "complete_btn": "Terminer"
+    "complete_btn": "Terminer",
+    "salut_morning": "Bonjour",
+    "salut_afternoon": "Bon après-midi",
+    "salut_evening": "Bonsoir"
   },
   "landing": {
     "nav_features": "Fonctionnalités",

@@ -413,7 +413,10 @@
     "focus_slot3": "الأولوية 3",
     "focus_choose_first": "اختر أول مهمة",
     "focus_pin_task": "تثبيت مهمة",
-    "complete_btn": "إنهاء"
+    "complete_btn": "إنهاء",
+    "salut_morning": "صباح الخير",
+    "salut_afternoon": "مساء الخير",
+    "salut_evening": "مساء الخير"
   },
   "landing": {
     "nav_features": "الميزات",

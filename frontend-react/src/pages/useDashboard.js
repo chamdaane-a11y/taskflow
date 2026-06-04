@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import confetti from 'canvas-confetti'
+import i18n from '../i18n'
 import { themes } from '../themes'
 import { applyTheme } from '../useTheme'
 import {
@@ -212,7 +213,7 @@ export function useDashboard() {
     ? Math.round(((points - niveauActuel.min) / (niveauSuivant.min - niveauActuel.min)) * 100)
     : 100
   const heure = new Date().getHours()
-  const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir'
+  const salut = i18n.t(heure < 12 ? 'dashboard.salut_morning' : heure < 18 ? 'dashboard.salut_afternoon' : 'dashboard.salut_evening')
 
   // ══════════════════════════════════════════════════════════════════
   // INIT — chargements PARALLÈLES pour éviter le spinner long
@@ -345,7 +346,7 @@ export function useDashboard() {
   const syncGcalImport = useCallback(async () => {
     try {
       const k = `gcal_sync_${user.id}`
-      if (Date.now() - Number(localStorage.getItem(k) || 0) < 5 * 60 * 1000) return
+      if (Date.now() - Number(localStorage.getItem(k) || 0) < 60 * 1000) return
       const r = await api.post(`/integrations/google-calendar/import-events/${user.id}`)
       localStorage.setItem(k, String(Date.now()))
       if (r.data?.created > 0) chargerTaches()

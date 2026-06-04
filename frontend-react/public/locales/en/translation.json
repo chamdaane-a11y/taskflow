@@ -413,7 +413,10 @@
     "focus_slot3": "3rd priority",
     "focus_choose_first": "Choose my first task",
     "focus_pin_task": "Pin a task",
-    "complete_btn": "Complete"
+    "complete_btn": "Complete",
+    "salut_morning": "Good morning",
+    "salut_afternoon": "Good afternoon",
+    "salut_evening": "Good evening"
   },
   "landing": {
     "nav_features": "Features",

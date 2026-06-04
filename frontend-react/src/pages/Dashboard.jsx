@@ -56,6 +56,31 @@ const labelHeure = (tache) => {
   return (m && m[1] !== '00:00') ? m[1] : ''
 }
 
+// Icônes de provenance (GCal / Gmail / Drive / Notion) — réutilisé sur les cartes
+// de tâche ET les cartes Focus du jour. stopPropagation pour ne pas déclencher la carte.
+function SourceLogos({ tache, size = 12 }) {
+  const u = tache?.source_url || ''
+  const linkStyle = { display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', flexShrink: 0 }
+  const stop = (e) => e.stopPropagation()
+  return (
+    <>
+      {tache?.gcal_imported_event_id && (
+        u ? <a href={u} target="_blank" rel="noopener noreferrer" data-source-link onClick={stop} title="Google Calendar" style={linkStyle}><GoogleCalendarLogo size={size} /></a>
+          : <span title="Google Calendar" style={{ ...linkStyle, opacity: 0.7 }}><GoogleCalendarLogo size={size} /></span>
+      )}
+      {!tache?.gcal_imported_event_id && u.includes('mail.google.com') && (
+        <a href={u} target="_blank" rel="noopener noreferrer" data-source-link onClick={stop} title="Gmail" style={linkStyle}><GmailLogo size={size} /></a>
+      )}
+      {(u.includes('drive.google.com') || u.includes('docs.google.com')) && (
+        <a href={u} target="_blank" rel="noopener noreferrer" data-source-link onClick={stop} title="Drive" style={linkStyle}><GoogleDriveLogo size={size} /></a>
+      )}
+      {u.includes('notion.so') && (
+        <a href={u} target="_blank" rel="noopener noreferrer" data-source-link onClick={stop} title="Notion" style={linkStyle}><NotionLogo size={size} /></a>
+      )}
+    </>
+  )
+}
+
 const PRIORITES = [
   { val: 'haute', label: 'Haute', bg: 'rgba(224,92,92,0.12)', color: '#e05c5c' },
   { val: 'moyenne', label: 'Moyenne', bg: 'rgba(224,138,60,0.12)', color: '#e08a3c' },
@@ -1665,6 +1690,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                     {labelDate(ft.deadline)}
                   </span>
                 )}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}><SourceLogos tache={ft} size={13} /></span>
                 <motion.button
                   onClick={() => d.toggleTache(ft.id, ft.terminee, ft.priorite, ft.bloquee)}
                   whileTap={{ scale: 0.9 }}
@@ -1710,6 +1736,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
                         {labelDate(ft.deadline)}
                       </span>
                     )}
+                    <SourceLogos tache={ft} size={12} />
                     <span style={{ fontSize: 10, color: 'var(--ember)', fontWeight: 700 }}>+{pts}</span>
                   </div>
                 </div>

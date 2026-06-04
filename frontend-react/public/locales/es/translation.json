@@ -413,7 +413,10 @@
     "focus_slot3": "3ª prioridad",
     "focus_choose_first": "Elegir mi primera tarea",
     "focus_pin_task": "Anclar una tarea",
-    "complete_btn": "Completar"
+    "complete_btn": "Completar",
+    "salut_morning": "Buenos días",
+    "salut_afternoon": "Buenas tardes",
+    "salut_evening": "Buenas noches"
   },
   "landing": {
     "nav_features": "Funciones",
