@@ -426,7 +426,26 @@ def _enforce_auth():
                 db.close()
             break
 
-VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
+def _normalize_pem_private_key(raw):
+    """Rend une clé privée PEM robuste quelle que soit la façon dont elle a été
+    collée sur Render : \\n échappés, vrais newlines, PEM aplati sur une ligne,
+    ou espaces parasites dans le corps base64. Reconstruit un PEM propre."""
+    if not raw:
+        return raw
+    s = raw.strip().replace('\\n', '\n')
+    if '-----BEGIN' not in s:
+        return s  # peut-être une clé brute (non-PEM) → laissée telle quelle
+    import re as _re
+    m = _re.search(r'-----BEGIN ([A-Z0-9 ]+?)-----(.*?)-----END \1-----', s, _re.S)
+    if not m:
+        return s
+    label = m.group(1).strip()
+    b64 = ''.join(m.group(2).split())  # retire TOUS les espaces/newlines du corps
+    body = '\n'.join(b64[i:i + 64] for i in range(0, len(b64), 64))
+    return f"-----BEGIN {label}-----\n{body}\n-----END {label}-----\n"
+
+
+VAPID_PRIVATE_KEY = _normalize_pem_private_key(os.getenv('VAPID_PRIVATE_KEY', ''))
 VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
 VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
