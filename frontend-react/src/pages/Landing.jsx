@@ -473,6 +473,7 @@ export default function Landing() {
           .hero-desk { display: none !important; }
           .hero-mob { display: flex !important; }
           .nav-links { display: none !important; }
+          .nav-cta { display: none !important; }
           .int-grid { grid-template-columns: repeat(4,1fr) !important; }
           .bg-grid { grid-template-columns: repeat(2,1fr) !important; }
           .mob-inner { flex-direction: column !important; align-items: center !important; }
@@ -499,7 +500,7 @@ export default function Landing() {
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}>{label}</a>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="nav-cta" style={{ display: 'flex', gap: 8 }}>
           <motion.button onClick={() => navigate('/login')} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
             style={{ padding: '8px 16px', background: 'transparent', border: '1.5px solid var(--border-default)', borderRadius: 9, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
             Connexion

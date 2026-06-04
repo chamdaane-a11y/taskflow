@@ -6091,6 +6091,15 @@ def push_test(user_id):
                         pass
             except Exception as e:
                 errors.append(f"{type(e).__name__}: {str(e)[:160]}")
+        # Trace l'envoi réussi → le check watchdog "Crons notifs" repasse au vert.
+        if sent:
+            try:
+                _ensure_notif_table(cursor)
+                cursor.execute("INSERT INTO notifications_envoyees (user_id, type, titre, body) VALUES (%s,%s,%s,%s)",
+                               (user_id, 'push_test', 'Test GetShift', 'Pipeline OK'))
+                db.commit()
+            except Exception:
+                pass
         cursor.close(); db.close()
         msg = (f"{sent} notification(s) envoyée(s) — vérifie ton écran." if sent
                else "Aucun envoi. Détail technique ci-dessous (à m'envoyer).")
@@ -11070,9 +11079,9 @@ def assistant_augmente():
         })
 
     except Exception as e:
-        import traceback
-        print(f"[GetShift AI] Erreur: {e}")
-        return erreur_500(e)
+        import traceback; traceback.print_exc()
+        app.logger.error("assistant_augmente: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:250]}"}), 500
 
 @app.route('/ia/assistant/stream', methods=['POST'])
 def assistant_stream():
@@ -11197,8 +11206,9 @@ def assistant_stream():
             'Connection': 'keep-alive',
         })
     except Exception as e:
-        import traceback
-        return erreur_500(e)
+        import traceback; traceback.print_exc()
+        app.logger.error("assistant_stream: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:250]}"}), 500
 
 
 @app.route('/ia/suggestions/<int:user_id>', methods=['GET'])

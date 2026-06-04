@@ -751,12 +751,14 @@ export default function IAChat() {
           return out
         })
       } catch (err2) {
+        const detail = err2?.response?.data?.detail
+        const msg = detail ? `${t('ia.conn_error')} (${detail})` : t('ia.conn_error')
         setMessages(p => {
           const out = [...p]
           if (out.length && out[out.length - 1].streaming) {
-            out[out.length - 1] = { role: 'erreur', content: t('ia.conn_error') }
+            out[out.length - 1] = { role: 'erreur', content: msg }
           } else {
-            out.push({ role: 'erreur', content: t('ia.conn_error_short') })
+            out.push({ role: 'erreur', content: detail ? `${t('ia.conn_error_short')} (${detail})` : t('ia.conn_error_short') })
           }
           return out
         })
