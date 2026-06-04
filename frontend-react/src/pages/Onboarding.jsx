@@ -56,6 +56,16 @@ const INTEGRATIONS_BASE = [
   { id: 'slack',           nom: 'Slack',           Logo: SlackLogo,          oauthPath: null },
 ]
 
+// Tant que Google n'a pas validé nos scopes restricted (gmail.readonly,
+// drive.metadata.readonly), une connexion Google déclenche l'écran rouge
+// "Google n'a pas validé cette application" — désastreux pendant l'onboarding.
+// On n'affiche donc QUE Notion (zéro warning) à cette étape.
+// → Le jour où Google valide : passer GOOGLE_VERIFIED à true, c'est tout.
+const GOOGLE_VERIFIED = false
+const ONBOARDING_INTEGRATION_IDS = GOOGLE_VERIFIED
+  ? ['google_calendar', 'google_drive', 'gmail', 'notion']
+  : ['notion']
+
 const RYTHMES_BASE = [
   { val: 'matin', Icon: Sun    },
   { val: 'apres', Icon: Sunset },
@@ -319,7 +329,9 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
   const navigate = useNavigate()
   const containerRef = useRef(null)
 
-  const INTEGRATIONS = INTEGRATIONS_BASE.map(i => ({ ...i, desc: t(`onboarding.integ_${i.id}_desc`) }))
+  const INTEGRATIONS = INTEGRATIONS_BASE
+    .filter(i => ONBOARDING_INTEGRATION_IDS.includes(i.id))
+    .map(i => ({ ...i, desc: t(`onboarding.integ_${i.id}_desc`) }))
   const RYTHMES = RYTHMES_BASE.map(r => ({ ...r, label: t(`onboarding.rythme_${r.val}`), desc: t(`onboarding.rythme_${r.val}_desc`) }))
   const USAGES = USAGES_BASE.map(u => ({ ...u, label: t(`onboarding.usage_${u.val}`), desc: t(`onboarding.usage_${u.val}_desc`) }))
   const TEAMS = TEAMS_BASE.map(tm => ({ ...tm, label: t(`onboarding.team_${tm.val}`), desc: t(`onboarding.team_${tm.val}_desc`) }))
