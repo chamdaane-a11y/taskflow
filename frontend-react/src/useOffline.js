@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { synchroniserAvecServeur, lireActionsSync } from './db'
 
-const API = 'https://taskflow-production-75c1.up.railway.app'
+const API = 'https://getshift-backend.onrender.com'
 
 export function useOffline(userId) {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
