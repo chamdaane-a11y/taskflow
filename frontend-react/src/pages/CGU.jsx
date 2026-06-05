@@ -9,7 +9,7 @@ const SECTIONS_CGU = [
   {
     id: 'objet',
     titre: '1. Objet',
-    contenu: `Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme GetShift, accessible à l'adresse https://chamdaane-a11y.github.io/taskflow, éditée et développée par Hamdaane CHITOU, seul et unique fondateur de GetShift, domicilié au Bénin.
+    contenu: `Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme GetShift, accessible à l'adresse https://usegetshift.com, éditée et développée par Hamdaane CHITOU, seul et unique fondateur de GetShift, domicilié au Bénin.
 
 En accédant à GetShift et en créant un compte, vous acceptez sans réserve les présentes CGU. Si vous n'acceptez pas ces conditions, vous devez cesser toute utilisation de la plateforme.`,
   },
