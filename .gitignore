@@ -10,3 +10,9 @@ backend/.env
 # Secrets — ne jamais committer (clés VAPID, certs, etc.)
 *.pem
 backend/vapid_new_keys.txt
+
+# Fichiers verrous bureautique + déchets divers
+.~lock.*#
+.Rhistory
+.RData
+.DS_Store
