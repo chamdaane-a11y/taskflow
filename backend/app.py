@@ -26,7 +26,10 @@ import uuid
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 from datetime import timedelta, datetime
 from dotenv import load_dotenv
-from groq import Groq
+from groq import (
+    Groq, RateLimitError, BadRequestError, InternalServerError,
+    APIConnectionError, APITimeoutError, APIStatusError, GroqError,
+)
 from pywebpush import webpush, WebPushException
 import requests as http_requests
 from google.oauth2 import id_token
@@ -46,6 +49,79 @@ load_dotenv()
 print("[BOOT] load_dotenv OK", flush=True)
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 print("[BOOT] Groq client OK", flush=True)
+
+# ─────────────────────────────────────────────────────────────────────
+# GetShift AI — appel Groq résilient (TIER 1 fiabilité)
+# Objectif : ne JAMAIS renvoyer une "Erreur interne" quand la question
+# dépasse les limites Groq. On borne le contexte, on retry les rate-limits,
+# on bascule sur un modèle de secours, sinon message humain propre.
+# ─────────────────────────────────────────────────────────────────────
+GROQ_FALLBACK_MODELS = ["llama-3.1-8b-instant"]   # modèle de secours léger
+GROQ_CTX_BUDGET_CHARS = 24000                      # ≈ 6k tokens d'entrée, marge sous le plafond free tier
+GROQ_TOOL_RESULT_MAX = 3000                        # taille max d'un résultat d'outil réinjecté
+
+class GroqIndisponible(Exception):
+    """Levée quand Groq reste inutilisable après retry + fallback."""
+    pass
+
+def _borner_contexte(messages, budget_chars=GROQ_CTX_BUDGET_CHARS):
+    """Tronque l'historique pour tenir dans le budget de tokens.
+    Préserve TOUJOURS le system prompt et le dernier message user, et ne
+    coupe jamais au milieu d'une paire tool_call/tool (sécurité API).
+    À n'appeler que sur des messages SANS tool_calls (avant la boucle).
+    Ne lève jamais."""
+    try:
+        if not messages:
+            return messages
+        system = [m for m in messages if m.get("role") == "system"]
+        reste  = [m for m in messages if m.get("role") != "system"]
+        used = sum(len(str(m.get("content") or "")) for m in system)
+        gardes = []
+        for m in reversed(reste):                       # garde les plus récents d'abord
+            taille = len(str(m.get("content") or "")) + 50
+            if gardes and used + taille > budget_chars:
+                break
+            used += taille
+            gardes.append(m)
+        gardes.reverse()
+        return system + gardes
+    except Exception:
+        return messages  # en cas de doute, on ne casse rien
+
+def appeler_groq_resilient(messages, model, *, tools=None, tool_choice=None,
+                           max_tokens=2000, temperature=0.6, fallbacks=None):
+    """Appel Groq blindé. Retry sur rate-limit (backoff), fallback de modèle
+    sur contexte trop grand / surcharge, erreurs Groq attrapées précisément.
+    Lève GroqIndisponible si tout échoue — l'appelant produit alors un
+    message humain au lieu d'un crash."""
+    candidats = [model] + [m for m in (GROQ_FALLBACK_MODELS if fallbacks is None else fallbacks) if m != model]
+    derniere = None
+    for mdl in candidats:
+        for tentative in range(2):                       # 1 essai + 1 retry par modèle
+            try:
+                kwargs = {"model": mdl, "messages": messages,
+                          "max_tokens": max_tokens, "temperature": temperature}
+                if tools is not None:
+                    kwargs["tools"] = tools
+                    kwargs["tool_choice"] = tool_choice or "auto"
+                return groq_client.chat.completions.create(**kwargs)
+            except RateLimitError as e:
+                derniere = e
+                time.sleep(1.5 * (tentative + 1))        # backoff puis retry
+                continue
+            except BadRequestError as e:
+                derniere = e                              # contexte/requête trop grand : inutile de retry
+                break                                     # → modèle suivant
+            except (InternalServerError, APIConnectionError, APITimeoutError, APIStatusError, GroqError) as e:
+                derniere = e
+                time.sleep(1.0)
+                continue
+    raise GroqIndisponible(f"{type(derniere).__name__}: {str(derniere)[:160]}")
+
+# Message renvoyé à l'utilisateur quand Groq est vraiment indisponible.
+GROQ_MSG_SURCHARGE = ("Ta question est costaude et j'ai atteint ma limite de traitement sur ce coup. "
+                      "Réessaie dans quelques secondes, ou découpe-la en deux questions plus courtes — "
+                      "je m'en occupe juste après.")
 print(f"[BOOT] Brevo API key set: {bool(os.getenv('BREVO_API_KEY'))}", flush=True)
 
 class ISODateJSONProvider(DefaultJSONProvider):
@@ -11215,50 +11291,60 @@ def assistant_augmente():
 
         # 8. Appel Groq AVEC TOOL USE — l'IA peut appeler nos fonctions GetShift
         # Loop : modèle → tool_calls? → exécuter → re-call avec résultats → ... jusqu'à done
+        # Borne le contexte AVANT la boucle (ici : system + historique + user,
+        # aucun tool_call → coupe sûre qui ne brise pas les paires tool).
+        messages_api = _borner_contexte(messages_api)
+
         actions_executees = []
         max_tours = 5  # garde-fou anti-loop infini
         tour = 0
-        while tour < max_tours:
-            tour += 1
-            completion = groq_client.chat.completions.create(
-                model=modele, messages=messages_api,
-                tools=GETSHIFT_TOOLS, tool_choice="auto",
-                max_tokens=2000, temperature=0.6,
-            )
-            choice = completion.choices[0]
-            msg = choice.message
+        reponse = ""
+        try:
+            while tour < max_tours:
+                tour += 1
+                completion = appeler_groq_resilient(
+                    messages_api, modele,
+                    tools=GETSHIFT_TOOLS, tool_choice="auto",
+                    max_tokens=2000, temperature=0.6,
+                )
+                choice = completion.choices[0]
+                msg = choice.message
 
-            # Si l'IA appelle des outils → exécuter et re-prompter
-            if msg.tool_calls:
-                # Ajouter le message assistant (avec ses tool_calls) à l'historique
-                messages_api.append({
-                    "role": "assistant",
-                    "content": msg.content or "",
-                    "tool_calls": [
-                        {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
-                        for tc in msg.tool_calls
-                    ]
-                })
-                # Exécuter chaque tool call
-                for tc in msg.tool_calls:
-                    fn_name = tc.function.name
-                    try: fn_args = json.loads(tc.function.arguments or '{}')
-                    except: fn_args = {}
-                    res = executer_outil(fn_name, fn_args, user_id)
-                    actions_executees.append(res)
-                    # Renvoyer le résultat au modèle
+                # Si l'IA appelle des outils → exécuter et re-prompter
+                if msg.tool_calls:
+                    # Ajouter le message assistant (avec ses tool_calls) à l'historique
                     messages_api.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "content": json.dumps(res, default=str)[:3000],
+                        "role": "assistant",
+                        "content": msg.content or "",
+                        "tool_calls": [
+                            {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
+                            for tc in msg.tool_calls
+                        ]
                     })
-                continue  # Boucle pour qu'il termine sa réponse
+                    # Exécuter chaque tool call
+                    for tc in msg.tool_calls:
+                        fn_name = tc.function.name
+                        try: fn_args = json.loads(tc.function.arguments or '{}')
+                        except: fn_args = {}
+                        res = executer_outil(fn_name, fn_args, user_id)
+                        actions_executees.append(res)
+                        # Renvoyer le résultat au modèle
+                        messages_api.append({
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": json.dumps(res, default=str)[:GROQ_TOOL_RESULT_MAX],
+                        })
+                    continue  # Boucle pour qu'il termine sa réponse
 
-            # Pas de tool call → réponse finale
-            reponse = (msg.content or "").strip()
-            break
-        else:
-            reponse = "(L'IA a effectué plusieurs actions mais n'a pas pu finaliser la réponse texte.)"
+                # Pas de tool call → réponse finale
+                reponse = (msg.content or "").strip()
+                break
+            else:
+                reponse = "(L'IA a effectué plusieurs actions mais n'a pas pu finaliser la réponse texte.)"
+        except GroqIndisponible as e:
+            # Plafond Groq atteint malgré retry + fallback → message humain, jamais un crash.
+            print(f"[Assistant] Groq indisponible: {e}", flush=True)
+            reponse = GROQ_MSG_SURCHARGE
 
         # 9. Historique + mémoire
         try:
@@ -11382,6 +11468,9 @@ def assistant_stream():
             user_content_stream = f"[FICHIER UPLOADÉ — voici son contenu :]\n\n{attachment_text}\n\n[FIN DU FICHIER]\n\n{message}"
         messages_api.append({"role": "user", "content": user_content_stream})
 
+        # Borne le contexte (stream : pas de tool_calls → coupe sûre)
+        messages_api = _borner_contexte(messages_api)
+
         def generate():
             full_response_parts = []
             # Métadonnées au tout début (1 ligne JSON)
@@ -11414,7 +11503,30 @@ def assistant_stream():
                     print(f"[Stream] historique err: {e}")
                 threading.Thread(target=extraire_et_sauvegarder_memoire, args=(user_id, message_raw, full_response), daemon=True).start()
             except Exception as e:
-                yield f"data: {json.dumps({'type': 'error', 'message': 'Erreur interne'})}\n\n"
+                # Le stream a échoué (souvent plafond Groq). On ne montre JAMAIS
+                # "Erreur interne" : si rien n'a été envoyé, repli non-streamé
+                # résilient (retry + modèle de secours) ; sinon on clôture le partiel.
+                print(f"[Stream] échec ({type(e).__name__}: {str(e)[:120]}) → repli", flush=True)
+                if not full_response_parts:
+                    try:
+                        completion = appeler_groq_resilient(
+                            messages_api, modele,
+                            max_tokens=2000, temperature=0.72,
+                        )
+                        texte = (completion.choices[0].message.content or "").strip() or GROQ_MSG_SURCHARGE
+                    except GroqIndisponible:
+                        texte = GROQ_MSG_SURCHARGE
+                    yield f"data: {json.dumps({'type': 'token', 'content': texte})}\n\n"
+                    yield f"data: {json.dumps({'type': 'done', 'full': texte})}\n\n"
+                    try:
+                        db2 = connecter(); cur2 = db2.cursor()
+                        cur2.execute("INSERT INTO historique_ia (user_id, prompt, reponse, modele, tache_id) VALUES (%s,%s,%s,%s,%s)", (user_id, message_raw, texte, modele, None))
+                        db2.commit(); cur2.close(); db2.close()
+                    except Exception:
+                        pass
+                else:
+                    partiel = "".join(full_response_parts)
+                    yield f"data: {json.dumps({'type': 'done', 'full': partiel})}\n\n"
 
         return Response(stream_with_context(generate()), mimetype='text/event-stream', headers={
             'Cache-Control': 'no-cache',
