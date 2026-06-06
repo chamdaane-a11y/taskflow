@@ -541,7 +541,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-06-06-ia-tools-objectifs-v15'
+APP_BUILD_MARKER = '2026-06-06-coach-page-aware-v16'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -9548,12 +9548,18 @@ def coach_chat():
         analytics_ctx = data.get('analytics_context')
         if analytics_ctx:
             system_prompt += f"\n\nDONNÉES ANALYTIQUES EN TEMPS RÉEL (page Analytics):\n- Streak: {analytics_ctx.get('streak', 0)} jours consécutifs\n- Score focus: {analytics_ctx.get('focusScore', 0)}/100\n- Risque burnout: {'OUI ⚠️' if analytics_ctx.get('burnoutRisk') else 'Non'}\n- Vélocité: {analytics_ctx.get('velocity', 0)} tâches/jour actif\n- Évolution vs période précédente: {analytics_ctx.get('wow', 0)}%\n- Chronotype: pic de productivité à {analytics_ctx.get('peakHour', 0)}h ({analytics_ctx.get('chronotype', '?')})\n- Règle 80/20: {analytics_ctx.get('lowRatio', 0)}% de tâches à faible priorité\n- Tâches complétées sur la période: {analytics_ctx.get('total', 0)}\nTu as accès à ces données en temps réel. Utilise-les précisément dans tes réponses."
+        planning_ctx = data.get('planning_context')
+        if planning_ctx:
+            system_prompt += f"\n\nDONNÉES DE PLANIFICATION EN TEMPS RÉEL (page Planification):\n- Charge planifiée aujourd'hui: {planning_ctx.get('charge_min', 0)} min sur {planning_ctx.get('capacite_min', 0)} min dispo\n- Tâches non planifiées: {planning_ctx.get('non_planifiees', 0)}\n- Tâches en retard: {planning_ctx.get('en_retard', 0)}\nTu vois le planning en temps réel. Aide concrètement à organiser la journée et signale toute surcharge ou retard."
         messages = [{"role": "system", "content": system_prompt}]
         for h in historique[-6:]:
             messages.append({"role": h['role'], "content": h['contenu']})
         messages.append({"role": "user", "content": message})
-        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, max_tokens=400, temperature=0.8)
-        reponse = response.choices[0].message.content.strip()
+        try:
+            response = appeler_groq_resilient(messages, "llama-3.3-70b-versatile", max_tokens=400, temperature=0.8)
+            reponse = (response.choices[0].message.content or "").strip()
+        except GroqIndisponible:
+            reponse = "Je suis un peu surchargé là, redonne-moi ça dans quelques secondes."
         curseur.execute("INSERT INTO coach_messages (user_id, role, contenu, style_coach) VALUES (%s, %s, %s, %s)", (user_id, 'assistant', reponse, style))
         db.commit(); db.close()
         return jsonify({"reponse": reponse, "coach": {"nom": coach['nom'], "emoji": coach['emoji']}})

@@ -142,6 +142,12 @@ export const CoachFloat = memo(function CoachFloat({
           chronotype: analyticsStats.chronotype,
           peakHour: analyticsStats.peakHour,
         } : null,
+        planning_context: (!analyticsStats && (planification.length || taches.length)) ? {
+          charge_min: ctx.chargeMin,
+          capacite_min: ctx.capaciteMin,
+          non_planifiees: ctx.unplanned,
+          en_retard: ctx.overdue,
+        } : null,
       })
       const reply = res.data?.reponse || res.data?.message || t('coach.error_reply')
       setMessages(m => [...m, { role: 'assistant', content: reply }])
