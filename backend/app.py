@@ -541,7 +541,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-06-06-ia-maverick-v14'
+APP_BUILD_MARKER = '2026-06-06-ia-tools-objectifs-v15'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -10853,6 +10853,29 @@ GETSHIFT_TOOLS = [
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "lister_objectifs",
+            "description": "Liste les objectifs (Goals) de l'utilisateur avec deadline, statut et faisabilité. À utiliser quand il demande où en sont ses objectifs, ou avant de rattacher une tâche à un objectif.",
+            "parameters": {"type": "object", "properties": {}}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "lier_tache_a_objectif",
+            "description": "Rattache une tâche existante à un objectif (Goal) existant, pour relier le quotidien aux grands objectifs. Fournir des mots-clés pour retrouver la tâche ET l'objectif.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "recherche_tache": {"type": "string", "description": "Mots-clés du titre de la tâche à rattacher"},
+                    "recherche_objectif": {"type": "string", "description": "Mots-clés du titre de l'objectif cible"}
+                },
+                "required": ["recherche_tache", "recherche_objectif"]
+            }
+        }
+    },
 ]
 
 
@@ -11171,6 +11194,31 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
             if page not in pages_valides:
                 db.close(); return {"tool": nom_fonction, "ok": False, "erreur": f"Page inconnue : {page}"}
             result.update({"page": page, "section": section, "navigation": True})
+
+        elif nom_fonction == "lister_objectifs":
+            cur.execute("SELECT id, titre, deadline, statut, score_faisabilite, duree_semaines FROM objectifs WHERE user_id=%s ORDER BY cree_le DESC LIMIT 20", (user_id,))
+            objs = cur.fetchall()
+            for o in objs:
+                if o.get('deadline'): o['deadline'] = str(o['deadline'])
+            result.update({"objectifs": objs, "nb": len(objs)})
+
+        elif nom_fonction == "lier_tache_a_objectif":
+            rt = (arguments.get('recherche_tache') or '').strip()
+            ro = (arguments.get('recherche_objectif') or '').strip()
+            tache = trouver_tache_par_recherche(cur, user_id, rt)
+            if not tache:
+                db.close(); return {"tool": nom_fonction, "ok": False, "erreur": f"Aucune tâche trouvée pour « {rt} »"}
+            mots = set(ro.lower().split())
+            obj = None
+            cur.execute("SELECT id, titre FROM objectifs WHERE user_id=%s ORDER BY cree_le DESC LIMIT 50", (user_id,))
+            for o in cur.fetchall():
+                if mots & set((o['titre'] or '').lower().split()):
+                    obj = o; break
+            if not obj:
+                db.close(); return {"tool": nom_fonction, "ok": False, "erreur": f"Aucun objectif trouvé pour « {ro} »"}
+            cur.execute("UPDATE taches SET objectif_id=%s WHERE id=%s AND user_id=%s", (obj['id'], tache['id'], user_id))
+            db.commit()
+            result.update({"tache_id": tache['id'], "tache_titre": tache['titre'], "objectif_id": obj['id'], "objectif_titre": obj['titre']})
 
         else:
             db.close()

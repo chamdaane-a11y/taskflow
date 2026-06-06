@@ -220,6 +220,8 @@ const CarteAction = memo(function CarteAction({ action, T }) {
     creer_tache_equipe:     { color: '#10b981', Icon: UserPlus, label: t('ia.action_label_team_task') },
     assigner_tache_equipe:  { color: '#3b82f6', Icon: UserPlus, label: t('ia.action_label_assigned') },
     naviguer_vers:          { color: '#a855f7', Icon: Compass,  label: 'Navigation' },
+    lister_objectifs:       { color: '#f59e0b', Icon: Target,   label: 'Objectifs' },
+    lier_tache_a_objectif:  { color: '#10b981', Icon: Target,   label: 'Tâche liée' },
   }
 
   const isToolFormat = !!action.tool
@@ -242,6 +244,8 @@ const CarteAction = memo(function CarteAction({ action, T }) {
     else if (action.tool === 'creer_tache_equipe') subtitle = `"${action.titre}"${action.assignee_nom ? ` → ${action.assignee_nom}` : ''}`
     else if (action.tool === 'assigner_tache_equipe') subtitle = `"${action.titre}" → ${action.assignee_nom}`
     else if (action.tool === 'naviguer_vers') subtitle = `Vers ${action.page}${action.section ? ` · ${action.section}` : ''}`
+    else if (action.tool === 'lister_objectifs') subtitle = `${action.nb} objectif${action.nb > 1 ? 's' : ''}`
+    else if (action.tool === 'lier_tache_a_objectif') subtitle = `"${action.tache_titre}" → "${action.objectif_titre}"`
   } else {
     subtitle = action.titre ? `"${action.titre}"` : null
   }
