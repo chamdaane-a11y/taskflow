@@ -56,7 +56,11 @@ print("[BOOT] Groq client OK", flush=True)
 # dépasse les limites Groq. On borne le contexte, on retry les rate-limits,
 # on bascule sur un modèle de secours, sinon message humain propre.
 # ─────────────────────────────────────────────────────────────────────
-GROQ_FALLBACK_MODELS = ["llama-3.1-8b-instant"]   # modèle de secours léger
+# TIER 2 puissance : Llama 4 Maverick en primaire (le plus costaud chez Groq).
+# Si indispo sur l'offre → fallback auto (zéro crash) vers le tool-use champion puis le rapide.
+# ⚙️ Pour revenir en arrière : remettre GROQ_PRIMARY_MODEL = "llama-3.3-70b-versatile".
+GROQ_PRIMARY_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
+GROQ_FALLBACK_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 GROQ_CTX_BUDGET_CHARS = 24000                      # ≈ 6k tokens d'entrée, marge sous le plafond free tier
 GROQ_TOOL_RESULT_MAX = 3000                        # taille max d'un résultat d'outil réinjecté
 
@@ -537,7 +541,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-06-06-ia-resilient-v13'
+APP_BUILD_MARKER = '2026-06-06-ia-maverick-v14'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -11189,7 +11193,7 @@ def assistant_augmente():
         data = request.get_json()
         user_id     = data.get('user_id')
         message_raw = data.get('message', '').strip()
-        modele      = data.get('modele', 'llama-3.3-70b-versatile')
+        modele      = GROQ_PRIMARY_MODEL  # TIER 2 : modèle imposé backend (le front envoie l'ancien défaut)
         historique  = data.get('historique', [])
         tache_id    = data.get('tache_id')
         force_search = data.get('force_search', False)
@@ -11299,6 +11303,7 @@ def assistant_augmente():
         max_tours = 5  # garde-fou anti-loop infini
         tour = 0
         reponse = ""
+        modele_reel = modele  # modèle réellement servi par Groq (peut différer si fallback)
         try:
             while tour < max_tours:
                 tour += 1
@@ -11307,6 +11312,7 @@ def assistant_augmente():
                     tools=GETSHIFT_TOOLS, tool_choice="auto",
                     max_tokens=2000, temperature=0.6,
                 )
+                modele_reel = getattr(completion, 'model', modele) or modele
                 choice = completion.choices[0]
                 msg = choice.message
 
@@ -11377,6 +11383,7 @@ def assistant_augmente():
             "search_results": search_results if search_results else None,
             "web_searched": bool(search_results) or any(a.get('tool') == 'rechercher_web' for a in actions_executees),
             "modele": modele,
+            "modele_reel": modele_reel,  # TIER 2 : modèle effectivement servi (pour vérifier Maverick vs fallback)
             "calendar_used": calendar_used,
         })
 
@@ -11398,7 +11405,7 @@ def assistant_stream():
         data = request.get_json()
         user_id      = data.get('user_id')
         message_raw  = data.get('message', '').strip()
-        modele       = data.get('modele', 'llama-3.3-70b-versatile')
+        modele       = GROQ_PRIMARY_MODEL  # TIER 2 : modèle imposé backend
         historique   = data.get('historique', [])
         force_search    = data.get('force_search', False)
         coach_style     = data.get('coach_style')
