@@ -537,7 +537,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-05-28-pool-backup-fix-v12'
+APP_BUILD_MARKER = '2026-06-06-ia-resilient-v13'
 
 # ============================================
 # HELPERS EMAIL & SLACK
