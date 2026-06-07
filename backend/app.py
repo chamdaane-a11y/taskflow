@@ -541,7 +541,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-06-07-ia-conscience-transversale-v17'
+APP_BUILD_MARKER = '2026-06-07-broadcast-email-v18'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -2571,8 +2571,8 @@ def admin_broadcast():
             return jsonify({"erreur": "Objet et message requis"}), 400
         titre = (data.get('titre') or subject).strip()
         items = [s.strip() for s in (data.get('items') or []) if s and s.strip()]
-        cta_label = (data.get('cta_label') or 'Ouvrir GetShift').strip()
-        cta_href = (data.get('cta_href') or 'https://usegetshift.com').strip()
+        cta_label = (data.get('cta_label') or "J'essaie GetShift AI").strip()
+        cta_href = (data.get('cta_href') or 'https://chamdaane-a11y.github.io/taskflow/#/ia').strip()
         dry_run = bool(data.get('dry_run'))
         db = connecter(); cur = db.cursor(dictionary=True)
         cur.execute("SELECT nom, email FROM users WHERE email_verifie=TRUE ORDER BY id")
@@ -6931,20 +6931,20 @@ def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href):
         f'<span style="color:{t["text"]};font-size:13.5px;">{item}</span></td></tr>'
         for item in corps_items
     )
+    table_html = (
+        f'<table width="100%" cellpadding="0" cellspacing="0" style="background:{t["surface_2"]};'
+        f'border-radius:12px;border:1px solid {t["border"]};margin-bottom:28px;">'
+        f'<tbody>{items_html}</tbody></table>'
+    ) if corps_items else ''
     contenu = f"""
 <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:{t['text']};letter-spacing:-0.3px;">{titre}</p>
 <p style="margin:0 0 24px;font-size:14px;color:{t['text_2']};line-height:1.7;">{intro}</p>
-<table width="100%" cellpadding="0" cellspacing="0" style="background:{t['surface_2']};border-radius:12px;border:1px solid {t['border']};margin-bottom:28px;">
-  <tbody>{items_html}</tbody>
-</table>
-<p style="margin:0 0 24px;font-size:13px;color:{t['text_3']};line-height:1.7;">
-  Ces améliorations sont actives immédiatement — aucune action requise de ta part.
-  Si tu étais connecté, il se peut que tu doives te reconnecter une fois.
-</p>
+{table_html}
 {_email_cta_btn(cta_label, cta_href)}
 """
     t = EMAIL_TOKENS
-    salut = f'<p style="margin:0 0 20px;font-size:14px;color:{t["text_2"]};">Bonjour {nom},</p>'
+    prenom = (nom or '').split(' ')[0] or (nom or 'toi')
+    salut = f'<p style="margin:0 0 20px;font-size:14px;color:{t["text_2"]};">Bonjour {prenom},</p>'
     return _base_email(salut + contenu, "Améliorations GetShift")
 
 @app.route('/email/broadcast', methods=['POST'])

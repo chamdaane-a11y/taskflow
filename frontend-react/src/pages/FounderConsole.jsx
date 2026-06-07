@@ -81,6 +81,8 @@ export default function FounderConsole() {
   const [bcTitre, setBcTitre] = useState('')
   const [bcMsg, setBcMsg] = useState('')
   const [bcItems, setBcItems] = useState('')
+  const [bcCtaLabel, setBcCtaLabel] = useState("J'essaie GetShift AI")
+  const [bcCtaHref, setBcCtaHref] = useState('https://chamdaane-a11y.github.io/taskflow/#/ia')
   const [bcBusy, setBcBusy] = useState(false)
   const [bcResult, setBcResult] = useState(null)
   const [bcCount, setBcCount] = useState(null)
@@ -113,7 +115,8 @@ export default function FounderConsole() {
     try {
       const items = bcItems.split('\n').map(s => s.trim()).filter(Boolean)
       const { data } = await axios.post(`${API}/admin/broadcast`, {
-        subject: bcSubject, titre: bcTitre || bcSubject, intro: bcMsg, items, dry_run: !!dryRun,
+        subject: bcSubject, titre: bcTitre || bcSubject, intro: bcMsg, items,
+        cta_label: bcCtaLabel, cta_href: bcCtaHref, dry_run: !!dryRun,
       })
       if (dryRun) { setBcCount(data?.total ?? 0); setBcResult(`${data?.total ?? 0} destinataire(s) vérifié(s).`) }
       else setBcResult(`✅ Envoyé à ${data?.sent ?? 0} / ${data?.total ?? 0} utilisateur(s).`)
@@ -122,7 +125,7 @@ export default function FounderConsole() {
       setBcResult(d?.erreur ? `Erreur : ${d.erreur}${d.detail ? ' — ' + d.detail : ''}` : `Erreur (${e?.response?.status || 'réseau'}).`)
     }
     setBcBusy(false)
-  }, [bcSubject, bcTitre, bcMsg, bcItems])
+  }, [bcSubject, bcTitre, bcMsg, bcItems, bcCtaLabel, bcCtaHref])
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState(null)
   const [testing, setTesting] = useState(false)
@@ -412,6 +415,18 @@ export default function FounderConsole() {
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Points (optionnel — un par ligne)</label>
                   <textarea value={bcItems} onChange={e => setBcItems(e.target.value)} rows={3} placeholder={"Notifications réparées\nPenser à les réactiver dans Réglages → Notifications"}
                     style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Texte du bouton</label>
+                    <input value={bcCtaLabel} onChange={e => setBcCtaLabel(e.target.value)} placeholder="J'essaie GetShift AI"
+                      style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Lien du bouton</label>
+                    <input value={bcCtaHref} onChange={e => setBcCtaHref(e.target.value)} placeholder="https://…/#/ia"
+                      style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
                   <motion.button onClick={() => bcEnvoyer(true)} disabled={bcBusy} whileTap={{ scale: 0.97 }}
