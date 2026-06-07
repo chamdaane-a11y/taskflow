@@ -2572,7 +2572,7 @@ def admin_broadcast():
         titre = (data.get('titre') or subject).strip()
         items = [s.strip() for s in (data.get('items') or []) if s and s.strip()]
         cta_label = (data.get('cta_label') or "J'essaie GetShift AI").strip()
-        cta_href = (data.get('cta_href') or 'https://chamdaane-a11y.github.io/taskflow/#/ia').strip()
+        cta_href = (data.get('cta_href') or 'https://usegetshift.com/#/ia').strip()
         dry_run = bool(data.get('dry_run'))
         db = connecter(); cur = db.cursor(dictionary=True)
         cur.execute("SELECT nom, email FROM users WHERE email_verifie=TRUE ORDER BY id")

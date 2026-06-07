@@ -82,7 +82,7 @@ export default function FounderConsole() {
   const [bcMsg, setBcMsg] = useState('')
   const [bcItems, setBcItems] = useState('')
   const [bcCtaLabel, setBcCtaLabel] = useState("J'essaie GetShift AI")
-  const [bcCtaHref, setBcCtaHref] = useState('https://chamdaane-a11y.github.io/taskflow/#/ia')
+  const [bcCtaHref, setBcCtaHref] = useState('https://usegetshift.com/#/ia')
   const [bcBusy, setBcBusy] = useState(false)
   const [bcResult, setBcResult] = useState(null)
   const [bcCount, setBcCount] = useState(null)
