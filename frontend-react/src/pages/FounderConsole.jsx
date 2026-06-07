@@ -110,15 +110,16 @@ export default function FounderConsole() {
     setPushBusy(false)
   }, [pushTitre, pushBody])
 
-  const bcEnvoyer = useCallback(async (dryRun) => {
+  const bcEnvoyer = useCallback(async (dryRun, target = 'all') => {
     setBcBusy(true); setBcResult(null)
     try {
       const items = bcItems.split('\n').map(s => s.trim()).filter(Boolean)
       const { data } = await axios.post(`${API}/admin/broadcast`, {
         subject: bcSubject, titre: bcTitre || bcSubject, intro: bcMsg, items,
-        cta_label: bcCtaLabel, cta_href: bcCtaHref, dry_run: !!dryRun,
+        cta_label: bcCtaLabel, cta_href: bcCtaHref, target, dry_run: !!dryRun,
       })
       if (dryRun) { setBcCount(data?.total ?? 0); setBcResult(`${data?.total ?? 0} destinataire(s) vérifié(s).`) }
+      else if (target === 'self') setBcResult(`Test envoyé à ton adresse — vérifie ta boîte (et les spams).`)
       else setBcResult(`✅ Envoyé à ${data?.sent ?? 0} / ${data?.total ?? 0} utilisateur(s).`)
     } catch (e) {
       const d = e?.response?.data
@@ -429,8 +430,12 @@ export default function FounderConsole() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+                  <motion.button onClick={() => bcEnvoyer(false, 'self')} disabled={bcBusy || !bcSubject || !bcMsg} whileTap={{ scale: 0.97 }}
+                    style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid var(--ember)', background: 'transparent', color: 'var(--ember)', fontSize: 13, fontWeight: 600, cursor: (bcBusy || !bcSubject || !bcMsg) ? 'not-allowed' : 'pointer', opacity: (bcBusy || !bcSubject || !bcMsg) ? 0.6 : 1 }}>
+                    M'envoyer un test
+                  </motion.button>
                   <motion.button onClick={() => bcEnvoyer(true)} disabled={bcBusy} whileTap={{ scale: 0.97 }}
-                    style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid var(--ember)', background: 'transparent', color: 'var(--ember)', fontSize: 13, fontWeight: 600, cursor: bcBusy ? 'wait' : 'pointer' }}>
+                    style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: bcBusy ? 'wait' : 'pointer' }}>
                     Compter les destinataires
                   </motion.button>
                   <motion.button

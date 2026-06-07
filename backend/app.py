@@ -541,7 +541,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-06-07-broadcast-email-v18'
+APP_BUILD_MARKER = '2026-06-07-broadcast-email-test-v19'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -2574,9 +2574,16 @@ def admin_broadcast():
         cta_label = (data.get('cta_label') or "J'essaie GetShift AI").strip()
         cta_href = (data.get('cta_href') or 'https://usegetshift.com/#/ia').strip()
         dry_run = bool(data.get('dry_run'))
+        target = (data.get('target') or 'all').strip().lower()
         db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("SELECT nom, email FROM users WHERE email_verifie=TRUE ORDER BY id")
-        users = cur.fetchall()
+        if target == 'self':
+            # Envoi de test : uniquement à l'adresse du fondateur
+            cur.execute("SELECT nom, email FROM users WHERE id=%s", (current_uid(),))
+            row = cur.fetchone()
+            users = [row] if row and row.get('email') else []
+        else:
+            cur.execute("SELECT nom, email FROM users WHERE email_verifie=TRUE ORDER BY id")
+            users = cur.fetchall()
         cur.close(); db.close()
         if dry_run:
             return jsonify({'sent': 0, 'total': len(users), 'dry_run': True}), 200
@@ -2588,7 +2595,7 @@ def admin_broadcast():
                     sent += 1
             except Exception as ee:
                 app.logger.error("admin_broadcast -> %s: %s", u.get('email'), ee)
-        return jsonify({'sent': sent, 'total': len(users)}), 200
+        return jsonify({'sent': sent, 'total': len(users), 'target': target}), 200
     except Exception as e:
         app.logger.error("admin_broadcast: %s", e, exc_info=True); _log_error(e)
         return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
