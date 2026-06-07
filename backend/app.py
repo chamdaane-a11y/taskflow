@@ -2594,6 +2594,52 @@ def admin_broadcast():
         return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
 
 
+@app.route('/admin/broadcast-push', methods=['POST'])
+def admin_broadcast_push():
+    """Envoie une notification push. Founder-only (gate /admin centrale).
+
+    target='self' (défaut) → uniquement le fondateur, pour tester le rendu.
+    target='all'           → tous les appareils abonnés aux notifications.
+    Le jeton {prenom} (ou {prénom}) dans le titre/message est remplacé par le
+    prénom réel de CHAQUE destinataire (premier mot de son nom).
+    Les abonnements expirés sont nettoyés automatiquement par envoyer_push.
+    """
+    try:
+        data = request.get_json() or {}
+        titre = (data.get('titre') or '').strip()
+        body = (data.get('body') or '').strip()
+        url = (data.get('url') or '/ia').strip()
+        target = (data.get('target') or 'self').strip().lower()
+        if not titre or not body:
+            return jsonify({"erreur": "Titre et message requis"}), 400
+        db = connecter(); cur = db.cursor(dictionary=True)
+        if target == 'all':
+            cur.execute("SELECT ps.id, ps.subscription, u.nom FROM push_subscriptions ps "
+                        "JOIN users u ON ps.user_id = u.id")
+        else:
+            uid = current_uid()
+            cur.execute("SELECT ps.id, ps.subscription, u.nom FROM push_subscriptions ps "
+                        "JOIN users u ON ps.user_id = u.id WHERE ps.user_id = %s", (uid,))
+        rows = cur.fetchall()
+        sent = 0
+        for r in rows:
+            prenom = (r.get('nom') or 'toi').split(' ')[0]
+            t = titre.replace('{prenom}', prenom).replace('{prénom}', prenom)
+            b = body.replace('{prenom}', prenom).replace('{prénom}', prenom)
+            try:
+                if envoyer_push(r['subscription'], t, b, url, db=db, sub_id=r['id']):
+                    sent += 1
+            except Exception as pe:
+                app.logger.error("broadcast-push sub %s: %s", r.get('id'), pe)
+        cur.close(); db.close()
+        msg = (f"{sent} notification(s) envoyée(s) sur {len(rows)} appareil(s)."
+               if rows else "Aucun appareil abonné aux notifications.")
+        return jsonify({'sent': sent, 'total': len(rows), 'target': target, 'message': msg}), 200
+    except Exception as e:
+        app.logger.error("admin_broadcast_push: %s", e, exc_info=True); _log_error(e)
+        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
+
+
 @app.route('/debug/gcal-status', methods=['GET'])
 def debug_gcal_status():
     """Diagnose complet Google Calendar pour un user.

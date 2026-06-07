@@ -84,6 +84,29 @@ export default function FounderConsole() {
   const [bcBusy, setBcBusy] = useState(false)
   const [bcResult, setBcResult] = useState(null)
   const [bcCount, setBcCount] = useState(null)
+  // Annonce push (notification)
+  const [pushTitre, setPushTitre] = useState('')
+  const [pushBody, setPushBody] = useState('')
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushResult, setPushResult] = useState(null)
+
+  const envoyerPush = useCallback(async (target) => {
+    setPushBusy(true); setPushResult(null)
+    try {
+      const { data } = await axios.post(`${API}/admin/broadcast-push`, {
+        titre: pushTitre, body: pushBody, url: '/ia', target,
+      })
+      setPushResult(`${target === 'all' ? '✅ Envoyé à tous' : 'Test envoyé'} — ${data?.sent ?? 0} / ${data?.total ?? 0} appareil(s).`)
+    } catch (e) {
+      const d = e?.response?.data
+      setPushResult(
+        e?.response?.status === 403 ? 'Réservé au fondateur.'
+        : d?.erreur ? `Erreur : ${d.erreur}${d.detail ? ' — ' + d.detail : ''}`
+        : `Erreur (${e?.response?.status || 'réseau'}).`
+      )
+    }
+    setPushBusy(false)
+  }, [pushTitre, pushBody])
 
   const bcEnvoyer = useCallback(async (dryRun) => {
     setBcBusy(true); setBcResult(null)
@@ -404,6 +427,39 @@ export default function FounderConsole() {
                 </div>
                 {bcResult && (
                   <div style={{ fontSize: 13, color: 'var(--text-primary)', padding: '10px 14px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)' }}>{bcResult}</div>
+                )}
+              </div>
+
+              {/* ── ANNONCE PUSH (notification) ── */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0 14px', padding: '12px 16px', borderRadius: 12, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
+                <Bell size={16} color="var(--ember)" />
+                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Notification push sur les appareils abonnés. Écris <strong>{'{prenom}'}</strong> pour insérer le prénom de chaque destinataire. Teste d'abord sur toi.</span>
+              </div>
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Titre de la notif</label>
+                  <input value={pushTitre} onChange={e => setPushTitre(e.target.value)} placeholder="{prenom}, ton IA voit toute ta journée"
+                    style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Message court</label>
+                  <textarea value={pushBody} onChange={e => setPushBody(e.target.value)} rows={2} placeholder={'Demande-lui « fais le point sur ma semaine » et clique.'}
+                    style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+                  <motion.button onClick={() => envoyerPush('self')} disabled={pushBusy || !pushTitre || !pushBody} whileTap={{ scale: 0.97 }}
+                    style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid var(--ember)', background: 'transparent', color: 'var(--ember)', fontSize: 13, fontWeight: 600, cursor: (pushBusy || !pushTitre || !pushBody) ? 'not-allowed' : 'pointer', opacity: (pushBusy || !pushTitre || !pushBody) ? 0.6 : 1 }}>
+                    Tester sur moi
+                  </motion.button>
+                  <motion.button
+                    onClick={() => { if (pushTitre && pushBody && window.confirm('Envoyer cette notification push à TOUS les utilisateurs abonnés ?')) envoyerPush('all') }}
+                    disabled={pushBusy || !pushTitre || !pushBody} whileTap={{ scale: 0.97 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: 'none', background: 'var(--ember)', color: 'var(--text-on-ember, #fff)', fontSize: 13, fontWeight: 700, cursor: (pushBusy || !pushTitre || !pushBody) ? 'not-allowed' : 'pointer', opacity: (pushBusy || !pushTitre || !pushBody) ? 0.6 : 1 }}>
+                    <Send size={14} /> {pushBusy ? 'Envoi…' : 'Envoyer à tous'}
+                  </motion.button>
+                </div>
+                {pushResult && (
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', padding: '10px 14px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)' }}>{pushResult}</div>
                 )}
               </div>
             </>
