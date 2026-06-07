@@ -541,7 +541,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-06-06-coach-page-aware-v16'
+APP_BUILD_MARKER = '2026-06-07-ia-conscience-transversale-v17'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -9551,6 +9551,13 @@ def coach_chat():
         planning_ctx = data.get('planning_context')
         if planning_ctx:
             system_prompt += f"\n\nDONNÉES DE PLANIFICATION EN TEMPS RÉEL (page Planification):\n- Charge planifiée aujourd'hui: {planning_ctx.get('charge_min', 0)} min sur {planning_ctx.get('capacite_min', 0)} min dispo\n- Tâches non planifiées: {planning_ctx.get('non_planifiees', 0)}\n- Tâches en retard: {planning_ctx.get('en_retard', 0)}\nTu vois le planning en temps réel. Aide concrètement à organiser la journée et signale toute surcharge ou retard."
+        # Conscience transversale — le coach flottant connaît l'état de toutes les pages
+        try:
+            cross_page_ctx = _build_cross_page_snapshot(curseur, user_id)
+            if cross_page_ctx:
+                system_prompt += cross_page_ctx
+        except Exception:
+            pass
         messages = [{"role": "system", "content": system_prompt}]
         for h in historique[-6:]:
             messages.append({"role": h['role'], "content": h['contenu']})
@@ -10535,6 +10542,129 @@ def extraire_titre_tache(prompt: str) -> str:
             return prompt.lower().replace(mot, "").strip().capitalize()[:120]
     return prompt.strip().capitalize()[:120]
 
+def _build_cross_page_snapshot(curseur, user_id) -> str:
+    """Conscience transversale de GetShift AI.
+
+    Construit un résumé compact de l'état de TOUTES les pages (Planification,
+    Objectifs, Tomorrow Builder, Collaboration, Analytics, Intégrations) pour
+    que l'IA sache ce qui se passe partout, pas seulement sur la page courante.
+
+    Chaque section est isolée dans son propre try/except : une page indisponible
+    n'empêche jamais les autres de s'afficher. Retourne '' si tout échoue, donc
+    n'introduit jamais d'erreur dans l'assistant.
+    """
+    lignes = []
+
+    # — Planification (page /planification) —
+    try:
+        curseur.execute(
+            "SELECT COALESCE(SUM(charge_minutes),0) AS charge, COUNT(*) AS nb "
+            "FROM planification WHERE user_id=%s AND date_planifiee=CURDATE()", (user_id,))
+        p = curseur.fetchone() or {}
+        curseur.execute(
+            "SELECT COUNT(*) AS nb FROM taches t WHERE t.user_id=%s AND t.terminee=0 "
+            "AND NOT EXISTS (SELECT 1 FROM planification pl WHERE pl.tache_id=t.id "
+            "AND pl.date_planifiee>=CURDATE())", (user_id,))
+        non_plan = (curseur.fetchone() or {}).get('nb', 0)
+        lignes.append(
+            f"PLANIFICATION : {p.get('nb', 0)} créneau(x) aujourd'hui (~{p.get('charge', 0)} min planifiées) · "
+            f"{non_plan} tâche(s) active(s) non planifiée(s).")
+    except Exception:
+        pass
+
+    # — Objectifs (page /goal-reverse) —
+    try:
+        curseur.execute(
+            "SELECT id, titre FROM objectifs WHERE user_id=%s AND COALESCE(statut,'actif')='actif' "
+            "ORDER BY cree_le DESC", (user_id,))
+        objs = curseur.fetchall()
+        if objs:
+            top = objs[0]
+            curseur.execute(
+                "SELECT COUNT(*) AS tot, SUM(CASE WHEN terminee=1 THEN 1 ELSE 0 END) AS done "
+                "FROM taches WHERE user_id=%s AND objectif_id=%s", (user_id, top['id']))
+            pr = curseur.fetchone() or {}
+            tot = pr.get('tot') or 0
+            done = pr.get('done') or 0
+            if tot:
+                prog = f" — « {top['titre']} » à {round(done / tot * 100)}% ({done}/{tot} tâches liées)"
+            else:
+                prog = f" — « {top['titre']} » (aucune tâche liée pour l'instant)"
+            lignes.append(f"OBJECTIFS : {len(objs)} objectif(s) actif(s){prog}.")
+        else:
+            lignes.append("OBJECTIFS : aucun objectif actif (page Goal vide).")
+    except Exception:
+        pass
+
+    # — Tomorrow Builder (page /tomorrow) —
+    try:
+        demain = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        curseur.execute(
+            "SELECT score_energie FROM tomorrow_plans WHERE user_id=%s AND date_planifiee=%s "
+            "ORDER BY cree_le DESC LIMIT 1", (user_id, demain))
+        tp = curseur.fetchone()
+        if tp:
+            lignes.append(f"TOMORROW BUILDER : plan de demain prêt (score énergie {tp.get('score_energie', '?')}).")
+        else:
+            lignes.append("TOMORROW BUILDER : pas encore de plan pour demain.")
+    except Exception:
+        pass
+
+    # — Collaboration (page /collaboration) —
+    try:
+        curseur.execute("SELECT COUNT(DISTINCT equipe_id) AS nb FROM equipe_membres WHERE user_id=%s", (user_id,))
+        nb_eq = (curseur.fetchone() or {}).get('nb', 0)
+        if nb_eq:
+            mes = 0
+            try:
+                curseur.execute(
+                    "SELECT COUNT(*) AS nb FROM taches_equipe "
+                    "WHERE assignee_id=%s AND COALESCE(statut,'todo')<>'termine'", (user_id,))
+                mes = (curseur.fetchone() or {}).get('nb', 0)
+            except Exception:
+                pass
+            lignes.append(
+                f"COLLABORATION : {nb_eq} équipe(s) · {mes} tâche(s) d'équipe assignée(s) à toi non terminée(s).")
+    except Exception:
+        pass
+
+    # — Analytics (page /analytics) — toujours via COALESCE(terminee_le, updated_at) (cf. CLAUDE.md) —
+    try:
+        curseur.execute(
+            "SELECT COUNT(*) AS nb FROM taches WHERE user_id=%s AND terminee=1 "
+            "AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)", (user_id,))
+        sem = (curseur.fetchone() or {}).get('nb', 0)
+        curseur.execute(
+            "SELECT HOUR(COALESCE(terminee_le, updated_at)) AS h, COUNT(*) AS nb FROM taches "
+            "WHERE user_id=%s AND terminee=1 "
+            "AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY) "
+            "GROUP BY HOUR(COALESCE(terminee_le, updated_at)) ORDER BY nb DESC LIMIT 1", (user_id,))
+        ph = curseur.fetchone()
+        pic = f" · pic de productivité vers {ph['h']}h" if ph and ph.get('h') is not None else ""
+        lignes.append(f"ANALYTICS : {sem} tâche(s) terminée(s) sur 7 jours{pic}.")
+    except Exception:
+        pass
+
+    # — Intégrations (page /settings) —
+    try:
+        curseur.execute("SELECT DISTINCT type FROM integrations WHERE user_id=%s", (user_id,))
+        types = [r['type'] for r in curseur.fetchall() if r.get('type')]
+        if types:
+            lignes.append("INTÉGRATIONS connectées : " + ", ".join(types) + ".")
+    except Exception:
+        pass
+
+    if not lignes:
+        return ""
+    corps = "\n".join(f"- {l}" for l in lignes)
+    return ("\n\n━━━ CONSCIENCE TRANSVERSALE — ÉTAT DE TOUTES LES PAGES ━━━\n"
+            "Tu vois en temps réel ce qui se passe sur CHAQUE page de GetShift, pas seulement "
+            "celle où l'utilisateur se trouve. GetShift n'est pas une juxtaposition de pages : "
+            "c'est un seul organisme. Sers-toi de cet état pour FAIRE LE LIEN entre les pages "
+            "(ex : tâche non planifiée → Planification ; objectif sans tâches → Goal ; surcharge "
+            "du jour → Tomorrow Builder) et emmène l'utilisateur sur la bonne page via naviguer_vers.\n"
+            + corps + "\n")
+
 def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, contexte_web: str,
                               coach_style: str = None, focus_today: list = None,
                               dna_summary: dict = None, recent_coach: list = None) -> str:
@@ -10626,7 +10756,8 @@ Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours
 8. LONGUEUR — Question simple = réponse percutante ; complexe = analyse complète mais sans bavardage
 9. PERSONA — Tu es GetShift AI. Si un ton de coach est demandé (bienveillant/énergique/analytique), garde-le dans CHAQUE phrase, pas seulement la première. Tu ne portes jamais de prénom (pas Alex/Max/Nova).
 10. DATE — Tu connais toujours la date et l'heure actuelles (voir bloc DATE & HEURE ci-dessus). Ne jamais prétendre l'ignorer.
-11. AGENT — Tu n'expliques pas ce que tu vas faire avec des phrases comme "je vais créer la tâche". Tu APPELLES directement les outils disponibles (creer_tache, terminer_tache, lister_membres_equipe, creer_tache_equipe, assigner_tache_equipe, naviguer_vers, etc.) puis tu confirmes en une phrase le résultat.
+11. AGENT — Tu n'expliques pas ce que tu vas faire avec des phrases comme "je vais créer la tâche". Tu APPELLES directement les outils disponibles (creer_tache, terminer_tache, lister_membres_equipe, creer_tache_equipe, assigner_tache_equipe, obtenir_contexte_global, naviguer_vers, etc.) puis tu confirmes en une phrase le résultat.
+12. PONT ENTRE LES PAGES — Tu es le cerveau central de GetShift, pas le chat d'une seule page. Tu connais l'état de TOUTES les pages (vois le bloc CONSCIENCE TRANSVERSALE). Tu fais activement le lien : une tâche non planifiée → propose la Planification ; un objectif sans tâches liées → propose Goal ; une journée surchargée → propose Tomorrow Builder ; une tâche d'équipe en attente → propose Collaboration. Quand c'est pertinent, emmène l'utilisateur sur la bonne page avec naviguer_vers. Si on te demande "où j'en suis" ou un point global, appelle obtenir_contexte_global.
 
 RAPPEL FORMAT : aucun astérisque, aucun caractère # en début de ligne. Si tu veux insister sur un mot, mets-le en MAJUSCULES, jamais entre étoiles.
 
@@ -10842,6 +10973,14 @@ GETSHIFT_TOOLS = [
                 },
                 "required": ["assignee_nom"]
             }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "obtenir_contexte_global",
+            "description": "Récupère l'état complet de TOUTES les pages de GetShift en une fois (Planification, Objectifs, Tomorrow Builder, Collaboration, Analytics, Intégrations). À utiliser quand l'utilisateur demande un point d'ensemble, 'où j'en suis', 'fais le point', 'résume ma situation', ou quand tu dois relier plusieurs pages pour conseiller.",
+            "parameters": {"type": "object", "properties": {}}
         }
     },
     {
@@ -11193,6 +11332,10 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
                 pass
             result.update({"id": tache_id, "titre": titre_t, "assignee_id": membre['id'], "assignee_nom": membre['nom'], "page_concernee": "collaboration"})
 
+        elif nom_fonction == "obtenir_contexte_global":
+            snapshot = _build_cross_page_snapshot(cur, user_id)
+            result.update({"snapshot": snapshot or "Aucune donnée transversale disponible pour l'instant."})
+
         elif nom_fonction == "naviguer_vers":
             page = arguments.get('page', '').strip().lower()
             section = arguments.get('section')
@@ -11307,6 +11450,12 @@ def assistant_augmente():
         # 3. Mémoire
         memoire = charger_memoire(user_id)
 
+        # 3bis. Conscience transversale — état de TOUTES les pages (résilient)
+        try:
+            cross_page_ctx = _build_cross_page_snapshot(curseur, user_id)
+        except Exception:
+            cross_page_ctx = ""
+
         # 4. Intention (kept pour debug/UI, mais les ACTIONS sont déléguées au tool calling)
         intention = detecter_intention(message)
 
@@ -11329,6 +11478,10 @@ def assistant_augmente():
             dna_summary=dna_summary,
             recent_coach=recent_coach,
         )
+
+        # Conscience transversale — l'IA connaît l'état de toutes les pages
+        if cross_page_ctx:
+            system_prompt += cross_page_ctx
 
         # Contexte Google Calendar — injecté si connecté (non bloquant)
         cal_ctx, calendar_used = _build_calendar_context(user_id)
@@ -11503,6 +11656,10 @@ def assistant_stream():
         except Exception:
             pass
         memoire = charger_memoire(user_id)
+        try:
+            cross_page_ctx = _build_cross_page_snapshot(c, user_id)
+        except Exception:
+            cross_page_ctx = ""
         db.close()
 
         # Web search (sync, avant le stream)
@@ -11519,6 +11676,8 @@ def assistant_stream():
             coach_style=coach_style, focus_today=focus_today,
             dna_summary=dna_summary, recent_coach=recent_coach,
         )
+        if cross_page_ctx:
+            system_prompt += cross_page_ctx
 
         messages_api = [{"role": "system", "content": system_prompt}]
         for h in historique[-16:]:

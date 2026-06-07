@@ -222,6 +222,7 @@ const CarteAction = memo(function CarteAction({ action, T }) {
     naviguer_vers:          { color: '#a855f7', Icon: Compass,  label: 'Navigation' },
     lister_objectifs:       { color: '#f59e0b', Icon: Target,   label: 'Objectifs' },
     lier_tache_a_objectif:  { color: '#10b981', Icon: Target,   label: 'Tâche liée' },
+    obtenir_contexte_global:{ color: 'var(--ember)', Icon: Layers, label: 'Vue d\'ensemble' },
   }
 
   const isToolFormat = !!action.tool
@@ -246,6 +247,7 @@ const CarteAction = memo(function CarteAction({ action, T }) {
     else if (action.tool === 'naviguer_vers') subtitle = `Vers ${action.page}${action.section ? ` · ${action.section}` : ''}`
     else if (action.tool === 'lister_objectifs') subtitle = `${action.nb} objectif${action.nb > 1 ? 's' : ''}`
     else if (action.tool === 'lier_tache_a_objectif') subtitle = `"${action.tache_titre}" → "${action.objectif_titre}"`
+    else if (action.tool === 'obtenir_contexte_global') subtitle = 'État de toutes les pages'
   } else {
     subtitle = action.titre ? `"${action.titre}"` : null
   }
@@ -612,7 +614,7 @@ export default function IAChat() {
 
     // Détection d'une intention "tool use" → endpoint non-stream (seul à avoir GETSHIFT_TOOLS)
     const lowerMsg = texte.toLowerCase()
-    const looksLikeAction = /\b(cr[eé][eé]|ajoute|nouvelle? tâche|nouvelle? tache|terminée?|terminer|fini[s]?|marque|planifie|planifier|tomorrow|supprime|supprimer|efface|modifie|modifier|change|mets? [àa] jour|renomme|liste|montre|affiche|donne.moi|quelles? sont|mes stats|mes points|mon streak|mon niveau|[eé]pingle|focus du jour|analyse|task dna|d[eé]place|repousse|deadline|assigne|assigner|coll[eè]gue|[eé]quipe|membre|va dans|ouvre|emm[èe]ne|montre[- ]moi (le|la|l[ae]s)|aller (à|sur|dans)|naviguer?)\b/.test(lowerMsg)
+    const looksLikeAction = /\b(cr[eé][eé]|ajoute|nouvelle? tâche|nouvelle? tache|terminée?|terminer|fini[s]?|marque|planifie|planifier|tomorrow|supprime|supprimer|efface|modifie|modifier|change|mets? [àa] jour|renomme|liste|montre|affiche|donne.moi|quelles? sont|mes stats|mes points|mon streak|mon niveau|[eé]pingle|focus du jour|analyse|task dna|d[eé]place|repousse|deadline|assigne|assigner|coll[eè]gue|[eé]quipe|membre|va dans|ouvre|emm[èe]ne|montre[- ]moi (le|la|l[ae]s)|aller (à|sur|dans)|naviguer?|fais? le point|o[uù] j.en suis|vue d.ensemble|r[eé]sume? (ma|tout|la situation)|fais? un bilan|[eé]tat g[eé]n[eé]ral|situation globale)\b/.test(lowerMsg)
 
     if (looksLikeAction) {
       // Mode classique non-stream pour gérer les actions
