@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import i18n from '../i18n'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
@@ -75,6 +75,8 @@ export default function GoalReverse() {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [iterating, setIterating] = useState(false)
   const [iterationInput, setIterationInput] = useState('')
+  const [objectifsActifs, setObjectifsActifs] = useState([])
+  const [objectifsLoading, setObjectifsLoading] = useState(true)
   const isMobile = useMediaQuery('(max-width: 768px)')
   const isTablet = useMediaQuery('(max-width: 1100px)')
 
@@ -87,6 +89,19 @@ export default function GoalReverse() {
     setSidebarOpen(next)
     try { localStorage.setItem('sidebar_open', String(next)) } catch {}
   }
+
+  const chargerObjectifs = useCallback(() => {
+    if (!user?.id) return
+    setObjectifsLoading(true)
+    axios.get(`${API}/ia/goal-reverse/list/${user.id}`)
+      .then(r => setObjectifsActifs(r.data.objectifs || []))
+      .catch(() => setObjectifsActifs([]))
+      .finally(() => setObjectifsLoading(false))
+  }, [user?.id])
+
+  useEffect(() => {
+    chargerObjectifs()
+  }, [chargerObjectifs])
 
   useEffect(() => {
     axios.get(`${API}/ia/goal-reverse/templates`)
@@ -195,6 +210,7 @@ export default function GoalReverse() {
       })
       setImported(true)
       afficherNotification(`✅ ${res.data.message}`)
+      chargerObjectifs()
     } catch {
       afficherNotification("Erreur lors de l'import", 'error')
     }
@@ -207,6 +223,15 @@ export default function GoalReverse() {
 
   const totalTaches = result?.jalons?.reduce((acc, j) => acc + j.taches.length, 0) || 0
   const niveauActif = NIVEAUX.find(n => n.id === niveau)
+  const pcProgress = (pct) => pct >= 70 ? '#4caf82' : pct >= 30 ? '#e08a3c' : 'var(--ember)'
+
+  const labelEcheance = (jours) => {
+    if (jours == null) return null
+    if (jours < 0) return `En retard (${Math.abs(jours)}j)`
+    if (jours === 0) return "Aujourd'hui"
+    if (jours === 1) return 'Demain'
+    return `Dans ${jours} jours`
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", overflowX: 'hidden' }}>
@@ -263,6 +288,89 @@ export default function GoalReverse() {
             </div>
           </div>
         </motion.div>
+
+        {/* Objectifs déjà en cours */}
+        {!objectifsLoading && objectifsActifs.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            style={{ marginBottom: isMobile ? 22 : 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Target size={15} color="var(--ember)" strokeWidth={2.2} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 0.3 }}>
+                Tes objectifs en cours
+              </span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)' }}>
+                {objectifsActifs.length}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {objectifsActifs.map(obj => {
+                const progColor = pcProgress(obj.progression)
+                const echeance = labelEcheance(obj.jours_restants)
+                return (
+                  <motion.div
+                    key={obj.id}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      background: 'var(--surface-1)',
+                      border: `1px solid ${obj.needs_replanning ? 'rgba(224,92,92,0.28)' : 'var(--border-subtle)'}`,
+                      borderRadius: isMobile ? 14 : 16,
+                      padding: isMobile ? '14px 14px' : '16px 18px',
+                    }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: 4 }}>
+                          {obj.titre}
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                          {echeance && (
+                            <span style={{ fontSize: 11, color: obj.jours_restants != null && obj.jours_restants < 0 ? '#e05c5c' : 'var(--text-secondary)', fontWeight: 600 }}>
+                              {echeance}
+                            </span>
+                          )}
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                            {obj.taches_done}/{obj.taches_total} tâches
+                          </span>
+                          {obj.taches_en_retard > 0 && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#e05c5c', background: 'rgba(224,92,92,0.1)', padding: '2px 7px', borderRadius: 99 }}>
+                              {obj.taches_en_retard} en retard
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 800, color: progColor, flexShrink: 0 }}>
+                        {obj.progression}%
+                      </span>
+                    </div>
+                    <div style={{ height: 5, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden', marginBottom: obj.prochaine_etape ? 10 : 0 }}>
+                      <div style={{ width: `${obj.progression}%`, height: '100%', background: progColor, borderRadius: 99 }} />
+                    </div>
+                    {obj.prochaine_etape && (
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.45 }}>
+                        <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>Prochaine étape · </span>
+                        {obj.prochaine_etape}
+                      </div>
+                    )}
+                    <motion.button
+                      type="button"
+                      onClick={() => navigate('/dashboard')}
+                      whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '7px 12px', borderRadius: 9,
+                        background: 'transparent', border: '1px solid var(--border-subtle)',
+                        color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                      }}>
+                      Voir les tâches <ArrowRight size={13} />
+                    </motion.button>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
 
         {/* Templates inspirants */}
         {templates.length > 0 && (
