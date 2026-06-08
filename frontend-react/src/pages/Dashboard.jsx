@@ -28,7 +28,7 @@ import AgendaSection from './AgendaSection'
 import TemplateIconBox from './CustomIcons'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
-import ProchainBadgeBanner from '../components/ProchainBadgeBanner'
+import { ProchainBadgePill } from '../components/ProchainBadgeBanner'
 import { BADGES_CONFIG } from '../data/badges'
 import { parseTaskInput, getPrioriteColor, getPrioriteBg } from '../utils/parseTask'
 
@@ -485,6 +485,58 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
 })
 
 // ── MobileActionBar — barre d'actions visible sur mobile ─────────────────────
+const RappelsDropdown = memo(function RappelsDropdown({ rappels, open, onClose, style = {} }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    document.addEventListener('mousedown', h)
+    document.addEventListener('touchstart', h)
+    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('touchstart', h) }
+  }, [open, onClose])
+
+  if (!open || !rappels?.length) return null
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+      transition={{ duration: 0.15 }}
+      style={{
+        position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 320,
+        width: 'min(340px, calc(100vw - 32px))',
+        background: 'var(--surface-1)',
+        border: '1px solid rgba(224,92,92,0.22)',
+        borderRadius: 14,
+        boxShadow: 'var(--shadow-lg)',
+        overflow: 'hidden',
+        ...style,
+      }}>
+      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Bell size={14} color="#e05c5c" />
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Deadlines à venir</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#e05c5c', background: 'rgba(224,92,92,0.1)', padding: '2px 7px', borderRadius: 99 }}>{rappels.length}</span>
+      </div>
+      <div style={{ maxHeight: 280, overflowY: 'auto' }}>
+        {rappels.map(r => {
+          const j = Number(r.jours_restants)
+          const label = j <= 0 ? "Aujourd'hui" : j === 1 ? 'Demain' : `Dans ${j}j`
+          return (
+          <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{r.titre}</span>
+            <span style={{ fontSize: 11, color: j <= 0 ? '#e05c5c' : '#e08a3c', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {label}
+            </span>
+          </div>
+        )})}
+      </div>
+    </motion.div>
+  )
+})
+
 const MobileActionBar = ({ d, T, onOpenTemplates, onOpenExport }) => (
   // Note : "+ Ajouter" supprimé car maintenant dans la BottomNavMobile (FAB central)
   <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border-subtle)', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0 }}>
@@ -499,11 +551,16 @@ const MobileActionBar = ({ d, T, onOpenTemplates, onOpenExport }) => (
       <Download size={14} />Exporter
     </motion.button>
     {d.rappels?.length > 0 && (
-      <motion.button onClick={() => d.setShowRappels(s => !s)}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 10, color: '#e05c5c', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
-        whileTap={{ scale: 0.96 }}>
-        <Bell size={14} />{d.rappels.length}
-      </motion.button>
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <motion.button onClick={() => d.setShowRappels(s => !s)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: d.showRappels ? 'rgba(224,92,92,0.16)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.35)' : 'rgba(224,92,92,0.2)'}`, borderRadius: 10, color: '#e05c5c', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+          whileTap={{ scale: 0.96 }}>
+          <Bell size={14} />{d.rappels.length}
+        </motion.button>
+        <AnimatePresence>
+          <RappelsDropdown rappels={d.rappels} open={d.showRappels} onClose={() => d.setShowRappels(false)} style={{ right: 0, left: 'auto' }} />
+        </AnimatePresence>
+      </div>
     )}
   </div>
 )
@@ -1613,65 +1670,40 @@ const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, na
   )
 })
 
-// ── GoalWidget — objectifs en cours avec progress ────────────────────────────
-const GoalWidget = memo(function GoalWidget({ d, T, isMobile, navigate }) {
-  const { t } = useTranslation()
-  const [objectifs, setObjectifs] = useState([])
+// ── ObjectifsLienFocus — lien discret sous le Focus ─────────────────────────
+const ObjectifsLienFocus = memo(function ObjectifsLienFocus({ userId, navigate, isMobile }) {
+  const [count, setCount] = useState(0)
   const [loaded, setLoaded] = useState(false)
-  const [replanningId, setReplanningId] = useState(null)
-  const [replanningLoading, setReplanningLoading] = useState(false)
-  const [replanningData, setReplanningData] = useState({})
-  const userId = d.user?.id
 
   useEffect(() => {
     if (!userId) return
     axios.get(`${API}/ia/goal-reverse/list/${userId}`)
-      .then(r => setObjectifs(r.data.objectifs || []))
+      .then(r => setCount((r.data.objectifs || []).length))
       .catch(() => {})
       .finally(() => setLoaded(true))
   }, [userId])
 
-  const lancerReplanning = async (id) => {
-    setReplanningId(id)
-    setReplanningLoading(true)
-    try {
-      const r = await axios.post(`${API}/ia/goal-reverse/${id}/replanning`)
-      setReplanningData(prev => ({ ...prev, [id]: r.data.replanning }))
-    } catch {}
-    setReplanningLoading(false)
-  }
-
-  if (!loaded || objectifs.length === 0) return null
-
-  const pc = (pct) => pct >= 70 ? '#4caf82' : pct >= 30 ? '#e08a3c' : 'var(--ember)'
+  if (!loaded || count === 0) return null
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Target size={13} color="var(--ember)" strokeWidth={2.5} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>{t('dashboard.goals')}</span>
-          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 700 }}>{objectifs.length}</span>
-        </div>
-        <motion.button onClick={() => navigate('/goal')} whileHover={{ x: 2 }}
-          style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}>
-          Tout voir <ChevronRight size={11} />
-        </motion.button>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {objectifs.slice(0, 3).map(obj => (
-          <div key={obj.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{obj.titre}</span>
-            <div style={{ width: 60, height: 4, background: 'var(--surface-2)', borderRadius: 99, flexShrink: 0, overflow: 'hidden' }}>
-              <motion.div initial={{ width: 0 }} animate={{ width: `${obj.progression}%` }} transition={{ duration: 0.6, ease: 'easeOut' }}
-                style={{ height: '100%', background: pc(obj.progression), borderRadius: 99 }} />
-            </div>
-            <span style={{ fontSize: 10, color: pc(obj.progression), fontWeight: 700, flexShrink: 0, minWidth: 28, textAlign: 'right' }}>{obj.progression}%</span>
-          </div>
-        ))}
-      </div>
-    </motion.div>
+    <motion.button
+      type="button"
+      onClick={() => navigate('/goal')}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      whileHover={{ color: 'var(--ember)', borderColor: 'var(--ember-ring)' }}
+      whileTap={{ scale: 0.98 }}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: 0, margin: 0,
+        background: 'transparent', border: 'none',
+        color: 'var(--text-secondary)', fontSize: isMobile ? 12 : 12.5,
+        fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+        alignSelf: 'flex-start',
+      }}>
+      <Target size={13} strokeWidth={2} color="var(--ember)" />
+      <span>{count} objectif{count > 1 ? 's' : ''} en cours</span>
+      <ArrowRight size={13} strokeWidth={2.2} />
+    </motion.button>
   )
 })
 
@@ -2870,10 +2902,15 @@ export default function Dashboard() {
                   <BookOpen size={13} />Templates
                 </motion.button>
                 {d.rappels?.length > 0 && (
-                  <motion.button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: 99, color: '#e05c5c', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-                    onClick={() => d.setShowRappels(s => !s)}>
-                    <Bell size={13} />{d.rappels.length}
-                  </motion.button>
+                  <div style={{ position: 'relative' }}>
+                    <motion.button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: d.showRappels ? 'rgba(224,92,92,0.16)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.35)' : 'rgba(224,92,92,0.2)'}`, borderRadius: 99, color: '#e05c5c', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                      onClick={() => d.setShowRappels(s => !s)}>
+                      <Bell size={13} />{d.rappels.length}
+                    </motion.button>
+                    <AnimatePresence>
+                      <RappelsDropdown rappels={d.rappels} open={d.showRappels} onClose={() => d.setShowRappels(false)} />
+                    </AnimatePresence>
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -2919,6 +2956,11 @@ export default function Dashboard() {
             <>
               {/* Focus du jour — zone principale */}
               <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: -6, marginBottom: isMobile ? 14 : 18 }}>
+                <ProchainBadgePill d={d} isMobile={isMobile} minPct={30} onClick={() => navigate('/profile')} />
+                <ObjectifsLienFocus userId={d.user?.id} navigate={navigate} isMobile={isMobile} />
+              </div>
 
               {/* Ajout rapide juste sous le focus (desktop) */}
               {!isMobile && (
@@ -2966,23 +3008,6 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* Rappels */}
-          <AnimatePresence>
-            {d.showRappels && d.rappels?.length > 0 && (
-              <motion.div style={{ background: 'rgba(224,92,92,0.06)', border: '1px solid rgba(224,92,92,0.15)', borderRadius: 14, padding: '14px 20px', marginBottom: 20 }}
-                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                {d.rappels.map(r => (
-                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(224,92,92,0.1)', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{r.titre}</span>
-                    <span style={{ fontSize: 12, color: r.jours_restants === 0 ? '#e05c5c' : '#e08a3c', fontWeight: 600 }}>
-                      {r.jours_restants === 0 ? "Aujourd'hui" : r.jours_restants === 1 ? 'Demain' : `Dans ${r.jours_restants}j`}
-                    </span>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Stats HUD — toggle discret */}
           {!isNewUser && (
             <>
@@ -2999,12 +3024,6 @@ export default function Dashboard() {
               </AnimatePresence>
             </>
           )}
-
-          {/* Prochain badge à débloquer — motivation forward-looking */}
-          {!isNewUser && <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />}
-
-          {/* Objectifs Goal Reverse en cours */}
-          {!isNewUser && <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />}
 
           {/* Alerte bloquées */}
           <AnimatePresence>

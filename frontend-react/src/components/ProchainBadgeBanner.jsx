@@ -37,6 +37,63 @@ function getRestantLabel(badgeId, current, target) {
   return `${restant} tâche${restant > 1 ? 's' : ''} restante${restant > 1 ? 's' : ''}`
 }
 
+export const ProchainBadgePill = memo(function ProchainBadgePill({ d, isMobile, onClick, minPct = 30 }) {
+  const points = d.points || 0
+  const streak = d.streak || 0
+  const nbTerminees = d.statsTaches?.terminees || 0
+  const badgesObtenus = d.badgesObtenus || []
+
+  const prochain = getProchainBadge(badgesObtenus)
+  if (!prochain) return null
+
+  const tier = TIER_STYLES[prochain.tier] || TIER_STYLES.common
+  const Icon = BADGE_ICONS[prochain.id]
+  const prog = getProgression(prochain.id, { points, streak, nbTerminees })
+  if (!prog) return null
+
+  const pct = Math.min(100, Math.round(prog[0] / prog[1] * 100))
+  if (pct <= minPct) return null
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+      whileHover={{ borderColor: tier.color }}
+      whileTap={{ scale: 0.98 }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+        padding: isMobile ? '8px 12px' : '9px 14px',
+        background: tier.bg,
+        border: `1px solid ${tier.border}`,
+        borderRadius: 99,
+        cursor: onClick ? 'pointer' : 'default',
+        textAlign: 'left',
+        fontFamily: 'var(--font-ui)',
+      }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--surface-1)', border: `1px solid ${tier.border}`,
+      }}>
+        {Icon && <Icon size={14} color={tier.color} strokeWidth={2.2} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: tier.color, letterSpacing: 0.3, marginBottom: 3 }}>
+          Prochain badge · {pct}%
+        </div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {prochain.nom}
+        </div>
+        <div style={{ height: 3, background: `${tier.color}18`, borderRadius: 99, overflow: 'hidden', marginTop: 5 }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: tier.color, borderRadius: 99 }} />
+        </div>
+      </div>
+      <ArrowRight size={14} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+    </motion.button>
+  )
+})
+
 const ProchainBadgeBanner = memo(function ProchainBadgeBanner({ d, T, isMobile }) {
   // Données nécessaires
   const points = d.points || 0
