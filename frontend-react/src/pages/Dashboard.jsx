@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef, useCallback } from 'react'
+import { memo, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import i18n from '../i18n'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -560,7 +560,6 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
   const [isExpanded, setIsExpanded] = useState(false)
   const [expandMode, setExpandMode] = useState(null)
   const menuRef = useRef(null)
-  const pts = tache.priorite === 'haute' ? 30 : tache.priorite === 'moyenne' ? 20 : 10
   const isBloquee = tache.bloquee && !tache.terminee
   const todayStr = (() => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}` })()
   const isFocused = !!tache.focus_date && String(tache.focus_date).slice(0,10) === todayStr
@@ -595,28 +594,21 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
           </motion.button>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: tache.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: tache.terminee ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.35 }}>
-            {tache.titre}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            {isFocused && <Star size={12} color="var(--ember)" fill="var(--ember)" strokeWidth={2} style={{ flexShrink: 0 }} />}
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: tache.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: tache.terminee ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35, flex: 1, minWidth: 0 }}>
+              {tache.titre}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 99, background: pBg(tache.priorite), color: pColor(tache.priorite), fontWeight: 600 }}>{tache.priorite}</span>
-            {tache.gcal_imported_event_id && (
-              tache.source_url
-                ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_in_gcal')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleCalendarLogo size={13} /></a>
-                : <span title={t('task.from_gcal')} style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7, minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleCalendarLogo size={13} /></span>
+          <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: pColor(tache.priorite), flexShrink: 0 }} title={tache.priorite} />
+            {tache.deadline && (
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {labelDate(tache.deadline)}{labelHeure(tache) ? ` · ${labelHeure(tache)}` : ''}
+              </span>
             )}
-            {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_email')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GmailLogo size={13} /></a>
-            )}
-            {tache.source_url && (tache.source_url.includes('drive.google.com') || tache.source_url.includes('docs.google.com')) && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_drive_file')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><GoogleDriveLogo size={13} /></a>
-            )}
-            {tache.source_url && tache.source_url.includes('notion.so') && (
-              <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none', minWidth: 22, minHeight: 22, justifyContent: 'center' }}><NotionLogo size={13} /></a>
-            )}
-            {tache.deadline && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{labelDate(tache.deadline)}{labelHeure(tache) ? ` · ${labelHeure(tache)}` : ''}</span>}
-            {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600 }}>+{pts}pts</span>}
-            {isBloquee && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 99, background: 'rgba(224,92,92,0.12)', color: '#e05c5c', fontWeight: 600 }}>{t('dashboard.blocked')}</span>}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden' }}><SourceLogos tache={tache} size={12} /></span>
+            {isBloquee && <span style={{ fontSize: 10, color: '#e05c5c', fontWeight: 600, flexShrink: 0 }}>{t('dashboard.blocked')}</span>}
           </div>
         </div>
         <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
@@ -670,6 +662,123 @@ const CarteTacheMobile = memo(function CarteTacheMobile({ tache, d, T, pColor, p
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             style={{ overflow: 'hidden', paddingLeft: 18, paddingRight: 12, paddingBottom: 12 }}>
             {expandMode === 'sousTaches' && <SousTaches tache={tache} T={T} />}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+})
+
+// ── CarteTacheDesktop — carte épurée, actions dans le menu ⋯ ─────────────────
+const CarteTacheDesktop = memo(function CarteTacheDesktop({ tache, d, T, pColor, pBg, compact = false }) {
+  const { t } = useTranslation()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  const isBloquee = tache.bloquee && !tache.terminee
+  const todayStr = (() => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}` })()
+  const isFocused = !!tache.focus_date && String(tache.focus_date).slice(0,10) === todayStr
+  const focusFull = (d.tachesFocus?.length || 0) >= 3 && !isFocused
+  const canPin = !tache.terminee && !isBloquee
+  const isExpanded = d.expandedTaches[tache.id]
+  const currentMode = d.expandMode[tache.id]
+  const deadlineLbl = tache.deadline ? labelDate(tache.deadline) : ''
+  const isUrgent = deadlineLbl === "Aujourd'hui" && !tache.terminee
+
+  useEffect(() => {
+    const h = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  return (
+    <motion.div layout
+      style={{ background: 'var(--surface-1)', border: `1px solid ${isBloquee ? 'rgba(224,92,92,0.25)' : 'var(--border-subtle)'}`, borderRadius: 14, marginBottom: compact ? 6 : 8, overflow: 'visible', opacity: tache.terminee ? 0.55 : 1, position: 'relative', zIndex: menuOpen ? 50 : 'auto' }}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: tache.terminee ? 0.55 : 1, y: 0 }} exit={{ opacity: 0, x: 16 }}
+      whileHover={{ borderColor: isBloquee ? 'rgba(224,92,92,0.45)' : 'var(--ember-ring)' }}>
+      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: tache.terminee ? 'var(--border-subtle)' : pColor(tache.priorite), borderRadius: '14px 0 0 14px', opacity: tache.terminee ? 0.3 : 1 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: compact ? '10px 12px 10px 18px' : '12px 14px 12px 20px' }}>
+        {isBloquee ? (
+          <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid rgba(224,92,92,0.4)', background: 'rgba(224,92,92,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconLock size={10} color="#e05c5c" />
+          </div>
+        ) : (
+          <motion.button onClick={() => d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)}
+            style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${tache.terminee ? '#4caf82' : 'var(--border-subtle)'}`, background: tache.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            whileHover={{ scale: 1.12, borderColor: '#4caf82' }} whileTap={{ scale: 0.9 }}>
+            {tache.terminee && <CheckSquare size={11} color="white" strokeWidth={3} />}
+          </motion.button>
+        )}
+        <div style={{ flex: '1 1 0', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            {isFocused && <Star size={12} color="var(--ember)" fill="var(--ember)" strokeWidth={2} style={{ flexShrink: 0 }} />}
+            <span style={{ fontSize: 13.5, fontWeight: tache.terminee ? 400 : 500, color: tache.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: tache.terminee ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', flex: 1, minWidth: 0 }}>
+              {tache.titre}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, minWidth: 0, overflow: 'hidden' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: pColor(tache.priorite), flexShrink: 0 }} title={tache.priorite} />
+            {tache.deadline && (
+              <span style={{ fontSize: 11, color: isUrgent ? 'var(--ember)' : 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {deadlineLbl}{labelHeure(tache) ? ` · ${labelHeure(tache)}` : ''}
+              </span>
+            )}
+            <SourceLogos tache={tache} size={12} />
+            {isBloquee && <span style={{ fontSize: 10, color: '#e05c5c', fontWeight: 600, flexShrink: 0 }}>{t('dashboard.blocked')}</span>}
+          </div>
+        </div>
+        <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
+          <motion.button
+            style={{ width: 32, height: 32, borderRadius: 8, background: menuOpen ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${menuOpen ? 'var(--ember)' : 'var(--border-subtle)'}`, color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setMenuOpen(o => !o)} whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }} whileTap={{ scale: 0.92 }}>
+            <MoreHorizontal size={16} />
+          </motion.button>
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.div initial={{ opacity: 0, scale: 0.95, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 400, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 12, boxShadow: 'var(--shadow-lg)', overflow: 'hidden', minWidth: 200 }}>
+                {!isBloquee && (
+                  <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: tache.terminee ? 'var(--text-secondary)' : '#4caf82', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                    onClick={() => { d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee); setMenuOpen(false) }}>
+                    <CheckSquare size={14} strokeWidth={1.8} />{tache.terminee ? t('dashboard.task_reopen') : t('dashboard.task_done')}
+                  </button>
+                )}
+                {canPin && (
+                  <button disabled={focusFull}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: isFocused ? 'var(--ember)' : focusFull ? 'var(--text-secondary)' : 'var(--text-primary)', fontSize: 13, cursor: focusFull ? 'not-allowed' : 'pointer', textAlign: 'left', opacity: focusFull ? 0.55 : 1 }}
+                    onClick={() => { if (!focusFull) { d.togglerFocus(tache.id, isFocused); setMenuOpen(false) } }}>
+                    <Star size={14} strokeWidth={1.8} fill={isFocused ? 'var(--ember)' : 'none'} />
+                    {isFocused ? t('dashboard.focus_unpin') : focusFull ? t('dashboard.focus_full') : t('dashboard.focus_pin')}
+                  </button>
+                )}
+                <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                  onClick={() => { d.toggleExpand(tache.id, 'sousTaches'); setMenuOpen(false) }}>
+                  <ChevronDown size={14} strokeWidth={1.8} />{t('dashboard.subtasks_label')}
+                </button>
+                <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                  onClick={() => { d.toggleExpand(tache.id, 'dependances'); setMenuOpen(false) }}>
+                  <IconLink size={14} color="var(--text-primary)" />{t('task.dependencies')}
+                </button>
+                {tache.deadline && !tache.terminee && (
+                  <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: '#1a73e8', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                    onClick={() => { d.exporterGoogleCalendar(tache); setMenuOpen(false) }}>
+                    <Calendar size={14} strokeWidth={1.8} />Google Calendar
+                  </button>
+                )}
+                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: '#e05c5c', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                  onClick={() => { d.supprimerTache(tache.id); setMenuOpen(false) }}>
+                  <Trash2 size={14} strokeWidth={1.8} />Supprimer
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            style={{ overflow: 'hidden', borderTop: '1px solid var(--border-subtle)', paddingLeft: 20, paddingRight: 14, paddingBottom: 14 }}>
+            {currentMode === 'sousTaches' && <SousTaches tache={tache} T={T} />}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1575,6 +1684,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
   const slots = [0, 1, 2]
   const limitAtteinte = focused.length >= 3
   const dateTitre = new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })
+  const focusPlein = focused.length >= 3
 
   useEffect(() => {
     const h = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false) }
@@ -1598,14 +1708,15 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
       initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
       style={{
         position: 'relative',
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: isMobile ? 14 : 16,
-        padding: isMobile ? '10px 12px 10px' : '18px 22px 16px',
-        marginBottom: isMobile ? 14 : 20,
+        background: focusPlein ? 'linear-gradient(180deg, var(--ember-soft) 0%, var(--surface-1) 42%)' : 'var(--surface-1)',
+        border: `1px solid ${focusPlein ? 'var(--ember-ring)' : 'var(--border-subtle)'}`,
+        borderRadius: isMobile ? 16 : 20,
+        padding: isMobile ? '14px 14px 12px' : '24px 28px 22px',
+        marginBottom: isMobile ? 18 : 28,
         overflow: 'visible',
+        boxShadow: focusPlein ? 'var(--shadow-ember)' : 'var(--shadow-md)',
       }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: isMobile ? 2 : 3, background: `linear-gradient(90deg, var(--ember), var(--ember-hover))`, borderRadius: isMobile ? '14px 14px 0 0' : '16px 16px 0 0' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: isMobile ? 3 : 4, background: `linear-gradient(90deg, var(--ember), var(--ember-hover))`, borderRadius: isMobile ? '16px 16px 0 0' : '20px 20px 0 0' }} />
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: isMobile ? (focused.length === 0 ? 8 : 8) : 14 }}>
@@ -1614,10 +1725,8 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
             <Target size={isMobile ? 13 : 16} color="var(--ember)" strokeWidth={2.2} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>{t('task.focus')}</div>
-            {!isMobile && (
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1, textTransform: 'capitalize' }}>{dateTitre}</div>
-            )}
+            <div style={{ fontSize: isMobile ? 14 : 17, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>{t('task.focus')}</div>
+            <div style={{ fontSize: isMobile ? 10.5 : 11, color: 'var(--text-secondary)', marginTop: 1, textTransform: 'capitalize' }}>{dateTitre}</div>
           </div>
         </div>
         <div style={{ fontSize: isMobile ? 10 : 11, padding: isMobile ? '3px 8px' : '4px 10px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', fontWeight: 700, flexShrink: 0 }}>
@@ -2509,6 +2618,18 @@ export default function Dashboard() {
     try { localStorage.setItem('stats_hud_visible', String(next)) } catch {}
   }
 
+  const [showCompleted, setShowCompleted] = useState(false)
+
+  const tasksForMainList = useMemo(() => {
+    if (d.filtre === 'terminee') return d.tachesFiltrees
+    return d.tachesFiltrees.filter(t => !t.terminee)
+  }, [d.tachesFiltrees, d.filtre])
+
+  const completedCollapsed = useMemo(() => {
+    if (d.filtre !== 'toutes') return []
+    return (d.taches || []).filter(t => t.terminee)
+  }, [d.taches, d.filtre])
+
   // ── Onboarding spotlight : 1ère vue d'une tâche avec source (Gmail/Drive/GCal) ──
   const [showSourceSpot, setShowSourceSpot] = useState(false)
   useEffect(() => {
@@ -2583,6 +2704,12 @@ export default function Dashboard() {
 
   const pColor = (p) => p === 'haute' ? '#e05c5c' : p === 'moyenne' ? '#e08a3c' : '#4caf82'
   const pBg = (p) => p === 'haute' ? 'rgba(224,92,92,0.12)' : p === 'moyenne' ? 'rgba(224,138,60,0.12)' : 'rgba(76,175,130,0.12)'
+
+  const renderTaskCard = useCallback((tache, compact = false) => (
+    isMobile
+      ? <CarteTacheMobile key={tache.id} tache={tache} d={d} T={T} pColor={pColor} pBg={pBg} />
+      : <CarteTacheDesktop key={tache.id} tache={tache} d={d} T={T} pColor={pColor} pBg={pBg} compact={compact} />
+  ), [isMobile, d, T])
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)" }}>
@@ -2790,35 +2917,28 @@ export default function Dashboard() {
             </>
           ) : (
             <>
-              {/* Coach Daily Message — bandeau personnalisé du coach */}
-              <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={false} />
-
-              {/* Focus du jour */}
+              {/* Focus du jour — zone principale */}
               <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
 
-              {/* Agenda Google Calendar du jour */}
-              {/* Toast import GCal */}
-              {gcalImportNotif && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  style={{
-                    background: 'linear-gradient(90deg, rgba(26,115,232,0.12), rgba(66,133,244,0.08))',
-                    border: '1px solid rgba(26,115,232,0.3)',
-                    borderRadius: 12, padding: '10px 14px',
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    marginBottom: 8, fontSize: 12,
-                  }}>
-                  <span style={{ fontSize: 16 }}>📅</span>
-                  <span style={{ flex: 1, color: 'var(--text-primary)' }}>
-                    <strong style={{ color: '#1A73E8' }}>{gcalImportNotif.count} tâche{gcalImportNotif.count > 1 ? 's' : ''}</strong> importée{gcalImportNotif.count > 1 ? 's' : ''} depuis Google Calendar
-                    {gcalImportNotif.tasks[0] && <span style={{ color: 'var(--text-secondary)' }}> — "{gcalImportNotif.tasks[0].titre}"…</span>}
-                  </span>
-                  <button onClick={() => setGcalImportNotif(null)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1 }}>×</button>
-                </motion.div>
+              {/* Ajout rapide juste sous le focus (desktop) */}
+              {!isMobile && (
+                <div className="gs-forms" style={{ marginBottom: 20 }}>
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
+                    <SmartTaskInput d={d} T={T} />
+                  </motion.div>
+                  <motion.div style={{ background: 'var(--surface-1)', border: `1px solid var(--ember-soft)`, borderRadius: 14, padding: 20 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Sparkles size={15} strokeWidth={2} color="var(--ember)" />Générer avec l'IA
+                    </p>
+                    <input style={{ width: '100%', padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 13, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
+                      placeholder={t('dashboard.ex_learn_react')} value={d.objectif} onChange={e => d.setObjectif(e.target.value)} onKeyDown={e => e.key === 'Enter' && d.genererTaches()} />
+                    <motion.button style={{ width: '100%', padding: '9px 16px', background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, color: 'var(--ember)', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                      onClick={d.genererTaches} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      Générer 5 tâches automatiquement
+                    </motion.button>
+                  </motion.div>
+                </div>
               )}
-
-              <AgendaSection user={d.user} T={T} onImport={() => handleGcalImport(false)} />
             </>
           )}
 
@@ -2839,8 +2959,8 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
 
-          {/* Stats HUD — toggle discret */}
-          {!isNewUser && (
+          {/* Stats HUD — nouveaux users uniquement (sinon sous la liste) */}
+          {isNewUser && (
             <>
               <button onClick={toggleStats} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', marginBottom: statsVisible ? 8 : 16, letterSpacing: 0.3, textTransform: 'uppercase' }}>
                 <ChevronDown size={12} strokeWidth={2.5} style={{ transform: statsVisible ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
@@ -2856,11 +2976,11 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* Prochain badge à débloquer — motivation forward-looking */}
-          {!isNewUser && <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />}
+          {/* Prochain badge — nouveaux users */}
+          {isNewUser && <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />}
 
-          {/* Objectifs Goal Reverse en cours */}
-          {!isNewUser && <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />}
+          {/* Objectifs — nouveaux users */}
+          {isNewUser && <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />}
 
           {/* Alerte bloquées */}
           <AnimatePresence>
@@ -2876,8 +2996,8 @@ export default function Dashboard() {
           </AnimatePresence>
 
 
-          {/* Formulaire desktop - Smart Task Input */}
-          {!isMobile && (
+          {/* Formulaire desktop — nouveaux users uniquement (sinon sous le Focus) */}
+          {!isMobile && isNewUser && (
             <div className="gs-forms" style={{ marginBottom: 24 }}>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
                 <SmartTaskInput d={d} T={T} />
@@ -2896,23 +3016,38 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Filtres */}
+          {/* Filtres — tâches actives */}
+          {!isNewUser && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                {d.filtre === 'terminee' ? 'Historique' : 'Autres tâches'}
+              </p>
+              {d.filtre === 'toutes' && completedCollapsed.length > 0 && (
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                  {completedCollapsed.length} terminée{completedCollapsed.length > 1 ? 's' : ''} en repli
+                </span>
+              )}
+            </div>
+          )}
           <div data-guide="dash-filters" style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
-            {[['toutes', 'Toutes'], ['haute', 'Haute'], ['moyenne', 'Moyenne'], ['basse', 'Basse'], ['bloquee', 'Bloquées'], ['terminee', 'Terminées']].map(([val, label]) => (
+            {[['toutes', 'Actives'], ['haute', 'Haute'], ['moyenne', 'Moyenne'], ['basse', 'Basse'], ['bloquee', 'Bloquées'], ['terminee', 'Terminées']].map(([val, label]) => (
               <motion.button key={val}
                 style={{ display: 'flex', alignItems: 'center', gap: 4, padding: isMobile ? '5px 10px' : '5px 14px', background: d.filtre === val ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${d.filtre === val ? 'var(--ember)' : 'var(--border-subtle)'}`, borderRadius: 99, color: d.filtre === val ? 'var(--ember)' : 'var(--text-secondary)', fontSize: isMobile ? 11 : 12, fontWeight: d.filtre === val ? 600 : 400, cursor: 'pointer', flexShrink: 0 }}
-                onClick={() => d.setFiltre(val)} whileTap={{ scale: 0.97 }}>
+                onClick={() => { d.setFiltre(val); if (val !== 'toutes') setShowCompleted(false) }} whileTap={{ scale: 0.97 }}>
                 {val === 'bloquee' && <IconLock size={10} color="currentColor" />}
                 {label}
                 {val === 'bloquee' && d.bloquees > 0 && <span style={{ background: '#e05c5c', color: 'white', borderRadius: 99, fontSize: 9, fontWeight: 700, padding: '0 4px' }}>{d.bloquees}</span>}
+                {val === 'terminee' && completedCollapsed.length > 0 && d.filtre !== 'terminee' && (
+                  <span style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', borderRadius: 99, fontSize: 9, fontWeight: 700, padding: '0 4px' }}>{completedCollapsed.length}</span>
+                )}
               </motion.button>
             ))}
           </div>
 
-          {/* Liste tâches */}
+          {/* Liste tâches actives */}
           {d.loading ? (
             <div>{[1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} T={T} />)}</div>
-          ) : d.tachesFiltrees.length === 0 ? (
+          ) : tasksForMainList.length === 0 && !(d.filtre === 'toutes' && completedCollapsed.length > 0) ? (
             <motion.div
               style={{
                 textAlign: 'center',
@@ -2936,6 +3071,7 @@ export default function Dashboard() {
                   ? "C'est tout neuf ici"
                   : d.filtre === 'terminee' ? "Aucune tâche terminée pour l'instant"
                   : d.filtre === 'bloquee' ? "Aucune tâche bloquée — bravo !"
+                  : d.filtre === 'toutes' ? 'Aucune tâche active — bravo !'
                   : "Aucune tâche dans ce filtre"}
               </p>
               <p style={{ fontSize: 12.5, marginTop: 4, color: 'var(--text-secondary)', marginBottom: isNewUser ? 16 : 0, fontWeight: 500 }}>
@@ -2963,129 +3099,82 @@ export default function Dashboard() {
               )}
             </motion.div>
           ) : (
-            <AnimatePresence>
-              {d.tachesFiltrees.map((tache, i) => {
-                if (isMobile) return <CarteTacheMobile key={tache.id} tache={tache} d={d} T={T} pColor={pColor} pBg={pBg} />
+            <>
+              <AnimatePresence>
+                {tasksForMainList.map(tache => renderTaskCard(tache))}
+              </AnimatePresence>
 
-                const pts = tache.priorite === 'haute' ? 30 : tache.priorite === 'moyenne' ? 20 : 10
-                const isExpanded = d.expandedTaches[tache.id]
-                const currentMode = d.expandMode[tache.id]
-                const isBloquee = tache.bloquee && !tache.terminee
-                const todayStr = (() => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}` })()
-                const isFocused = !!tache.focus_date && String(tache.focus_date).slice(0,10) === todayStr
-                const focusFull = (d.tachesFocus?.length || 0) >= 3 && !isFocused
-                const canPin = !tache.terminee && !isBloquee
+              {!isNewUser && d.filtre === 'toutes' && completedCollapsed.length > 0 && (
+                <div style={{ marginTop: 4, marginBottom: 20 }}>
+                  <button
+                    onClick={() => setShowCompleted(s => !s)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                      padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
+                      borderRadius: 12, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-ui)',
+                    }}>
+                    <ChevronDown size={14} strokeWidth={2.5} style={{ transform: showCompleted ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--ember)' }} />
+                    Terminées ({completedCollapsed.length})
+                  </button>
+                  <AnimatePresence>
+                    {showCompleted && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                        style={{ overflow: 'hidden', marginTop: 8 }}>
+                        <AnimatePresence>
+                          {completedCollapsed.map(tache => renderTaskCard(tache, true))}
+                        </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </>
+          )}
 
-                return (
-                  <motion.div key={tache.id} layout
-                    style={{ background: 'var(--surface-1)', border: `1px solid ${isBloquee ? 'rgba(224,92,92,0.25)' : 'var(--border-subtle)'}`, borderRadius: 14, marginBottom: 8, overflow: 'hidden', opacity: tache.terminee ? 0.55 : 1, position: 'relative' }}
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: tache.terminee ? 0.55 : 1, y: 0 }}
-                    exit={{ opacity: 0, x: 20 }} transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                    whileHover={{ borderColor: isBloquee ? 'rgba(224,92,92,0.45)' : 'rgba(var(--ember-rgb, 184 82 28) / 0.31)' }}>
-                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: tache.terminee ? 'var(--border-subtle)' : pColor(tache.priorite), borderRadius: '14px 0 0 14px', opacity: tache.terminee ? 0.3 : 1 }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 12px 20px' }}>
-                      {isBloquee ? (
-                        <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid rgba(224,92,92,0.4)', background: 'rgba(224,92,92,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <IconLock size={10} color="#e05c5c" />
-                        </div>
-                      ) : (
-                        <motion.button onClick={() => d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)}
-                          style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${tache.terminee ? '#4caf82' : 'var(--border-subtle)'}`, background: tache.terminee ? '#4caf82' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          whileHover={{ scale: 1.15, borderColor: '#4caf82' }} whileTap={{ scale: 0.9 }}>
-                          {tache.terminee && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><CheckSquare size={11} color="white" strokeWidth={3} /></motion.div>}
-                        </motion.button>
-                      )}
-                      <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                        <span style={{ fontSize: 13.5, fontWeight: tache.terminee ? 400 : 500, color: tache.terminee ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: tache.terminee ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                          {tache.titre}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
-                          {tache.gcal_imported_event_id && (
-                            tache.source_url
-                              ? <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_in_gcal')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleCalendarLogo size={12} /></a>
-                              : <span title={t('task.from_gcal')} style={{ display: 'flex', alignItems: 'center', lineHeight: 0, opacity: 0.7 }}><GoogleCalendarLogo size={12} /></span>
-                          )}
-                          {!tache.gcal_imported_event_id && tache.source_url && tache.source_url.includes('mail.google.com') && (
-                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_email')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GmailLogo size={12} /></a>
-                          )}
-                          {tache.source_url && (tache.source_url.includes('drive.google.com') || tache.source_url.includes('docs.google.com')) && (
-                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={t('dashboard.open_drive_file')} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><GoogleDriveLogo size={12} /></a>
-                          )}
-                          {tache.source_url && tache.source_url.includes('notion.so') && (
-                            <a href={tache.source_url} target="_blank" rel="noopener noreferrer" title={tache.notion_block_id ? "Ouvrir la page Notion (sync inverse active)" : "Ouvrir la page Notion"} data-source-link className="source-link" style={{ display: 'flex', alignItems: 'center', lineHeight: 0, textDecoration: 'none' }}><NotionLogo size={12} /></a>
-                          )}
-                          {tache.deadline && (() => {
-                            const lbl = labelDate(tache.deadline)
-                            const isUrgent = lbl === "Aujourd'hui" && !tache.terminee
-                            return (
-                              <span style={{ fontSize: 11, color: isUrgent ? 'var(--ember)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                                <Calendar size={10} strokeWidth={1.8} />
-                                {lbl}
-                                {tache.heure_debut && <>{' · '}{tache.heure_debut}</>}
-                              </span>
-                            )
-                          })()}
-                          {!tache.terminee && !isBloquee && <span style={{ fontSize: 11, color: 'var(--ember)', fontWeight: 600 }}>+{pts} pts</span>}
-                          {isBloquee && <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: 'rgba(224,92,92,0.1)', color: '#e05c5c', fontWeight: 600 }}>{t('dashboard.blocked')}</span>}
-                        </div>
-                      </div>
-                      <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700, flexShrink: 0, background: pBg(tache.priorite), color: pColor(tache.priorite), textTransform: 'uppercase' }}>
-                        {tache.priorite}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                        {canPin && (
-                          <motion.button
-                            onClick={() => !focusFull && d.togglerFocus(tache.id, isFocused)}
-                            disabled={focusFull}
-                            title={isFocused ? 'Désépingler du focus' : focusFull ? 'Limite de 3 atteinte' : 'Épingler au focus du jour'}
-                            style={{ padding: '5px 8px', borderRadius: 8, background: isFocused ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${isFocused ? 'var(--ember)' : 'var(--border-subtle)'}`, color: isFocused ? 'var(--ember)' : focusFull ? `var(--text-secondary)50` : 'var(--text-secondary)', cursor: focusFull ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', opacity: focusFull ? 0.5 : 1 }}
-                            whileHover={!focusFull ? { borderColor: 'var(--ember)', color: 'var(--ember)' } : {}}>
-                            <Star size={13} strokeWidth={1.8} fill={isFocused ? 'var(--ember)' : 'none'} />
-                          </motion.button>
-                        )}
-                        <motion.button onClick={() => d.toggleExpand(tache.id, 'dependances')}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 8px', borderRadius: 8, fontSize: 11, background: isExpanded && currentMode === 'dependances' ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${isExpanded && currentMode === 'dependances' ? 'var(--ember)' : 'var(--border-subtle)'}`, color: isExpanded && currentMode === 'dependances' ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer' }}
-                          whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
-                          <IconLink size={12} color="currentColor" />
-                          <span className="task-btn-label">{t('task.dependencies')}</span>
-                        </motion.button>
-                        <motion.button onClick={() => d.toggleExpand(tache.id, 'sousTaches')}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 8px', borderRadius: 8, fontSize: 11, background: isExpanded && currentMode === 'sousTaches' ? 'var(--ember-soft)' : 'transparent', border: `1px solid ${isExpanded && currentMode === 'sousTaches' ? 'var(--ember)' : 'var(--border-subtle)'}`, color: isExpanded && currentMode === 'sousTaches' ? 'var(--ember)' : 'var(--text-secondary)', cursor: 'pointer' }}
-                          whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}>
-                          {isExpanded && currentMode === 'sousTaches' ? <ChevronUp size={11} strokeWidth={2} /> : <ChevronDown size={11} strokeWidth={2} />}
-                          <span className="task-btn-label">{t('task.subtasks')}</span>
-                        </motion.button>
-                        {tache.deadline && !tache.terminee && (
-                          <motion.button onClick={() => d.exporterGoogleCalendar(tache)}
-                            style={{ padding: '5px 8px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                            whileHover={{ borderColor: '#1a73e8', color: '#1a73e8' }} title="Google Calendar">
-                            <Calendar size={13} strokeWidth={1.8} />
-                          </motion.button>
-                        )}
-                        <motion.button onClick={() => !isBloquee && d.toggleTache(tache.id, tache.terminee, tache.priorite, tache.bloquee)}
-                          style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: tache.terminee ? 'transparent' : isBloquee ? 'transparent' : 'var(--ember-soft)', border: `1px solid ${tache.terminee ? 'var(--border-subtle)' : isBloquee ? 'rgba(224,92,92,0.2)' : 'var(--ember-ring)'}`, color: tache.terminee ? 'var(--text-secondary)' : isBloquee ? 'rgba(224,92,92,0.5)' : 'var(--ember)', cursor: isBloquee ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
-                          whileHover={!isBloquee ? { background: 'var(--ember-soft)' } : {}}>
-                          {tache.terminee ? 'Rouvrir' : isBloquee ? 'Bloquée' : 'Terminer'}
-                        </motion.button>
-                        <motion.button onClick={() => d.supprimerTache(tache.id)}
-                          style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          whileHover={{ borderColor: '#e05c5c', color: '#e05c5c', background: 'rgba(224,92,92,0.06)' }}>
-                          <Trash2 size={13} strokeWidth={1.8} />
-                        </motion.button>
-                      </div>
-                    </div>
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                          style={{ overflow: 'hidden', borderTop: '1px solid var(--border-subtle)', paddingLeft: 20, paddingRight: 14, paddingBottom: 14 }}>
-                          {currentMode === 'sousTaches' && <SousTaches tache={tache} T={T} />}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+          {/* Contenu secondaire — sous la liste pour laisser le Focus respirer */}
+          {!isNewUser && (
+            <>
+              <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={false} />
+
+              {gcalImportNotif && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  style={{
+                    background: 'linear-gradient(90deg, rgba(26,115,232,0.12), rgba(66,133,244,0.08))',
+                    border: '1px solid rgba(26,115,232,0.3)',
+                    borderRadius: 12, padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    marginBottom: 8, fontSize: 12,
+                  }}>
+                  <span style={{ fontSize: 16 }}>📅</span>
+                  <span style={{ flex: 1, color: 'var(--text-primary)' }}>
+                    <strong style={{ color: '#1A73E8' }}>{gcalImportNotif.count} tâche{gcalImportNotif.count > 1 ? 's' : ''}</strong> importée{gcalImportNotif.count > 1 ? 's' : ''} depuis Google Calendar
+                    {gcalImportNotif.tasks[0] && <span style={{ color: 'var(--text-secondary)' }}> — "{gcalImportNotif.tasks[0].titre}"…</span>}
+                  </span>
+                  <button onClick={() => setGcalImportNotif(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1 }}>×</button>
+                </motion.div>
+              )}
+
+              <AgendaSection user={d.user} T={T} onImport={() => handleGcalImport(false)} />
+
+              <button onClick={toggleStats} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', marginTop: 8, marginBottom: statsVisible ? 8 : 16, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                <ChevronDown size={12} strokeWidth={2.5} style={{ transform: statsVisible ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                Statistiques
+              </button>
+              <AnimatePresence>
+                {statsVisible && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                    <StatsHUD d={d} T={T} isMobile={isMobile} />
                   </motion.div>
-                )
-              })}
-            </AnimatePresence>
+                )}
+              </AnimatePresence>
+
+              <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />
+              <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />
+            </>
           )}
 
         </div>
