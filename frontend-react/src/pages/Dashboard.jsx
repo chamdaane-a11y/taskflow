@@ -2939,6 +2939,30 @@ export default function Dashboard() {
                   </motion.div>
                 </div>
               )}
+
+              <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={false} />
+
+              {gcalImportNotif && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  style={{
+                    background: 'linear-gradient(90deg, rgba(26,115,232,0.12), rgba(66,133,244,0.08))',
+                    border: '1px solid rgba(26,115,232,0.3)',
+                    borderRadius: 12, padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    marginBottom: 8, fontSize: 12,
+                  }}>
+                  <span style={{ fontSize: 16 }}>📅</span>
+                  <span style={{ flex: 1, color: 'var(--text-primary)' }}>
+                    <strong style={{ color: '#1A73E8' }}>{gcalImportNotif.count} tâche{gcalImportNotif.count > 1 ? 's' : ''}</strong> importée{gcalImportNotif.count > 1 ? 's' : ''} depuis Google Calendar
+                    {gcalImportNotif.tasks[0] && <span style={{ color: 'var(--text-secondary)' }}> — "{gcalImportNotif.tasks[0].titre}"…</span>}
+                  </span>
+                  <button onClick={() => setGcalImportNotif(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1 }}>×</button>
+                </motion.div>
+              )}
+
+              <AgendaSection user={d.user} T={T} onImport={() => handleGcalImport(false)} />
             </>
           )}
 
@@ -2959,8 +2983,8 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
 
-          {/* Stats HUD — nouveaux users uniquement (sinon sous la liste) */}
-          {isNewUser && (
+          {/* Stats HUD — toggle discret */}
+          {!isNewUser && (
             <>
               <button onClick={toggleStats} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', marginBottom: statsVisible ? 8 : 16, letterSpacing: 0.3, textTransform: 'uppercase' }}>
                 <ChevronDown size={12} strokeWidth={2.5} style={{ transform: statsVisible ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
@@ -2976,11 +3000,11 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* Prochain badge — nouveaux users */}
-          {isNewUser && <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />}
+          {/* Prochain badge à débloquer — motivation forward-looking */}
+          {!isNewUser && <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />}
 
-          {/* Objectifs — nouveaux users */}
-          {isNewUser && <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />}
+          {/* Objectifs Goal Reverse en cours */}
+          {!isNewUser && <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />}
 
           {/* Alerte bloquées */}
           <AnimatePresence>
@@ -3130,50 +3154,6 @@ export default function Dashboard() {
                   </AnimatePresence>
                 </div>
               )}
-            </>
-          )}
-
-          {/* Contenu secondaire — sous la liste pour laisser le Focus respirer */}
-          {!isNewUser && (
-            <>
-              <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={false} />
-
-              {gcalImportNotif && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  style={{
-                    background: 'linear-gradient(90deg, rgba(26,115,232,0.12), rgba(66,133,244,0.08))',
-                    border: '1px solid rgba(26,115,232,0.3)',
-                    borderRadius: 12, padding: '10px 14px',
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    marginBottom: 8, fontSize: 12,
-                  }}>
-                  <span style={{ fontSize: 16 }}>📅</span>
-                  <span style={{ flex: 1, color: 'var(--text-primary)' }}>
-                    <strong style={{ color: '#1A73E8' }}>{gcalImportNotif.count} tâche{gcalImportNotif.count > 1 ? 's' : ''}</strong> importée{gcalImportNotif.count > 1 ? 's' : ''} depuis Google Calendar
-                    {gcalImportNotif.tasks[0] && <span style={{ color: 'var(--text-secondary)' }}> — "{gcalImportNotif.tasks[0].titre}"…</span>}
-                  </span>
-                  <button onClick={() => setGcalImportNotif(null)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1 }}>×</button>
-                </motion.div>
-              )}
-
-              <AgendaSection user={d.user} T={T} onImport={() => handleGcalImport(false)} />
-
-              <button onClick={toggleStats} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', marginTop: 8, marginBottom: statsVisible ? 8 : 16, letterSpacing: 0.3, textTransform: 'uppercase' }}>
-                <ChevronDown size={12} strokeWidth={2.5} style={{ transform: statsVisible ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                Statistiques
-              </button>
-              <AnimatePresence>
-                {statsVisible && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
-                    <StatsHUD d={d} T={T} isMobile={isMobile} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <ProchainBadgeBanner d={d} T={T} isMobile={isMobile} />
-              <GoalWidget d={d} T={T} isMobile={isMobile} navigate={navigate} />
             </>
           )}
 
