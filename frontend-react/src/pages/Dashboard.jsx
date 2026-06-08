@@ -1,4 +1,5 @@
 import { memo, useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import i18n from '../i18n'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -484,58 +485,77 @@ const SmartTaskInput = memo(function SmartTaskInput({ d, T, onSuccess, compact =
   )
 })
 
-// ── MobileActionBar — barre d'actions visible sur mobile ─────────────────────
-const RappelsDropdown = memo(function RappelsDropdown({ rappels, open, onClose, style = {} }) {
-  const ref = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', h)
-    document.addEventListener('touchstart', h)
-    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('touchstart', h) }
-  }, [open, onClose])
-
-  if (!open || !rappels?.length) return null
-
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: -6, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -6, scale: 0.98 }}
-      transition={{ duration: 0.15 }}
-      style={{
-        position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 320,
-        width: 'min(340px, calc(100vw - 32px))',
-        background: 'var(--surface-1)',
-        border: '1px solid rgba(224,92,92,0.22)',
-        borderRadius: 14,
-        boxShadow: 'var(--shadow-lg)',
-        overflow: 'hidden',
-        ...style,
-      }}>
-      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Bell size={14} color="#e05c5c" />
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Deadlines à venir</span>
-        <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#e05c5c', background: 'rgba(224,92,92,0.1)', padding: '2px 7px', borderRadius: 99 }}>{rappels.length}</span>
-      </div>
-      <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-        {rappels.map(r => {
-          const j = Number(r.jours_restants)
-          const label = j <= 0 ? "Aujourd'hui" : j === 1 ? 'Demain' : `Dans ${j}j`
-          return (
-          <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{r.titre}</span>
-            <span style={{ fontSize: 11, color: j <= 0 ? '#e05c5c' : '#e08a3c', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
-              {label}
-            </span>
-          </div>
-        )})}
-      </div>
-    </motion.div>
+// ── Panneau deadlines — portal fixe (évite le clipping overflow des barres sticky) ─
+const RappelsPanel = memo(function RappelsPanel({ rappels, onClose, isMobile }) {
+  return createPortal(
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, zIndex: 650, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}
+      />
+      <motion.div
+        initial={isMobile ? { y: '100%' } : { opacity: 0, y: -10, scale: 0.98 }}
+        animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={isMobile ? { y: '100%' } : { opacity: 0, y: -10, scale: 0.98 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        style={{
+          position: 'fixed', zIndex: 651,
+          background: 'var(--surface-1)',
+          border: '1px solid rgba(224,92,92,0.22)',
+          boxShadow: 'var(--shadow-lg)',
+          overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          ...(isMobile ? {
+            left: 0, right: 0, bottom: 0,
+            borderRadius: '20px 20px 0 0',
+            maxHeight: 'min(70vh, 520px)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+          } : {
+            top: 'calc(64px + env(safe-area-inset-top))',
+            right: 24,
+            width: 'min(380px, calc(100vw - 48px))',
+            borderRadius: 14,
+          }),
+        }}>
+        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {isMobile && <div style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--border-subtle)', margin: '0 auto 10px', position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)' }} />}
+          <Bell size={15} color="#e05c5c" />
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Deadlines à venir</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#e05c5c', background: 'rgba(224,92,92,0.1)', padding: '2px 8px', borderRadius: 99 }}>{rappels.length}</span>
+          <motion.button
+            type="button"
+            onClick={onClose}
+            whileTap={{ scale: 0.92 }}
+            style={{ width: 30, height: 30, marginLeft: 4, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <X size={14} />
+          </motion.button>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {rappels.map(r => {
+            const j = Number(r.jours_restants)
+            const label = j < 0 ? `En retard (${Math.abs(j)}j)` : j === 0 ? "Aujourd'hui" : j === 1 ? 'Demain' : `Dans ${j}j`
+            const dl = r.deadline ? new Date(String(r.deadline).slice(0, 10)).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' }) : null
+            return (
+              <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.titre}</div>
+                  {dl && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{dl}</div>}
+                </div>
+                <span style={{ fontSize: 11, color: j <= 0 ? '#e05c5c' : '#e08a3c', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  {label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </motion.div>
+    </>,
+    document.body
   )
 })
+
+// ── MobileActionBar — barre d'actions visible sur mobile ─────────────────────
 
 const MobileActionBar = ({ d, T, onOpenTemplates, onOpenExport }) => (
   // Note : "+ Ajouter" supprimé car maintenant dans la BottomNavMobile (FAB central)
@@ -551,16 +571,11 @@ const MobileActionBar = ({ d, T, onOpenTemplates, onOpenExport }) => (
       <Download size={14} />Exporter
     </motion.button>
     {d.rappels?.length > 0 && (
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <motion.button onClick={() => d.setShowRappels(s => !s)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: d.showRappels ? 'rgba(224,92,92,0.16)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.35)' : 'rgba(224,92,92,0.2)'}`, borderRadius: 10, color: '#e05c5c', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
-          whileTap={{ scale: 0.96 }}>
-          <Bell size={14} />{d.rappels.length}
-        </motion.button>
-        <AnimatePresence>
-          <RappelsDropdown rappels={d.rappels} open={d.showRappels} onClose={() => d.setShowRappels(false)} style={{ right: 0, left: 'auto' }} />
-        </AnimatePresence>
-      </div>
+      <motion.button onClick={() => d.setShowRappels(s => !s)}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: d.showRappels ? 'rgba(224,92,92,0.16)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.35)' : 'rgba(224,92,92,0.2)'}`, borderRadius: 10, color: '#e05c5c', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+        whileTap={{ scale: 0.96 }}>
+        <Bell size={14} />{d.rappels.length}
+      </motion.button>
     )}
   </div>
 )
@@ -2902,15 +2917,10 @@ export default function Dashboard() {
                   <BookOpen size={13} />Templates
                 </motion.button>
                 {d.rappels?.length > 0 && (
-                  <div style={{ position: 'relative' }}>
-                    <motion.button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: d.showRappels ? 'rgba(224,92,92,0.16)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.35)' : 'rgba(224,92,92,0.2)'}`, borderRadius: 99, color: '#e05c5c', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-                      onClick={() => d.setShowRappels(s => !s)}>
-                      <Bell size={13} />{d.rappels.length}
-                    </motion.button>
-                    <AnimatePresence>
-                      <RappelsDropdown rappels={d.rappels} open={d.showRappels} onClose={() => d.setShowRappels(false)} />
-                    </AnimatePresence>
-                  </div>
+                  <motion.button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: d.showRappels ? 'rgba(224,92,92,0.16)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.35)' : 'rgba(224,92,92,0.2)'}`, borderRadius: 99, color: '#e05c5c', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                    onClick={() => d.setShowRappels(s => !s)}>
+                    <Bell size={13} />{d.rappels.length}
+                  </motion.button>
                 )}
               </div>
             </motion.div>
