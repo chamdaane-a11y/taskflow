@@ -511,11 +511,12 @@ const RappelsPanel = memo(function RappelsPanel({ rappels, onClose, isMobile }) 
             left: 0, right: 0, bottom: 0,
             borderRadius: '20px 20px 0 0',
             maxHeight: 'min(70vh, 520px)',
-            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingBottom: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom))`,
           } : {
             top: 'calc(64px + env(safe-area-inset-top))',
             right: 24,
             width: 'min(380px, calc(100vw - 48px))',
+            maxHeight: 'calc(100vh - 100px - env(safe-area-inset-top))',
             borderRadius: 14,
           }),
         }}>
@@ -571,13 +572,6 @@ const MobileActionBar = ({ d, T, onOpenTemplates, onOpenExport }) => (
       whileTap={{ scale: 0.96 }}>
       <Download size={14} />Exporter
     </motion.button>
-    {d.rappels?.length > 0 && (
-      <motion.button onClick={() => d.setShowRappels(s => !s)}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: d.showRappels ? 'rgba(224,92,92,0.16)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.35)' : 'rgba(224,92,92,0.2)'}`, borderRadius: 10, color: '#e05c5c', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
-        whileTap={{ scale: 0.96 }}>
-        <Bell size={14} />{d.rappels.length}
-      </motion.button>
-    )}
   </div>
 )
 
@@ -2953,9 +2947,21 @@ export default function Dashboard() {
 
           {/* Header mobile simplifié */}
           {isMobile && (
-            <div style={{ marginBottom: 16 }}>
-              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', margin: '0 0 2px' }}>{d.salut}, {d.user?.nom?.split(' ')[0]}</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 11, margin: 0 }}>{new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', margin: '0 0 2px' }}>{d.salut}, {d.user?.nom?.split(' ')[0]}</h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 11, margin: 0 }}>{new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+              </div>
+              {d.rappels?.length > 0 && (
+                <motion.button
+                  type="button"
+                  onClick={() => d.setShowRappels(s => !s)}
+                  whileTap={{ scale: 0.92 }}
+                  style={{ position: 'relative', flexShrink: 0, width: 40, height: 40, borderRadius: 12, background: d.showRappels ? 'rgba(224,92,92,0.18)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.4)' : 'rgba(224,92,92,0.22)'}`, color: '#e05c5c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bell size={17} />
+                  <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 99, background: '#e05c5c', color: '#fff', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>{d.rappels.length}</span>
+                </motion.button>
+              )}
             </div>
           )}
 
