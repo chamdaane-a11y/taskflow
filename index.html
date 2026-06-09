@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
   <!-- ===== PWA MANIFEST ===== -->
-  <link rel="manifest" href="/taskflow/manifest.json" />
+  <link rel="manifest" href="/manifest.json" />
 
   <!-- ===== THEME & COULEURS ===== -->
   <!-- Theme-color synchronisé avec Graphite (dark) par défaut -->
@@ -19,14 +19,14 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="GetShift" />
-  <link rel="apple-touch-icon" href="/taskflow/icons/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/taskflow/icons/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="152x152" href="/taskflow/icons/icon-152.png" />
-  <link rel="apple-touch-icon" sizes="144x144" href="/taskflow/icons/icon-144.png" />
-  <link rel="apple-touch-icon" sizes="128x128" href="/taskflow/icons/icon-128.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png" />
+  <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128.png" />
 
   <!-- ===== WINDOWS / MICROSOFT ===== -->
-  <meta name="msapplication-TileImage" content="/taskflow/icons/icon-144.png" />
+  <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
   <meta name="msapplication-TileColor" content="#0E1011" />
   <meta name="msapplication-tap-highlight" content="no" />
 
@@ -34,36 +34,131 @@
   <meta name="google-site-verification" content="FrhVNJBF44akYd_Dj3t2ttrGysZVOdYKgx-n02F4qJw" />
 
   <!-- ===== SEO & META ===== -->
-  <meta name="description" content="GetShift - Gérez vos tâches avec l'IA, gamification et collaboration en temps réel" />
-  <meta name="keywords" content="tâches, productivité, IA, gestion de projet, GetShift" />
+  <meta name="description" content="GetShift est l'app de gestion de tâches dopée à l'IA : elle planifie ta journée, transforme tes objectifs en étapes, gère la collaboration d'équipe et analyse ta productivité. Gratuit, multilingue, sur mobile et web." />
+  <meta name="keywords" content="gestion de tâches, app de gestion de tâches, to-do list, productivité, planning IA, gestionnaire de tâches, organisation, task manager, collaboration, GetShift" />
   <meta name="author" content="GetShift" />
   <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://usegetshift.com/" />
 
   <!-- ===== OPEN GRAPH ===== -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="GetShift - Gestionnaire de tâches intelligent" />
-  <meta property="og:description" content="Gérez vos tâches avec l'IA, gamification et collaboration" />
-  <meta property="og:image" content="/taskflow/icons/icon-512.png" />
-  <meta property="og:url" content="https://chamdaane-a11y.github.io/taskflow/" />
+  <meta property="og:site_name" content="GetShift" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:title" content="GetShift — Gestionnaire de tâches IA, planning & collaboration" />
+  <meta property="og:description" content="Planifie ta journée avec l'IA, décompose tes objectifs en étapes, collabore en équipe et suis ta productivité. Gratuit et multilingue." />
+  <meta property="og:image" content="https://usegetshift.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="GetShift — Organise. Performe. Évolue." />
+  <meta property="og:url" content="https://usegetshift.com/" />
+
+  <!-- ===== TWITTER CARD ===== -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="GetShift — Gestionnaire de tâches IA" />
+  <meta name="twitter:description" content="Planifie ta journée avec l'IA, décompose tes objectifs, collabore en équipe. Gratuit et multilingue." />
+  <meta name="twitter:image" content="https://usegetshift.com/og-image.png" />
+
+  <!-- ===== DONNÉES STRUCTURÉES (JSON-LD) — aide Google à comprendre que c'est une app ===== -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://usegetshift.com/#app",
+        "name": "GetShift",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web, Android, iOS",
+        "url": "https://usegetshift.com/",
+        "description": "Application de gestion de tâches dopée à l'IA : planning intelligent de la journée, objectifs décomposés en étapes, collaboration d'équipe et analytics de productivité.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "inLanguage": ["fr", "en", "es", "pt", "de", "ar"],
+        "publisher": { "@id": "https://usegetshift.com/#org" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://usegetshift.com/#org",
+        "name": "GetShift",
+        "url": "https://usegetshift.com/",
+        "logo": "https://usegetshift.com/icons/icon-512.png"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://usegetshift.com/#website",
+        "name": "GetShift",
+        "url": "https://usegetshift.com/",
+        "publisher": { "@id": "https://usegetshift.com/#org" },
+        "inLanguage": "fr"
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://usegetshift.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "GetShift est-il gratuit ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. GetShift est gratuit, sans carte bancaire ni engagement. Tu peux organiser tes tâches, planifier ta journée avec l'IA et suivre ta productivité sans payer."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce que GetShift fait avec l'IA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "L'IA de GetShift planifie ta journée, priorise tes tâches et transforme un objectif en étapes concrètes et planifiées. Elle s'appuie sur tes tâches, ton agenda et tes habitudes."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Sur quels appareils GetShift fonctionne-t-il ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GetShift fonctionne sur le web (ordinateur), Android et iOS. C'est une application installable (PWA) qui se synchronise sur tous tes appareils."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "GetShift s'intègre-t-il à d'autres outils ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. GetShift se connecte à Google Agenda, Gmail, Google Drive et Notion pour importer et synchroniser tes tâches et événements."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "En quelles langues GetShift est-il disponible ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GetShift est disponible en 6 langues : français, anglais, espagnol, portugais, allemand et arabe."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 
   <!-- ===== iOS SPLASH SCREENS ===== -->
   <!-- Fond #0E1011 + icône centrée, une entrée par résolution iPhone/iPad -->
-  <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" href="/taskflow/icons/splash-iphone-14-pro-max.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/taskflow/icons/splash-iphone-14.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="/taskflow/icons/splash-iphone-x-xs.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" href="/taskflow/icons/splash-iphone-xs-max.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" href="/taskflow/icons/splash-iphone-xr.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/taskflow/icons/splash-iphone-8.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" href="/taskflow/icons/splash-iphone-se.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" href="/taskflow/icons/splash-ipad-pro-12-9.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)" href="/taskflow/icons/splash-ipad-pro-11.png" />
-  <link rel="apple-touch-startup-image" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)" href="/taskflow/icons/splash-ipad-mini-air.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" href="/icons/splash-iphone-14-pro-max.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/icons/splash-iphone-14.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="/icons/splash-iphone-x-xs.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" href="/icons/splash-iphone-xs-max.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-iphone-xr.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-iphone-8.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-iphone-se.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-ipad-pro-12-9.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-ipad-pro-11.png" />
+  <link rel="apple-touch-startup-image" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-ipad-mini-air.png" />
 
   <!-- ===== ICÔNES ===== -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/taskflow/icons/icon-96.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/taskflow/icons/icon-72.png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72.png" />
 
-  <title>GetShift</title>
+  <title>GetShift — App de gestion de tâches IA, planning & collaboration</title>
 
   <!-- Polices — direction artistique GRAPHITE & EMBER
        Geist (UI/headings) + Geist Mono (timers/data) + Instrument Serif (moments éditoriaux)
@@ -76,11 +171,12 @@
   <!-- ═══════════════════════════════════════════════════════════
        GitHub Pages SPA fix — synchronisé avec 404.html
        Ton 404.html encode : ?p=/dashboard&q=...
-       Ce script restaure : /taskflow/dashboard
+       Ce script restaure : /dashboard
   ═══════════════════════════════════════════════════════════ -->
   <script>
     (function () {
-      var BASE = '/taskflow';
+      // Domaine racine (usegetshift.com) : base = '/'. (Ancien : '/taskflow'.)
+      var BASE = '';
       var search = window.location.search;
       if (!search) return;
 
@@ -102,19 +198,45 @@
         var query = params.q ? '?' + params.q.replace(/~and~/g, '&') : '';
         var hash = window.location.hash;
 
-        // Reconstruit l'URL complète avec le base /taskflow
-        var newUrl = BASE + path + query + hash;
+        // Reconstruit l'URL complète depuis la racine
+        var newUrl = (BASE + path || '/') + query + hash;
         window.history.replaceState(null, null, newUrl);
       }
     })();
   </script>
-  <script type="module" crossorigin src="/taskflow/assets/index-CggFLLP9.js"></script>
-  <link rel="modulepreload" crossorigin href="/taskflow/assets/createLucideIcon-D-7wxzDe.js">
-  <link rel="stylesheet" crossorigin href="/taskflow/assets/index-CoWslTPS.css">
+  <script type="module" crossorigin src="/assets/index-BHyaakFf.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/createLucideIcon-CV3EyIMq.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-DhSqc8hn.css">
 </head>
 
 <body>
   <div id="root"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Contenu indexable de secours (sans JavaScript)
+       Vu par les crawlers qui n'exécutent pas le JS (réseaux sociaux,
+       agrégateurs, certains bots). React remplace #root, ce bloc reste
+       invisible pour les vrais visiteurs (JS activé).
+  ═══════════════════════════════════════════════════════════ -->
+  <noscript>
+    <main style="max-width:760px;margin:0 auto;padding:48px 24px;font-family:system-ui,sans-serif;line-height:1.6;color:#1a1a1a;">
+      <h1>GetShift — Organise. Performe. Évolue.</h1>
+      <p>GetShift combine gestion de tâches, IA personnelle et analytics avancés
+         pour t'aider à accomplir plus — chaque jour. Gratuit, multilingue,
+         sur mobile et web.</p>
+      <h2>Ce que fait GetShift</h2>
+      <ul>
+        <li><strong>Planning IA</strong> — l'IA organise ta journée et priorise tes tâches.</li>
+        <li><strong>Objectifs décomposés</strong> — transforme un objectif en étapes concrètes et planifiées.</li>
+        <li><strong>Collaboration d'équipe</strong> — partage, assigne et avance ensemble.</li>
+        <li><strong>Analytics de productivité</strong> — mesure tes progrès et tes habitudes.</li>
+        <li><strong>Intégrations</strong> — Google Agenda, Gmail, Drive, Notion et plus.</li>
+      </ul>
+      <p>Aucune carte bancaire · Sans engagement · Gratuit pour toujours.</p>
+      <p><a href="https://usegetshift.com/">Accéder à GetShift</a></p>
+    </main>
+  </noscript>
+
 </body>
 
 </html>

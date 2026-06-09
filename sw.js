@@ -1,9 +1,9 @@
-const CACHE_NAME = 'getshift-v23'
+const CACHE_NAME = 'getshift-v29'
 const STATIC_ASSETS = [
-  '/taskflow/',
-  '/taskflow/index.html',
-  '/taskflow/icons/icon-192.png',
-  '/taskflow/icons/icon-512.png',
+  '/',
+  '/index.html',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
 ]
 
 self.addEventListener('install', (e) => {
@@ -15,11 +15,16 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(clients => clients.forEach(client => {
+        // Force un rechargement de toutes les pages ouvertes après activation
+        // du nouveau SW — élimine les JS hashés stale qui n'existent plus sur CDN
+        client.postMessage({ type: 'SW_UPDATED' })
+      }))
   )
-  self.clients.claim()
 })
 
 self.addEventListener('fetch', (e) => {
@@ -41,8 +46,7 @@ self.addEventListener('fetch', (e) => {
   // Si on cache l'ancien index.html, il pointe vers des JS qui n'existent plus → 404.
   const isHtml = e.request.mode === 'navigate'
     || url.pathname.endsWith('.html')
-    || url.pathname === '/taskflow/'
-    || url.pathname === '/taskflow'
+    || url.pathname === '/'
   if (isHtml) {
     e.respondWith(
       fetch(e.request)
@@ -54,7 +58,26 @@ self.addEventListener('fetch', (e) => {
           }
           return resp
         })
-        .catch(() => caches.match(e.request).then(c => c || caches.match('/taskflow/index.html')))
+        .catch(() => caches.match(e.request).then(c => c || caches.match('/index.html')))
+    )
+    return
+  }
+
+  // ── Fichiers de traduction (/locales/*.json) → NETWORK FIRST ──
+  // Ces fichiers changent à chaque ajout de clé i18n mais gardent la même URL
+  // (pas de hash). En cache-first, les nouvelles traductions n'apparaissent jamais
+  // et i18next affiche le nom de la clé brute (ex: "dashboard.complete_btn").
+  if (url.pathname.includes('/locales/') && url.pathname.endsWith('.json')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(resp => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone()
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone))
+          }
+          return resp
+        })
+        .catch(() => caches.match(e.request).then(c => c || new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })))
     )
     return
   }
@@ -72,8 +95,10 @@ self.addEventListener('fetch', (e) => {
         return response
       }).catch(() => {
         if (e.request.mode === 'navigate') {
-          return caches.match('/taskflow/index.html')
+          return caches.match('/index.html')
         }
+        // Retourner une Response valide — undefined ferait TypeError dans respondWith
+        return new Response('', { status: 503, statusText: 'Offline' })
       })
     })
   )
@@ -84,8 +109,8 @@ self.addEventListener('push', (e) => {
   const targetUrl = data.url || '/dashboard'
   const options = {
     body: data.body || '',
-    icon: '/taskflow/icons/icon-192.png',
-    badge: '/taskflow/icons/icon-72.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-72.png',
     // Couleur thème ember pour Android (statut bar + accent)
     // Chrome/Android utilise theme_color du manifest mais on peut surcharger ici
     color: '#E07A3E',
@@ -101,7 +126,7 @@ self.addEventListener('push', (e) => {
     requireInteraction: !!data.require_interaction,
     silent: false,
     actions: [
-      { action: 'open', title: 'Ouvrir', icon: '/taskflow/icons/icon-72.png' },
+      { action: 'open', title: 'Ouvrir', icon: '/icons/icon-72.png' },
       { action: 'dismiss', title: 'Ignorer' }
     ],
   }
@@ -114,11 +139,11 @@ self.addEventListener('notificationclick', (e) => {
   e.notification.close()
   if (e.action === 'dismiss') return
   const target = e.notification.data?.url || '/dashboard'
-  const targetFull = `/taskflow/#${target.startsWith('/') ? target : '/' + target}`
+  const targetFull = `/#${target.startsWith('/') ? target : '/' + target}`
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const client of list) {
-        if (client.url.includes('/taskflow') && 'focus' in client) {
+        if ('focus' in client) {
           client.navigate(targetFull).catch(() => {})
           return client.focus()
         }
