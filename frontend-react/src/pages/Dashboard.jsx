@@ -32,6 +32,7 @@ import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../component
 import { ProchainBadgePill } from '../components/ProchainBadgeBanner'
 import { BADGES_CONFIG } from '../data/badges'
 import { parseTaskInput, getPrioriteColor, getPrioriteBg } from '../utils/parseTask'
+import { formatJXLabel, jxBadgeStyle } from '../utils/jxMeta'
 
 registerLocale('fr', fr)
 
@@ -518,8 +519,8 @@ const RappelsPanel = memo(function RappelsPanel({ rappels, onClose, isMobile }) 
             borderRadius: 14,
           }),
         }}>
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          {isMobile && <div style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--border-subtle)', margin: '0 auto 10px', position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)' }} />}
+        <div style={{ padding: isMobile ? '18px 16px 12px' : '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, position: 'relative' }}>
+          {isMobile && <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 36, height: 4, borderRadius: 99, background: 'var(--border-subtle)' }} />}
           <Bell size={15} color="#e05c5c" />
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Deadlines à venir</span>
           <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#e05c5c', background: 'rgba(224,92,92,0.1)', padding: '2px 8px', borderRadius: 99 }}>{rappels.length}</span>
@@ -1688,35 +1689,59 @@ const TomorrowBuilderCTA = memo(function TomorrowBuilderCTA({ d, T, isMobile, na
 // ── ObjectifsLienFocus — lien discret sous le Focus ─────────────────────────
 const ObjectifsLienFocus = memo(function ObjectifsLienFocus({ userId, navigate, isMobile }) {
   const [count, setCount] = useState(0)
+  const [nearestJ, setNearestJ] = useState(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     if (!userId) return
     axios.get(`${API}/ia/goal-reverse/list/${userId}`)
-      .then(r => setCount((r.data.objectifs || []).length))
+      .then(r => {
+        const objs = r.data.objectifs || []
+        setCount(objs.length)
+        const nearest = objs.reduce((best, o) => {
+          if (o.jours_restants == null) return best
+          if (!best || Number(o.jours_restants) < Number(best.jours_restants)) return o
+          return best
+        }, null)
+        setNearestJ(nearest?.jours_restants ?? null)
+      })
       .catch(() => {})
       .finally(() => setLoaded(true))
   }, [userId])
 
   if (!loaded || count === 0) return null
 
+  const jxLabel = formatJXLabel(nearestJ)
+  const jxStyle = jxBadgeStyle(nearestJ)
+
   return (
     <motion.button
       type="button"
       onClick={() => navigate('/goal')}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      whileHover={{ color: 'var(--ember)', borderColor: 'var(--ember-ring)' }}
+      whileHover={{ color: 'var(--ember)' }}
       whileTap={{ scale: 0.98 }}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: 0, margin: 0,
-        background: 'transparent', border: 'none',
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '6px 10px', margin: 0,
+        background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
+        borderRadius: 10,
         color: 'var(--text-secondary)', fontSize: isMobile ? 12 : 12.5,
         fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-ui)',
-        alignSelf: 'flex-start',
+        alignSelf: 'flex-start', boxShadow: 'var(--shadow-sm)',
       }}>
       <Target size={13} strokeWidth={2} color="var(--ember)" />
       <span>{count} objectif{count > 1 ? 's' : ''} en cours</span>
+      {jxLabel && (
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 800,
+          padding: '2px 7px', borderRadius: 6,
+          background: jxStyle.bg, color: jxStyle.color, border: `1px solid ${jxStyle.border}`,
+          letterSpacing: '-0.3px',
+        }}>
+          {jxLabel}
+        </span>
+      )}
       <ArrowRight size={13} strokeWidth={2.2} />
     </motion.button>
   )
@@ -3194,6 +3219,17 @@ export default function Dashboard() {
 
       {/* BottomSheet ajout mobile */}
       <BottomSheetAjout open={showBottomSheet} onClose={() => setShowBottomSheet(false)} d={d} T={T} />
+
+      {/* Panneau deadlines (portal — visible au-dessus de tout) */}
+      <AnimatePresence>
+        {d.showRappels && d.rappels?.length > 0 && (
+          <RappelsPanel
+            rappels={d.rappels}
+            onClose={() => d.setShowRappels(false)}
+            isMobile={isMobile}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Bottom Nav mobile permanente */}
       {isMobile && (

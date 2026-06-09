@@ -9812,7 +9812,14 @@ def _ensure_objectifs_schema(curseur):
         coach_style VARCHAR(30),
         statut VARCHAR(20) DEFAULT 'actif',
         cree_le DATETIME DEFAULT CURRENT_TIMESTAMP,
+        termine_le DATETIME NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)""")
+    curseur.execute("SHOW COLUMNS FROM objectifs LIKE 'termine_le'")
+    if not curseur.fetchone():
+        try:
+            curseur.execute("ALTER TABLE objectifs ADD COLUMN termine_le DATETIME NULL")
+        except Exception:
+            pass
     curseur.execute("SHOW COLUMNS FROM taches LIKE 'objectif_id'")
     if not curseur.fetchone():
         try:
@@ -10042,6 +10049,14 @@ def goal_reverse_list(user_id):
             total = stats['total'] or 0
             done = stats['done'] or 0
 
+            # Auto-complétion : toutes les tâches liées sont terminées
+            if total > 0 and done >= total:
+                curseur.execute(
+                    "UPDATE objectifs SET statut='termine', termine_le=COALESCE(termine_le, NOW()) WHERE id=%s AND statut='actif'",
+                    (oid,))
+                db.commit()
+                continue
+
             # Prochaine tâche non terminée (deadline la plus proche)
             curseur.execute("""SELECT titre, deadline FROM taches
                 WHERE objectif_id=%s AND terminee=0
@@ -10077,10 +10092,23 @@ def goal_reverse_list(user_id):
                 'needs_replanning': taches_en_retard >= 2,
                 'jours_restants': jours_restants,
             })
+        # Objectifs terminés (pour la section "accomplis")
+        curseur.execute("""SELECT id, titre, termine_le FROM objectifs
+                           WHERE user_id=%s AND statut='termine'
+                           ORDER BY termine_le DESC LIMIT 20""", (user_id,))
+        termines_rows = curseur.fetchall()
+        objectifs_termines = [
+            {
+                'id': r['id'],
+                'titre': r['titre'],
+                'termine_le': str(r['termine_le']) if r['termine_le'] else None,
+            }
+            for r in termines_rows
+        ]
         db.close()
-        return jsonify({"objectifs": result})
+        return jsonify({"objectifs": result, "objectifs_termines": objectifs_termines})
     except Exception as e:
-        return jsonify({"error": "indisponible", "objectifs": []}), 200
+        return jsonify({"error": "indisponible", "objectifs": [], "objectifs_termines": []}), 200
 
 
 @app.route('/ia/goal-reverse/iterate', methods=['POST'])

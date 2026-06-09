@@ -19,6 +19,7 @@ import { useMediaQuery } from '../useMediaQuery'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import { useSidebarUser } from '../components/useSidebarUser'
+import { getJXMeta, progressColor } from '../utils/jxMeta'
 
 registerLocale('fr', fr)
 const API = 'https://getshift-backend.onrender.com'
@@ -43,6 +44,261 @@ const QUICK_ITERATIONS_BASE = [
   { emoji: '🎯', lkey: 'goal.adjust_prep', tkey: 'goal.adjust_prep_text' },
   { emoji: '📅', lkey: 'goal.adjust_dates', tkey: 'goal.adjust_dates_text' },
 ]
+
+function ProgressRing({ pct, size = 52, stroke = 4, color }) {
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  const offset = c - (pct / 100) * c
+  return (
+    <svg width={size} height={size} style={{ flexShrink: 0, transform: 'rotate(-90deg)' }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
+    </svg>
+  )
+}
+
+function ObjectifsEnCoursSection({ objectifs, loading, isMobile, navigate, niveaux }) {
+  const { t } = useTranslation()
+  if (loading) {
+    return (
+      <div style={{ marginBottom: isMobile ? 22 : 28 }}>
+        <div style={{ height: 14, width: 180, borderRadius: 6, background: 'var(--surface-2)', marginBottom: 14 }} />
+        <div style={{ height: 120, borderRadius: 18, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }} />
+      </div>
+    )
+  }
+  if (!objectifs.length) return null
+
+  const sorted = [...objectifs].sort((a, b) => {
+    const aj = a.jours_restants == null ? 99999 : Number(a.jours_restants)
+    const bj = b.jours_restants == null ? 99999 : Number(b.jours_restants)
+    return aj - bj
+  })
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+      style={{ marginBottom: isMobile ? 24 : 32 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <Target size={16} color="var(--ember)" strokeWidth={2.3} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: 1.4, textTransform: 'uppercase' }}>
+              {t('goal.active_label')}
+            </span>
+          </div>
+          <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 20, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
+            {t('goal.trajectory_title')}
+          </h2>
+        </div>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', border: '1px solid var(--ember-ring)' }}>
+          {t('goal.active_count', { n: objectifs.length })}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {sorted.map((obj, idx) => {
+          const jx = getJXMeta(obj.jours_restants, t)
+          const pColor = progressColor(obj.progression)
+          const niveauInfo = niveaux.find(n => n.id === obj.niveau)
+          const dl = obj.deadline
+            ? new Date(String(obj.deadline).slice(0, 10)).toLocaleDateString(i18n.language, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+            : null
+          const urgent = obj.jours_restants != null && Number(obj.jours_restants) <= 3
+          const late = obj.jours_restants != null && Number(obj.jours_restants) < 0
+
+          return (
+            <motion.article
+              key={obj.id}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+              style={{
+                position: 'relative',
+                overflow: 'hidden',
+                background: late ? 'linear-gradient(135deg, rgba(224,92,92,0.06) 0%, var(--surface-1) 55%)' : 'var(--surface-1)',
+                border: `1px solid ${obj.needs_replanning || late ? 'rgba(224,92,92,0.32)' : urgent ? 'var(--ember-ring)' : 'var(--border-subtle)'}`,
+                borderRadius: isMobile ? 16 : 18,
+                padding: isMobile ? '14px' : '16px 18px',
+                boxShadow: urgent || late ? `0 8px 28px ${jx.glow}` : 'var(--shadow-sm)',
+              }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${pColor}, ${jx.bg})`, opacity: 0.85 }} />
+
+              <div style={{ display: 'flex', gap: isMobile ? 12 : 16, alignItems: 'stretch' }}>
+                <div style={{
+                  width: isMobile ? 62 : 68, flexShrink: 0,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  padding: '10px 6px', borderRadius: 14,
+                  background: jx.bg, border: `1.5px solid ${jx.border}`,
+                  boxShadow: `0 4px 16px ${jx.glow}`,
+                }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: isMobile ? 15 : 16, fontWeight: 800, color: jx.color, letterSpacing: '-0.5px', lineHeight: 1 }}>
+                    {jx.label}
+                  </span>
+                  <span style={{ fontSize: 9, fontWeight: 600, color: jx.color, opacity: 0.9, marginTop: 4, textAlign: 'center', lineHeight: 1.2 }}>
+                    {jx.caption}
+                  </span>
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                        {niveauInfo && (
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: `${niveauInfo.color}18`, color: niveauInfo.color, border: `1px solid ${niveauInfo.color}30` }}>
+                            {niveauInfo.emoji} {niveauInfo.label}
+                          </span>
+                        )}
+                        {obj.taches_en_retard > 0 && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#e05c5c', background: 'rgba(224,92,92,0.1)', padding: '2px 8px', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <AlertTriangle size={10} /> {t('goal.tasks_late', { n: obj.taches_en_retard })}
+                          </span>
+                        )}
+                        {obj.needs_replanning && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#e08a3c', background: 'rgba(224,138,60,0.12)', padding: '2px 8px', borderRadius: 99 }}>
+                            {t('goal.replanning_suggested')}
+                          </span>
+                        )}
+                      </div>
+                      <h3 style={{ margin: 0, fontSize: isMobile ? 15 : 16, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, letterSpacing: '-0.2px' }}>
+                        {obj.titre}
+                      </h3>
+                      {dl && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                          <Calendar size={11} strokeWidth={2} />
+                          <span>{t('goal.deadline_on', { date: dl })}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ position: 'relative', width: isMobile ? 48 : 52, height: isMobile ? 48 : 52, flexShrink: 0 }}>
+                      <ProgressRing pct={obj.progression} size={isMobile ? 48 : 52} color={pColor} />
+                      <div style={{
+                        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: isMobile ? 11 : 12, fontWeight: 800, color: pColor, fontFamily: 'var(--font-mono)',
+                      }}>
+                        {obj.progression}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 5, fontWeight: 600 }}>
+                      <span>{t('goal.tasks_completed', { done: obj.taches_done, total: obj.taches_total })}</span>
+                      {obj.score_faisabilite != null && <span>{t('goal.feasibility', { pct: obj.score_faisabilite })}</span>}
+                    </div>
+                    <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
+                      <motion.div
+                        initial={{ width: 0 }} animate={{ width: `${obj.progression}%` }}
+                        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ height: '100%', background: `linear-gradient(90deg, ${pColor}, ${pColor}cc)`, borderRadius: 99 }}
+                      />
+                    </div>
+                  </div>
+
+                  {obj.prochaine_etape && (
+                    <div style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 8,
+                      padding: '10px 12px', borderRadius: 12,
+                      background: 'var(--surface-2)', border: '1px solid var(--border-subtle)',
+                    }}>
+                      <ArrowRight size={14} color="var(--ember)" style={{ flexShrink: 0, marginTop: 1 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 2 }}>
+                          {t('goal.next_step')}
+                        </div>
+                        <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          {obj.prochaine_etape}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <motion.button
+                    type="button"
+                    onClick={() => navigate('/dashboard')}
+                    whileHover={{ background: 'var(--ember-soft)', borderColor: 'var(--ember-ring)', color: 'var(--ember)' }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{
+                      alignSelf: 'flex-start',
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '8px 14px', borderRadius: 10,
+                      background: 'transparent', border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                    }}>
+                    {t('goal.view_linked_tasks')} <ArrowRight size={13} />
+                  </motion.button>
+                </div>
+              </div>
+            </motion.article>
+          )
+        })}
+      </div>
+    </motion.section>
+  )
+}
+
+function ObjectifsTerminesSection({ objectifs, isMobile }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  if (!objectifs.length) return null
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      style={{ marginBottom: isMobile ? 24 : 32 }}>
+      <motion.button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        whileTap={{ scale: 0.99 }}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+          padding: '12px 14px', borderRadius: 14,
+          background: 'rgba(76,175,130,0.08)', border: '1px solid rgba(76,175,130,0.22)',
+          cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+        }}>
+        <CheckCircle2 size={18} color="#4caf82" strokeWidth={2.2} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{t('goal.completed_section')}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{t('goal.completed_count', { n: objectifs.length })}</div>
+        </div>
+        {open ? <ChevronUp size={16} color="var(--text-secondary)" /> : <ChevronDown size={16} color="var(--text-secondary)" />}
+      </motion.button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            style={{ overflow: 'hidden', marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {objectifs.map(obj => {
+              const doneDate = obj.termine_le
+                ? new Date(String(obj.termine_le).slice(0, 10)).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' })
+                : null
+              return (
+                <div key={obj.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 14px', borderRadius: 12,
+                  background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', opacity: 0.85,
+                }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(76,175,130,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <CheckCircle2 size={18} color="#4caf82" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{obj.titre}</div>
+                    <div style={{ fontSize: 11, color: '#4caf82', marginTop: 2 }}>{t('goal.completed_celebrate')}</div>
+                    {doneDate && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>{t('goal.completed_on', { date: doneDate })}</div>}
+                  </div>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 800, color: '#4caf82', flexShrink: 0 }}>100%</span>
+                </div>
+              )
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.section>
+  )
+}
 
 export default function GoalReverse() {
   const { t } = useTranslation()
@@ -76,6 +332,7 @@ export default function GoalReverse() {
   const [iterating, setIterating] = useState(false)
   const [iterationInput, setIterationInput] = useState('')
   const [objectifsActifs, setObjectifsActifs] = useState([])
+  const [objectifsTermines, setObjectifsTermines] = useState([])
   const [objectifsLoading, setObjectifsLoading] = useState(true)
   const isMobile = useMediaQuery('(max-width: 768px)')
   const isTablet = useMediaQuery('(max-width: 1100px)')
@@ -94,8 +351,11 @@ export default function GoalReverse() {
     if (!user?.id) return
     setObjectifsLoading(true)
     axios.get(`${API}/ia/goal-reverse/list/${user.id}`)
-      .then(r => setObjectifsActifs(r.data.objectifs || []))
-      .catch(() => setObjectifsActifs([]))
+      .then(r => {
+        setObjectifsActifs(r.data.objectifs || [])
+        setObjectifsTermines(r.data.objectifs_termines || [])
+      })
+      .catch(() => { setObjectifsActifs([]); setObjectifsTermines([]) })
       .finally(() => setObjectifsLoading(false))
   }, [user?.id])
 
@@ -223,15 +483,6 @@ export default function GoalReverse() {
 
   const totalTaches = result?.jalons?.reduce((acc, j) => acc + j.taches.length, 0) || 0
   const niveauActif = NIVEAUX.find(n => n.id === niveau)
-  const pcProgress = (pct) => pct >= 70 ? '#4caf82' : pct >= 30 ? '#e08a3c' : 'var(--ember)'
-
-  const labelEcheance = (jours) => {
-    if (jours == null) return null
-    if (jours < 0) return `En retard (${Math.abs(jours)}j)`
-    if (jours === 0) return "Aujourd'hui"
-    if (jours === 1) return 'Demain'
-    return `Dans ${jours} jours`
-  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "var(--font-ui)", overflowX: 'hidden' }}>
@@ -289,88 +540,15 @@ export default function GoalReverse() {
           </div>
         </motion.div>
 
-        {/* Objectifs déjà en cours */}
-        {!objectifsLoading && objectifsActifs.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            style={{ marginBottom: isMobile ? 22 : 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <Target size={15} color="var(--ember)" strokeWidth={2.2} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 0.3 }}>
-                Tes objectifs en cours
-              </span>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)' }}>
-                {objectifsActifs.length}
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {objectifsActifs.map(obj => {
-                const progColor = pcProgress(obj.progression)
-                const echeance = labelEcheance(obj.jours_restants)
-                return (
-                  <motion.div
-                    key={obj.id}
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      background: 'var(--surface-1)',
-                      border: `1px solid ${obj.needs_replanning ? 'rgba(224,92,92,0.28)' : 'var(--border-subtle)'}`,
-                      borderRadius: isMobile ? 14 : 16,
-                      padding: isMobile ? '14px 14px' : '16px 18px',
-                    }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: 4 }}>
-                          {obj.titre}
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                          {echeance && (
-                            <span style={{ fontSize: 11, color: obj.jours_restants != null && obj.jours_restants < 0 ? '#e05c5c' : 'var(--text-secondary)', fontWeight: 600 }}>
-                              {echeance}
-                            </span>
-                          )}
-                          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                            {obj.taches_done}/{obj.taches_total} tâches
-                          </span>
-                          {obj.taches_en_retard > 0 && (
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#e05c5c', background: 'rgba(224,92,92,0.1)', padding: '2px 7px', borderRadius: 99 }}>
-                              {obj.taches_en_retard} en retard
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 800, color: progColor, flexShrink: 0 }}>
-                        {obj.progression}%
-                      </span>
-                    </div>
-                    <div style={{ height: 5, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden', marginBottom: obj.prochaine_etape ? 10 : 0 }}>
-                      <div style={{ width: `${obj.progression}%`, height: '100%', background: progColor, borderRadius: 99 }} />
-                    </div>
-                    {obj.prochaine_etape && (
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.45 }}>
-                        <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>Prochaine étape · </span>
-                        {obj.prochaine_etape}
-                      </div>
-                    )}
-                    <motion.button
-                      type="button"
-                      onClick={() => navigate('/dashboard')}
-                      whileHover={{ borderColor: 'var(--ember)', color: 'var(--ember)' }}
-                      whileTap={{ scale: 0.98 }}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '7px 12px', borderRadius: 9,
-                        background: 'transparent', border: '1px solid var(--border-subtle)',
-                        color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600,
-                        cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                      }}>
-                      Voir les tâches <ArrowRight size={13} />
-                    </motion.button>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </motion.div>
-        )}
+        <ObjectifsEnCoursSection
+          objectifs={objectifsActifs}
+          loading={objectifsLoading}
+          isMobile={isMobile}
+          navigate={navigate}
+          niveaux={NIVEAUX}
+        />
+
+        <ObjectifsTerminesSection objectifs={objectifsTermines} isMobile={isMobile} />
 
         {/* Templates inspirants */}
         {templates.length > 0 && (
