@@ -181,6 +181,7 @@ function TimelineSection({ T, cardBg, cardBorder, isLight, text, text2, accent, 
 // Composant Showcase — vitrine des badges débloqués + prochain à débloquer
 function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, bg3, badges, points, streak, nbTerminees, navigate }) {
   const { t } = useTranslation()
+  const [showAll, setShowAll] = useState(false)
   // Hydrate les badges avec leur config (tier, categorie)
   const obtenusFull = (badges || [])
     .filter(b => b.obtenu)
@@ -223,9 +224,9 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
             </p>
           </div>
         </div>
-        <motion.button onClick={() => navigate('/settings', { state: { section: 'badges' } })} whileHover={{ x: 2 }}
+        <motion.button onClick={() => setShowAll(s => !s)} whileHover={{ x: 2 }}
           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', background: 'transparent', border: `1px solid ${cardBorder}`, borderRadius: 9, color: text2, fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
-          Tous voir <ChevronRight size={13} />
+          {showAll ? 'Réduire' : 'Tous voir'} {showAll ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
         </motion.button>
       </div>
 
@@ -320,6 +321,51 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
           </div>
         </div>
       )}
+
+      {/* Grille complète de tous les badges */}
+      <AnimatePresence>
+        {showAll && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            style={{ overflow: 'hidden', marginTop: 20 }}>
+            {['performance', 'points', 'streak', 'special'].map(cat => (
+              <div key={cat} style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: text2, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>
+                  {BADGE_CATEGORIES[cat]?.label || cat}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {BADGES_CONFIG.filter(b => b.categorie === cat).map(b => {
+                    const obtenu = obtenusFull.find(ob => ob.id === b.id)
+                    const tier = TIER_STYLES[b.tier] || TIER_STYLES.common
+                    const Icon = BADGE_ICONS[b.id]
+                    return (
+                      <div key={b.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                        borderRadius: 12,
+                        background: obtenu ? tier.bg : 'var(--surface-2)',
+                        border: `1px solid ${obtenu ? tier.border : cardBorder}`,
+                        opacity: obtenu ? 1 : 0.45,
+                      }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: obtenu ? tier.bg : 'var(--surface-3)', border: `1px solid ${obtenu ? tier.border : cardBorder}` }}>
+                          {Icon && <Icon size={16} color={obtenu ? tier.color : text2} strokeWidth={2} />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: obtenu ? 600 : 400, color: text }}>{b.nom}</div>
+                          <div style={{ fontSize: 11, color: text2, marginTop: 2 }}>{b.description}</div>
+                        </div>
+                        {obtenu
+                          ? <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
+                          : <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px dashed ${cardBorder}`, flexShrink: 0 }} />
+                        }
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
