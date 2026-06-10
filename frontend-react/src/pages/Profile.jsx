@@ -329,35 +329,90 @@ function BadgesShowcase({ T, cardBg, cardBorder, isLight, text, text2, accent, b
             initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             style={{ overflow: 'hidden', marginTop: 20 }}>
             {['performance', 'points', 'streak', 'special'].map(cat => (
-              <div key={cat} style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: text2, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>
+              <div key={cat} style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: text2, letterSpacing: 1.3, textTransform: 'uppercase', marginBottom: 10 }}>
                   {BADGE_CATEGORIES[cat]?.label || cat}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {BADGES_CONFIG.filter(b => b.categorie === cat).map(b => {
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+                  {BADGES_CONFIG.filter(b => b.categorie === cat).map((b, i) => {
                     const obtenu = obtenusFull.find(ob => ob.id === b.id)
                     const tier = TIER_STYLES[b.tier] || TIER_STYLES.common
                     const Icon = BADGE_ICONS[b.id]
+                    const prog = !obtenu ? progresBadge(b.id, { points, streak, nbTerminees }) : null
+                    const pct = prog ? Math.min(100, Math.round(prog[0] / prog[1] * 100)) : null
+                    const restant = prog ? Math.max(0, prog[1] - prog[0]) : null
+
                     return (
-                      <div key={b.id} style={{
-                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                        borderRadius: 12,
-                        background: obtenu ? tier.bg : 'var(--surface-2)',
-                        border: `1px solid ${obtenu ? tier.border : cardBorder}`,
-                        opacity: obtenu ? 1 : 0.45,
-                      }}>
-                        <div style={{ width: 34, height: 34, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: obtenu ? tier.bg : 'var(--surface-3)', border: `1px solid ${obtenu ? tier.border : cardBorder}` }}>
-                          {Icon && <Icon size={16} color={obtenu ? tier.color : text2} strokeWidth={2} />}
+                      <motion.div key={b.id}
+                        initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}
+                        style={{
+                          display: 'flex', flexDirection: 'column', gap: 8,
+                          padding: '12px 12px',
+                          borderRadius: 14,
+                          background: obtenu
+                            ? `linear-gradient(135deg, ${tier.bg}, ${isLight ? 'white' : bg3})`
+                            : 'var(--surface-2)',
+                          border: `1px solid ${obtenu ? tier.border : cardBorder}`,
+                          boxShadow: obtenu ? `0 0 14px ${tier.glow}` : 'none',
+                          opacity: obtenu ? 1 : 0.65,
+                          position: 'relative', overflow: 'hidden',
+                        }}>
+
+                        {/* Icône */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: obtenu ? tier.bg : 'var(--surface-3)',
+                            border: `1px solid ${obtenu ? tier.border : cardBorder}`,
+                            position: 'relative',
+                          }}>
+                            {Icon && <Icon size={17} color={obtenu ? tier.color : text2} strokeWidth={2} />}
+                            {!obtenu && (
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                                style={{ position: 'absolute', bottom: -3, right: -3, background: cardBorder, borderRadius: '50%', padding: 2 }}>
+                                <rect x="3" y="4" width="4" height="5" rx="1" stroke={text2} strokeWidth="1.2" fill="none"/>
+                                <path d="M3.5 4V3a1.5 1.5 0 013 0v1" stroke={text2} strokeWidth="1.2" strokeLinecap="round"/>
+                              </svg>
+                            )}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: obtenu ? tier.color : text2, letterSpacing: 0.5, textTransform: 'uppercase' }}>{tier.label}</div>
+                          </div>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: obtenu ? 600 : 400, color: text }}>{b.nom}</div>
-                          <div style={{ fontSize: 11, color: text2, marginTop: 2 }}>{b.description}</div>
+
+                        {/* Nom + description */}
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: text, lineHeight: 1.3 }}>{b.nom}</div>
+                          <div style={{ fontSize: 10.5, color: text2, marginTop: 3, lineHeight: 1.4 }}>{b.description}</div>
                         </div>
-                        {obtenu
-                          ? <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                          : <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px dashed ${cardBorder}`, flexShrink: 0 }} />
-                        }
-                      </div>
+
+                        {/* Chemin de progression (badges verrouillés) */}
+                        {!obtenu && prog && (
+                          <div style={{ marginTop: 2 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: text2, marginBottom: 4, fontWeight: 500 }}>
+                              <span>{prog[0]}/{prog[1]}</span>
+                              <span style={{ color: tier.color, fontWeight: 700 }}>{pct}%</span>
+                            </div>
+                            <div style={{ height: 3, background: `${tier.color}20`, borderRadius: 99, overflow: 'hidden' }}>
+                              <div style={{ width: `${pct}%`, height: '100%', background: tier.color, borderRadius: 99, transition: 'width 0.6s ease' }} />
+                            </div>
+                            <div style={{ fontSize: 9, color: text2, marginTop: 4 }}>
+                              encore {restant} {b.id.startsWith('streak_') ? 'jour(s)' : b.id.startsWith('pts_') ? 'pts' : 'tâche(s)'}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Badge débloqué */}
+                        {obtenu && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                            <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#4caf82', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="8" height="6" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </div>
+                            <span style={{ fontSize: 9.5, color: '#4caf82', fontWeight: 600 }}>Débloqué</span>
+                          </div>
+                        )}
+                      </motion.div>
                     )
                   })}
                 </div>

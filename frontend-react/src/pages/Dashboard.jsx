@@ -2952,25 +2952,16 @@ export default function Dashboard() {
                 <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', margin: '0 0 2px' }}>{d.salut}, {d.user?.nom?.split(' ')[0]}</h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 11, margin: 0 }}>{new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-                {d.rappels?.length > 0 && (
-                  <motion.button
-                    type="button"
-                    onClick={() => d.setShowRappels(s => !s)}
-                    whileTap={{ scale: 0.92 }}
-                    style={{ position: 'relative', width: 40, height: 40, borderRadius: 12, background: d.showRappels ? 'rgba(224,92,92,0.18)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.4)' : 'rgba(224,92,92,0.22)'}`, color: '#e05c5c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Bell size={17} />
-                    <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 99, background: '#e05c5c', color: '#fff', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>{d.rappels.length}</span>
-                  </motion.button>
-                )}
+              {d.rappels?.length > 0 && (
                 <motion.button
                   type="button"
-                  onClick={() => navigate('/profile')}
+                  onClick={() => d.setShowRappels(s => !s)}
                   whileTap={{ scale: 0.92 }}
-                  style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <User size={17} />
+                  style={{ position: 'relative', flexShrink: 0, width: 40, height: 40, borderRadius: 12, background: d.showRappels ? 'rgba(224,92,92,0.18)' : 'rgba(224,92,92,0.1)', border: `1px solid ${d.showRappels ? 'rgba(224,92,92,0.4)' : 'rgba(224,92,92,0.22)'}`, color: '#e05c5c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bell size={17} />
+                  <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 99, background: '#e05c5c', color: '#fff', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>{d.rappels.length}</span>
                 </motion.button>
-              </div>
+              )}
             </div>
           )}
 
