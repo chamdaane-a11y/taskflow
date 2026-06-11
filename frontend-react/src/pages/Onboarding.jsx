@@ -14,35 +14,9 @@ import {
 import {
   GoogleCalendarLogo, GoogleDriveLogo, GmailLogo, NotionLogo, SlackLogo,
 } from '../components/BrandLogos'
+import GetShiftLogoKick from '../components/GetShiftLogoKick'
 
 const API = 'https://getshift-backend.onrender.com'
-
-/* ═══════════════════════════════════════════════════════════════════
-   BRAND LOGOS — SVG inline officiels
-   ═══════════════════════════════════════════════════════════════════ */
-
-const GetShiftMark = ({ size = 40 }) => {
-  const gid = `gs-onb-${size}`
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id={`${gid}-bg`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#E07A3E" />
-          <stop offset="100%" stopColor="#B8521C" />
-        </linearGradient>
-        <linearGradient id={`${gid}-hl`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.16" />
-          <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="60" height="60" rx="14" fill={`url(#${gid}-bg)`} />
-      <rect x="2" y="2" width="60" height="60" rx="14" fill={`url(#${gid}-hl)`} />
-      <rect x="14" y="26" width="24" height="24" rx="5"
-        fill="none" stroke="#FFFFFF" strokeWidth="3" strokeOpacity="0.6" />
-      <rect x="26" y="14" width="24" height="24" rx="5" fill="#FFFFFF" />
-    </svg>
-  )
-}
 
 /* ═══════════════════════════════════════════════════════════════════
    DATA
@@ -148,13 +122,11 @@ function ProgressBar({ idx, total }) {
 
 function BrandMark() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <GetShiftMark size={28} />
-      <span style={{
-        fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
-        fontFamily: 'var(--font-ui)', letterSpacing: '-0.02em',
-      }}>GetShift</span>
-    </div>
+    <GetShiftLogoKick
+      markSize={28}
+      gap={10}
+      wordStyle={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.02em' }}
+    />
   )
 }
 
@@ -297,7 +269,7 @@ function NotifPreview({ title, body, when }) {
         boxShadow: 'var(--shadow-md)',
       }}>
       <div style={{ flexShrink: 0 }}>
-        <GetShiftMark size={32} />
+        <GetShiftLogoKick markSize={32} showWord={false} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -443,7 +415,7 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               style={{ marginBottom: 28 }}>
-              <GetShiftMark size={72} />
+              <GetShiftLogoKick markSize={72} showWord={false} />
             </motion.div>
             <Eyebrow>{t('onboarding.eyebrow_year')}</Eyebrow>
             <Title serif>{t('onboarding.welcome_title')}</Title>
@@ -665,7 +637,7 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               style={{ marginBottom: 28, position: 'relative' }}>
-              <GetShiftMark size={80} />
+              <GetShiftLogoKick markSize={80} showWord={false} />
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}

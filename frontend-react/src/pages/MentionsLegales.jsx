@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FileText, ArrowLeft, Mail, Globe, Server } from 'lucide-react'
-import GetShiftMark from '../components/GetShiftMark'
+import GetShiftLogoKick from '../components/GetShiftLogoKick'
 
 const BLOCKS = [
   {
@@ -57,8 +57,7 @@ export default function MentionsLegales() {
       <div style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-1)', padding: 'clamp(16px,3vw,24px) clamp(20px,5vw,80px)' }}>
         <div style={{ maxWidth: 820, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <GetShiftMark size={28} />
-            <span style={{ fontSize: 15, fontWeight: 700 }}>GetShift</span>
+            <GetShiftLogoKick markSize={28} gap={10} wordStyle={{ fontSize: 15, fontWeight: 700 }} />
           </div>
           <motion.button onClick={() => navigate(-1)} whileHover={{ x: -2 }}
             style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontFamily: 'var(--font-ui)' }}>

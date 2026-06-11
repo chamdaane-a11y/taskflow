@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import WorldCupBanner from '../components/WorldCupBanner'
 import {
   ArrowRight, CheckCircle, Zap, BarChart2, Users, Calendar,
   Brain, Target, Flame, Trophy, Star, ChevronDown,
   MessageSquare, TrendingUp, Shield, Bell, Sparkles,
   Home, Send,
 } from 'lucide-react'
-import GetShiftMark from '../components/GetShiftMark'
+import GetShiftLogoKick from '../components/GetShiftLogoKick'
 import {
   GoogleCalendarLogo, GoogleDriveLogo, GmailLogo,
   NotionLogo, SlackLogo, DiscordLogo, ZoomLogo,
@@ -68,9 +69,8 @@ function DashboardMockup() {
     <div style={{ display: 'flex', height: 340, fontSize: 11, fontFamily: 'var(--font-ui)', overflow: 'hidden' }}>
       {/* Sidebar */}
       <div style={{ width: 150, background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', padding: '12px 8px', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16, padding: '0 5px' }}>
-          <GetShiftMark size={18} />
-          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>GetShift</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16, padding: '0 5px', overflow: 'visible', minWidth: 0 }}>
+          <GetShiftLogoKick markSize={18} gap={7} wordStyle={{ fontSize: 11, letterSpacing: '-0.3px' }} style={{ maxWidth: '100%' }} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
           {navItems.map(({ label, icon: Icon, active }) => (
@@ -418,6 +418,7 @@ export default function Landing() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
+  const [bannerHeight, setBannerHeight] = useState(0)
 
   useEffect(() => {
     const user = localStorage.getItem('user')
@@ -432,6 +433,7 @@ export default function Landing() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'var(--font-ui)', overflowX: 'hidden' }}>
+      <WorldCupBanner onHeightChange={setBannerHeight} />
       <style>{`
         * { box-sizing: border-box; margin: 0; }
         .ls { padding: clamp(64px,8vw,110px) clamp(20px,5vw,80px); }
@@ -474,6 +476,7 @@ export default function Landing() {
           .hero-mob { display: flex !important; }
           .nav-links { display: none !important; }
           .nav-cta { display: none !important; }
+          .landing-nav-logo { max-width: calc(100vw - 48px); min-width: 0; }
           .int-grid { grid-template-columns: repeat(4,1fr) !important; }
           .bg-grid { grid-template-columns: repeat(2,1fr) !important; }
           .mob-inner { flex-direction: column !important; align-items: center !important; }
@@ -488,11 +491,8 @@ export default function Landing() {
 
       {/* ── NAV ─────────────────────────────────────────────────────────────── */}
       <motion.nav initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 'calc(60px + env(safe-area-inset-top))', paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'clamp(20px,5vw,80px)', paddingRight: 'clamp(20px,5vw,80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: scrolled ? 'var(--bg-overlay)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none', WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none', borderBottom: scrolled ? '1px solid var(--border-subtle)' : 'none', transition: 'background 0.3s, border-color 0.3s' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <GetShiftMark size={30} />
-          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px' }}>GetShift</span>
-        </div>
+        style={{ position: 'fixed', top: bannerHeight, left: 0, right: 0, zIndex: 200, height: 'calc(60px + env(safe-area-inset-top))', paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'clamp(20px,5vw,80px)', paddingRight: 'clamp(20px,5vw,80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: scrolled ? 'var(--bg-overlay)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none', WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none', borderBottom: scrolled ? '1px solid var(--border-subtle)' : 'none', transition: 'top 0.35s ease, background 0.3s, border-color 0.3s' }}>
+        <GetShiftLogoKick className="landing-nav-logo" markSize={30} gap={9} wordStyle={{ fontSize: 16, letterSpacing: '-0.5px' }} />
         <div className="nav-links" style={{ display: 'flex', gap: 32 }}>
           {[['#features', t('landing.nav_features')], ['#integrations', t('landing.nav_integrations')], ['#gamification', t('landing.nav_gamification')], ['#pricing', t('landing.nav_pricing')]].map(([href, label]) => (
             <a key={href} href={href} style={{ color: 'var(--text-secondary)', fontSize: 14, textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
@@ -513,7 +513,7 @@ export default function Landing() {
       </motion.nav>
 
       {/* ── HERO ────────────────────────────────────────────────────────────── */}
-      <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(100px,14vh,140px) clamp(20px,5vw,80px) 60px', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
+      <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `calc(clamp(100px,14vh,140px) + ${bannerHeight}px) clamp(20px,5vw,80px) 60px`, position: 'relative', overflow: 'hidden', textAlign: 'center', transition: 'padding 0.35s ease' }}>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', transform: 'translateZ(0)' }}>
           <div style={{ position: 'absolute', width: 900, height: 900, borderRadius: '50%', background: 'radial-gradient(circle,var(--ember),transparent)', opacity: 0.035, top: '40%', left: '50%', transform: 'translate(-50%,-60%)' }} />
         </div>
@@ -877,7 +877,7 @@ export default function Landing() {
       {/* ── CTA FINAL ───────────────────────────────────────────────────────── */}
       <section style={{ padding: 'clamp(64px,8vw,110px) clamp(20px,5vw,80px)', background: 'var(--surface-1)', borderTop: '1px solid var(--border-subtle)', textAlign: 'center' }}>
         <FadeUp>
-          <GetShiftMark size={48} style={{ margin: '0 auto 20px' }} />
+          <GetShiftLogoKick markSize={48} showWord={false} style={{ margin: '0 auto 20px', display: 'flex', justifyContent: 'center' }} />
           <h2 style={{ fontSize: 'clamp(28px,5vw,56px)', fontWeight: 800, letterSpacing: '-2px', color: 'var(--text-primary)', marginBottom: 16, lineHeight: 1.05, maxWidth: 700, margin: '0 auto 16px' }}>
             {t('landing.cta_title')}
           </h2>
@@ -900,9 +900,8 @@ export default function Landing() {
 
       {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
       <footer style={{ padding: 'clamp(24px,4vw,36px) clamp(20px,5vw,80px)', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <GetShiftMark size={22} />
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>GetShift</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <GetShiftLogoKick markSize={22} gap={8} wordStyle={{ fontSize: 14 }} />
           <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t('landing.footer_copy')}</span>
         </div>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>

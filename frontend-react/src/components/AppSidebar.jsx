@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import GetShiftMark from './GetShiftMark'
+import GetShiftLogoKick from './GetShiftLogoKick'
 import {
   LayoutDashboard, Bot, BarChart2, Calendar, Users, HelpCircle, Sparkles, Flag,
   PanelLeftClose, PanelLeftOpen, ChevronUp, User, Settings, Star, LogOut, Shield
@@ -57,10 +57,7 @@ export function FloatingLogo({ sidebarOpen, isMobile, onClick, T }) {
         boxShadow: 'var(--shadow-sm)',
       }}
       title="Ouvrir la sidebar">
-      <GetShiftMark size={26} showAccent={false} />
-      {!isMobile && (
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>GetShift</span>
-      )}
+      <GetShiftLogoKick markSize={26} showAccent={false} showWord={!isMobile} gap={8} wordStyle={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.3px' }} />
     </motion.button>
   )
 }
@@ -248,8 +245,7 @@ export default function AppSidebar({
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(20px,4vh,32px)', padding: '0 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <GetShiftMark size={32} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>GetShift</span>
+            <GetShiftLogoKick markSize={32} gap={10} wordStyle={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.3px' }} />
           </div>
           <motion.button onClick={toggleSidebar}
             style={{ width: isMobile ? 32 : 28, height: isMobile ? 32 : 28, borderRadius: 7, background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}

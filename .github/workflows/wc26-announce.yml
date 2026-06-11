@@ -1,0 +1,45 @@
+name: WC26 announcement email
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (count only, no send)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  broadcast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Coupe du Monde 2026 announcement
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          payload=$(cat <<EOF
+          {
+            "dry_run": ${DRY_RUN},
+            "subject": "[GetShift] Bonne Coupe du Monde 2026",
+            "titre": "Bonne Coupe du Monde 2026",
+            "intro": "La Coupe du Monde 2026 est lancée (11 juin – 19 juillet), et GetShift célèbre l'événement avec toi. Connecte-toi pour découvrir une animation festive sur tous nos logos, une bannière dédiée et un compte à rebours vers la finale.",
+            "items": [
+              "Animation « coup de pied » sur le logo GetShift — style Google Doodle, identité Graphite & Ember",
+              "Bannière Coupe du Monde avec compte à rebours en direct",
+              "Expérience responsive sur desktop, tablette et mobile",
+              "Disponible sur toute l'app jusqu'au 19 juillet 2026"
+            ],
+            "cta_label": "Découvrir sur GetShift",
+            "cta_href": "https://usegetshift.com"
+          }
+          EOF
+          )
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${{ secrets.JOB_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 300 \
+            https://getshift-backend.onrender.com/email/broadcast \
+            -d "$payload"

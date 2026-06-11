@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
-import GetShiftMark from '../components/GetShiftMark'
+import GetShiftLogoKick from '../components/GetShiftLogoKick'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import { useSidebarUser } from '../components/useSidebarUser'
@@ -309,7 +309,7 @@ function MockNotif({ title, body, when }) {
       background: 'var(--surface-1)',
       boxShadow: 'var(--shadow-sm)',
     }}>
-      <GetShiftMark size={28} showAccent={false} />
+      <GetShiftLogoKick markSize={28} showWord={false} showAccent={false} />
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</span>
@@ -1488,7 +1488,7 @@ Crée un Goal Reverse pour "publier mon article de blog d'ici fin du mois"`}</Co
                 textAlign: 'center',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                  <GetShiftMark size={40} />
+                  <GetShiftLogoKick markSize={40} showWord={false} />
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 400, color: 'var(--text-primary)', marginBottom: 6, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
                   Quelque chose manque ?

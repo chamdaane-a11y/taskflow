@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
 import { ArrowRight, Sparkles } from 'lucide-react'
-import GetShiftMark from '../components/GetShiftMark'
+import GetShiftLogoKick from '../components/GetShiftLogoKick'
 import axios from 'axios'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -116,8 +116,7 @@ function RegisterInner() {
       <motion.nav initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
         style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 64, padding: '0 clamp(20px, 5vw, 80px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border-subtle)' }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <GetShiftMark size={34} />
-          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>GetShift</span>
+          <GetShiftLogoKick markSize={34} gap={10} wordStyle={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px' }} />
         </Link>
         <Link to="/" style={{ padding: '8px 20px', background: 'transparent', border: '1.5px solid var(--border-default)', borderRadius: 9, color: 'var(--text-secondary)', fontSize: 14, fontWeight: 500, textDecoration: 'none', fontFamily: 'var(--font-ui)' }}>
           Se connecter

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Shield, ArrowLeft, FileText, Lock, ChevronRight, Mail, ExternalLink } from 'lucide-react'
-import GetShiftMark from '../components/GetShiftMark'
+import GetShiftLogoKick from '../components/GetShiftLogoKick'
 
 const SECTIONS_CGU = [
   {
@@ -173,8 +173,7 @@ export default function CGU() {
       {/* Header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', padding: '0 clamp(20px,5vw,80px)', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <GetShiftMark size={28} />
-          <span style={{ fontSize: 15, fontWeight: 700 }}>GetShift</span>
+          <GetShiftLogoKick markSize={28} gap={9} wordStyle={{ fontSize: 15, fontWeight: 700 }} />
         </div>
         <motion.button onClick={() => navigate('/')} whileHover={{ x: -2 }}
           style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontFamily: 'var(--font-ui)' }}>

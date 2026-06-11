@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckSquare, Bot, BarChart2, Sparkles } from 'lucide-react'
-import GetShiftMark from '../components/GetShiftMark'
+import GetShiftLogoKick from '../components/GetShiftLogoKick'
 
 export default function Splash() {
   const { t } = useTranslation()
@@ -86,7 +86,7 @@ export default function Splash() {
           transition={{ duration: 2.5, repeat: Infinity }}
           style={{ marginBottom: 22, borderRadius: 22, boxShadow: 'var(--shadow-ember)' }}
         >
-          <GetShiftMark size={80} />
+          <GetShiftLogoKick markSize={80} showWord={false} />
         </motion.div>
 
         <motion.h1

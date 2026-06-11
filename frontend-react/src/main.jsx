@@ -6,8 +6,10 @@ import './index.css'
 import './i18n'  // i18next — doit être importé avant App pour que t() soit disponible
 import App from './App.jsx'
 
-// Réveille le backend Render dès le démarrage (cold start = ~30s sinon)
-fetch('https://getshift-backend.onrender.com/health').catch(() => {})
+// Réveille le backend Render (prod uniquement — évite l'erreur CORS en local)
+if (!import.meta.env.DEV) {
+  fetch('https://getshift-backend.onrender.com/health').catch(() => {})
+}
 
 // Cache-buster GLOBAL sur tous les GET : sans ça, le navigateur peut servir
 // du JSON stale en cache local (même avec Cache-Control: no-store côté serveur,

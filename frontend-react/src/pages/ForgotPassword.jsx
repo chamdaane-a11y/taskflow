@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Mail } from 'lucide-react'
-import GetShiftMark from '../components/GetShiftMark'
+import GetShiftLogoKick from '../components/GetShiftLogoKick'
 import axios from 'axios'
 
 const API = 'https://getshift-backend.onrender.com'
@@ -59,8 +59,7 @@ export default function ForgotPassword() {
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
         style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40, position: 'relative', zIndex: 2 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <GetShiftMark size={34} />
-          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>GetShift</span>
+          <GetShiftLogoKick markSize={34} gap={10} wordStyle={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.5px' }} />
         </Link>
       </motion.div>
 
