@@ -28,7 +28,7 @@ export function getCsrfToken() {
 }
 
 // Token JWT en localStorage → header Authorization Bearer. C'est la voie d'auth
-// principale : les cookies tiers (github.io ↔ onrender.com) sont bloqués par
+// principale : les cookies cross-site (usegetshift.com ↔ onrender.com) sont bloqués par
 // Safari/iOS et Android Chrome, ce qui cassait l'app sur mobile.
 export function getAuthToken() {
   try { return localStorage.getItem('access_token') } catch { return null }

@@ -161,7 +161,7 @@
           `
           setTimeout(() => {
             const btn = panel.querySelector('#gs-open-app')
-            if (btn) btn.onclick = () => window.open('https://chamdaane-a11y.github.io/taskflow/', '_blank')
+            if (btn) btn.onclick = () => window.open('https://usegetshift.com/', '_blank')
           }, 10)
         } else {
           panel.innerHTML = `
@@ -213,7 +213,7 @@
             </div>
 
             <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
-              <a href="https://chamdaane-a11y.github.io/taskflow/" target="_blank" style="
+              <a href="https://usegetshift.com/" target="_blank" style="
                 display:flex;align-items:center;justify-content:center;gap:6px;
                 font-size:11px;color:rgba(108,99,255,0.7);text-decoration:none;font-weight:500;
               ">
@@ -260,7 +260,7 @@
       const user = response?.user
 
       if (!user?.id) {
-        window.open('https://chamdaane-a11y.github.io/taskflow/', '_blank')
+        window.open('https://usegetshift.com/', '_blank')
         return
       }
 

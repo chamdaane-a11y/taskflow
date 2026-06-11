@@ -240,7 +240,7 @@
       <div class="logo-sub">ASSISTANT IA</div>
     </div>
   </div>
-  <a class="open-app" href="https://chamdaane-a11y.github.io/taskflow/" target="_blank">
+  <a class="open-app" href="https://usegetshift.com/" target="_blank">
     Ouvrir l'app →
   </a>
 </div>
@@ -270,7 +270,7 @@ async function init() {
 
   if (!user) {
     // Essayer de lire depuis le localStorage de l'app GetShift
-    const tabs = await chrome.tabs.query({ url: 'https://chamdaane-a11y.github.io/taskflow/*' })
+    const tabs = await chrome.tabs.query({ url: 'https://usegetshift.com/*' })
     if (tabs.length > 0) {
       try {
         const result = await chrome.scripting.executeScript({
@@ -317,7 +317,7 @@ function afficherLogin() {
     <div class="login-card">
       <div style="font-size:32px;margin-bottom:12px;">🔐</div>
       <p>Connecte-toi à GetShift pour créer des tâches depuis tes onglets.</p>
-      <button class="btn-login" onclick="window.open('https://chamdaane-a11y.github.io/taskflow/','_blank')">
+      <button class="btn-login" onclick="window.open('https://usegetshift.com/','_blank')">
         Ouvrir GetShift
       </button>
     </div>

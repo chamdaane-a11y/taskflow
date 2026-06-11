@@ -20,7 +20,7 @@
     "https://app.slack.com/*",
     "https://discord.com/*",
     "https://getshift-backend.onrender.com/*",
-    "https://chamdaane-a11y.github.io/*"
+    "https://usegetshift.com/*"
   ],
   "background": {
     "service_worker": "background.js"

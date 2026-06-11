@@ -21,7 +21,7 @@ const BLOCKS = [
     titre: 'Application',
     lignes: [
       { label: 'Nom du service', val: 'GetShift' },
-      { label: 'URL', val: 'https://chamdaane-a11y.github.io/taskflow', href: 'https://chamdaane-a11y.github.io/taskflow' },
+      { label: 'URL', val: 'https://usegetshift.com', href: 'https://usegetshift.com' },
       { label: 'Nature', val: 'Application web progressive (PWA) de productivité' },
       { label: 'Accès', val: 'Gratuit, sur inscription' },
       { label: 'Langue', val: 'Français' },

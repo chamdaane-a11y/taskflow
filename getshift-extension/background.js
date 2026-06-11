@@ -4,7 +4,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 const API = 'https://getshift-backend.onrender.com'
-const APP_URL = 'https://chamdaane-a11y.github.io/taskflow'
+const APP_URL = 'https://usegetshift.com'
 
 // ── Détecteurs de contexte par domaine ────────────────────────────────
 const DETECTEURS = {

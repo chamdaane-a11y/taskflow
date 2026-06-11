@@ -2,7 +2,7 @@
 
 **Application de productivité IA — pour étudiants et travailleurs qui veulent performer, pas juste cocher des cases.**
 
-> Live → [chamdaane-a11y.github.io/taskflow](https://chamdaane-a11y.github.io/taskflow/)  
+> Live → [usegetshift.com](https://usegetshift.com/)  
 > Backend → [getshift-backend.onrender.com](https://getshift-backend.onrender.com/health)
 
 ---
@@ -185,7 +185,7 @@ mon_site/
 cd frontend-react
 npm ci
 npm run dev
-# → http://localhost:5173/taskflow/
+# → http://localhost:5173/
 ```
 
 ### Backend
@@ -236,7 +236,7 @@ Ce hook bloque tout usage de `DATE(updated_at)` nu dans les requêtes SQL — vo
 | `VAPID_PRIVATE_KEY` | Clé privée Web Push |
 | `VAPID_PUBLIC_KEY` | Clé publique Web Push |
 | `INTEGRATIONS_ENCRYPTION_KEY` | Clé Fernet — chiffre les tokens OAuth en DB |
-| `FRONTEND_URL` | `https://chamdaane-a11y.github.io/taskflow` |
+| `FRONTEND_URL` | `https://usegetshift.com` |
 
 ---
 
@@ -451,7 +451,7 @@ Communique avec `getshift-backend.onrender.com`.
 
 | Sujet | Détail |
 |---|---|
-| **Repo GitHub** | Nommé `taskflow` (legacy avant rebrand) — l'URL GitHub Pages garde `/taskflow/` |
+| **Repo GitHub** | Nommé `taskflow` (legacy avant rebrand) — site public : `usegetshift.com` |
 | **HashRouter** | Toutes les URLs ont `#` (`/#/dashboard`) — obligatoire pour GitHub Pages (pas de serveur SSR) |
 | **Cold start Render** | Free tier → backend dort après 15 min d'inactivité → premier appel prend ~30s |
 | **Backend monolithe** | Tout dans `app.py` (~9 500 lignes) — blueprints Flask à prévoir |

@@ -152,7 +152,7 @@ app.secret_key = _SECRET_KEY
 
 app.config['JWT_SECRET_KEY'] = _JWT_SECRET_KEY
 # 'headers' ET 'cookies' : le header Authorization Bearer est la voie principale
-# (les cookies tiers github.io↔onrender.com sont bloqués par Safari/iOS et Android
+# (les cookies cross-site usegetshift.com↔onrender.com sont bloqués par Safari/iOS et Android
 # Chrome). Le cookie reste accepté en parallèle pour rétrocompat / clients où il passe.
 app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
 app.config['JWT_COOKIE_SECURE'] = True
@@ -166,7 +166,7 @@ jwt = JWTManager(app)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
-CORS(app, origins=["https://chamdaane-a11y.github.io", "https://usegetshift.com", "https://www.usegetshift.com"], supports_credentials=True, allow_headers=["Content-Type", "X-CSRF-TOKEN", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+CORS(app, origins=["https://usegetshift.com", "https://www.usegetshift.com"], supports_credentials=True, allow_headers=["Content-Type", "X-CSRF-TOKEN", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 
 # ═══════════════════════════════════════════════════════════════════
 #  Sécurité — helpers transverses (auth, ownership, jobs, erreurs)
