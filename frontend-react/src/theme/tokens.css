@@ -11,6 +11,7 @@
 [data-theme="parchemin"],
 [data-theme="light"] {
   /* Backgrounds */
+  --gs-banner-offset: 0px;
   --bg-base: #F4F1EB;
   --bg-elevated: #FBFAF7;
   --bg-overlay: rgba(255, 255, 255, 0.93);

@@ -14,6 +14,7 @@ import {
 import { themes } from '../themes'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
+import { appTopInset } from '../utils/engagement'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import {
@@ -851,7 +852,7 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? 'calc(56px + env(safe-area-inset-top)) 16px 24px' : 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 32px)', position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? `${appTopInset(56)} 16px 24px` : 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 32px)', position: 'relative', zIndex: 1 }}>
 
         {/* Retour */}
         <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} style={{ marginBottom: 32 }}>

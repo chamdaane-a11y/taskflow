@@ -28,7 +28,8 @@ function CountdownUnit({ value, label, hideLabel }) {
   )
 }
 
-export default function WorldCupBanner({ onHeightChange }) {
+export default function WorldCupBanner({ onHeightChange, variant = 'landing' }) {
+  const isApp = variant === 'app'
   const [visible, setVisible] = useState(false)
   const [compact, setCompact] = useState(false)
   const [narrow, setNarrow] = useState(false)
@@ -47,8 +48,8 @@ export default function WorldCupBanner({ onHeightChange }) {
     const compactMq = window.matchMedia('(max-width: 640px)')
     const narrowMq = window.matchMedia('(max-width: 480px)')
     const update = () => {
-      setCompact(compactMq.matches)
-      setNarrow(narrowMq.matches)
+      setCompact(isApp || compactMq.matches)
+      setNarrow(isApp || narrowMq.matches)
     }
     update()
     compactMq.addEventListener('change', update)
@@ -57,7 +58,7 @@ export default function WorldCupBanner({ onHeightChange }) {
       compactMq.removeEventListener('change', update)
       narrowMq.removeEventListener('change', update)
     }
-  }, [])
+  }, [isApp])
 
   useEffect(() => {
     if (!onHeightChange) return
@@ -76,7 +77,7 @@ export default function WorldCupBanner({ onHeightChange }) {
       ro.disconnect()
       window.removeEventListener('resize', measure)
     }
-  }, [visible, onHeightChange, compact, narrow])
+  }, [visible, onHeightChange, compact, narrow, isApp])
 
   function close() {
     sessionStorage.setItem('wc2026_closed', '1')
@@ -89,7 +90,7 @@ export default function WorldCupBanner({ onHeightChange }) {
       {visible && (
         <motion.div
           ref={bannerRef}
-          className="wc-banner"
+          className={`wc-banner${isApp ? ' wc-banner--app' : ''}`}
           initial={{ y: -64, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -64, opacity: 0 }}
@@ -98,7 +99,7 @@ export default function WorldCupBanner({ onHeightChange }) {
           <div className="wc-banner__inner">
             <div className="wc-banner__anim">
               <GetShiftLogoKick
-                markSize={narrow ? 22 : compact ? 26 : 34}
+                markSize={isApp ? (narrow ? 20 : 24) : (narrow ? 22 : compact ? 26 : 34)}
                 showWord={!narrow}
                 gap={narrow ? 0 : 7}
                 wordStyle={{ fontSize: narrow ? 13 : compact ? 14 : 15 }}
@@ -136,6 +137,7 @@ export default function WorldCupBanner({ onHeightChange }) {
               </div>
             </div>
 
+            {!isApp && (
             <div className="wc-banner__visual" aria-label="Visuels Coupe du Monde 2026">
               <div className="wc-banner__visual-players">
                 <img src="/wc26-players.jpeg" alt="Stars de la Coupe du Monde 2026" />
@@ -154,6 +156,7 @@ export default function WorldCupBanner({ onHeightChange }) {
                 <img src="/wc26-mascots.jpeg" alt="Mascottes officielles Coupe du Monde 2026" />
               </div>
             </div>
+            )}
 
             <button type="button" className="wc-banner__close" onClick={close} aria-label="Fermer la bannière Coupe du Monde">
               ×
@@ -469,6 +472,40 @@ export default function WorldCupBanner({ onHeightChange }) {
 
             @media (prefers-reduced-motion: reduce) {
               .wc-banner__live-dot { animation: none; }
+            }
+
+            .wc-banner--app {
+              z-index: 280;
+            }
+            .wc-banner--app .wc-banner__inner {
+              min-height: 52px;
+              flex-wrap: nowrap;
+            }
+            .wc-banner--app .wc-banner__anim {
+              width: auto;
+              max-width: 38%;
+              border-right: 1px solid var(--border-subtle);
+              padding: 6px 10px;
+            }
+            .wc-banner--app .wc-banner__center {
+              padding: 6px 44px 6px 12px;
+              gap: 10px;
+            }
+            .wc-banner--app .wc-banner__title {
+              font-size: clamp(11px, 2.8vw, 13px);
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .wc-banner--app .wc-banner__subtitle { display: none; }
+            .wc-banner--app .wc-banner__countdown { display: flex !important; }
+            .wc-banner--app .wc-countdown__value { font-size: 12px; }
+            .wc-banner--app .wc-banner__close {
+              position: absolute;
+              top: 0;
+              right: 0;
+              height: 100%;
+              width: 36px;
             }
           `}</style>
         </motion.div>

@@ -16,6 +16,7 @@ import {
   Wand2, BookOpen, Send, Lightbulb, X
 } from 'lucide-react'
 import { useMediaQuery } from '../useMediaQuery'
+import { appTopInset } from '../utils/engagement'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import { useSidebarUser } from '../components/useSidebarUser'
@@ -520,7 +521,7 @@ export default function GoalReverse() {
   transition: 'margin-left 0.3s ease',
   flex: 1,
   padding: isMobile ? '16px' : '40px',
-  paddingTop: isMobile ? 'calc(70px + env(safe-area-inset-top))' : '40px',
+  paddingTop: isMobile ? appTopInset(70) : '40px',
   paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : '40px',
   minWidth: 0,
   maxWidth: 900,

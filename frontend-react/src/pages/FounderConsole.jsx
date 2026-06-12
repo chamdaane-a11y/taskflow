@@ -120,7 +120,10 @@ export default function FounderConsole() {
       })
       if (dryRun) { setBcCount(data?.total ?? 0); setBcResult(`${data?.total ?? 0} destinataire(s) vérifié(s).`) }
       else if (target === 'self') setBcResult(`Test envoyé à ton adresse — vérifie ta boîte (et les spams).`)
-      else setBcResult(`✅ Envoyé à ${data?.sent ?? 0} / ${data?.total ?? 0} utilisateur(s).`)
+      else {
+        const inApp = data?.announcement_id ? ` Message in-app #${data.announcement_id} activé.` : ''
+        setBcResult(`✅ Envoyé à ${data?.sent ?? 0} / ${data?.total ?? 0} utilisateur(s).${inApp}`)
+      }
     } catch (e) {
       const d = e?.response?.data
       setBcResult(d?.erreur ? `Erreur : ${d.erreur}${d.detail ? ' — ' + d.detail : ''}` : `Erreur (${e?.response?.status || 'réseau'}).`)
@@ -394,7 +397,7 @@ export default function FounderConsole() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '12px 16px', borderRadius: 12, background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))' }}>
                 <Mail size={16} color="var(--ember)" />
-                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Email envoyé à <strong>tous les utilisateurs vérifiés</strong>. Rédige, compte les destinataires, puis envoie.</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Email à <strong>tous les utilisateurs vérifiés</strong> (expéditeur « Hamdaane · GetShift »). Le même message s&apos;affiche aussi <strong>dans l&apos;app</strong> à la prochaine connexion.</span>
               </div>
               <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>

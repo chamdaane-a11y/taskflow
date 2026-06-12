@@ -586,16 +586,18 @@ def envoyer_notification_slack(webhook_url, message):
     except Exception as e:
         print(f"Erreur Slack: {e}")
 
-def envoyer_email(to_email, subject, html_content, attachment=None):
+def envoyer_email(to_email, subject, html_content, attachment=None, sender_name=None):
     """Envoie un email via l'API Brevo.
-    attachment optionnel : dict {'name': 'file.sql', 'content_b64': '...'}"""
+    attachment optionnel : dict {'name': 'file.sql', 'content_b64': '...'}
+    sender_name optionnel : ex. 'Hamdaane · GetShift' pour les messages fondateur."""
     api_key = os.getenv('BREVO_API_KEY', '')
     if not api_key:
         print("Erreur email Brevo: BREVO_API_KEY non definie")
         return False
     sender_email = os.getenv('MAIL_DEFAULT_SENDER', 'chamdaane@gmail.com')
+    display_name = (sender_name or 'GetShift').strip() or 'GetShift'
     payload = {
-        'sender': {'name': 'GetShift', 'email': sender_email},
+        'sender': {'name': display_name, 'email': sender_email},
         'to': [{'email': to_email}],
         'subject': subject,
         'htmlContent': html_content,
@@ -961,7 +963,17 @@ def _email_logo_html(size=40):
     url = "https://usegetshift.com/icons/icon-192.png"
     return f'<img src="{url}" alt="GetShift" width="{size}" height="{size}" style="display:block;border:0;outline:none;border-radius:{int(size*0.22)}px;">'
 
-def _base_email(contenu_html, titre_preheader="GetShift"):
+def _email_preheader(text):
+    """Texte invisible affiché en aperçu boîte mail (Gmail, Apple Mail…)."""
+    if not text:
+        return ''
+    safe = str(text).replace('<', '').replace('>', '').strip()[:140]
+    return (
+        f'<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;opacity:0;'
+        f'color:transparent;height:0;width:0;line-height:0;font-size:0;">{safe}</div>'
+    )
+
+def _base_email(contenu_html, titre_preheader="GetShift", preheader=None):
     """Wrapper email GRAPHITE & EMBER. Reproduit l'identité visuelle de l'app :
     fond graphite profond, surface 1 pour le card, accents ember, off-white."""
     t = EMAIL_TOKENS
@@ -976,6 +988,7 @@ def _base_email(contenu_html, titre_preheader="GetShift"):
   <title>{titre_preheader}</title>
 </head>
 <body style="margin:0;padding:0;background:{t['bg']};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Arial,sans-serif;color:{t['text']};">
+{_email_preheader(preheader or titre_preheader)}
 <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:{t['bg']};padding:32px 16px;">
   <tr><td align="center">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:560px;background:{t['surface_1']};border-radius:18px;border:1px solid {t['border']};overflow:hidden;">
@@ -2006,6 +2019,21 @@ def run_migrations():
             print(f"[Migrations] Cleanup doublons GCal sync-loop : {nb_dup} tâches supprimées ✅")
             db.commit()
 
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS app_announcements (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                subject VARCHAR(255) NOT NULL,
+                titre VARCHAR(255) NOT NULL,
+                intro TEXT NOT NULL,
+                items_json JSON NULL,
+                cta_label VARCHAR(120) NULL,
+                cta_href VARCHAR(500) NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_created (created_at)
+            )
+        """)
+        print("[Migrations] app_announcements ✅")
+
         db.close()
     except Exception as e:
         print(f"[Migrations] erreur : {e}")
@@ -2588,13 +2616,17 @@ def admin_broadcast():
         if dry_run:
             return jsonify({'sent': 0, 'total': len(users), 'dry_run': True}), 200
         sent = 0
+        founder_sender = os.getenv('FOUNDER_EMAIL_SENDER', 'Hamdaane · GetShift')
         for u in users:
             try:
-                html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href)
-                if envoyer_email(u['email'], subject, html):
+                html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href, founder=True)
+                if envoyer_email(u['email'], subject, html, sender_name=founder_sender):
                     sent += 1
             except Exception as ee:
                 app.logger.error("admin_broadcast -> %s: %s", u.get('email'), ee)
+        if target == 'all' and sent > 0:
+            ann_id = _save_app_announcement(subject, titre, intro, items, cta_label, cta_href)
+            return jsonify({'sent': sent, 'total': len(users), 'target': target, 'announcement_id': ann_id}), 200
         return jsonify({'sent': sent, 'total': len(users), 'target': target}), 200
     except Exception as e:
         app.logger.error("admin_broadcast: %s", e, exc_info=True); _log_error(e)
@@ -6929,8 +6961,8 @@ def test_email_user(user_id):
 # EMAIL BROADCAST (update produit, annonces)
 # ============================================
 
-def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href):
-    """Email d'annonce produit — même charte GRAPHITE & EMBER que les autres emails."""
+def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href, founder=True):
+    """Email d'annonce produit — charte GRAPHITE & EMBER. founder=True → ton perso Hamdaane."""
     t = EMAIL_TOKENS
     items_html = "".join(
         f'<tr><td style="padding:10px 14px;border-bottom:1px solid {t["border"]};">'
@@ -6943,16 +6975,79 @@ def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href):
         f'border-radius:12px;border:1px solid {t["border"]};margin-bottom:28px;">'
         f'<tbody>{items_html}</tbody></table>'
     ) if corps_items else ''
+    prenom = (nom or '').split(' ')[0] or (nom or 'toi')
+    founder_badge = (
+        f'<p style="margin:0 0 16px;font-size:11px;font-weight:700;letter-spacing:1px;'
+        f'text-transform:uppercase;color:{t["ember"]};">Message personnel · Hamdaane</p>'
+    ) if founder else ''
+    signature = (
+        f'<p style="margin:24px 0 0;font-size:13px;color:{t["text_2"]};line-height:1.65;">'
+        f'— Hamdaane<br><span style="font-size:12px;color:{t["text_3"]};">Fondateur de GetShift</span></p>'
+    ) if founder else ''
     contenu = f"""
+{founder_badge}
 <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:{t['text']};letter-spacing:-0.3px;">{titre}</p>
 <p style="margin:0 0 24px;font-size:14px;color:{t['text_2']};line-height:1.7;">{intro}</p>
 {table_html}
 {_email_cta_btn(cta_label, cta_href)}
+{signature}
 """
-    t = EMAIL_TOKENS
-    prenom = (nom or '').split(' ')[0] or (nom or 'toi')
     salut = f'<p style="margin:0 0 20px;font-size:14px;color:{t["text_2"]};">Bonjour {prenom},</p>'
-    return _base_email(salut + contenu, "Améliorations GetShift")
+    preheader = intro[:120] if intro else titre
+    return _base_email(salut + contenu, titre, preheader=preheader)
+
+def _save_app_announcement(subject, titre, intro, items, cta_label, cta_href):
+    """Persiste le dernier message fondateur pour affichage in-app."""
+    try:
+        db = connecter()
+        cur = db.cursor()
+        cur.execute(
+            """INSERT INTO app_announcements (subject, titre, intro, items_json, cta_label, cta_href)
+               VALUES (%s, %s, %s, %s, %s, %s)""",
+            (subject, titre, intro, json.dumps(items or []), cta_label, cta_href),
+        )
+        db.commit()
+        ann_id = cur.lastrowid
+        cur.close()
+        db.close()
+        return ann_id
+    except Exception as e:
+        print(f"[announcement] save error: {e}")
+        return None
+
+@app.route('/announcements/current', methods=['GET'])
+def announcements_current():
+    """Dernier message fondateur actif — pour bannière/modal in-app."""
+    try:
+        db = connecter()
+        cur = db.cursor(dictionary=True)
+        cur.execute(
+            """SELECT id, titre, intro, items_json, cta_label, cta_href, created_at
+               FROM app_announcements ORDER BY id DESC LIMIT 1"""
+        )
+        row = cur.fetchone()
+        cur.close()
+        db.close()
+        if not row:
+            return jsonify(None), 200
+        items = row.get('items_json')
+        if isinstance(items, str):
+            try:
+                items = json.loads(items)
+            except Exception:
+                items = []
+        return jsonify({
+            'id': row['id'],
+            'titre': row['titre'],
+            'intro': row['intro'],
+            'items': items or [],
+            'cta_label': row.get('cta_label') or 'Ouvrir GetShift',
+            'cta_href': row.get('cta_href') or 'https://usegetshift.com',
+            'created_at': row['created_at'].isoformat() if row.get('created_at') else None,
+        }), 200
+    except Exception as e:
+        app.logger.error("announcements_current: %s", e, exc_info=True)
+        return jsonify(None), 200
 
 @app.route('/email/broadcast', methods=['POST'])
 def broadcast_email():
@@ -6981,21 +7076,27 @@ def broadcast_email():
         subject   = data.get('subject',   f"[GetShift] {titre}")
 
         sent, skipped = 0, 0
+        founder_sender = os.getenv('FOUNDER_EMAIL_SENDER', 'Hamdaane · GetShift')
         for u in users:
             if dry_run:
                 skipped += 1
                 continue
-            html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href)
-            ok = envoyer_email(u['email'], subject, html)
+            html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href, founder=True)
+            ok = envoyer_email(u['email'], subject, html, sender_name=founder_sender)
             if ok: sent += 1
             else:  skipped += 1
+
+        ann_id = None
+        if not dry_run and sent > 0:
+            ann_id = _save_app_announcement(subject, titre, intro, items, cta_label, cta_href)
 
         return jsonify({
             "dry_run": dry_run,
             "total_users": len(users),
             "sent": sent,
             "skipped": skipped,
-            "preview_html": _html_broadcast("Prénom", titre, intro, items, cta_label, cta_href) if dry_run else None,
+            "announcement_id": ann_id,
+            "preview_html": _html_broadcast("Prénom", titre, intro, items, cta_label, cta_href, founder=True) if dry_run else None,
         })
     except Exception as e:
         return erreur_500(e)

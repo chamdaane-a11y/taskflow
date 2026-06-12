@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import CookieBanner from './components/CookieBanner'
+import ConnectedEngagement from './components/engagement/ConnectedEngagement'
 import PageGuide from './components/PageGuide'
 
 const Splash           = lazy(() => import('./pages/Splash'))
@@ -67,6 +68,7 @@ function App() {
   return (
     <HashRouter>
       <CookieBanner />
+      <ConnectedEngagement />
       <UpdateBanner />
       {/* Guide désactivé : à refaire mobile-first (gigotait + s'affichait sur l'onboarding).
           Réactiver via <PageGuide /> une fois la refonte validée sur téléphone. */}

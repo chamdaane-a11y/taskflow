@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '../useTheme'
 import { useMediaQuery } from '../useMediaQuery'
+import { appTopInset } from '../utils/engagement'
 import GetShiftLogoKick from '../components/GetShiftLogoKick'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
@@ -695,7 +696,7 @@ export default function Help() {
               zIndex: isMobile ? 50 : 1,
               background: isMobile ? 'var(--bg-base)' : 'transparent',
               overflowY: 'auto',
-              padding: isMobile ? 'calc(60px + env(safe-area-inset-top)) 20px 20px' : 0,
+              padding: isMobile ? `${appTopInset(60)} 20px 20px` : 0,
               transform: isMobile ? (tocOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
               transition: 'transform 220ms var(--ease-out-quart)',
               borderRight: isMobile ? '1px solid var(--border-subtle)' : 'none',

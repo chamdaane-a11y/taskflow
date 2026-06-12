@@ -47,7 +47,7 @@ export function FloatingLogo({ sidebarOpen, isMobile, onClick, T }) {
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       style={{
-        position: 'fixed', top: 'calc(14px + env(safe-area-inset-top))', left: 56, zIndex: 199,
+        position: 'fixed', top: 'calc(14px + env(safe-area-inset-top) + var(--gs-banner-offset, 0px))', left: 56, zIndex: 199,
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '6px 12px 6px 8px',
         background: 'var(--surface-1)',
@@ -74,7 +74,7 @@ export function SidebarToggle({ sidebarOpen, isMobile, onClick, T }) {
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ duration: 0.15 }}
           style={{
-            position: 'fixed', top: 'calc(14px + env(safe-area-inset-top))', left: 12, zIndex: 200,
+            position: 'fixed', top: 'calc(14px + env(safe-area-inset-top) + var(--gs-banner-offset, 0px))', left: 12, zIndex: 200,
             width: 36, height: 36, borderRadius: 'var(--radius-base)',
             background: 'var(--surface-1)',
             border: '1px solid var(--border-subtle)',

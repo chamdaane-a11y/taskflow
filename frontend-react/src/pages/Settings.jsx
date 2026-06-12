@@ -22,6 +22,7 @@ const LANGUAGES = [
   { code: 'de', label: 'Deutsch',  flag: '🇩🇪' },
 ]
 import { useMediaQuery } from '../useMediaQuery'
+import { appTopInset } from '../utils/engagement'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import OutilsIntegrations from './OutilsIntegrations'
 import PushNotifToggle from '../components/PushNotifToggle'
@@ -1146,7 +1147,7 @@ export default function Settings() {
         )}
 
         {/* ── CONTENU PRINCIPAL ── */}
-        <main style={{ flex: 1, padding: isMobile ? 'calc(16px + env(safe-area-inset-top)) 16px 16px' : isTablet ? '24px 24px' : '40px 48px', maxWidth: 720, minWidth: 0, marginLeft: 'auto', marginRight: 'auto', paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : undefined }}>
+        <main style={{ flex: 1, padding: isMobile ? `${appTopInset(16)} 16px 16px` : isTablet ? '24px 24px' : '40px 48px', maxWidth: 720, minWidth: 0, marginLeft: 'auto', marginRight: 'auto', paddingBottom: isMobile ? BOTTOM_NAV_HEIGHT + 16 : undefined }}>
 
           {/* Header mobile */}
           {isMobile && (

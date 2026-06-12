@@ -32,7 +32,7 @@ import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../component
 import { ProchainBadgePill } from '../components/ProchainBadgeBanner'
 import { BADGES_CONFIG } from '../data/badges'
 import { parseTaskInput, getPrioriteColor, getPrioriteBg } from '../utils/parseTask'
-import { formatJXLabel, jxBadgeStyle } from '../utils/jxMeta'
+import { appTopInset } from '../utils/engagement'
 
 registerLocale('fr', fr)
 
@@ -513,10 +513,10 @@ const RappelsPanel = memo(function RappelsPanel({ rappels, onClose, isMobile }) 
             maxHeight: 'min(70vh, 520px)',
             paddingBottom: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom))`,
           } : {
-            top: 'calc(64px + env(safe-area-inset-top))',
+            top: appTopInset(64),
             right: 24,
             width: 'min(380px, calc(100vw - 48px))',
-            maxHeight: 'calc(100vh - 100px - env(safe-area-inset-top))',
+            maxHeight: `calc(100vh - 100px - env(safe-area-inset-top) - var(--gs-banner-offset, 0px))`,
             borderRadius: 14,
           }),
         }}>
@@ -2868,7 +2868,7 @@ export default function Dashboard() {
 
         {/* ── BARRE D'ACTIONS MOBILE (toujours visible) ── */}
         {isMobile && (
-          <div style={{ position: 'sticky', top: 0, zIndex: 100, paddingTop: 'calc(52px + env(safe-area-inset-top))' }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 100, paddingTop: appTopInset(52) }}>
             <MobileActionBar
               d={d} T={T}
               onOpenTemplates={d.ouvrirTemplates}
