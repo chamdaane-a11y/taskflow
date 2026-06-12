@@ -589,7 +589,7 @@ def envoyer_notification_slack(webhook_url, message):
 def envoyer_email(to_email, subject, html_content, attachment=None, sender_name=None):
     """Envoie un email via l'API Brevo.
     attachment optionnel : dict {'name': 'file.sql', 'content_b64': '...'}
-    sender_name optionnel : ex. 'Hamdaane · GetShift' pour les messages fondateur."""
+    sender_name optionnel : ex. 'GetShift' (défaut)."""
     api_key = os.getenv('BREVO_API_KEY', '')
     if not api_key:
         print("Erreur email Brevo: BREVO_API_KEY non definie")
@@ -2616,10 +2616,10 @@ def admin_broadcast():
         if dry_run:
             return jsonify({'sent': 0, 'total': len(users), 'dry_run': True}), 200
         sent = 0
-        founder_sender = os.getenv('FOUNDER_EMAIL_SENDER', 'Hamdaane · GetShift')
+        founder_sender = os.getenv('BROADCAST_EMAIL_SENDER', 'GetShift')
         for u in users:
             try:
-                html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href, founder=True)
+                html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href)
                 if envoyer_email(u['email'], subject, html, sender_name=founder_sender):
                     sent += 1
             except Exception as ee:
@@ -6961,8 +6961,8 @@ def test_email_user(user_id):
 # EMAIL BROADCAST (update produit, annonces)
 # ============================================
 
-def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href, founder=True):
-    """Email d'annonce produit — charte GRAPHITE & EMBER. founder=True → ton perso Hamdaane."""
+def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href):
+    """Email d'annonce produit — voix marque GetShift (crédible, pas perso fondateur)."""
     t = EMAIL_TOKENS
     items_html = "".join(
         f'<tr><td style="padding:10px 14px;border-bottom:1px solid {t["border"]};">'
@@ -6975,23 +6975,23 @@ def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href, founder
         f'border-radius:12px;border:1px solid {t["border"]};margin-bottom:28px;">'
         f'<tbody>{items_html}</tbody></table>'
     ) if corps_items else ''
-    prenom = (nom or '').split(' ')[0] or (nom or 'toi')
-    founder_badge = (
+    brand_badge = (
         f'<p style="margin:0 0 16px;font-size:11px;font-weight:700;letter-spacing:1px;'
-        f'text-transform:uppercase;color:{t["ember"]};">Message personnel · Hamdaane</p>'
-    ) if founder else ''
+        f'text-transform:uppercase;color:{t["ember"]};">Nouveauté GetShift</p>'
+    )
     signature = (
         f'<p style="margin:24px 0 0;font-size:13px;color:{t["text_2"]};line-height:1.65;">'
-        f'— Hamdaane<br><span style="font-size:12px;color:{t["text_3"]};">Fondateur de GetShift</span></p>'
-    ) if founder else ''
+        f'— L&apos;équipe GetShift</p>'
+    )
     contenu = f"""
-{founder_badge}
+{brand_badge}
 <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:{t['text']};letter-spacing:-0.3px;">{titre}</p>
 <p style="margin:0 0 24px;font-size:14px;color:{t['text_2']};line-height:1.7;">{intro}</p>
 {table_html}
 {_email_cta_btn(cta_label, cta_href)}
 {signature}
 """
+    prenom = (nom or '').split(' ')[0] or (nom or 'toi')
     salut = f'<p style="margin:0 0 20px;font-size:14px;color:{t["text_2"]};">Bonjour {prenom},</p>'
     preheader = intro[:120] if intro else titre
     return _base_email(salut + contenu, titre, preheader=preheader)
@@ -7076,12 +7076,12 @@ def broadcast_email():
         subject   = data.get('subject',   f"[GetShift] {titre}")
 
         sent, skipped = 0, 0
-        founder_sender = os.getenv('FOUNDER_EMAIL_SENDER', 'Hamdaane · GetShift')
+        founder_sender = os.getenv('BROADCAST_EMAIL_SENDER', 'GetShift')
         for u in users:
             if dry_run:
                 skipped += 1
                 continue
-            html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href, founder=True)
+            html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href)
             ok = envoyer_email(u['email'], subject, html, sender_name=founder_sender)
             if ok: sent += 1
             else:  skipped += 1
@@ -7096,7 +7096,7 @@ def broadcast_email():
             "sent": sent,
             "skipped": skipped,
             "announcement_id": ann_id,
-            "preview_html": _html_broadcast("Prénom", titre, intro, items, cta_label, cta_href, founder=True) if dry_run else None,
+            "preview_html": _html_broadcast("Prénom", titre, intro, items, cta_label, cta_href) if dry_run else None,
         })
     except Exception as e:
         return erreur_500(e)

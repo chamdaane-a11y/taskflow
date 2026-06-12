@@ -397,7 +397,7 @@ export default function FounderConsole() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '12px 16px', borderRadius: 12, background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))' }}>
                 <Mail size={16} color="var(--ember)" />
-                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Email à <strong>tous les utilisateurs vérifiés</strong> (expéditeur « Hamdaane · GetShift »). Le même message s&apos;affiche aussi <strong>dans l&apos;app</strong> à la prochaine connexion.</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Email à <strong>tous les utilisateurs vérifiés</strong> (expéditeur <strong>GetShift</strong>). Le même message s&apos;affiche aussi <strong>dans l&apos;app</strong> à la prochaine connexion.</span>
               </div>
               <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>

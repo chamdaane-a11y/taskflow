@@ -44,7 +44,7 @@ export default function FounderAnnouncement({ announcement, open, onClose }) {
             <div className="gs-founder-ann__head">
               <div className="gs-founder-ann__icon"><Mail size={18} strokeWidth={2.2} /></div>
               <div>
-                <span className="gs-founder-ann__badge">Message de Hamdaane</span>
+                <span className="gs-founder-ann__badge">Nouveauté GetShift</span>
                 <h2 id="gs-founder-ann-title" className="gs-founder-ann__title">{announcement.titre}</h2>
               </div>
             </div>
