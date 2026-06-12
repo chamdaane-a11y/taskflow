@@ -33,6 +33,7 @@ import { ProchainBadgePill } from '../components/ProchainBadgeBanner'
 import { BADGES_CONFIG } from '../data/badges'
 import { parseTaskInput, getPrioriteColor, getPrioriteBg } from '../utils/parseTask'
 import { appTopInset } from '../utils/engagement'
+import { formatJXLabel, jxBadgeStyle } from '../utils/jxMeta'
 
 registerLocale('fr', fr)
 
