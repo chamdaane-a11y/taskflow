@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from 'axios'
-import WorldCupBanner from '../WorldCupBanner'
 import ProductSpotlight from './ProductSpotlight'
 import FounderAnnouncement from './FounderAnnouncement'
 import {
@@ -21,25 +20,15 @@ export default function ConnectedEngagement() {
   const wcActive = isWorldCupSeason()
   const showBase = Boolean(user && onAppRoute)
 
-  const [bannerHeight, setBannerHeight] = useState(0)
   const [spotlightOpen, setSpotlightOpen] = useState(false)
   const [spotlightDone, setSpotlightDone] = useState(false)
   const [announcement, setAnnouncement] = useState(null)
   const [founderOpen, setFounderOpen] = useState(false)
 
-  const showWcBanner = showBase && wcActive
-
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--gs-banner-offset',
-      showWcBanner ? `${bannerHeight}px` : '0px',
-    )
-    document.body.classList.toggle('gs-banner-active', showWcBanner && bannerHeight > 0)
-    return () => {
-      document.documentElement.style.setProperty('--gs-banner-offset', '0px')
-      document.body.classList.remove('gs-banner-active')
-    }
-  }, [bannerHeight, showWcBanner])
+    document.documentElement.style.setProperty('--gs-banner-offset', '0px')
+    document.body.classList.remove('gs-banner-active')
+  }, [])
 
   useEffect(() => {
     if (!showBase || !wcActive) {
@@ -103,7 +92,6 @@ export default function ConnectedEngagement() {
 
   return (
     <>
-      {showWcBanner && <WorldCupBanner variant="app" onHeightChange={setBannerHeight} />}
       <ProductSpotlight open={spotlightOpen} onClose={handleSpotlightClose} />
       <FounderAnnouncement
         announcement={announcement}
