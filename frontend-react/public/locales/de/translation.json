@@ -1066,6 +1066,7 @@
     "source_analyzed": "{{n}} Element analysiert",
     "source_analyzed_plural": "{{n}} Elemente analysiert",
     "source_not_connected": "Nicht verbunden",
+    "source_ready": "Verbunden — bereit zum Scannen",
     "source_activate": "In Einstellungen aktivieren →",
     "task_time_range": "{{start}} → {{end}} · {{dur}} Min geplant",
     "deferred_note": "Manuell verschoben",

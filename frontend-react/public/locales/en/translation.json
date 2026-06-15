@@ -1066,6 +1066,7 @@
     "source_analyzed": "{{n}} item analyzed",
     "source_analyzed_plural": "{{n}} items analyzed",
     "source_not_connected": "Not connected",
+    "source_ready": "Connected — ready to scan",
     "source_activate": "Enable in Settings →",
     "task_time_range": "{{start}} → {{end}} · {{dur}} min planned",
     "deferred_note": "Manually deferred",

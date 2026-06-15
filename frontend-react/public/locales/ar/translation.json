@@ -1066,6 +1066,7 @@
     "source_analyzed": "{{n}} عنصر محلَّل",
     "source_analyzed_plural": "{{n}} عناصر محلَّلة",
     "source_not_connected": "غير متصل",
+    "source_ready": "متصل — جاهز للمسح",
     "source_activate": "تفعيل في الإعدادات →",
     "task_time_range": "{{start}} → {{end}} · {{dur}} دقيقة مخططة",
     "deferred_note": "مؤجَّل يدويًا",

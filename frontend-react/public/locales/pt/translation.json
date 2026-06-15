@@ -1066,6 +1066,7 @@
     "source_analyzed": "{{n}} item analisado",
     "source_analyzed_plural": "{{n}} itens analisados",
     "source_not_connected": "Não conectado",
+    "source_ready": "Conectado — pronto para analisar",
     "source_activate": "Ativar em Configurações →",
     "task_time_range": "{{start}} → {{end}} · {{dur}} min previsto",
     "deferred_note": "Adiado manualmente",

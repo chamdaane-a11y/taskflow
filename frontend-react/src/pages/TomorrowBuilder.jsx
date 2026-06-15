@@ -67,7 +67,7 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
             {connected
               ? (tasks.length > 0
                 ? tasks.length > 1 ? t('tomorrow.source_connected_plural', { n: tasks.length }) : t('tomorrow.source_connected', { n: tasks.length })
-                : (nbItems > 0 ? nbItems > 1 ? t('tomorrow.source_analyzed_plural', { n: nbItems }) : t('tomorrow.source_analyzed', { n: nbItems }) : (sublabel || t('tomorrow.source_not_connected'))))
+                : (nbItems > 0 ? nbItems > 1 ? t('tomorrow.source_analyzed_plural', { n: nbItems }) : t('tomorrow.source_analyzed', { n: nbItems }) : t('tomorrow.source_ready')))
               : t('tomorrow.source_not_connected')}
           </div>
         </div>
@@ -93,21 +93,21 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
           </motion.button>
           {tasks.length > 0 && (
             <div style={{ marginTop: 10 }}>
-              {tasks.map((t, i) => {
+              {tasks.map((task, i) => {
                 const status = importingState[i]
-                const badge = getTaskBadge ? getTaskBadge(t) : null
+                const badge = typeof getTaskBadge === 'function' ? getTaskBadge(task) : null
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ wordBreak: 'break-word' }}>{t.titre}</span>
+                        <span style={{ wordBreak: 'break-word' }}>{task.titre}</span>
                         {badge}
                       </div>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ padding: '1px 6px', borderRadius: 4, background: t.priorite === 'haute' ? 'rgba(239,68,68,0.12)' : t.priorite === 'basse' ? 'rgba(100,116,139,0.12)' : 'rgba(234,179,8,0.12)', color: t.priorite === 'haute' ? '#ef4444' : t.priorite === 'basse' ? '#64748b' : '#eab308', fontWeight: 600 }}>{t.priorite || 'moyenne'}</span>
-                        <span>{t.duree_min || 30} min</span>
+                        <span style={{ padding: '1px 6px', borderRadius: 4, background: task.priorite === 'haute' ? 'rgba(239,68,68,0.12)' : task.priorite === 'basse' ? 'rgba(100,116,139,0.12)' : 'rgba(234,179,8,0.12)', color: task.priorite === 'haute' ? '#ef4444' : task.priorite === 'basse' ? '#64748b' : '#eab308', fontWeight: 600 }}>{task.priorite || 'moyenne'}</span>
+                        <span>{task.duree_min || 30} min</span>
                       </div>
-                      {(t.contexte_email || t.contexte) && <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 3, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>↳ {t.contexte_email || t.contexte}</div>}
+                      {(task.contexte_email || task.contexte) && <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 3, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>↳ {task.contexte_email || task.contexte}</div>}
                     </div>
                     <motion.button onClick={() => status !== 'done' && onImport(t, i)} disabled={status === 'done' || status === true}
                       whileTap={{ scale: 0.92 }}
@@ -1096,6 +1096,7 @@ export default function TomorrowBuilder() {
         if (data?.integration !== 'notion') return
         setNotionConnecting(false)
         setNotionConnected(true)
+        chargerNotionDatabases()
       },
       onFail: () => {
         setNotionConnecting(false)
@@ -1660,7 +1661,7 @@ export default function TomorrowBuilder() {
                           )}
                         </div>
                       )}
-                      getTaskBadge={(t) => t.notion_block_id
+                      getTaskBadge={(task) => task.notion_block_id
                         ? <span title={t('tomorrow.notion_todo_explicit')}
                             style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(34,197,94,0.14)', color: '#16a34a', whiteSpace: 'nowrap' }}>
                             ✓ TO-DO
