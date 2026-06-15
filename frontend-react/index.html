@@ -38,6 +38,7 @@
   <meta name="keywords" content="gestion de tâches, app de gestion de tâches, to-do list, productivité, planning IA, gestionnaire de tâches, organisation, task manager, collaboration, GetShift" />
   <meta name="author" content="GetShift" />
   <meta name="robots" content="index, follow" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="canonical" href="https://usegetshift.com/" />
 
   <!-- ===== OPEN GRAPH ===== -->
@@ -80,7 +81,12 @@
         "@id": "https://usegetshift.com/#org",
         "name": "GetShift",
         "url": "https://usegetshift.com/",
-        "logo": "https://usegetshift.com/icons/icon-512.png"
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://usegetshift.com/icons/icon-512.png",
+          "width": 512,
+          "height": 512
+        }
       },
       {
         "@type": "WebSite",
@@ -153,10 +159,13 @@
   <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-ipad-pro-11.png" />
   <link rel="apple-touch-startup-image" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-ipad-mini-air.png" />
 
-  <!-- ===== ICÔNES ===== -->
+  <!-- ===== ICÔNES (Google Search exige ≥48×48, sizes = dimensions réelles du fichier) ===== -->
   <link rel="icon" href="/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72.png" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/icons/icon-48.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
 
   <title>GetShift — App de gestion de tâches IA, planning & collaboration</title>
 

@@ -349,10 +349,22 @@ def verify_password(pw, stored, user_id=None):
     return check_password_hash(stored, pw)
 
 @app.after_request
-def disable_api_cache(response):
-    """Empêche les browsers de cacher les réponses JSON.
-    Sans ça, axios.get polling renvoie du cache stale → l'user doit Ctrl+Shift+R."""
+def apply_security_headers(response):
+    """Headers de durcissement HTTP + no-cache sur les réponses JSON API."""
     try:
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault(
+            'Permissions-Policy',
+            'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+        )
+        # Render est toujours servi en HTTPS — HSTS protège contre le downgrade SSL.
+        if request.is_secure:
+            response.headers.setdefault(
+                'Strict-Transport-Security',
+                'max-age=63072000; includeSubDomains',
+            )
         ctype = (response.headers.get('Content-Type') or '').lower()
         if 'application/json' in ctype:
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
