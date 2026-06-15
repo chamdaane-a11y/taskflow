@@ -349,8 +349,9 @@ export function useDashboard() {
       if (Date.now() - Number(localStorage.getItem(k) || 0) < 60 * 1000) return
       const r = await api.post(`/integrations/google-calendar/import-events/${user.id}`)
       localStorage.setItem(k, String(Date.now()))
+      if (r.data?.connected === false) return
       if (r.data?.created > 0) chargerTaches()
-    } catch { /* GCal non connecté (400) → on ignore silencieusement */ }
+    } catch { /* GCal non connecté → ignoré silencieusement */ }
   }, [user?.id, chargerTaches])
 
   const chargerRappels = useCallback(async () => {

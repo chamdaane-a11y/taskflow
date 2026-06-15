@@ -7856,7 +7856,7 @@ def gcal_import_events(user_id):
     """
     service = _gcal_service(user_id)
     if not service:
-        return jsonify({'error': 'Google Calendar non connecté'}), 400
+        return jsonify({'connected': False, 'created': 0, 'skipped': 0, 'tasks': []})
 
     today = datetime.now().date()
     to_dt  = today + timedelta(days=30)

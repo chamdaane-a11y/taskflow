@@ -32,6 +32,7 @@ import {
   useSortable, arrayMove
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { openOAuthPopup } from '../utils/oauthPopup'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -1012,30 +1013,19 @@ export default function TomorrowBuilder() {
 
   const connecterCalendar = () => {
     setCalendarConnecting(true)
-    const popup = window.open(
-      `${API}/auth/google/calendar?user_id=${user.id}`,
-      'gcal_oauth', 'width=540,height=680,menubar=no,toolbar=no'
-    )
-    const listener = (e) => {
-      if (e.data?.type === 'oauth_success' && e.data?.integration === 'google_calendar') {
-        window.removeEventListener('message', listener)
+    openOAuthPopup(`${API}/auth/google/calendar?user_id=${user.id}`, {
+      onSuccess: (data) => {
+        if (data?.integration !== 'google_calendar') return
         setCalendarConnecting(false)
         const datePlan = savedPlan?.date_planifiee || demain.toISOString().split('T')[0]
         chargerCalendarEvents(datePlan)
-      } else if (e.data?.type === 'oauth_error') {
-        window.removeEventListener('message', listener)
+      },
+      onFail: () => {
         setCalendarConnecting(false)
         setErreur(t('planification.cancel_gcal'))
-      }
-    }
-    window.addEventListener('message', listener)
-    const checkPopup = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkPopup)
-        window.removeEventListener('message', listener)
-        setCalendarConnecting(false)
-      }
-    }, 800)
+      },
+      onClose: () => setCalendarConnecting(false),
+    })
   }
 
   const chargerGmailStatus = async () => {
@@ -1047,29 +1037,18 @@ export default function TomorrowBuilder() {
 
   const connecterGmail = () => {
     setGmailConnecting(true)
-    const popup = window.open(
-      `${API}/auth/gmail?user_id=${user.id}`,
-      'gmail_oauth', 'width=540,height=680,menubar=no,toolbar=no'
-    )
-    const listener = (e) => {
-      if (e.data?.type === 'oauth_success' && e.data?.integration === 'gmail') {
-        window.removeEventListener('message', listener)
+    openOAuthPopup(`${API}/auth/gmail?user_id=${user.id}`, {
+      onSuccess: (data) => {
+        if (data?.integration !== 'gmail') return
         setGmailConnecting(false)
         setGmailConnected(true)
-      } else if (e.data?.type === 'oauth_error') {
-        window.removeEventListener('message', listener)
+      },
+      onFail: () => {
         setGmailConnecting(false)
         setErreur(t('planification.cancel_gmail'))
-      }
-    }
-    window.addEventListener('message', listener)
-    const checkPopup = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkPopup)
-        window.removeEventListener('message', listener)
-        setGmailConnecting(false)
-      }
-    }, 800)
+      },
+      onClose: () => setGmailConnecting(false),
+    })
   }
 
   const extraireGmailTasks = async () => {
@@ -1112,29 +1091,18 @@ export default function TomorrowBuilder() {
 
   const connecterNotion = () => {
     setNotionConnecting(true)
-    const popup = window.open(
-      `${API}/auth/notion?user_id=${user.id}`,
-      'notion_oauth', 'width=540,height=680,menubar=no,toolbar=no'
-    )
-    const listener = (e) => {
-      if (e.data?.type === 'oauth_success' && e.data?.integration === 'notion') {
-        window.removeEventListener('message', listener)
+    openOAuthPopup(`${API}/auth/notion?user_id=${user.id}`, {
+      onSuccess: (data) => {
+        if (data?.integration !== 'notion') return
         setNotionConnecting(false)
         setNotionConnected(true)
-      } else if (e.data?.type === 'oauth_error') {
-        window.removeEventListener('message', listener)
+      },
+      onFail: () => {
         setNotionConnecting(false)
         setErreur(t('planification.cancel_notion'))
-      }
-    }
-    window.addEventListener('message', listener)
-    const checkPopup = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkPopup)
-        window.removeEventListener('message', listener)
-        setNotionConnecting(false)
-      }
-    }, 800)
+      },
+      onClose: () => setNotionConnecting(false),
+    })
   }
 
   const chargerNotionDatabases = async () => {
@@ -1192,29 +1160,18 @@ export default function TomorrowBuilder() {
 
   const connecterDrive = () => {
     setDriveConnecting(true)
-    const popup = window.open(
-      `${API}/auth/google/drive?user_id=${user.id}`,
-      'drive_oauth', 'width=540,height=680,menubar=no,toolbar=no'
-    )
-    const listener = (e) => {
-      if (e.data?.type === 'oauth_success' && e.data?.integration === 'google_drive') {
-        window.removeEventListener('message', listener)
+    openOAuthPopup(`${API}/auth/google/drive?user_id=${user.id}`, {
+      onSuccess: (data) => {
+        if (data?.integration !== 'google_drive') return
         setDriveConnecting(false)
         chargerDrive()
-      } else if (e.data?.type === 'oauth_error') {
-        window.removeEventListener('message', listener)
+      },
+      onFail: () => {
         setDriveConnecting(false)
         setErreur(t('planification.cancel_drive'))
-      }
-    }
-    window.addEventListener('message', listener)
-    const checkPopup = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkPopup)
-        window.removeEventListener('message', listener)
-        setDriveConnecting(false)
-      }
-    }, 800)
+      },
+      onClose: () => setDriveConnecting(false),
+    })
   }
 
   const chargerCheckinToday = async () => {

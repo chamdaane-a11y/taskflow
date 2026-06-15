@@ -2728,10 +2728,14 @@ export default function Dashboard() {
   const handleGcalImport = useCallback(async (silent = false) => {
     if (!d.user?.id) return
     try {
+      const k = `gcal_sync_${d.user.id}`
+      if (Date.now() - Number(localStorage.getItem(k) || 0) < 60 * 1000) return
       const res = await axios.post(
         `https://getshift-backend.onrender.com/integrations/google-calendar/import-events/${d.user.id}`,
         {}, { withCredentials: true }
       )
+      localStorage.setItem(k, String(Date.now()))
+      if (!res.data?.connected) return
       const count = res.data?.created || 0
       if (count > 0) {
         d.chargerTaches()
