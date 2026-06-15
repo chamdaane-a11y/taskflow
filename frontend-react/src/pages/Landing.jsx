@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import WorldCupBanner from '../components/WorldCupBanner'
+import SeoHead from '../components/SeoHead'
 import {
   ArrowRight, CheckCircle, Zap, BarChart2, Users, Calendar,
   Brain, Target, Flame, Trophy, Star, ChevronDown,
@@ -433,6 +434,7 @@ export default function Landing() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'var(--font-ui)', overflowX: 'hidden' }}>
+      <SeoHead />
       <WorldCupBanner onHeightChange={setBannerHeight} />
       <style>{`
         * { box-sizing: border-box; margin: 0; }

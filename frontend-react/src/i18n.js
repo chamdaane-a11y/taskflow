@@ -11,7 +11,8 @@ i18n
     supportedLngs: ['fr', 'en', 'es', 'ar', 'pt', 'de'],
     fallbackLng: 'en',
     detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
+      order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
+      lookupQuerystring: 'lang',
       caches: ['localStorage'],
       lookupLocalStorage: 'getshift_lang',
     },

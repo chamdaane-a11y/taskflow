@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "GetShift - Gestionnaire de tâches",
+  "name": "GetShift — AI Task Manager",
   "short_name": "GetShift",
-  "description": "Organize. Automate. Perform.",
+  "description": "Free AI task manager: plan your day, break goals into steps, collaborate with your team. Web, iOS & Android.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
