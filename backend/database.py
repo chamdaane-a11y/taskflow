@@ -9,7 +9,7 @@ def _get_pool():
     if _pool is None:
         _pool = MySQLConnectionPool(
             pool_name="getshift",
-            pool_size=10,
+            pool_size=5,
             pool_reset_session=True,
             host=os.getenv('MYSQLHOST', 'localhost'),
             user=os.getenv('MYSQLUSER', 'root'),

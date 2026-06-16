@@ -5,6 +5,7 @@ import threading
 import schedule
 import time
 import urllib.parse
+from contextlib import contextmanager
 from flask import Flask, jsonify, request, make_response, redirect
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
@@ -13,6 +14,24 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from database import connecter
 import hashlib
+
+
+@contextmanager
+def db_session(dictionary=False):
+    """Connexion MySQL avec fermeture garantie — évite d'épuiser le pool Render."""
+    db = connecter()
+    cur = db.cursor(dictionary=dictionary)
+    try:
+        yield db, cur
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            db.close()
+        except Exception:
+            pass
 import os
 import json
 import re
@@ -209,6 +228,13 @@ def erreur_500(e):
     app.logger.error("Exception non gérée: %s", e, exc_info=True)
     _log_error(e)
     return jsonify({"erreur": "Erreur interne"}), 500
+
+
+def _admin_err(e, where='admin'):
+    """500 founder-only avec détail diagnostic (console admin)."""
+    app.logger.error("%s: %s", where, e, exc_info=True)
+    _log_error(e)
+    return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:400]}"}), 500
 
 @app.errorhandler(500)
 def _handle_500(e):
@@ -2062,7 +2088,19 @@ GOOGLE_CLIENT_ID = '149080640376-8t2ah2odllgq6t83795dafhdgrajbh61.apps.googleuse
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'ok', 'build': APP_BUILD_MARKER}), 200
+    payload = {'build': APP_BUILD_MARKER, 'db': False}
+    try:
+        with db_session() as (db, cur):
+            cur.execute("SELECT 1")
+            cur.fetchone()
+            db.commit()
+        payload['db'] = True
+        payload['status'] = 'ok'
+        return jsonify(payload), 200
+    except Exception as e:
+        payload['status'] = 'degraded'
+        payload['db_error'] = str(e)[:200]
+        return jsonify(payload), 503
 
 
 @app.route('/debug/push-status', methods=['GET'])
@@ -2274,67 +2312,62 @@ def watchdog_run():
 @app.route('/admin/overview', methods=['GET'])
 def admin_overview():
     try:
-        db = connecter(); cur = db.cursor(dictionary=True)
-        out = {}
-        cur.execute("SELECT COUNT(*) AS n FROM users"); out['total_users'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM users WHERE email_verifie=TRUE"); out['verified_users'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM users WHERE DATE(created_at)=CURDATE()"); out['signups_today'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['signups_7d'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"); out['signups_30d'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM users WHERE DATE(derniere_activite)=CURDATE()"); out['active_today'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM users WHERE derniere_activite >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['active_7d'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM users WHERE derniere_activite >= DATE_SUB(NOW(), INTERVAL 30 DAY)"); out['active_30d'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM taches"); out['total_taches'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE"); out['taches_done_total'] = cur.fetchone()['n']
-        # Complétions : on date sur COALESCE(terminee_le, updated_at) — JAMAIS updated_at nu (cf. CLAUDE.md)
-        cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE AND DATE(COALESCE(terminee_le, updated_at))=CURDATE()"); out['taches_done_today'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['taches_done_7d'] = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM taches WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['taches_created_7d'] = cur.fetchone()['n']
-        out['completion_rate'] = round(100 * out['taches_done_total'] / out['total_taches']) if out['total_taches'] else 0
-        out['avg_taches_per_user'] = round(out['total_taches'] / out['total_users'], 1) if out['total_users'] else 0
-        try:
-            cur.execute("SELECT COUNT(*) AS n FROM push_subscriptions"); out['push_subscriptions'] = cur.fetchone()['n']
-        except Exception:
-            out['push_subscriptions'] = None
-        try:
-            cur.execute("SELECT COUNT(*) AS n FROM equipes"); out['total_equipes'] = cur.fetchone()['n']
-        except Exception:
-            out['total_equipes'] = None
-        # Activité sécurité des dernières 24h
-        try:
-            _ensure_security_log(cur)
-            cur.execute("SELECT COUNT(*) AS n FROM security_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)")
-            out['security_events_24h'] = cur.fetchone()['n']
-        except Exception:
-            out['security_events_24h'] = 0
-        cur.close(); db.close()
+        with db_session(dictionary=True) as (db, cur):
+            out = {}
+            cur.execute("SELECT COUNT(*) AS n FROM users"); out['total_users'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM users WHERE email_verifie=TRUE"); out['verified_users'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM users WHERE DATE(created_at)=CURDATE()"); out['signups_today'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['signups_7d'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"); out['signups_30d'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM users WHERE DATE(derniere_activite)=CURDATE()"); out['active_today'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM users WHERE derniere_activite >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['active_7d'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM users WHERE derniere_activite >= DATE_SUB(NOW(), INTERVAL 30 DAY)"); out['active_30d'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM taches"); out['total_taches'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE"); out['taches_done_total'] = cur.fetchone()['n']
+            # Complétions : on date sur COALESCE(terminee_le, updated_at) — JAMAIS updated_at nu (cf. CLAUDE.md)
+            cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE AND DATE(COALESCE(terminee_le, updated_at))=CURDATE()"); out['taches_done_today'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM taches WHERE terminee=TRUE AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['taches_done_7d'] = cur.fetchone()['n']
+            cur.execute("SELECT COUNT(*) AS n FROM taches WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"); out['taches_created_7d'] = cur.fetchone()['n']
+            out['completion_rate'] = round(100 * out['taches_done_total'] / out['total_taches']) if out['total_taches'] else 0
+            out['avg_taches_per_user'] = round(out['total_taches'] / out['total_users'], 1) if out['total_users'] else 0
+            try:
+                cur.execute("SELECT COUNT(*) AS n FROM push_subscriptions"); out['push_subscriptions'] = cur.fetchone()['n']
+            except Exception:
+                out['push_subscriptions'] = None
+            try:
+                cur.execute("SELECT COUNT(*) AS n FROM equipes"); out['total_equipes'] = cur.fetchone()['n']
+            except Exception:
+                out['total_equipes'] = None
+            try:
+                _ensure_security_log(cur)
+                cur.execute("SELECT COUNT(*) AS n FROM security_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)")
+                out['security_events_24h'] = cur.fetchone()['n']
+            except Exception:
+                out['security_events_24h'] = 0
         return jsonify(out), 200
     except Exception as e:
-        return erreur_500(e)
+        return _admin_err(e, 'admin_overview')
 
 @app.route('/admin/signups', methods=['GET'])
 def admin_signups():
     try:
         days = request.args.get('days', default=30, type=int)
         days = max(1, min(days, 365))
-        db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("""
-            SELECT id, nom, email, created_at, email_verifie
-            FROM users
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
-            ORDER BY created_at DESC
-            LIMIT 300
-        """, (days,))
-        rows = cur.fetchall()
-        cur.close(); db.close()
-        # Formatage en Python (le connecteur ne déséchappe pas %% dans DATE_FORMAT
-        # quand il y a des paramètres → la chaîne de format ressortait littéralement).
+        with db_session(dictionary=True) as (db, cur):
+            cur.execute("""
+                SELECT id, nom, email, created_at, email_verifie
+                FROM users
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                ORDER BY created_at DESC
+                LIMIT 300
+            """, (days,))
+            rows = cur.fetchall()
         for r in rows:
             d = r.get('created_at')
             r['created_at'] = d.strftime('%Y-%m-%d %H:%M') if hasattr(d, 'strftime') else (str(d) if d else None)
         return jsonify({'days': days, 'count': len(rows), 'signups': rows}), 200
     except Exception as e:
-        return erreur_500(e)
+        return _admin_err(e, 'admin_signups')
 
 @app.route('/admin/security', methods=['GET'])
 def admin_security():
@@ -2387,27 +2420,26 @@ def admin_timeseries():
     try:
         days = request.args.get('days', default=30, type=int)
         days = max(7, min(days, 90))
-        db = connecter(); cur = db.cursor(dictionary=True)
-        cur.execute("""
-            SELECT DATE(created_at) AS d, COUNT(*) AS n FROM users
-            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-            GROUP BY DATE(created_at)
-        """, (days,))
-        signups = {str(r['d']): r['n'] for r in cur.fetchall()}
-        cur.execute("""
-            SELECT DATE(created_at) AS d, COUNT(*) AS n FROM taches
-            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-            GROUP BY DATE(created_at)
-        """, (days,))
-        created = {str(r['d']): r['n'] for r in cur.fetchall()}
-        # Complétions datées sur COALESCE(terminee_le, updated_at) — JAMAIS updated_at nu (cf. CLAUDE.md)
-        cur.execute("""
-            SELECT DATE(COALESCE(terminee_le, updated_at)) AS d, COUNT(*) AS n FROM taches
-            WHERE terminee=TRUE AND COALESCE(terminee_le, updated_at) >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-            GROUP BY DATE(COALESCE(terminee_le, updated_at))
-        """, (days,))
-        done = {str(r['d']): r['n'] for r in cur.fetchall()}
-        cur.close(); db.close()
+        with db_session(dictionary=True) as (db, cur):
+            cur.execute("""
+                SELECT DATE(created_at) AS d, COUNT(*) AS n FROM users
+                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+                GROUP BY DATE(created_at)
+            """, (days,))
+            signups = {str(r['d']): r['n'] for r in cur.fetchall()}
+            cur.execute("""
+                SELECT DATE(created_at) AS d, COUNT(*) AS n FROM taches
+                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+                GROUP BY DATE(created_at)
+            """, (days,))
+            created = {str(r['d']): r['n'] for r in cur.fetchall()}
+            # Complétions datées sur COALESCE(terminee_le, updated_at) — JAMAIS updated_at nu (cf. CLAUDE.md)
+            cur.execute("""
+                SELECT DATE(COALESCE(terminee_le, updated_at)) AS d, COUNT(*) AS n FROM taches
+                WHERE terminee=TRUE AND COALESCE(terminee_le, updated_at) >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+                GROUP BY DATE(COALESCE(terminee_le, updated_at))
+            """, (days,))
+            done = {str(r['d']): r['n'] for r in cur.fetchall()}
         from datetime import date, timedelta
         labels, s_arr, c_arr, d_arr = [], [], [], []
         today = date.today()
@@ -2420,8 +2452,7 @@ def admin_timeseries():
         return jsonify({'days': days, 'labels': labels,
                         'signups': s_arr, 'tasks_created': c_arr, 'tasks_done': d_arr}), 200
     except Exception as e:
-        app.logger.error("admin_timeseries: %s", e, exc_info=True); _log_error(e)
-        return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:400]}"}), 500
+        return _admin_err(e, 'admin_timeseries')
 
 
 @app.route('/admin/test-push', methods=['POST'])
@@ -4375,60 +4406,55 @@ def dashboard_stats(user_id):
     """Stats agrégées pour le HUD du Dashboard : niveau, points, streak, semaine."""
     try:
         from datetime import date as _date
-        db = connecter()
-        c = db.cursor(dictionary=True)
-        c.execute("SELECT nom, points, niveau, streak, derniere_activite FROM users WHERE id=%s", (user_id,))
-        u = c.fetchone()
-        if not u:
-            db.close(); return jsonify({"erreur": "User non trouvé"}), 404
+        with db_session(dictionary=True) as (db, c):
+            c.execute("SELECT nom, points, niveau, streak, derniere_activite FROM users WHERE id=%s", (user_id,))
+            u = c.fetchone()
+            if not u:
+                return jsonify({"erreur": "User non trouvé"}), 404
 
-        c.execute("""SELECT
-            COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
-            COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(terminee_le, updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine_prec,
-            COUNT(CASE WHEN terminee=1 THEN 1 END) as terminees_total,
-            COUNT(CASE WHEN terminee=0 THEN 1 END) as actives,
-            COUNT(*) as total
-            FROM taches WHERE user_id=%s""", (user_id,))
-        cnt = c.fetchone()
+            c.execute("""SELECT
+                COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine,
+                COUNT(CASE WHEN terminee=1 AND COALESCE(terminee_le, updated_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND COALESCE(terminee_le, updated_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as terminees_semaine_prec,
+                COUNT(CASE WHEN terminee=1 THEN 1 END) as terminees_total,
+                COUNT(CASE WHEN terminee=0 THEN 1 END) as actives,
+                COUNT(*) as total
+                FROM taches WHERE user_id=%s""", (user_id,))
+            cnt = c.fetchone()
 
-        # Source canonique : NIVEAUX (10 paliers, sync frontend data/badges.js)
-        points = u['points'] or 0
-        niveau_actuel, niveau_nom = niveau_for_points(points)
-        if niveau_actuel != (u['niveau'] or 1):
-            c.execute("UPDATE users SET niveau=%s WHERE id=%s", (niveau_actuel, user_id))
-            db.commit()
-        prev_threshold = next(m for n, m, _ in NIVEAUX if n == niveau_actuel)
-        next_threshold = next((m for n, m, _ in NIVEAUX if n == niveau_actuel + 1), prev_threshold + 1)
-        progres_niveau = max(0, min(100, round((points - prev_threshold) / max(1, next_threshold - prev_threshold) * 100)))
+            points = u['points'] or 0
+            niveau_actuel, niveau_nom = niveau_for_points(points)
+            if niveau_actuel != (u['niveau'] or 1):
+                c.execute("UPDATE users SET niveau=%s WHERE id=%s", (niveau_actuel, user_id))
+                db.commit()
+            prev_threshold = next(m for n, m, _ in NIVEAUX if n == niveau_actuel)
+            next_threshold = next((m for n, m, _ in NIVEAUX if n == niveau_actuel + 1), prev_threshold + 1)
+            progres_niveau = max(0, min(100, round((points - prev_threshold) / max(1, next_threshold - prev_threshold) * 100)))
 
-        # Streak — auto-reset si > 1 jour d'inactivité
-        streak = u['streak'] or 0
-        derniere = u['derniere_activite']
-        if derniere:
-            today = _date.today()
-            d_act = derniere.date() if hasattr(derniere, 'date') else derniere
-            try:
-                delta_days = (today - d_act).days
-                if delta_days > 1:
-                    streak = 0
-                    c.execute("UPDATE users SET streak=0 WHERE id=%s", (user_id,))
-                    db.commit()
-            except Exception:
-                pass
+            streak = u['streak'] or 0
+            derniere = u['derniere_activite']
+            if derniere:
+                today = _date.today()
+                d_act = derniere.date() if hasattr(derniere, 'date') else derniere
+                try:
+                    delta_days = (today - d_act).days
+                    if delta_days > 1:
+                        streak = 0
+                        c.execute("UPDATE users SET streak=0 WHERE id=%s", (user_id,))
+                        db.commit()
+                except Exception:
+                    pass
 
-        # Points semaine : 10 points par tâche terminée cette semaine
-        points_semaine = (cnt['terminees_semaine'] or 0) * 10
-        points_semaine_prec = (cnt['terminees_semaine_prec'] or 0) * 10
-        if points_semaine_prec > 0:
-            delta_pct = round((points_semaine - points_semaine_prec) / points_semaine_prec * 100)
-        else:
-            delta_pct = 100 if points_semaine > 0 else 0
+            points_semaine = (cnt['terminees_semaine'] or 0) * 10
+            points_semaine_prec = (cnt['terminees_semaine_prec'] or 0) * 10
+            if points_semaine_prec > 0:
+                delta_pct = round((points_semaine - points_semaine_prec) / points_semaine_prec * 100)
+            else:
+                delta_pct = 100 if points_semaine > 0 else 0
 
-        total = cnt['total'] or 0
-        terminees_total = cnt['terminees_total'] or 0
-        taux = round(terminees_total / total * 100) if total > 0 else 0
+            total = cnt['total'] or 0
+            terminees_total = cnt['terminees_total'] or 0
+            taux = round(terminees_total / total * 100) if total > 0 else 0
 
-        db.close()
         return jsonify({
             "niveau": niveau_actuel,
             "niveau_label": niveau_nom,
