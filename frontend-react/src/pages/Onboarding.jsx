@@ -26,7 +26,7 @@ const INTEGRATIONS_BASE = [
   { id: 'google_calendar', nom: 'Google Calendar', Logo: GoogleCalendarLogo, oauthPath: '/integrations/google-calendar/start' },
   { id: 'google_drive',    nom: 'Google Drive',    Logo: GoogleDriveLogo,    oauthPath: '/integrations/google-drive/start' },
   { id: 'gmail',           nom: 'Gmail',           Logo: GmailLogo,          oauthPath: '/integrations/gmail/start' },
-  { id: 'notion',          nom: 'Notion',          Logo: NotionLogo,         oauthPath: '/integrations/notion/start' },
+  { id: 'notion',          nom: 'Notion',          Logo: NotionLogo,         oauthPath: '/auth/notion' },
   { id: 'slack',           nom: 'Slack',           Logo: SlackLogo,          oauthPath: null },
 ]
 
@@ -369,11 +369,15 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
       clearInterval(checkClosed)
     }
     const listener = (e) => {
-      if (e.data?.type === 'OAUTH_SUCCESS' && e.data.service === integ.id) {
+      if (e.data?.type === 'oauth_success' && e.data?.integration === integ.id) {
         cleanup()
         setIntegConnectees(p => ({ ...p, [integ.id]: true }))
         setIntegLoading(null)
-        if (popup) popup.close()
+        popup?.close()
+      } else if (e.data?.type === 'oauth_error' && e.data?.integration === integ.id) {
+        cleanup()
+        setIntegLoading(null)
+        popup?.close()
       }
     }
     const checkClosed = setInterval(() => {
