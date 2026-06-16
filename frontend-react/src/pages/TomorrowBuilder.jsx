@@ -53,10 +53,10 @@ function ProgressBar({ value, color, height = 6 }) {
 // ---- Bloc générique source externe (Gmail/Notion/etc) avec extraction IA ----
 // headerExtra (optionnel) : ReactNode affiché sous le header (ex: dropdown DB Notion)
 // getTaskBadge (optionnel) : (task) => ReactNode — petit badge à côté du titre
-function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onExtract, onImport, scanLabel, onActiver, headerExtra, getTaskBadge }) {
+function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, tasks, nbItems, itemLabel, importingState, IconComp, onExtract, onImport, scanLabel, onActiver, headerExtra, getTaskBadge, embedded = false }) {
   const { t } = useTranslation()
   return (
-    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+    <div style={{ background: embedded ? 'var(--surface-2)' : 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: embedded ? 10 : 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: `${color}26`, border: `1.5px solid ${color}4D`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <IconComp size={15} color={color} />
@@ -109,7 +109,7 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
                       </div>
                       {(task.contexte_email || task.contexte) && <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 3, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>↳ {task.contexte_email || task.contexte}</div>}
                     </div>
-                    <motion.button onClick={() => status !== 'done' && onImport(t, i)} disabled={status === 'done' || status === true}
+                    <motion.button onClick={() => status !== 'done' && onImport(task, i)} disabled={status === 'done' || status === true}
                       whileTap={{ scale: 0.92 }}
                       style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, background: status === 'done' ? 'rgba(34,197,94,0.15)' : `${color}1A`, border: `1px solid ${status === 'done' ? 'rgba(34,197,94,0.4)' : color + '4D'}`, color: status === 'done' ? '#22c55e' : color, cursor: status === 'done' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {status === 'done' ? <Check size={13} /> : status === true ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><RefreshCw size={11} /></motion.span> : <Plus size={13} />}
@@ -121,6 +121,91 @@ function SourceExterneBloc({ T, color, label, sublabel, connected, extracting, t
           )}
         </>
       )}
+    </div>
+  )
+}
+
+/** Section repliée de la sidebar TB — progressive disclosure UX */
+function SidebarSection({ title, hint, badge, defaultOpen = false, storageKey, children }) {
+  const [open, setOpen] = useState(() => {
+    if (!storageKey) return defaultOpen
+    try {
+      const v = localStorage.getItem(storageKey)
+      if (v === '1') return true
+      if (v === '0') return false
+    } catch {}
+    return defaultOpen
+  })
+
+  const toggle = () => {
+    setOpen(prev => {
+      const next = !prev
+      if (storageKey) {
+        try { localStorage.setItem(storageKey, next ? '1' : '0') } catch {}
+      }
+      return next
+    })
+  }
+
+  return (
+    <div style={{ marginTop: 12, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, overflow: 'hidden' }}>
+      <motion.button
+        type="button"
+        onClick={toggle}
+        whileHover={{ background: 'var(--surface-2)' }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+          padding: '12px 14px', background: 'transparent', border: 'none',
+          cursor: 'pointer', textAlign: 'left',
+        }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</div>
+          {hint && <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{hint}</div>}
+        </div>
+        {badge != null && (
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', flexShrink: 0 }}>
+            {badge}
+          </span>
+        )}
+        {open ? <ChevronUp size={16} color="var(--text-secondary)" /> : <ChevronDown size={16} color="var(--text-secondary)" />}
+      </motion.button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '0 12px 12px', borderTop: '1px solid var(--border-subtle)' }}>
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function IntegrationConnectRow({ color, label, IconComp, connecting, onConnect, connectLabel }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px', borderBottom: '1px solid var(--border-subtle)' }}>
+      <div style={{ width: 30, height: 30, borderRadius: 9, background: `${color}20`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <IconComp size={14} color={color} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0, fontSize: 11, fontWeight: 700, color, letterSpacing: 0.6 }}>{label}</div>
+      <motion.button
+        type="button"
+        onClick={onConnect}
+        disabled={connecting}
+        whileTap={{ scale: 0.97 }}
+        style={{
+          padding: '6px 10px', borderRadius: 8, border: `1px solid ${color}55`,
+          background: `${color}12`, color, fontSize: 10, fontWeight: 700,
+          cursor: connecting ? 'wait' : 'pointer', flexShrink: 0,
+        }}>
+        {connecting ? '…' : connectLabel}
+      </motion.button>
     </div>
   )
 }
@@ -1520,11 +1605,10 @@ export default function TomorrowBuilder() {
                   )}
                 </div>
 
-                {/* SIDEBAR droite */}
+                {/* SIDEBAR droite — progressive disclosure */}
                 <div style={{ minWidth: 0 }}>
                   <EnergyGauge score={energieCourbe?.score_global || planning.score_energie || 60} T={T} />
 
-                  {/* Heure productive */}
                   <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '16px 20px', marginTop: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                       <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--ember-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1540,195 +1624,209 @@ export default function TomorrowBuilder() {
                     </p>
                   </div>
 
-                  {/* Push notif matin 7h */}
-                  <PushMatinBloc user={user} T={T} isMobile={isMobile} />
-
-                  {/* Apprentissage durées */}
-                  <DureeApprentissageBloc user={user} T={T} isMobile={isMobile} />
-
-                  {/* Export iCal */}
-                  {planning && (
-                    <motion.button
-                      onClick={async () => {
-                        try {
-                          const dateStr = savedPlan?.date_planifiee || demain.toISOString().split('T')[0]
-                          const res = await axios.get(`${API}/ia/tomorrow-builder/${user.id}/export-ical?date=${dateStr}`, { responseType: 'blob' })
-                          const url = window.URL.createObjectURL(res.data)
-                          const a = document.createElement('a')
-                          a.href = url
-                          a.download = `getshift-${dateStr}.ics`
-                          a.click()
-                          window.URL.revokeObjectURL(url)
-                        } catch (e) {
-                          console.error('export failed', e)
-                        }
-                      }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 16px', background: 'var(--ember-soft)', border: `1.5px solid var(--ember-soft)`, borderRadius: 14, color: 'var(--ember)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 12 }}
-                    >
-                      <Download size={13} />
-                      <span>Exporter iCal</span>
-                    </motion.button>
-                  )}
-
-                  {/* Google Calendar — visible seulement si connecté */}
-                  {calendarConnected && (
-                    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: calendarEvents.length > 0 ? 10 : 0 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <CalendarDays size={15} color="#1A73E8" />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: '#1A73E8', letterSpacing: 0.8 }}>GOOGLE CALENDAR</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                            {calendarEvents.length === 0 ? t('tomorrow.free_day') : calendarEvents.length > 1 ? t('tomorrow.calendar_events_plural', { n: calendarEvents.length }) : t('tomorrow.calendar_events', { n: calendarEvents.length })}
-                          </div>
-                        </div>
-                        <CheckCircle size={14} color="#1A73E8" />
-                      </div>
-                      {calendarEvents.length > 0 && (
-                        <div>
-                          {calendarEvents.slice(0, 5).map((ev, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
-                              <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#1A73E8', flexShrink: 0 }} />
-                              <span style={{ fontSize: 11, color: '#1A73E8', fontWeight: 700, flexShrink: 0, minWidth: 38 }}>{ev.all_day ? '—' : ev.heure_debut}</span>
-                              <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ev.titre}</span>
-                            </div>
-                          ))}
-                          {calendarEvents.length > 5 && (
-                            <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', textAlign: 'center' }}>+ {calendarEvents.length - 5} autre{calendarEvents.length - 5 > 1 ? 's' : ''}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Gmail — visible seulement si connecté */}
-                  {gmailConnected && (
-                    <SourceExterneBloc
-                      T={T} color="#EA4335" label="GMAIL" itemLabel="email" scanLabel="Scanner mes emails"
-                      IconComp={Mail} connected={gmailConnected}
-                      extracting={gmailExtracting} tasks={gmailTasks} nbItems={gmailNbEmails}
-                      importingState={gmailImporting}
-                      onActiver={() => {}}
-                      onExtract={extraireGmailTasks} onImport={importerGmailTask}
-                    />
-                  )}
-
-                  {/* Notion — visible seulement si connecté */}
-                  {notionConnected && (
-                    <SourceExterneBloc
-                      T={T} color="#0F172A" label="NOTION" itemLabel="page" scanLabel="Scanner mes pages"
-                      IconComp={FileText} connected={notionConnected}
-                      extracting={notionExtracting} tasks={notionTasks} nbItems={notionNbPages}
-                      importingState={notionImporting}
-                      onActiver={() => {}}
-                      onExtract={extraireNotionTasks} onImport={importerNotionTask}
-                      headerExtra={notionDatabases.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <label htmlFor="notion-db-select" style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase' }}>
-                            Source
-                          </label>
-                          <select
-                            id="notion-db-select"
-                            value={notionDbId}
-                            onChange={e => {
-                              setNotionDbId(e.target.value)
-                              try { localStorage.setItem('notion_db_id', e.target.value) } catch {}
-                            }}
-                            style={{
-                              flex: 1, minWidth: 120,
-                              padding: '6px 10px',
-                              fontSize: 12,
-                              background: 'var(--bg-base)',
-                              border: '1px solid var(--border-subtle)',
-                              borderRadius: 8,
-                              color: 'var(--text-primary)',
-                              cursor: 'pointer',
-                            }}>
-                            <option value="">{t('tomorrow.notion_page_dropdown')}</option>
-                            {notionDatabases.map(db => (
-                              <option key={db.id} value={db.id}>{db.title}</option>
-                            ))}
-                          </select>
-                          {(notionStats.direct > 0 || notionStats.ia > 0) && (
-                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', width: '100%', marginTop: 4 }}>
-                              {notionStats.direct > 0 && <><strong style={{ color: '#22c55e' }}>{notionStats.direct}</strong> to-do{notionStats.direct > 1 ? 's' : ''} explicite{notionStats.direct > 1 ? 's' : ''}</>}
-                              {notionStats.direct > 0 && notionStats.ia > 0 && ' · '}
-                              {notionStats.ia > 0 && <><strong style={{ color: '#0F172A' }}>{notionStats.ia}</strong> détecté{notionStats.ia > 1 ? 's' : ''} par IA</>}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      getTaskBadge={(task) => task.notion_block_id
-                        ? <span title={t('tomorrow.notion_todo_explicit')}
-                            style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(34,197,94,0.14)', color: '#16a34a', whiteSpace: 'nowrap' }}>
-                            ✓ TO-DO
-                          </span>
-                        : <span title={t('tomorrow.notion_todo_implicit')}
-                            style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(15,23,42,0.08)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                            IA
-                          </span>
-                      }
-                    />
-                  )}
-
-                  {/* Google Drive — visible seulement si connecté */}
-                  {driveConnected && driveDocs.length > 0 && (
-                    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(0,172,71,0.15)', border: '1.5px solid rgba(0,172,71,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Folder size={15} color="#00AC47" />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: '#00AC47', letterSpacing: 0.8 }}>GOOGLE DRIVE</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{driveDocs.length} doc{driveDocs.length > 1 ? 's' : ''} récent{driveDocs.length > 1 ? 's' : ''}</div>
-                        </div>
-                        <CheckCircle size={14} color="#00AC47" />
-                      </div>
-                      <div>
-                        {driveDocs.slice(0, 5).map((d, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
-                            <a href={d.lien} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flex: 1, minWidth: 0 }}>
-                              <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,172,71,0.12)', color: '#00AC47', fontWeight: 600, flexShrink: 0, textTransform: 'uppercase' }}>{d.type}</span>
-                              <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
-                              <ExternalLink size={11} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
-                            </a>
-                            <button
-                              onClick={() => creerTacheDepuisDrive(d)}
-                              title={t('tomorrow.drive_task_tooltip')}
-                              style={{ flexShrink: 0, background: driveToTaskDone.has(d.id) ? 'rgba(0,172,71,0.15)' : 'var(--surface-2)', border: 'none', borderRadius: 6, padding: '3px 6px', cursor: driveToTaskDone.has(d.id) ? 'default' : 'pointer', display: 'flex', alignItems: 'center', color: driveToTaskDone.has(d.id) ? '#00AC47' : 'var(--text-secondary)' }}>
-                              {driveToTaskLoading.has(d.id) ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: 11 }}>↻</motion.span> : driveToTaskDone.has(d.id) ? <Check size={11} /> : <Plus size={11} />}
-                            </button>
-                          </div>
-                        ))}
-                        {driveDocs.length > 5 && (
-                          <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', textAlign: 'center' }}>+ {driveDocs.length - 5} autre{driveDocs.length - 5 > 1 ? 's' : ''}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* CTA discret si au moins une intégration non connectée */}
-                  {(!calendarConnected || !gmailConnected || !notionConnected || !driveConnected) && (
-                    <motion.button
-                      onClick={() => navigate('/settings', { state: { section: 'integrations' } })}
-                      whileHover={{ opacity: 1 }} initial={{ opacity: 0.5 }} animate={{ opacity: 0.5 }}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', marginTop: 14, padding: '7px 0', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
-                    >
-                      <ExternalLink size={10} /> {t('tomorrow.generate_from_integration')}
-                    </motion.button>
-                  )}
-
-                  {/* Tip du jour */}
                   {planning.conseil_journee && (
-                    <div style={{ background: 'var(--ember-soft)', border: `1px solid var(--ember-soft)`, borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.8, marginBottom: 6 }}>💡 CONSEIL IA</div>
+                    <div style={{ background: 'var(--ember-soft)', border: '1px solid var(--ember-soft)', borderRadius: 16, padding: '14px 16px', marginTop: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ember)', letterSpacing: 0.8, marginBottom: 6 }}>💡 {t('tomorrow.sidebar_tip')}</div>
                       <p style={{ fontSize: 12, color: 'var(--text-primary)', margin: 0, lineHeight: 1.6 }}>{planning.conseil_journee}</p>
                     </div>
                   )}
+
+                  <SidebarSection
+                    title={t('tomorrow.sidebar_sources')}
+                    hint={t('tomorrow.sidebar_sources_hint')}
+                    badge={[calendarConnected, gmailConnected, notionConnected, driveConnected].filter(Boolean).length || null}
+                    defaultOpen={false}
+                    storageKey="tb_sidebar_sources">
+                    {!calendarConnected ? (
+                      <IntegrationConnectRow color="#1A73E8" label="GOOGLE CALENDAR" IconComp={CalendarDays} connecting={calendarConnecting} onConnect={connecterCalendar} connectLabel={t('tomorrow.connect_integration')} />
+                    ) : (
+                      <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: calendarEvents.length > 0 ? 10 : 0 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(26,115,232,0.15)', border: '1.5px solid rgba(26,115,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <CalendarDays size={15} color="#1A73E8" />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#1A73E8', letterSpacing: 0.8 }}>GOOGLE CALENDAR</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                              {calendarEvents.length === 0 ? t('tomorrow.free_day') : calendarEvents.length > 1 ? t('tomorrow.calendar_events_plural', { n: calendarEvents.length }) : t('tomorrow.calendar_events', { n: calendarEvents.length })}
+                            </div>
+                          </div>
+                          <CheckCircle size={14} color="#1A73E8" />
+                        </div>
+                        {calendarEvents.length > 0 && (
+                          <div>
+                            {calendarEvents.slice(0, 5).map((ev, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+                                <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#1A73E8', flexShrink: 0 }} />
+                                <span style={{ fontSize: 11, color: '#1A73E8', fontWeight: 700, flexShrink: 0, minWidth: 38 }}>{ev.all_day ? '—' : ev.heure_debut}</span>
+                                <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ev.titre}</span>
+                              </div>
+                            ))}
+                            {calendarEvents.length > 5 && (
+                              <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', textAlign: 'center' }}>+ {calendarEvents.length - 5} autre{calendarEvents.length - 5 > 1 ? 's' : ''}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!gmailConnected ? (
+                      <IntegrationConnectRow color="#EA4335" label="GMAIL" IconComp={Mail} connecting={gmailConnecting} onConnect={connecterGmail} connectLabel={t('tomorrow.connect_integration')} />
+                    ) : (
+                      <SourceExterneBloc
+                        embedded
+                        T={T} color="#EA4335" label="GMAIL" itemLabel="email" scanLabel={t('tomorrow.scan_gmail')}
+                        IconComp={Mail} connected={gmailConnected}
+                        extracting={gmailExtracting} tasks={gmailTasks} nbItems={gmailNbEmails}
+                        importingState={gmailImporting}
+                        onActiver={connecterGmail}
+                        onExtract={extraireGmailTasks} onImport={importerGmailTask}
+                      />
+                    )}
+
+                    {!notionConnected ? (
+                      <IntegrationConnectRow color="#0F172A" label="NOTION" IconComp={FileText} connecting={notionConnecting} onConnect={connecterNotion} connectLabel={t('tomorrow.connect_integration')} />
+                    ) : (
+                      <SourceExterneBloc
+                        embedded
+                        T={T} color="#0F172A" label="NOTION" itemLabel="page" scanLabel={t('tomorrow.scan_notion')}
+                        IconComp={FileText} connected={notionConnected}
+                        extracting={notionExtracting} tasks={notionTasks} nbItems={notionNbPages}
+                        importingState={notionImporting}
+                        onActiver={connecterNotion}
+                        onExtract={extraireNotionTasks} onImport={importerNotionTask}
+                        headerExtra={notionDatabases.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <label htmlFor="notion-db-select" style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                              Source
+                            </label>
+                            <select
+                              id="notion-db-select"
+                              value={notionDbId}
+                              onChange={e => {
+                                setNotionDbId(e.target.value)
+                                try { localStorage.setItem('notion_db_id', e.target.value) } catch {}
+                              }}
+                              style={{
+                                flex: 1, minWidth: 120,
+                                padding: '6px 10px',
+                                fontSize: 12,
+                                background: 'var(--bg-base)',
+                                border: '1px solid var(--border-subtle)',
+                                borderRadius: 8,
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer',
+                              }}>
+                              <option value="">{t('tomorrow.notion_page_dropdown')}</option>
+                              {notionDatabases.map(db => (
+                                <option key={db.id} value={db.id}>{db.title}</option>
+                              ))}
+                            </select>
+                            {(notionStats.direct > 0 || notionStats.ia > 0) && (
+                              <span style={{ fontSize: 10, color: 'var(--text-secondary)', width: '100%', marginTop: 4 }}>
+                                {notionStats.direct > 0 && <><strong style={{ color: '#22c55e' }}>{notionStats.direct}</strong> to-do{notionStats.direct > 1 ? 's' : ''} explicite{notionStats.direct > 1 ? 's' : ''}</>}
+                                {notionStats.direct > 0 && notionStats.ia > 0 && ' · '}
+                                {notionStats.ia > 0 && <><strong style={{ color: '#0F172A' }}>{notionStats.ia}</strong> détecté{notionStats.ia > 1 ? 's' : ''} par IA</>}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        getTaskBadge={(task) => task.notion_block_id
+                          ? <span title={t('tomorrow.notion_todo_explicit')}
+                              style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(34,197,94,0.14)', color: '#16a34a', whiteSpace: 'nowrap' }}>
+                              ✓ TO-DO
+                            </span>
+                          : <span title={t('tomorrow.notion_todo_implicit')}
+                              style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(15,23,42,0.08)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                              IA
+                            </span>
+                        }
+                      />
+                    )}
+
+                    {!driveConnected ? (
+                      <IntegrationConnectRow color="#00AC47" label="GOOGLE DRIVE" IconComp={Folder} connecting={driveConnecting} onConnect={connecterDrive} connectLabel={t('tomorrow.connect_integration')} />
+                    ) : (
+                      <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px 16px', marginTop: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: driveDocs.length > 0 ? 10 : 0 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(0,172,71,0.15)', border: '1.5px solid rgba(0,172,71,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Folder size={15} color="#00AC47" />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#00AC47', letterSpacing: 0.8 }}>GOOGLE DRIVE</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{driveDocs.length} doc{driveDocs.length > 1 ? 's' : ''} récent{driveDocs.length > 1 ? 's' : ''}</div>
+                          </div>
+                          <CheckCircle size={14} color="#00AC47" />
+                        </div>
+                        {driveDocs.length > 0 && (
+                          <div>
+                            {driveDocs.slice(0, 5).map((d, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+                                <a href={d.lien} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flex: 1, minWidth: 0 }}>
+                                  <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,172,71,0.12)', color: '#00AC47', fontWeight: 600, flexShrink: 0, textTransform: 'uppercase' }}>{d.type}</span>
+                                  <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.titre}</span>
+                                  <ExternalLink size={11} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+                                </a>
+                                <button
+                                  onClick={() => creerTacheDepuisDrive(d)}
+                                  title={t('tomorrow.drive_task_tooltip')}
+                                  style={{ flexShrink: 0, background: driveToTaskDone.has(d.id) ? 'rgba(0,172,71,0.15)' : 'var(--surface-2)', border: 'none', borderRadius: 6, padding: '3px 6px', cursor: driveToTaskDone.has(d.id) ? 'default' : 'pointer', display: 'flex', alignItems: 'center', color: driveToTaskDone.has(d.id) ? '#00AC47' : 'var(--text-secondary)' }}>
+                                  {driveToTaskLoading.has(d.id) ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: 11 }}>↻</motion.span> : driveToTaskDone.has(d.id) ? <Check size={11} /> : <Plus size={11} />}
+                                </button>
+                              </div>
+                            ))}
+                            {driveDocs.length > 5 && (
+                              <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', textAlign: 'center' }}>+ {driveDocs.length - 5} autre{driveDocs.length - 5 > 1 ? 's' : ''}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <motion.button
+                      type="button"
+                      onClick={() => navigate('/settings', { state: { section: 'integrations' } })}
+                      whileHover={{ opacity: 1 }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', marginTop: 10, padding: '7px 0', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', opacity: 0.7 }}
+                    >
+                      <ExternalLink size={10} /> {t('tomorrow.generate_from_integration')}
+                    </motion.button>
+                  </SidebarSection>
+
+                  <SidebarSection
+                    title={t('tomorrow.sidebar_tools')}
+                    hint={t('tomorrow.sidebar_tools_hint')}
+                    defaultOpen={false}
+                    storageKey="tb_sidebar_tools">
+                    <PushMatinBloc user={user} T={T} isMobile={isMobile} />
+                    <DureeApprentissageBloc user={user} T={T} isMobile={isMobile} />
+                    {planning && (
+                      <motion.button
+                        onClick={async () => {
+                          try {
+                            const dateStr = savedPlan?.date_planifiee || demain.toISOString().split('T')[0]
+                            const res = await axios.get(`${API}/ia/tomorrow-builder/${user.id}/export-ical?date=${dateStr}`, { responseType: 'blob' })
+                            const url = window.URL.createObjectURL(res.data)
+                            const a = document.createElement('a')
+                            a.href = url
+                            a.download = `getshift-${dateStr}.ics`
+                            a.click()
+                            window.URL.revokeObjectURL(url)
+                          } catch (e) {
+                            console.error('export failed', e)
+                          }
+                        }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 16px', background: 'var(--ember-soft)', border: '1.5px solid var(--ember-soft)', borderRadius: 14, color: 'var(--ember)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 10 }}
+                      >
+                        <Download size={13} />
+                        <span>{t('tomorrow.export_ical')}</span>
+                      </motion.button>
+                    )}
+                  </SidebarSection>
                 </div>
+
               </div>
             )}
 
