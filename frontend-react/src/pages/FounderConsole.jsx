@@ -4,7 +4,7 @@
 // backend (toute route /admin/* renvoie 403 si pas le fondateur) ; ici la
 // garde client n'est que cosmétique (redirige si !is_founder).
 // ══════════════════════════════════════════════════════════════════════
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { motion } from 'framer-motion'
@@ -86,19 +86,156 @@ export default function FounderConsole() {
   const [bcBusy, setBcBusy] = useState(false)
   const [bcResult, setBcResult] = useState(null)
   const [bcCount, setBcCount] = useState(null)
+  const [bcAudience, setBcAudience] = useState('selected')
+  const [bcSelectedIds, setBcSelectedIds] = useState([])
+  const [adminUsers, setAdminUsers] = useState([])
+  const [userSearch, setUserSearch] = useState('')
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [bcMarkWelcome, setBcMarkWelcome] = useState(false)
   // Annonce push (notification)
   const [pushTitre, setPushTitre] = useState('')
   const [pushBody, setPushBody] = useState('')
   const [pushBusy, setPushBusy] = useState(false)
   const [pushResult, setPushResult] = useState(null)
 
-  const envoyerPush = useCallback(async (target) => {
+  const broadcastTarget = useCallback(() => {
+    if (bcAudience === 'self') return 'self'
+    if (bcAudience === 'selected') return 'selected'
+    return 'all'
+  }, [bcAudience])
+
+  const broadcastUserIds = useCallback(() => (
+    bcAudience === 'selected' ? bcSelectedIds : undefined
+  ), [bcAudience, bcSelectedIds])
+
+  const audienceSummary = useCallback(() => {
+    if (bcAudience === 'self') return 'test (toi uniquement)'
+    if (bcAudience === 'selected') return `${bcSelectedIds.length} personne(s) sélectionnée(s)`
+    return 'tous les utilisateurs vérifiés'
+  }, [bcAudience, bcSelectedIds.length])
+
+  const chargerUtilisateurs = useCallback(async (q = '') => {
+    setUsersLoading(true)
+    try {
+      const { data } = await axios.get(`${API}/admin/users/list`, {
+        params: { q: q || undefined, verified_only: 1 },
+      })
+      setAdminUsers(data?.users || [])
+    } catch {
+      setAdminUsers([])
+    }
+    setUsersLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'message' && user?.is_founder) chargerUtilisateurs(userSearch)
+  }, [tab, user, chargerUtilisateurs])
+
+  useEffect(() => {
+    if (tab !== 'message' || !user?.is_founder) return
+    const t = setTimeout(() => chargerUtilisateurs(userSearch), 300)
+    return () => clearTimeout(t)
+  }, [userSearch, tab, user, chargerUtilisateurs])
+
+  const pendingWelcome = useMemo(
+    () => (signups?.signups || []).filter(u => u.email_verifie && u.welcome_pending),
+    [signups],
+  )
+
+  const todayPendingWelcome = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    return pendingWelcome.filter(u => (u.created_at || '').startsWith(today))
+  }, [pendingWelcome])
+
+  const appliquerModeleBienvenue = useCallback(() => {
+    setBcSubject('Bienvenue sur GetShift — tout est débloqué pour toi')
+    setBcTitre('Tu viens d\'entrer dans le Shift.')
+    setBcMsg(
+      "Bienvenue sur GetShift.\n\n"
+      + "Tu es en phase test — et ça veut dire une chose : tu as accès à toutes les fonctionnalités. "
+      + "IA, planification, intégrations… tout est ouvert pour toi.\n\n"
+      + "Utilise GetShift sérieusement quelques jours. Tu vas probablement être surpris(e) par l'avance que tu prends "
+      + "— et par le shift que tu ressens quand tu regardes en arrière.\n\n"
+      + "On construit GetShift avec des gens comme toi. Merci d'être là dès le début."
+    )
+    setBcItems([
+      'Accès complet à GetShift pendant la phase test',
+      'IA, dashboard et planification débloqués',
+      'Prépare-toi à voir ton rythme autrement',
+    ].join('\n'))
+    setBcCtaLabel('Commencer mon Shift')
+    setBcCtaHref('https://usegetshift.com/#/dashboard')
+    setPushTitre('{prenom}, bienvenue sur GetShift')
+    setPushBody('Tout est débloqué pour toi. Dans quelques jours, tu verras l\'écart.')
+    setBcAudience('selected')
+    setBcMarkWelcome(true)
+  }, [])
+
+  const accueillirUtilisateurs = useCallback((list, applyTemplate = true) => {
+    const ids = (list || []).filter(u => u.email_verifie).map(u => u.id)
+    if (!ids.length) return
+    setBcSelectedIds(ids)
+    setBcAudience('selected')
+    setTab('message')
+    if (applyTemplate) appliquerModeleBienvenue()
+  }, [appliquerModeleBienvenue])
+
+  const accueillirUn = useCallback((u, e) => {
+    e?.stopPropagation?.()
+    accueillirUtilisateurs([u], true)
+  }, [accueillirUtilisateurs])
+
+  const rafraichirInscriptions = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API}/admin/signups`, { params: { days: 30 } })
+      setSignups(data)
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    if ((tab === 'message' || tab === 'growth') && user?.is_founder && !signups) {
+      rafraichirInscriptions()
+    }
+  }, [tab, user, signups, rafraichirInscriptions])
+
+  const toggleUserSelection = useCallback((uid) => {
+    setBcSelectedIds(prev => (
+      prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
+    ))
+  }, [])
+
+  const appliquerModeleTesteurs = useCallback(() => {
+    setBcMarkWelcome(false)
+    setBcSubject('Bienvenue dans le monde des 3★ Shifts')
+    setBcTitre('Tu es dans la cohorte test GetShift')
+    setBcMsg(
+      "GetShift est encore en phase test — et tu fais partie des premiers à profiter du meilleur mode (celui qui deviendra payant).\n\n"
+      + "Merci de tester avec exigence : chaque retour compte. Bienvenue dans le monde des 3★ Shifts."
+    )
+    setBcItems([
+      'Accès privilégié au mode complet pendant la phase test',
+      'Ton feedback façonne la version payante',
+      'Merci de ta confiance dès le début',
+    ].join('\n'))
+    setBcCtaLabel('Ouvrir GetShift')
+    setBcCtaHref('https://usegetshift.com/#/dashboard')
+    setBcAudience('selected')
+  }, [])
+
+  const envoyerPush = useCallback(async (targetOverride) => {
+    const target = targetOverride || broadcastTarget()
+    if (target === 'selected' && bcSelectedIds.length === 0) {
+      setPushResult('Sélectionne au moins un utilisateur.')
+      return
+    }
     setPushBusy(true); setPushResult(null)
     try {
       const { data } = await axios.post(`${API}/admin/broadcast-push`, {
         titre: pushTitre, body: pushBody, url: '/ia', target,
+        user_ids: target === 'selected' ? bcSelectedIds : undefined,
       })
-      setPushResult(`${target === 'all' ? '✅ Envoyé à tous' : 'Test envoyé'} — ${data?.sent ?? 0} / ${data?.total ?? 0} appareil(s).`)
+      const label = target === 'all' ? 'tous' : target === 'selected' ? 'la sélection' : 'toi'
+      setPushResult(`Envoyé à ${label} — ${data?.sent ?? 0} / ${data?.total ?? 0} appareil(s).`)
     } catch (e) {
       const d = e?.response?.data
       setPushResult(
@@ -108,28 +245,38 @@ export default function FounderConsole() {
       )
     }
     setPushBusy(false)
-  }, [pushTitre, pushBody])
+  }, [pushTitre, pushBody, broadcastTarget, bcSelectedIds])
 
-  const bcEnvoyer = useCallback(async (dryRun, target = 'all') => {
+  const bcEnvoyer = useCallback(async (dryRun, targetOverride) => {
+    const target = targetOverride || broadcastTarget()
+    if (target === 'selected' && bcSelectedIds.length === 0) {
+      setBcResult('Sélectionne au moins un utilisateur.')
+      return
+    }
     setBcBusy(true); setBcResult(null)
     try {
       const items = bcItems.split('\n').map(s => s.trim()).filter(Boolean)
       const { data } = await axios.post(`${API}/admin/broadcast`, {
         subject: bcSubject, titre: bcTitre || bcSubject, intro: bcMsg, items,
-        cta_label: bcCtaLabel, cta_href: bcCtaHref, target, dry_run: !!dryRun,
+        cta_label: bcCtaLabel, cta_href: bcCtaHref, target,
+        user_ids: target === 'selected' ? bcSelectedIds : undefined,
+        dry_run: !!dryRun,
+        mark_welcome: !!bcMarkWelcome && !dryRun && target !== 'self',
       })
-      if (dryRun) { setBcCount(data?.total ?? 0); setBcResult(`${data?.total ?? 0} destinataire(s) vérifié(s).`) }
+      if (dryRun) { setBcCount(data?.total ?? 0); setBcResult(`${data?.total ?? 0} destinataire(s) pour ${audienceSummary()}.`) }
       else if (target === 'self') setBcResult(`Test envoyé à ton adresse — vérifie ta boîte (et les spams).`)
       else {
         const inApp = data?.announcement_id ? ` Message in-app #${data.announcement_id} activé.` : ''
-        setBcResult(`✅ Envoyé à ${data?.sent ?? 0} / ${data?.total ?? 0} utilisateur(s).${inApp}`)
+        const welcomed = bcMarkWelcome ? ' Marqués comme accueillis.' : ''
+        setBcResult(`✅ Envoyé à ${data?.sent ?? 0} / ${data?.total ?? 0} utilisateur(s) (${audienceSummary()}).${inApp}${welcomed}`)
+        if (bcMarkWelcome) rafraichirInscriptions()
       }
     } catch (e) {
       const d = e?.response?.data
       setBcResult(d?.erreur ? `Erreur : ${d.erreur}${d.detail ? ' — ' + d.detail : ''}` : `Erreur (${e?.response?.status || 'réseau'}).`)
     }
     setBcBusy(false)
-  }, [bcSubject, bcTitre, bcMsg, bcItems, bcCtaLabel, bcCtaHref])
+  }, [bcSubject, bcTitre, bcMsg, bcItems, bcCtaLabel, bcCtaHref, broadcastTarget, bcSelectedIds, audienceSummary, bcMarkWelcome, rafraichirInscriptions])
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState(null)
   const [testing, setTesting] = useState(false)
@@ -310,7 +457,14 @@ export default function FounderConsole() {
                 </>
               )}
 
-              <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px' }}>Inscriptions récentes (30j)</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                Inscriptions récentes (30j)
+                {pendingWelcome.length > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)' }}>
+                    {pendingWelcome.length} à accueillir
+                  </span>
+                )}
+              </h3>
               <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, overflow: 'hidden' }}>
                 {!signups?.signups?.length && <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>Aucune inscription sur la période.</div>}
                 {signups?.signups?.map((u, i) => (
@@ -320,7 +474,19 @@ export default function FounderConsole() {
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
                     </div>
                     {!u.email_verifie && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(194,135,72,0.15)', color: '#C28748', flexShrink: 0 }}>non vérifié</span>}
+                    {u.email_verifie && u.welcome_pending && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'var(--ember-soft)', color: 'var(--ember)', flexShrink: 0 }}>à accueillir</span>
+                    )}
+                    {u.founder_welcome_at && (
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: 'rgba(122,151,120,0.15)', color: '#7A9778', flexShrink: 0 }}>accueilli</span>
+                    )}
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>{u.created_at}</span>
+                    {u.email_verifie && u.welcome_pending && (
+                      <motion.button type="button" onClick={e => accueillirUn(u, e)} whileTap={{ scale: 0.96 }}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--ember)', background: 'var(--ember-soft)', color: 'var(--ember)', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                        Accueillir
+                      </motion.button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -397,8 +563,144 @@ export default function FounderConsole() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '12px 16px', borderRadius: 12, background: 'var(--ember-soft)', border: '1px solid var(--ember-ring, var(--ember))' }}>
                 <Mail size={16} color="var(--ember)" />
-                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Email à <strong>tous les utilisateurs vérifiés</strong> (expéditeur <strong>GetShift</strong>). Le même message s&apos;affiche aussi <strong>dans l&apos;app</strong> à la prochaine connexion.</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>
+                  Phase test : accueille chaque nouvel inscrit individuellement — message perso, accès complet, effet « wow » après quelques jours d&apos;usage.
+                </span>
               </div>
+
+              {pendingWelcome.length > 0 && (
+                <div style={{ background: 'var(--surface-1)', border: '1px solid var(--ember-ring, var(--ember))', borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {pendingWelcome.length} nouvel{pendingWelcome.length > 1 ? 's' : ''} inscrit{pendingWelcome.length > 1 ? 's' : ''} à accueillir
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                        {todayPendingWelcome.length > 0
+                          ? `${todayPendingWelcome.length} inscrit(s) aujourd'hui · `
+                          : ''}
+                        Clique « Accueillir » pour pré-remplir le message de bienvenue.
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {todayPendingWelcome.length > 0 && (
+                        <motion.button type="button" onClick={() => accueillirUtilisateurs(todayPendingWelcome)} whileTap={{ scale: 0.97 }}
+                          style={{ padding: '8px 12px', borderRadius: 9, border: '1px solid var(--ember)', background: 'var(--ember-soft)', color: 'var(--ember)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                          Accueillir aujourd&apos;hui ({todayPendingWelcome.length})
+                        </motion.button>
+                      )}
+                      <motion.button type="button" onClick={() => accueillirUtilisateurs(pendingWelcome)} whileTap={{ scale: 0.97 }}
+                        style={{ padding: '8px 12px', borderRadius: 9, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        Tous les non-accueillis ({pendingWelcome.length})
+                      </motion.button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 160, overflowY: 'auto' }}>
+                    {pendingWelcome.slice(0, 12).map(u => (
+                      <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: 'var(--surface-2)' }}>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.nom}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0 }}>{u.created_at}</span>
+                        <motion.button type="button" onClick={() => accueillirUtilisateurs([u])} whileTap={{ scale: 0.96 }}
+                          style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--ember)', background: 'transparent', color: 'var(--ember)', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                          Accueillir
+                        </motion.button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Destinataires</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <motion.button type="button" onClick={appliquerModeleBienvenue} whileTap={{ scale: 0.97 }}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--ember)', background: 'var(--ember-soft)', color: 'var(--ember)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                      Modèle bienvenue
+                    </motion.button>
+                    <motion.button type="button" onClick={appliquerModeleTesteurs} whileTap={{ scale: 0.97 }}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      Modèle 3★ Shifts
+                    </motion.button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  {[
+                    ['selected', 'Sélection'],
+                    ['all', 'Tous vérifiés'],
+                    ['self', 'Test (moi)'],
+                  ].map(([key, label]) => (
+                    <motion.button key={key} type="button" onClick={() => setBcAudience(key)} whileTap={{ scale: 0.97 }}
+                      style={{
+                        padding: '8px 14px', borderRadius: 9, fontSize: 12, fontWeight: bcAudience === key ? 700 : 500, cursor: 'pointer',
+                        border: `1px solid ${bcAudience === key ? 'var(--ember)' : 'var(--border-subtle)'}`,
+                        background: bcAudience === key ? 'var(--ember-soft)' : 'transparent',
+                        color: bcAudience === key ? 'var(--ember)' : 'var(--text-secondary)',
+                      }}>
+                      {label}
+                    </motion.button>
+                  ))}
+                </div>
+                {bcAudience === 'selected' && (
+                  <>
+                    <input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Rechercher nom ou email…"
+                      style={{ width: '100%', marginBottom: 10, padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: 13, boxSizing: 'border-box' }} />
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                      <button type="button" onClick={() => setBcSelectedIds(pendingWelcome.map(u => u.id))}
+                        style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--ember)', background: 'transparent', color: 'var(--ember)', fontSize: 11, cursor: 'pointer' }}>
+                        Non-accueillis ({pendingWelcome.length})
+                      </button>
+                      <button type="button" onClick={() => setBcSelectedIds(todayPendingWelcome.map(u => u.id))}
+                        style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+                        Inscrits aujourd&apos;hui ({todayPendingWelcome.length})
+                      </button>
+                      <button type="button" onClick={() => setBcSelectedIds(adminUsers.map(u => u.id))}
+                        style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+                        Tout cocher
+                      </button>
+                      <button type="button" onClick={() => setBcSelectedIds([])}
+                        style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+                        Tout décocher
+                      </button>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)', alignSelf: 'center' }}>
+                        {usersLoading ? 'Chargement…' : `${bcSelectedIds.length} sélectionné(s) · ${adminUsers.length} affiché(s)`}
+                      </span>
+                    </div>
+                    <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 10 }}>
+                      {adminUsers.map(u => {
+                        const checked = bcSelectedIds.includes(u.id)
+                        return (
+                          <label key={u.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                            borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer',
+                            background: checked ? 'var(--ember-soft)' : 'transparent',
+                          }}>
+                            <input type="checkbox" checked={checked} onChange={() => toggleUserSelection(u.id)} />
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{u.nom}</span>
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</span>
+                            </span>
+                            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                              #{u.id}{u.welcome_pending ? ' · à accueillir' : u.founder_welcome_at ? ' · ✓' : ''}
+                            </span>
+                          </label>
+                        )
+                      })}
+                      {!usersLoading && adminUsers.length === 0 && (
+                        <div style={{ padding: 16, fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>Aucun utilisateur trouvé.</div>
+                      )}
+                    </div>
+                  </>
+                )}
+                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  Audience active : <strong style={{ color: 'var(--text-primary)' }}>{audienceSummary()}</strong>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={bcMarkWelcome} onChange={e => setBcMarkWelcome(e.target.checked)} />
+                  Marquer comme accueilli après envoi (recommandé pour les nouveaux inscrits)
+                </label>
+              </div>
+
               <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Objet de l'email</label>
@@ -442,10 +744,18 @@ export default function FounderConsole() {
                     Compter les destinataires
                   </motion.button>
                   <motion.button
-                    onClick={() => { if (bcSubject && bcMsg && window.confirm(`Envoyer cet email à ${bcCount != null ? bcCount + ' ' : 'TOUS les '}utilisateur(s) vérifié(s) ?`)) bcEnvoyer(false) }}
-                    disabled={bcBusy || !bcSubject || !bcMsg} whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      if (!bcSubject || !bcMsg) return
+                      if (bcAudience === 'selected' && bcSelectedIds.length === 0) {
+                        setBcResult('Sélectionne au moins un utilisateur.')
+                        return
+                      }
+                      const n = bcAudience === 'selected' ? bcSelectedIds.length : (bcCount ?? 'tous les')
+                      if (window.confirm(`Envoyer cet email à ${n} utilisateur(s) (${audienceSummary()}) ?`)) bcEnvoyer(false)
+                    }}
+                    disabled={bcBusy || !bcSubject || !bcMsg || (bcAudience === 'selected' && bcSelectedIds.length === 0)} whileTap={{ scale: 0.97 }}
                     style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: 'none', background: 'var(--ember)', color: 'var(--text-on-ember, #fff)', fontSize: 13, fontWeight: 700, cursor: (bcBusy || !bcSubject || !bcMsg) ? 'not-allowed' : 'pointer', opacity: (bcBusy || !bcSubject || !bcMsg) ? 0.6 : 1 }}>
-                    <Send size={14} /> {bcBusy ? 'Envoi…' : 'Envoyer à tous'}
+                    <Send size={14} /> {bcBusy ? 'Envoi…' : 'Envoyer'}
                   </motion.button>
                 </div>
                 {bcResult && (
@@ -456,7 +766,7 @@ export default function FounderConsole() {
               {/* ── ANNONCE PUSH (notification) ── */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0 14px', padding: '12px 16px', borderRadius: 12, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
                 <Bell size={16} color="var(--ember)" />
-                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Notification push sur les appareils abonnés. Écris <strong>{'{prenom}'}</strong> pour insérer le prénom de chaque destinataire. Teste d'abord sur toi.</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>Notification push — même audience que ci-dessus. Écris <strong>{'{prenom}'}</strong> pour personnaliser.</span>
               </div>
               <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
@@ -475,10 +785,17 @@ export default function FounderConsole() {
                     Tester sur moi
                   </motion.button>
                   <motion.button
-                    onClick={() => { if (pushTitre && pushBody && window.confirm('Envoyer cette notification push à TOUS les utilisateurs abonnés ?')) envoyerPush('all') }}
-                    disabled={pushBusy || !pushTitre || !pushBody} whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      if (!pushTitre || !pushBody) return
+                      if (bcAudience === 'selected' && bcSelectedIds.length === 0) {
+                        setPushResult('Sélectionne au moins un utilisateur.')
+                        return
+                      }
+                      if (window.confirm(`Envoyer cette push à ${audienceSummary()} ?`)) envoyerPush()
+                    }}
+                    disabled={pushBusy || !pushTitre || !pushBody || (bcAudience === 'selected' && bcSelectedIds.length === 0)} whileTap={{ scale: 0.97 }}
                     style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: 'none', background: 'var(--ember)', color: 'var(--text-on-ember, #fff)', fontSize: 13, fontWeight: 700, cursor: (pushBusy || !pushTitre || !pushBody) ? 'not-allowed' : 'pointer', opacity: (pushBusy || !pushTitre || !pushBody) ? 0.6 : 1 }}>
-                    <Send size={14} /> {pushBusy ? 'Envoi…' : 'Envoyer à tous'}
+                    <Send size={14} /> {pushBusy ? 'Envoi…' : 'Envoyer push'}
                   </motion.button>
                 </div>
                 {pushResult && (

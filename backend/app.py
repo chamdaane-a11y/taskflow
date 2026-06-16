@@ -2072,6 +2072,14 @@ def run_migrations():
         """)
         print("[Migrations] app_announcements ✅")
 
+        if not col_exists(curseur, 'app_announcements', 'target_user_ids'):
+            curseur.execute("ALTER TABLE app_announcements ADD COLUMN target_user_ids JSON NULL")
+            print("[Migrations] app_announcements.target_user_ids ✅")
+
+        if not col_exists(curseur, 'users', 'founder_welcome_at'):
+            curseur.execute("ALTER TABLE users ADD COLUMN founder_welcome_at DATETIME NULL")
+            print("[Migrations] users.founder_welcome_at ✅")
+
         db.close()
     except Exception as e:
         print(f"[Migrations] erreur : {e}")
@@ -2355,7 +2363,7 @@ def admin_signups():
         days = max(1, min(days, 365))
         with db_session(dictionary=True) as (db, cur):
             cur.execute("""
-                SELECT id, nom, email, created_at, email_verifie
+                SELECT id, nom, email, created_at, email_verifie, founder_welcome_at
                 FROM users
                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
                 ORDER BY created_at DESC
@@ -2365,7 +2373,11 @@ def admin_signups():
         for r in rows:
             d = r.get('created_at')
             r['created_at'] = d.strftime('%Y-%m-%d %H:%M') if hasattr(d, 'strftime') else (str(d) if d else None)
-        return jsonify({'days': days, 'count': len(rows), 'signups': rows}), 200
+            w = r.get('founder_welcome_at')
+            r['founder_welcome_at'] = w.strftime('%Y-%m-%d %H:%M') if hasattr(w, 'strftime') else (str(w) if w else None)
+            r['welcome_pending'] = bool(r.get('email_verifie')) and not r.get('founder_welcome_at')
+        pending = sum(1 for r in rows if r.get('welcome_pending'))
+        return jsonify({'days': days, 'count': len(rows), 'pending_welcome': pending, 'signups': rows}), 200
     except Exception as e:
         return _admin_err(e, 'admin_signups')
 
@@ -2630,10 +2642,89 @@ def admin_user_detail(uid):
         return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
 
 
+def _parse_broadcast_user_ids(raw):
+    """Liste d'IDs entiers uniques, max 500 — pour envoi ciblé fondateur."""
+    if not raw:
+        return []
+    if not isinstance(raw, (list, tuple)):
+        return []
+    out = []
+    seen = set()
+    for x in raw:
+        try:
+            uid = int(x)
+        except (TypeError, ValueError):
+            continue
+        if uid > 0 and uid not in seen:
+            seen.add(uid)
+            out.append(uid)
+        if len(out) >= 500:
+            break
+    return out
+
+
+def _broadcast_recipients(cur, target, user_ids, founder_uid):
+    """Résout la liste {id, nom, email} selon target: all | self | selected."""
+    target = (target or 'all').strip().lower()
+    if target == 'self':
+        cur.execute("SELECT id, nom, email FROM users WHERE id=%s", (founder_uid,))
+        row = cur.fetchone()
+        return [row] if row and row.get('email') else []
+    if target == 'selected':
+        ids = _parse_broadcast_user_ids(user_ids)
+        if not ids:
+            return []
+        ph = ','.join(['%s'] * len(ids))
+        cur.execute(
+            f"SELECT id, nom, email FROM users WHERE id IN ({ph}) AND email_verifie=TRUE ORDER BY id",
+            tuple(ids),
+        )
+        return cur.fetchall()
+    cur.execute("SELECT id, nom, email FROM users WHERE email_verifie=TRUE ORDER BY id")
+    return cur.fetchall()
+
+
+@app.route('/admin/users/list', methods=['GET'])
+def admin_users_list():
+    """Liste des utilisateurs pour sélection d'audience (console fondateur)."""
+    try:
+        q = (request.args.get('q') or '').strip()
+        verified_only = request.args.get('verified_only', '1') != '0'
+        welcome_pending = request.args.get('welcome_pending') == '1'
+        with db_session(dictionary=True) as (db, cur):
+            sql = (
+                "SELECT id, nom, email, email_verifie, niveau, points, "
+                "created_at, derniere_activite, founder_welcome_at FROM users WHERE 1=1"
+            )
+            params = []
+            if verified_only:
+                sql += " AND email_verifie=TRUE"
+            if welcome_pending:
+                sql += " AND founder_welcome_at IS NULL"
+            if q:
+                sql += " AND (nom LIKE %s OR email LIKE %s)"
+                like = f"%{q[:80]}%"
+                params.extend([like, like])
+            sql += " ORDER BY id DESC LIMIT 500"
+            cur.execute(sql, tuple(params))
+            rows = cur.fetchall()
+        for r in rows:
+            r['email_verifie'] = bool(r.get('email_verifie'))
+            r['created_at'] = _fmt_dt(r.get('created_at'))
+            r['derniere_activite'] = _fmt_dt(r.get('derniere_activite'))
+            w = r.get('founder_welcome_at')
+            r['founder_welcome_at'] = _fmt_dt(w) if w else None
+            r['welcome_pending'] = bool(r.get('email_verifie')) and not r.get('founder_welcome_at')
+        return jsonify({'users': rows, 'count': len(rows)}), 200
+    except Exception as e:
+        return _admin_err(e, 'admin_users_list')
+
+
 @app.route('/admin/broadcast', methods=['POST'])
 def admin_broadcast():
-    """Envoie un message (email) à tous les utilisateurs vérifiés. Founder-only.
-    dry_run=true → ne fait que compter les destinataires (aperçu)."""
+    """Envoie un message (email) aux utilisateurs choisis. Founder-only.
+    target: all | self | selected (+ user_ids si selected).
+    dry_run=true → ne fait que compter les destinataires."""
     try:
         data = request.get_json() or {}
         subject = (data.get('subject') or '').strip()
@@ -2645,32 +2736,48 @@ def admin_broadcast():
         cta_label = (data.get('cta_label') or "J'essaie GetShift AI").strip()
         cta_href = (data.get('cta_href') or 'https://usegetshift.com/#/ia').strip()
         dry_run = bool(data.get('dry_run'))
+        mark_welcome = bool(data.get('mark_welcome'))
         target = (data.get('target') or 'all').strip().lower()
-        db = connecter(); cur = db.cursor(dictionary=True)
-        if target == 'self':
-            # Envoi de test : uniquement à l'adresse du fondateur
-            cur.execute("SELECT nom, email FROM users WHERE id=%s", (current_uid(),))
-            row = cur.fetchone()
-            users = [row] if row and row.get('email') else []
-        else:
-            cur.execute("SELECT nom, email FROM users WHERE email_verifie=TRUE ORDER BY id")
-            users = cur.fetchall()
-        cur.close(); db.close()
+        user_ids = data.get('user_ids')
+        if target == 'selected' and not _parse_broadcast_user_ids(user_ids):
+            return jsonify({"erreur": "Sélectionne au moins un utilisateur"}), 400
+        founder_uid = current_uid()
+        with db_session(dictionary=True) as (db, cur):
+            users = _broadcast_recipients(cur, target, user_ids, founder_uid)
         if dry_run:
-            return jsonify({'sent': 0, 'total': len(users), 'dry_run': True}), 200
+            return jsonify({'sent': 0, 'total': len(users), 'dry_run': True, 'target': target}), 200
         sent = 0
+        sent_ids = []
         founder_sender = os.getenv('BROADCAST_EMAIL_SENDER', 'GetShift')
         for u in users:
             try:
                 html = _html_broadcast(u['nom'], titre, intro, items, cta_label, cta_href)
                 if envoyer_email(u['email'], subject, html, sender_name=founder_sender):
                     sent += 1
+                    sent_ids.append(u['id'])
             except Exception as ee:
                 app.logger.error("admin_broadcast -> %s: %s", u.get('email'), ee)
-        if target == 'all' and sent > 0:
-            ann_id = _save_app_announcement(subject, titre, intro, items, cta_label, cta_href)
-            return jsonify({'sent': sent, 'total': len(users), 'target': target, 'announcement_id': ann_id}), 200
-        return jsonify({'sent': sent, 'total': len(users), 'target': target}), 200
+        if mark_welcome and sent_ids:
+            try:
+                with db_session() as (db, cur):
+                    ph = ','.join(['%s'] * len(sent_ids))
+                    cur.execute(
+                        f"UPDATE users SET founder_welcome_at=NOW() WHERE id IN ({ph}) AND founder_welcome_at IS NULL",
+                        tuple(sent_ids),
+                    )
+                    db.commit()
+            except Exception as me:
+                app.logger.error("admin_broadcast mark_welcome: %s", me)
+        ann_id = None
+        if sent > 0 and target in ('all', 'selected'):
+            targets_json = None
+            if target == 'selected':
+                targets_json = _parse_broadcast_user_ids(user_ids)
+            ann_id = _save_app_announcement(subject, titre, intro, items, cta_label, cta_href, targets_json)
+        payload = {'sent': sent, 'total': len(users), 'target': target}
+        if ann_id:
+            payload['announcement_id'] = ann_id
+        return jsonify(payload), 200
     except Exception as e:
         app.logger.error("admin_broadcast: %s", e, exc_info=True); _log_error(e)
         return jsonify({"erreur": "Erreur interne", "detail": f"{type(e).__name__}: {str(e)[:300]}"}), 500
@@ -2691,29 +2798,45 @@ def admin_broadcast_push():
         titre = (data.get('titre') or '').strip()
         body = (data.get('body') or '').strip()
         url = (data.get('url') or '/ia').strip()
-        target = (data.get('target') or 'self').strip().lower()
         if not titre or not body:
             return jsonify({"erreur": "Titre et message requis"}), 400
-        db = connecter(); cur = db.cursor(dictionary=True)
-        if target == 'all':
-            cur.execute("SELECT ps.id, ps.subscription, u.nom FROM push_subscriptions ps "
-                        "JOIN users u ON ps.user_id = u.id")
-        else:
-            uid = current_uid()
-            cur.execute("SELECT ps.id, ps.subscription, u.nom FROM push_subscriptions ps "
-                        "JOIN users u ON ps.user_id = u.id WHERE ps.user_id = %s", (uid,))
-        rows = cur.fetchall()
+        target = (data.get('target') or 'self').strip().lower()
+        user_ids = data.get('user_ids')
+        if target == 'selected' and not _parse_broadcast_user_ids(user_ids):
+            return jsonify({"erreur": "Sélectionne au moins un utilisateur"}), 400
+        founder_uid = current_uid()
         sent = 0
-        for r in rows:
-            prenom = (r.get('nom') or 'toi').split(' ')[0]
-            t = titre.replace('{prenom}', prenom).replace('{prénom}', prenom)
-            b = body.replace('{prenom}', prenom).replace('{prénom}', prenom)
-            try:
-                if envoyer_push(r['subscription'], t, b, url, db=db, sub_id=r['id']):
-                    sent += 1
-            except Exception as pe:
-                app.logger.error("broadcast-push sub %s: %s", r.get('id'), pe)
-        cur.close(); db.close()
+        rows = []
+        with db_session(dictionary=True) as (db, cur):
+            if target == 'all':
+                cur.execute(
+                    "SELECT ps.id, ps.subscription, u.nom FROM push_subscriptions ps "
+                    "JOIN users u ON ps.user_id = u.id"
+                )
+            elif target == 'selected':
+                ids = _parse_broadcast_user_ids(user_ids)
+                ph = ','.join(['%s'] * len(ids))
+                cur.execute(
+                    f"SELECT ps.id, ps.subscription, u.nom FROM push_subscriptions ps "
+                    f"JOIN users u ON ps.user_id = u.id WHERE ps.user_id IN ({ph})",
+                    tuple(ids),
+                )
+            else:
+                cur.execute(
+                    "SELECT ps.id, ps.subscription, u.nom FROM push_subscriptions ps "
+                    "JOIN users u ON ps.user_id = u.id WHERE ps.user_id = %s",
+                    (founder_uid,),
+                )
+            rows = cur.fetchall()
+            for r in rows:
+                prenom = (r.get('nom') or 'toi').split(' ')[0]
+                t = titre.replace('{prenom}', prenom).replace('{prénom}', prenom)
+                b = body.replace('{prenom}', prenom).replace('{prénom}', prenom)
+                try:
+                    if envoyer_push(r['subscription'], t, b, url, db=db, sub_id=r['id']):
+                        sent += 1
+                except Exception as pe:
+                    app.logger.error("broadcast-push sub %s: %s", r.get('id'), pe)
         msg = (f"{sent} notification(s) envoyée(s) sur {len(rows)} appareil(s)."
                if rows else "Aucun appareil abonné aux notifications.")
         return jsonify({'sent': sent, 'total': len(rows), 'target': target, 'message': msg}), 200
@@ -7034,15 +7157,20 @@ def _html_broadcast(nom, titre, intro, corps_items, cta_label, cta_href):
     preheader = intro[:120] if intro else titre
     return _base_email(salut + contenu, titre, preheader=preheader)
 
-def _save_app_announcement(subject, titre, intro, items, cta_label, cta_href):
+def _save_app_announcement(subject, titre, intro, items, cta_label, cta_href, target_user_ids=None):
     """Persiste le dernier message fondateur pour affichage in-app."""
     try:
+        targets_json = None
+        if target_user_ids:
+            ids = _parse_broadcast_user_ids(target_user_ids)
+            if ids:
+                targets_json = json.dumps(ids)
         db = connecter()
         cur = db.cursor()
         cur.execute(
-            """INSERT INTO app_announcements (subject, titre, intro, items_json, cta_label, cta_href)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (subject, titre, intro, json.dumps(items or []), cta_label, cta_href),
+            """INSERT INTO app_announcements (subject, titre, intro, items_json, cta_label, cta_href, target_user_ids)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (subject, titre, intro, json.dumps(items or []), cta_label, cta_href, targets_json),
         )
         db.commit()
         ann_id = cur.lastrowid
@@ -7057,17 +7185,25 @@ def _save_app_announcement(subject, titre, intro, items, cta_label, cta_href):
 def announcements_current():
     """Dernier message fondateur actif — pour bannière/modal in-app."""
     try:
-        db = connecter()
-        cur = db.cursor(dictionary=True)
-        cur.execute(
-            """SELECT id, titre, intro, items_json, cta_label, cta_href, created_at
-               FROM app_announcements ORDER BY id DESC LIMIT 1"""
-        )
-        row = cur.fetchone()
-        cur.close()
-        db.close()
+        uid = current_uid()
+        with db_session(dictionary=True) as (db, cur):
+            cur.execute(
+                """SELECT id, titre, intro, items_json, cta_label, cta_href, target_user_ids, created_at
+                   FROM app_announcements ORDER BY id DESC LIMIT 1"""
+            )
+            row = cur.fetchone()
         if not row:
             return jsonify(None), 200
+        raw_targets = row.get('target_user_ids')
+        if raw_targets is not None:
+            if isinstance(raw_targets, str):
+                try:
+                    raw_targets = json.loads(raw_targets)
+                except Exception:
+                    raw_targets = []
+            allowed = _parse_broadcast_user_ids(raw_targets)
+            if allowed and uid not in allowed:
+                return jsonify(None), 200
         items = row.get('items_json')
         if isinstance(items, str):
             try:
