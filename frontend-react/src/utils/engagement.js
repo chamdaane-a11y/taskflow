@@ -7,6 +7,30 @@ export const SPOTLIGHT_WC26_KEY = 'gs_spotlight_wc26_v1'
 export const ANNOUNCEMENT_DISMISS_KEY = 'gs_founder_announcement_dismissed'
 export const PUSH_NUDGE_DISMISS_KEY = 'gs_push_nudge_dismissed_at'
 export const PUSH_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
+export const FEEDBACK_DISMISS_KEY = 'gs_feedback_dismissed_at'
+export const FEEDBACK_DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
+
+export function shouldShowFeedbackPrompt() {
+  try {
+    const raw = localStorage.getItem(FEEDBACK_DISMISS_KEY)
+    if (!raw) return true
+    const dismissedAt = Number(raw)
+    if (!Number.isFinite(dismissedAt)) return true
+    return Date.now() - dismissedAt > FEEDBACK_DISMISS_COOLDOWN_MS
+  } catch {
+    return true
+  }
+}
+
+export function feedbackRequestedFromUrl() {
+  try {
+    const hash = window.location.hash || ''
+    const q = hash.includes('?') ? hash.split('?')[1] : (window.location.search || '').replace(/^\?/, '')
+    return new URLSearchParams(q).get('feedback') === '1'
+  } catch {
+    return false
+  }
+}
 
 export function isAppRoute(pathname) {
   return APP_ROUTES.has(pathname)

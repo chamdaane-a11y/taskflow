@@ -11,7 +11,7 @@ import { motion } from 'framer-motion'
 import {
   TrendingUp, Shield, Server, Users, UserPlus, Activity,
   AlertTriangle, CheckCircle2, RefreshCw, ListChecks, Bell,
-  Bug, BarChart3, Zap, X, Mail, Send,
+  Bug, BarChart3, Zap, X, Mail, Send, MessageSquare, Star,
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -74,6 +74,7 @@ export default function FounderConsole() {
   const [activity, setActivity] = useState(null)
   const [errors, setErrors] = useState(null)
   const [adoption, setAdoption] = useState(null)
+  const [feedbacks, setFeedbacks] = useState(null)
   const [userDetail, setUserDetail] = useState(null)
   const [userLoading, setUserLoading] = useState(false)
   // Message aux utilisateurs (broadcast email)
@@ -148,25 +149,25 @@ export default function FounderConsole() {
   }, [pendingWelcome])
 
   const appliquerModeleBienvenue = useCallback(() => {
-    setBcSubject('Bienvenue sur GetShift — tout est débloqué pour toi')
-    setBcTitre('Tu viens d\'entrer dans le Shift.')
+    setBcSubject('Bienvenue sur GetShift — votre accès est activé')
+    setBcTitre('Heureux de vous accueillir.')
     setBcMsg(
       "Bienvenue sur GetShift.\n\n"
-      + "Tu es en phase test — et ça veut dire une chose : tu as accès à toutes les fonctionnalités. "
-      + "IA, planification, intégrations… tout est ouvert pour toi.\n\n"
-      + "Utilise GetShift sérieusement quelques jours. Tu vas probablement être surpris(e) par l'avance que tu prends "
-      + "— et par le shift que tu ressens quand tu regardes en arrière.\n\n"
-      + "On construit GetShift avec des gens comme toi. Merci d'être là dès le début."
+      + "Vous venez de nous rejoindre en phase test. IA, planification, intégrations : "
+      + "l'ensemble des fonctionnalités est ouvert pour vous, sans restriction.\n\n"
+      + "Prenez le temps de vous familiariser avec l'outil. L'avance se ressent rarement le premier jour — "
+      + "elle devient nette lorsque vous revenez quelques jours plus tard.\n\n"
+      + "Nous sommes ravis de vous compter parmi les premiers utilisateurs. Votre confiance compte énormément pour nous."
     )
     setBcItems([
-      'Accès complet à GetShift pendant la phase test',
-      'IA, dashboard et planification débloqués',
-      'Prépare-toi à voir ton rythme autrement',
+      'Accès complet pendant la phase test',
+      'IA, dashboard et planification à votre disposition',
+      'Un outil conçu pour vous accompagner au quotidien',
     ].join('\n'))
-    setBcCtaLabel('Commencer mon Shift')
+    setBcCtaLabel('Commencer avec GetShift')
     setBcCtaHref('https://usegetshift.com/#/dashboard')
     setPushTitre('{prenom}, bienvenue sur GetShift')
-    setPushBody('Tout est débloqué pour toi. Dans quelques jours, tu verras l\'écart.')
+    setPushBody('Heureux de vous accueillir — tout est ouvert pour vous.')
     setBcAudience('selected')
     setBcMarkWelcome(true)
   }, [])
@@ -219,6 +220,28 @@ export default function FounderConsole() {
     ].join('\n'))
     setBcCtaLabel('Ouvrir GetShift')
     setBcCtaHref('https://usegetshift.com/#/dashboard')
+    setBcAudience('selected')
+  }, [])
+
+  const appliquerModeleFeedback = useCallback(() => {
+    setBcMarkWelcome(false)
+    setBcSubject('Votre avis compte — 2 minutes pour GetShift')
+    setBcTitre('Comment se passe votre expérience ?')
+    setBcMsg(
+      "Vous utilisez GetShift depuis quelques jours — merci de votre confiance.\n\n"
+      + "Nous aimerions connaître votre ressenti : ce qui vous convient, ce qui pourrait être amélioré, "
+      + "et une note globale sur 5.\n\n"
+      + "Votre retour nous aide directement à prioriser les prochaines améliorations."
+    )
+    setBcItems([
+      'Notation sur 5 (échelle simple)',
+      'Votre ressenti sur GetShift',
+      'Ce que nous devrions améliorer en priorité',
+    ].join('\n'))
+    setBcCtaLabel('Donner mon avis')
+    setBcCtaHref('https://usegetshift.com/#/dashboard?feedback=1')
+    setPushTitre('{prenom}, votre avis compte')
+    setPushBody('2 minutes pour nous dire ce qui fonctionne — et ce qu’on peut améliorer.')
     setBcAudience('selected')
   }, [])
 
@@ -328,6 +351,9 @@ export default function FounderConsole() {
       } else if (which === 'adoption') {
         const r = await axios.get(`${API}/admin/adoption`)
         setAdoption(r.data)
+      } else if (which === 'feedback') {
+        const r = await axios.get(`${API}/admin/feedback`)
+        setFeedbacks(r.data)
       }
     } catch (err) {
       const d = err?.response?.data
@@ -359,6 +385,7 @@ export default function FounderConsole() {
     ['growth', 'Croissance', TrendingUp],
     ['activity', 'Activité', Activity],
     ['adoption', 'Adoption', BarChart3],
+    ['feedback', 'Retours', MessageSquare],
     ['errors', 'Erreurs', Bug],
     ['message', 'Message', Mail],
     ['security', 'Sécurité', Shield],
@@ -536,6 +563,52 @@ export default function FounderConsole() {
             </>
           )}
 
+          {/* ── RETOURS UTILISATEURS ── */}
+          {tab === 'feedback' && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 12, marginBottom: 18 }}>
+                <KpiCard icon={MessageSquare} label="Retours reçus" value={feedbacks?.count ?? 0} />
+                <KpiCard icon={Star} label="Note moyenne" value={feedbacks?.avg_rating != null ? `${feedbacks.avg_rating}/5` : '—'} />
+                <KpiCard icon={Users} label="Distribution" value={feedbacks?.count ? '1–5 ★' : '—'} sub={
+                  feedbacks?.distribution
+                    ? [5, 4, 3, 2, 1].map(n => `${n}★:${feedbacks.distribution[String(n)] || 0}`).join(' · ')
+                    : undefined
+                } />
+              </div>
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 14, overflow: 'hidden' }}>
+                {!feedbacks?.feedbacks?.length && (
+                  <div style={{ padding: '24px 16px', fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>
+                    Aucun retour pour l&apos;instant. Utilisez le modèle « Demande d&apos;avis » dans l&apos;onglet Message.
+                  </div>
+                )}
+                {feedbacks?.feedbacks?.map((f, i) => (
+                  <div key={f.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{f.nom || '(sans nom)'}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{f.email}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--ember)', flexShrink: 0 }}>
+                        {'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)} ({f.rating}/5)
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0 }}>{f.created_at}</span>
+                    </div>
+                    {f.experience && (
+                      <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.55, marginBottom: f.improvements ? 8 : 0 }}>
+                        <strong style={{ color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>Ressenti — </strong>
+                        {f.experience}
+                      </div>
+                    )}
+                    {f.improvements && (
+                      <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.55 }}>
+                        <strong style={{ color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>À améliorer — </strong>
+                        {f.improvements}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           {/* ── ERREURS ── */}
           {tab === 'errors' && (
             <>
@@ -621,6 +694,10 @@ export default function FounderConsole() {
                     <motion.button type="button" onClick={appliquerModeleTesteurs} whileTap={{ scale: 0.97 }}
                       style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                       Modèle 3★ Shifts
+                    </motion.button>
+                    <motion.button type="button" onClick={appliquerModeleFeedback} whileTap={{ scale: 0.97 }}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--surface-2)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      Demande d&apos;avis
                     </motion.button>
                   </div>
                 </div>

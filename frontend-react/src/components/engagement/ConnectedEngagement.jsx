@@ -3,11 +3,14 @@ import { useLocation } from 'react-router-dom'
 import axios from 'axios'
 import ProductSpotlight from './ProductSpotlight'
 import FounderAnnouncement from './FounderAnnouncement'
+import ProductFeedback from './ProductFeedback'
 import {
   isAppRoute,
   getStoredUser,
   SPOTLIGHT_WC26_KEY,
   ANNOUNCEMENT_DISMISS_KEY,
+  shouldShowFeedbackPrompt,
+  feedbackRequestedFromUrl,
 } from '../../utils/engagement'
 import { isWorldCupSeason } from '../../utils/worldCup'
 
@@ -24,6 +27,8 @@ export default function ConnectedEngagement() {
   const [spotlightDone, setSpotlightDone] = useState(false)
   const [announcement, setAnnouncement] = useState(null)
   const [founderOpen, setFounderOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [feedbackEligible, setFeedbackEligible] = useState(false)
 
   useEffect(() => {
     document.documentElement.style.setProperty('--gs-banner-offset', '0px')
@@ -83,6 +88,44 @@ export default function ConnectedEngagement() {
     }
   }, [spotlightOpen, spotlightDone, announcement])
 
+  useEffect(() => {
+    if (!showBase) {
+      setFeedbackEligible(false)
+      setFeedbackOpen(false)
+      return
+    }
+    if (founderOpen || spotlightOpen || !spotlightDone) return
+
+    let cancelled = false
+    let openTimer = null
+    const forced = feedbackRequestedFromUrl()
+
+    axios.get(`${API}/feedback/eligibility`, { params: forced ? { force: '1' } : undefined })
+      .then(res => {
+        if (cancelled) return
+        const data = res.data || {}
+        if (data.submitted) {
+          setFeedbackEligible(false)
+          setFeedbackOpen(false)
+          return
+        }
+        setFeedbackEligible(Boolean(data.eligible))
+        if (data.eligible && (forced || shouldShowFeedbackPrompt())) {
+          openTimer = setTimeout(() => {
+            if (!cancelled) setFeedbackOpen(true)
+          }, forced ? 300 : 1200)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFeedbackEligible(false)
+      })
+
+    return () => {
+      cancelled = true
+      if (openTimer) clearTimeout(openTimer)
+    }
+  }, [showBase, pathname, founderOpen, spotlightOpen, spotlightDone])
+
   const handleSpotlightClose = () => {
     setSpotlightOpen(false)
     setSpotlightDone(true)
@@ -97,6 +140,11 @@ export default function ConnectedEngagement() {
         announcement={announcement}
         open={founderOpen && !spotlightOpen && spotlightDone}
         onClose={() => setFounderOpen(false)}
+      />
+      <ProductFeedback
+        open={feedbackOpen && !founderOpen && !spotlightOpen && spotlightDone && feedbackEligible}
+        onClose={() => setFeedbackOpen(false)}
+        onSubmitted={() => setFeedbackEligible(false)}
       />
     </>
   )

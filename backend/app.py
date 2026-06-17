@@ -2080,6 +2080,22 @@ def run_migrations():
             curseur.execute("ALTER TABLE users ADD COLUMN founder_welcome_at DATETIME NULL")
             print("[Migrations] users.founder_welcome_at ✅")
 
+        curseur.execute("""
+            CREATE TABLE IF NOT EXISTS product_feedback (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                rating TINYINT NOT NULL,
+                experience TEXT NULL,
+                improvements TEXT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_user_feedback (user_id),
+                INDEX idx_rating (rating),
+                INDEX idx_created (created_at),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        print("[Migrations] product_feedback ✅")
+
         db.close()
     except Exception as e:
         print(f"[Migrations] erreur : {e}")
@@ -2718,6 +2734,42 @@ def admin_users_list():
         return jsonify({'users': rows, 'count': len(rows)}), 200
     except Exception as e:
         return _admin_err(e, 'admin_users_list')
+
+
+@app.route('/admin/feedback', methods=['GET'])
+def admin_feedback_list():
+    """Retours utilisateurs (notation + commentaires) — console fondateur."""
+    try:
+        limit = min(max(int(request.args.get('limit', 100)), 1), 500)
+        with db_session(dictionary=True) as (db, cur):
+            cur.execute(
+                """SELECT pf.id, pf.user_id, u.nom, u.email, pf.rating,
+                          pf.experience, pf.improvements, pf.created_at
+                   FROM product_feedback pf
+                   JOIN users u ON u.id = pf.user_id
+                   ORDER BY pf.created_at DESC LIMIT %s""",
+                (limit,),
+            )
+            rows = cur.fetchall()
+            cur.execute("SELECT COUNT(*) AS n, AVG(rating) AS avg_rating FROM product_feedback")
+            stats = cur.fetchone() or {}
+            cur.execute(
+                "SELECT rating, COUNT(*) AS n FROM product_feedback GROUP BY rating ORDER BY rating"
+            )
+            distribution = cur.fetchall() or []
+        for r in rows:
+            r['created_at'] = _fmt_dt(r.get('created_at'))
+        dist = {str(i): 0 for i in range(1, 6)}
+        for d in distribution:
+            dist[str(d['rating'])] = d['n']
+        return jsonify({
+            'count': stats.get('n') or 0,
+            'avg_rating': round(float(stats['avg_rating']), 2) if stats.get('avg_rating') is not None else None,
+            'distribution': dist,
+            'feedbacks': rows,
+        }), 200
+    except Exception as e:
+        return _admin_err(e, 'admin_feedback_list')
 
 
 @app.route('/admin/broadcast', methods=['POST'])
@@ -7180,6 +7232,84 @@ def _save_app_announcement(subject, titre, intro, items, cta_label, cta_href, ta
     except Exception as e:
         print(f"[announcement] save error: {e}")
         return None
+
+
+@app.route('/feedback/eligibility', methods=['GET'])
+def feedback_eligibility():
+    """Indique si l'utilisateur peut voir le formulaire de retour produit."""
+    try:
+        uid = current_uid()
+        force = request.args.get('force') == '1'
+        with db_session(dictionary=True) as (db, cur):
+            cur.execute("SELECT id, created_at FROM users WHERE id=%s", (uid,))
+            user = cur.fetchone()
+            if not user:
+                return jsonify({'eligible': False, 'submitted': False}), 200
+            cur.execute(
+                "SELECT id, created_at FROM product_feedback WHERE user_id=%s LIMIT 1", (uid,)
+            )
+            existing = cur.fetchone()
+            if existing:
+                return jsonify({
+                    'eligible': False,
+                    'submitted': True,
+                    'submitted_at': _fmt_dt(existing.get('created_at')),
+                }), 200
+            cur.execute(
+                "SELECT COUNT(*) AS n FROM taches WHERE user_id=%s AND terminee=TRUE", (uid,)
+            )
+            tasks_done = int((cur.fetchone() or {}).get('n') or 0)
+        created = user.get('created_at')
+        days_since = 0
+        if created:
+            try:
+                days_since = max(0, (datetime.now() - created).days)
+            except Exception:
+                days_since = 0
+        eligible = bool(force or days_since >= 3 or tasks_done >= 3)
+        return jsonify({
+            'eligible': eligible,
+            'submitted': False,
+            'tasks_done': tasks_done,
+            'days_since_signup': days_since,
+        }), 200
+    except Exception as e:
+        app.logger.error("feedback_eligibility: %s", e, exc_info=True)
+        return jsonify({'eligible': False, 'submitted': False}), 200
+
+
+@app.route('/feedback', methods=['POST'])
+def feedback_submit():
+    """Enregistre le retour utilisateur (notation 1–5 + commentaires)."""
+    try:
+        uid = current_uid()
+        data = request.get_json() or {}
+        rating = data.get('rating')
+        experience = (data.get('experience') or '').strip()
+        improvements = (data.get('improvements') or '').strip()
+        try:
+            rating = int(rating)
+        except (TypeError, ValueError):
+            rating = 0
+        if rating < 1 or rating > 5:
+            return jsonify({'erreur': 'Notation entre 1 et 5 requise'}), 400
+        if not experience and not improvements:
+            return jsonify({'erreur': 'Merci de partager au moins un commentaire'}), 400
+        with db_session(dictionary=True) as (db, cur):
+            cur.execute("SELECT id FROM product_feedback WHERE user_id=%s LIMIT 1", (uid,))
+            if cur.fetchone():
+                return jsonify({'erreur': 'Retour déjà envoyé'}), 409
+            cur.execute(
+                """INSERT INTO product_feedback (user_id, rating, experience, improvements)
+                   VALUES (%s, %s, %s, %s)""",
+                (uid, rating, experience[:2000] or None, improvements[:2000] or None),
+            )
+            db.commit()
+        return jsonify({'ok': True}), 201
+    except Exception as e:
+        app.logger.error("feedback_submit: %s", e, exc_info=True)
+        return jsonify({'erreur': 'Erreur interne'}), 500
+
 
 @app.route('/announcements/current', methods=['GET'])
 def announcements_current():
