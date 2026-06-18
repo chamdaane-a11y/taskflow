@@ -508,11 +508,8 @@ def _enforce_auth():
     # Ownership des ressources à user_id direct
     for prefix, param, table in RESOURCE_OWNERSHIP:
         if rule.startswith(prefix) and param in args:
-            db = connecter(); cur = db.cursor(dictionary=True)
-            try:
+            with db_session(dictionary=True) as (db, cur):
                 owned = owns_row(cur, table, args[param], uid)
-            finally:
-                db.close()
             if owned is None:
                 abort(404)
             if not owned:
@@ -522,26 +519,20 @@ def _enforce_auth():
     # Ownership équipe : être membre est requis pour toute route /equipes/<equipe_id>/*
     # (les actions admin font en plus leur propre contrôle de rôle dans le handler).
     if 'equipe_id' in args:
-        db = connecter(); cur = db.cursor(dictionary=True)
-        try:
+        with db_session(dictionary=True) as (db, cur):
             require_team_member(cur, args['equipe_id'], uid)
-        finally:
-            db.close()
 
     # Ownership équipe via ressource (tâche/label/sous-tâche d'équipe) : résoudre
     # l'équipe depuis la ressource puis exiger l'appartenance.
     for prefix, param, sql in TEAM_RESOURCE:
         if rule.startswith(prefix) and param in args:
-            db = connecter(); cur = db.cursor(dictionary=True)
-            try:
+            with db_session(dictionary=True) as (db, cur):
                 cur.execute(sql, (args[param],))
                 row = cur.fetchone()
                 if row is None:
                     abort(404)
                 eq_id = row['equipe_id'] if isinstance(row, dict) else row[0]
                 require_team_member(cur, eq_id, uid)
-            finally:
-                db.close()
             break
 
 def _normalize_pem_private_key(raw):
@@ -1462,6 +1453,8 @@ def _html_resume_hebdo(nom, stats):
 # ============================================
 
 def job_email_rappel_veille():
+    db = None
+    cursor = None
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -1472,7 +1465,6 @@ def job_email_rappel_veille():
             ORDER BY u.id, t.priorite DESC
         """)
         rows = cursor.fetchall()
-        cursor.close(); db.close()
         from itertools import groupby
         rows.sort(key=lambda r: r['id'])
         for user_id, taches_iter in groupby(rows, key=lambda r: r['id']):
@@ -1482,8 +1474,17 @@ def job_email_rappel_veille():
             threading.Thread(target=envoyer_email, args=(u['email'], f"Rappel · Deadline demain : {len(taches)} tâche(s) — GetShift", html)).start()
     except Exception as e:
         print(f"[Email J-1] Erreur: {e}")
+    finally:
+        if cursor:
+            try: cursor.close()
+            except Exception: pass
+        if db:
+            try: db.close()
+            except Exception: pass
 
 def job_email_rappel_jour_j():
+    db = None
+    cursor = None
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -1494,7 +1495,6 @@ def job_email_rappel_jour_j():
             ORDER BY u.id, t.priorite DESC
         """)
         rows = cursor.fetchall()
-        cursor.close(); db.close()
         from itertools import groupby
         rows.sort(key=lambda r: r['id'])
         for user_id, taches_iter in groupby(rows, key=lambda r: r['id']):
@@ -1504,8 +1504,17 @@ def job_email_rappel_jour_j():
             threading.Thread(target=envoyer_email, args=(u['email'], f"Deadline aujourd'hui : {len(taches)} tâche(s) — GetShift", html)).start()
     except Exception as e:
         print(f"[Email Jour J] Erreur: {e}")
+    finally:
+        if cursor:
+            try: cursor.close()
+            except Exception: pass
+        if db:
+            try: db.close()
+            except Exception: pass
 
 def job_email_taches_retard():
+    db = None
+    cursor = None
     try:
         db = connecter()
         cursor = db.cursor(dictionary=True)
@@ -1516,7 +1525,6 @@ def job_email_taches_retard():
             ORDER BY u.id, t.deadline ASC
         """)
         rows = cursor.fetchall()
-        cursor.close(); db.close()
         from itertools import groupby
         rows.sort(key=lambda r: r['id'])
         for user_id, taches_iter in groupby(rows, key=lambda r: r['id']):
@@ -1529,6 +1537,13 @@ def job_email_taches_retard():
             threading.Thread(target=envoyer_email, args=(u['email'], f"{len(taches)} tâche(s) en retard — GetShift", html)).start()
     except Exception as e:
         print(f"[Email Retard] Erreur: {e}")
+    finally:
+        if cursor:
+            try: cursor.close()
+            except Exception: pass
+        if db:
+            try: db.close()
+            except Exception: pass
 
 def _collecter_stats_hebdo(cursor, user_id, base_user):
     """Récupère toutes les données enrichies pour le rapport hebdo d'un utilisateur."""
@@ -3062,29 +3077,27 @@ def auth_google():
             avatar_url = idinfo.get('picture', '')
         else:
             return jsonify({"erreur": "Token Google manquant"}), 400
-        db = connecter()
-        cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE google_id = %s OR email = %s LIMIT 1", (google_id, email))
-        user = cursor.fetchone()
-        if user:
-            if not user.get('google_id'):
-                cursor.execute("UPDATE users SET google_id = %s, email_verifie = TRUE WHERE id = %s", (google_id, user['id']))
+        with db_session(dictionary=True) as (db, cursor):
+            cursor.execute("SELECT * FROM users WHERE google_id = %s OR email = %s LIMIT 1", (google_id, email))
+            user = cursor.fetchone()
+            if user:
+                if not user.get('google_id'):
+                    cursor.execute("UPDATE users SET google_id = %s, email_verifie = TRUE WHERE id = %s", (google_id, user['id']))
+                    db.commit()
+                user_id = user['id']; nom_final = user['nom']
+                niveau = user.get('niveau', 1); points = user.get('points', 0); theme = user.get('theme', 'light')
+            else:
+                cursor.execute("INSERT INTO users (nom, email, password, google_id, email_verifie, points, niveau, theme) VALUES (%s, %s, %s, %s, TRUE, 0, 1, 'light')", (nom, email, secrets.token_hex(32), google_id))
                 db.commit()
-            user_id = user['id']; nom_final = user['nom']
-            niveau = user.get('niveau', 1); points = user.get('points', 0); theme = user.get('theme', 'light')
-        else:
-            cursor.execute("INSERT INTO users (nom, email, password, google_id, email_verifie, points, niveau, theme) VALUES (%s, %s, %s, %s, TRUE, 0, 1, 'light')", (nom, email, secrets.token_hex(32), google_id))
-            db.commit()
-            user_id = cursor.lastrowid; nom_final = nom; niveau = 1; points = 0; theme = 'light'
+                user_id = cursor.lastrowid; nom_final = nom; niveau = 1; points = 0; theme = 'light'
 
-        # Si invite_code fourni : consommer immédiatement (Google = email auto-vérifié)
-        invite_code = (request.json.get('invite_code') or '').strip()
-        equipes_rejointes = []
-        if invite_code:
-            _stocker_invitation_pending(cursor, db, email, invite_code)
-            equipes_rejointes = consommer_invitations_pending(cursor, db, user_id, email)
+            # Si invite_code fourni : consommer immédiatement (Google = email auto-vérifié)
+            invite_code = (request.json.get('invite_code') or '').strip()
+            equipes_rejointes = []
+            if invite_code:
+                _stocker_invitation_pending(cursor, db, email, invite_code)
+                equipes_rejointes = consommer_invitations_pending(cursor, db, user_id, email)
 
-        cursor.close(); db.close()
         access_token = create_access_token(identity=str(user_id))
         _enregistrer_session(user_id, access_token)
         response = make_response(jsonify({

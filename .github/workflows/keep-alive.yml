@@ -13,10 +13,16 @@ jobs:
     steps:
       - name: Ping backend /health
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://getshift-backend.onrender.com/health)
-          echo "Status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "⚠️ Backend responded with $STATUS"
+          OK=0
+          for i in 1 2 3 4 5; do
+            BODY=$(curl -s --max-time 45 https://getshift-backend.onrender.com/health || true)
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 45 https://getshift-backend.onrender.com/health || echo "000")
+            echo "Try $i — Status: $STATUS — $BODY"
+            if [ "$STATUS" = "200" ]; then OK=1; break; fi
+            sleep 20
+          done
+          if [ "$OK" != "1" ]; then
+            echo "⚠️ Backend not healthy after retries"
             exit 1
           fi
           echo "✅ Backend alive"
