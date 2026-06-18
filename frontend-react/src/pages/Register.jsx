@@ -151,7 +151,6 @@ function RegisterInner() {
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
             {[
-              { titre: t('auth.feat_ai_title'), desc: t('auth.feat_ai_desc') },
               { titre: t('nav.collaboration'), desc: t('auth.feat_collab_desc') },
               { titre: t('auth.feat_report_title'), desc: t('auth.feat_report_desc') },
             ].map((f, i) => (
