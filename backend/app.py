@@ -416,8 +416,8 @@ PUBLIC_ENDPOINTS = {
     # Flux OAuth (redirect navigateur + callbacks) — identité via query/state + table oauth_states
     'auth_google_calendar', 'auth_google_calendar_callback', 'gcal_webhook',
     'auth_gmail', 'auth_gmail_callback', 'auth_google_drive',
-    'auth_google_drive_callback', 'auth_zoom', 'auth_notion',
-    'auth_notion_callback', 'auth_slack_oauth', 'auth_discord',
+    'auth_google_drive_callback', 'auth_zoom', 'auth_zoom_callback', 'auth_notion',
+    'auth_notion_callback', 'auth_slack_oauth', 'auth_slack_callback', 'auth_discord', 'auth_discord_save',
     # Données statiques non sensibles
     'get_coach_styles', 'goal_reverse_templates',
 }
@@ -570,7 +570,7 @@ VAPID_CLAIMS = {"sub": "mailto:chamdaane@gmail.com"}
 
 # Marker version pour diagnostiquer les retards de déploiement Render
 # (changer cette string à chaque commit majeur pour vérifier ce qui tourne).
-APP_BUILD_MARKER = '2026-06-07-broadcast-email-test-v19'
+APP_BUILD_MARKER = '2026-06-24-ia-parcours-objectif-v20'
 
 # ============================================
 # HELPERS EMAIL & SLACK
@@ -614,6 +614,84 @@ def envoyer_notification_slack(webhook_url, message):
         http_requests.post(webhook_url, json={"text": message}, timeout=5)
     except Exception as e:
         print(f"Erreur Slack: {e}")
+
+def envoyer_notification_discord(webhook_url, message):
+    if not (webhook_url or '').startswith(('https://discord.com/api/webhooks/', 'https://discordapp.com/api/webhooks/')):
+        print(f"[Discord] URL refusée : {str(webhook_url)[:60]!r}")
+        return
+    try:
+        http_requests.post(webhook_url, json={"content": message[:1900]}, timeout=5)
+    except Exception as e:
+        print(f"Erreur Discord: {e}")
+
+def _integration_lire_config(config_raw):
+    """Parse config integrations : chiffrée (Fernet) ou JSON legacy en clair."""
+    if not config_raw:
+        return None
+    try:
+        return json.loads(_fernet().decrypt(config_raw.encode()).decode())
+    except Exception:
+        try:
+            return json.loads(config_raw)
+        except Exception:
+            return None
+
+def get_integration_config(user_id, integration_type):
+    try:
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("SELECT config FROM integrations WHERE user_id=%s AND type=%s", (user_id, integration_type))
+        row = curseur.fetchone()
+        db.close()
+        if not row or not row.get('config'):
+            return None
+        return _integration_lire_config(row['config'])
+    except Exception:
+        return None
+
+def _integration_sauvegarder(curseur, user_id, integration_type, config_dict, chiffrer=True):
+    raw = json.dumps(config_dict)
+    if chiffrer:
+        raw = _fernet().encrypt(raw.encode()).decode()
+    curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type=%s", (user_id, integration_type))
+    curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, %s, %s)", (user_id, integration_type, raw))
+
+def get_slack_webhook_url(user_id):
+    cfg = get_integration_config(user_id, 'slack')
+    if not cfg:
+        return None
+    return cfg.get('webhook_url') or (cfg.get('incoming_webhook') or {}).get('url')
+
+def get_discord_webhook_url(user_id):
+    cfg = get_integration_config(user_id, 'discord')
+    if not cfg:
+        return None
+    return cfg.get('webhook_url')
+
+def _oauth_state_creer(curseur, user_id, integration):
+    curseur.execute("""CREATE TABLE IF NOT EXISTS oauth_states (
+        state VARCHAR(64) PRIMARY KEY, user_id INT NOT NULL,
+        integration VARCHAR(50) NOT NULL,
+        cree_le DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+    curseur.execute("DELETE FROM oauth_states WHERE cree_le < DATE_SUB(NOW(), INTERVAL 1 HOUR)")
+    state_token = secrets.token_urlsafe(32)
+    curseur.execute("INSERT INTO oauth_states (state, user_id, integration) VALUES (%s, %s, %s)", (state_token, user_id, integration))
+    return state_token
+
+def _oauth_state_consommer(curseur, state, integration):
+    curseur.execute("SELECT user_id FROM oauth_states WHERE state=%s AND integration=%s", (state, integration))
+    row = curseur.fetchone()
+    if not row:
+        return None
+    curseur.execute("DELETE FROM oauth_states WHERE state=%s", (state,))
+    return row['user_id'] if isinstance(row, dict) else row[0]
+
+def _oauth_popup_ok(integration):
+    return f"""<script>window.opener&&window.opener.postMessage({{type:'oauth_success',integration:'{integration}'}},'*');window.close();</script>"""
+
+def _oauth_popup_err(integration, error):
+    err = json.dumps(str(error))
+    return f"""<script>window.opener&&window.opener.postMessage({{type:'oauth_error',integration:'{integration}',error:{err}}},'*');window.close();</script>"""
 
 def envoyer_email(to_email, subject, html_content, attachment=None, sender_name=None):
     """Envoie un email via l'API Brevo.
@@ -4789,13 +4867,12 @@ def ajouter_tache():
             except Exception as _e:
                 print(f"[Notion dedup] insert failed: {_e}", flush=True)
         curseur2 = db.cursor(dictionary=True)
-        curseur2.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
-        row = curseur2.fetchone()
-        if row:
-            config = json.loads(row['config'])
-            webhook_url = config.get('webhook_url')
-            if webhook_url:
-                envoyer_notification_slack(webhook_url, f"Nouvelle tâche GetShift : *{data['titre']}* — Priorité: {data.get('priorite', 'moyenne')}")
+        slack_webhook = get_slack_webhook_url(user_id)
+        if slack_webhook:
+            envoyer_notification_slack(slack_webhook, f"Nouvelle tâche GetShift : *{data['titre']}* — Priorité: {data.get('priorite', 'moyenne')}")
+        discord_webhook = get_discord_webhook_url(user_id)
+        if discord_webhook and data.get('priorite') == 'haute':
+            envoyer_notification_discord(discord_webhook, f"**GetShift** — Tâche urgente : **{data['titre']}**")
         # ── HOOK NOTIF : 1ère tâche jamais créée → célébration ──
         try:
             if nb_avant == 0:
@@ -7427,15 +7504,8 @@ def get_slack_integration():
     try:
         user_id = request.args.get('user_id')
         if not user_id: return jsonify({"erreur": "user_id requis"}), 400
-        db = connecter()
-        curseur = db.cursor(dictionary=True)
-        curseur.execute("SELECT config FROM integrations WHERE user_id=%s AND type='slack'", (user_id,))
-        row = curseur.fetchone()
-        db.close()
-        if row:
-            config = json.loads(row['config'])
-            return jsonify({"webhook_url": config.get('webhook_url', '')})
-        return jsonify({"webhook_url": ""})
+        cfg = get_integration_config(int(user_id), 'slack') or {}
+        return jsonify({"webhook_url": get_slack_webhook_url(int(user_id)) or '', "team": cfg.get('team_name', ''), "channel": cfg.get('channel', '')})
     except Exception as e:
         return erreur_500(e)
 
@@ -7443,11 +7513,12 @@ def get_slack_integration():
 def save_slack_integration():
     try:
         data = request.get_json()
-        config = json.dumps({"webhook_url": data['webhook_url']})
+        webhook_url = (data.get('webhook_url') or '').strip()
+        if not webhook_url.startswith('https://hooks.slack.com/'):
+            return jsonify({"erreur": "URL webhook Slack invalide"}), 400
         db = connecter()
         curseur = db.cursor()
-        curseur.execute("DELETE FROM integrations WHERE user_id=%s AND type='slack'", (data['user_id'],))
-        curseur.execute("INSERT INTO integrations (user_id, type, config) VALUES (%s, 'slack', %s)", (data['user_id'], config))
+        _integration_sauvegarder(curseur, data['user_id'], 'slack', {"webhook_url": webhook_url, "source": "manual"}, chiffrer=True)
         db.commit(); db.close()
         return jsonify({"message": "Webhook Slack sauvegardé !"})
     except Exception as e:
@@ -8661,10 +8732,154 @@ def drive_status(user_id):
 @app.route('/auth/zoom')
 def auth_zoom():
     user_id = request.args.get('user_id')
-    return """<script>
-        window.opener.postMessage({type:'oauth_success',integration:'zoom'},'*');
-        window.close();
-    </script>"""
+    if not user_id:
+        return "user_id requis", 400
+    cid = os.environ.get('ZOOM_CLIENT_ID', '')
+    if not cid:
+        return f"""<!DOCTYPE html><html><body><script>{_oauth_popup_err('zoom', 'Zoom non configuré côté serveur')}</script></body></html>""", 500
+    db = connecter()
+    curseur = db.cursor()
+    state_token = _oauth_state_creer(curseur, user_id, 'zoom')
+    db.commit(); db.close()
+    redirect_uri = "https://getshift-backend.onrender.com/auth/zoom/callback"
+    auth_url = (
+        "https://zoom.us/oauth/authorize"
+        f"?response_type=code&client_id={urllib.parse.quote(cid)}"
+        f"&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}"
+    )
+    return redirect(auth_url)
+
+@app.route('/auth/zoom/callback')
+def auth_zoom_callback():
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    if error:
+        return _oauth_popup_err('zoom', error)
+    if not code or not state:
+        return "Paramètres OAuth manquants", 400
+    db = connecter()
+    curseur = db.cursor(dictionary=True)
+    user_id = _oauth_state_consommer(curseur, state, 'zoom')
+    if not user_id:
+        db.close()
+        return "State invalide ou expiré", 400
+    cid = os.environ.get('ZOOM_CLIENT_ID', '')
+    csecret = os.environ.get('ZOOM_CLIENT_SECRET', '')
+    redirect_uri = "https://getshift-backend.onrender.com/auth/zoom/callback"
+    try:
+        auth_b64 = base64.b64encode(f"{cid}:{csecret}".encode()).decode()
+        resp = http_requests.post(
+            "https://zoom.us/oauth/token",
+            headers={"Authorization": f"Basic {auth_b64}", "Content-Type": "application/x-www-form-urlencoded"},
+            data={"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            db.close()
+            return _oauth_popup_err('zoom', f"Token Zoom ({resp.status_code})")
+        data = resp.json()
+        tokens = {
+            "access_token": data.get("access_token"),
+            "refresh_token": data.get("refresh_token"),
+            "expires_at": int(time.time()) + int(data.get("expires_in", 3600)),
+        }
+        _integration_sauvegarder(curseur, user_id, 'zoom', tokens, chiffrer=True)
+        db.commit(); db.close()
+        threading.Thread(target=_zoom_sync_prep_tasks, args=(user_id,), daemon=True).start()
+        return _oauth_popup_ok('zoom')
+    except Exception as e:
+        db.close()
+        return _oauth_popup_err('zoom', 'erreur')
+
+def get_zoom_access_token(user_id):
+    cfg = get_integration_config(user_id, 'zoom')
+    if not cfg or not cfg.get('access_token'):
+        return None
+    if cfg.get('expires_at') and cfg['expires_at'] < int(time.time()) + 60:
+        refresh = cfg.get('refresh_token')
+        if not refresh:
+            return None
+        cid = os.environ.get('ZOOM_CLIENT_ID', '')
+        csecret = os.environ.get('ZOOM_CLIENT_SECRET', '')
+        try:
+            auth_b64 = base64.b64encode(f"{cid}:{csecret}".encode()).decode()
+            resp = http_requests.post(
+                "https://zoom.us/oauth/token",
+                headers={"Authorization": f"Basic {auth_b64}", "Content-Type": "application/x-www-form-urlencoded"},
+                data={"grant_type": "refresh_token", "refresh_token": refresh},
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            cfg['access_token'] = data.get('access_token')
+            cfg['refresh_token'] = data.get('refresh_token') or refresh
+            cfg['expires_at'] = int(time.time()) + int(data.get('expires_in', 3600))
+            db = connecter()
+            curseur = db.cursor()
+            _integration_sauvegarder(curseur, user_id, 'zoom', cfg, chiffrer=True)
+            db.commit(); db.close()
+        except Exception:
+            return None
+    return cfg.get('access_token')
+
+def _zoom_sync_prep_tasks(user_id):
+    """Crée des tâches de préparation pour les réunions Zoom à venir (7 jours)."""
+    token = get_zoom_access_token(user_id)
+    if not token:
+        return
+    try:
+        resp = http_requests.get(
+            "https://api.zoom.us/v2/users/me/meetings",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"type": "upcoming", "page_size": 30},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            print(f"[Zoom sync] API {resp.status_code} user={user_id}")
+            return
+        meetings = resp.json().get('meetings', [])
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        curseur.execute("""CREATE TABLE IF NOT EXISTS zoom_meetings_imported (
+            user_id INT NOT NULL, meeting_id VARCHAR(64) NOT NULL,
+            tache_id INT, PRIMARY KEY (user_id, meeting_id))""")
+        created = 0
+        for m in meetings:
+            mid = str(m.get('id', ''))
+            if not mid:
+                continue
+            curseur.execute("SELECT tache_id FROM zoom_meetings_imported WHERE user_id=%s AND meeting_id=%s", (user_id, mid))
+            if curseur.fetchone():
+                continue
+            topic = (m.get('topic') or 'Réunion Zoom').strip()[:180]
+            start = m.get('start_time') or ''
+            titre = f"Préparer : {topic}"
+            curseur.execute(
+                "INSERT INTO taches (titre, priorite, user_id, deadline, temps_estime) VALUES (%s, %s, %s, %s, %s)",
+                (titre, 'moyenne', user_id, start.replace('T', ' ').replace('Z', '')[:19] if start else None, 30)
+            )
+            tache_id = curseur.lastrowid
+            curseur.execute("INSERT INTO zoom_meetings_imported (user_id, meeting_id, tache_id) VALUES (%s, %s, %s)", (user_id, mid, tache_id))
+            created += 1
+        db.commit(); db.close()
+        print(f"[Zoom sync] user={user_id} → {created} tâche(s) créée(s)")
+    except Exception as e:
+        print(f"[Zoom sync] Erreur user={user_id}: {e}")
+
+@app.route('/integrations/zoom/sync/<int:user_id>', methods=['POST'])
+def zoom_sync_meetings(user_id):
+    if current_uid() != user_id:
+        abort(403)
+    if not get_zoom_access_token(user_id):
+        return jsonify({"erreur": "Zoom non connecté"}), 400
+    threading.Thread(target=_zoom_sync_prep_tasks, args=(user_id,), daemon=True).start()
+    return jsonify({"message": "Synchronisation Zoom lancée — les tâches de préparation apparaîtront sous peu."})
+
+@app.route('/integrations/zoom/status/<int:user_id>', methods=['GET'])
+def zoom_status(user_id):
+    return jsonify({"connected": get_zoom_access_token(user_id) is not None})
 
 # ============================================
 # NOTION — OAuth réel + lecture pages + extraction IA
@@ -9041,18 +9256,155 @@ def notion_databases(user_id):
 @app.route('/auth/slack/oauth')
 def auth_slack_oauth():
     user_id = request.args.get('user_id')
-    return """<script>
-        window.opener.postMessage({type:'oauth_success',integration:'slack'},'*');
-        window.close();
-    </script>"""
+    if not user_id:
+        return "user_id requis", 400
+    cid = os.environ.get('SLACK_CLIENT_ID', '')
+    if not cid:
+        return f"""<!DOCTYPE html><html><body><script>{_oauth_popup_err('slack', 'Slack non configuré côté serveur')}</script></body></html>""", 500
+    db = connecter()
+    curseur = db.cursor()
+    state_token = _oauth_state_creer(curseur, user_id, 'slack')
+    db.commit(); db.close()
+    redirect_uri = "https://getshift-backend.onrender.com/auth/slack/callback"
+    scopes = "incoming-webhook,chat:write"
+    auth_url = (
+        "https://slack.com/oauth/v2/authorize"
+        f"?client_id={urllib.parse.quote(cid)}&scope={urllib.parse.quote(scopes)}"
+        f"&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}"
+    )
+    return redirect(auth_url)
+
+@app.route('/auth/slack/callback')
+def auth_slack_callback():
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    if error:
+        return _oauth_popup_err('slack', error)
+    if not code or not state:
+        return "Paramètres OAuth manquants", 400
+    db = connecter()
+    curseur = db.cursor(dictionary=True)
+    user_id = _oauth_state_consommer(curseur, state, 'slack')
+    if not user_id:
+        db.close()
+        return "State invalide ou expiré", 400
+    cid = os.environ.get('SLACK_CLIENT_ID', '')
+    csecret = os.environ.get('SLACK_CLIENT_SECRET', '')
+    redirect_uri = "https://getshift-backend.onrender.com/auth/slack/callback"
+    try:
+        resp = http_requests.post(
+            "https://slack.com/api/oauth.v2.access",
+            data={"client_id": cid, "client_secret": csecret, "code": code, "redirect_uri": redirect_uri},
+            timeout=15,
+        )
+        data = resp.json()
+        if not data.get('ok'):
+            db.close()
+            return _oauth_popup_err('slack', data.get('error', 'oauth_slack'))
+        incoming = data.get('incoming_webhook') or {}
+        tokens = {
+            "access_token": data.get('access_token'),
+            "team_name": (data.get('team') or {}).get('name'),
+            "channel": incoming.get('channel'),
+            "webhook_url": incoming.get('url'),
+            "source": "oauth",
+        }
+        if not tokens.get('webhook_url') and not tokens.get('access_token'):
+            db.close()
+            return _oauth_popup_err('slack', 'Aucun canal Slack sélectionné')
+        _integration_sauvegarder(curseur, user_id, 'slack', tokens, chiffrer=True)
+        db.commit(); db.close()
+        return _oauth_popup_ok('slack')
+    except Exception:
+        db.close()
+        return _oauth_popup_err('slack', 'erreur')
 
 @app.route('/auth/discord')
 def auth_discord():
-    user_id = request.args.get('user_id')
-    return """<script>
-        window.opener.postMessage({type:'oauth_success',integration:'discord'},'*');
+    """Page de configuration Discord : colle l'URL du webhook de ton channel."""
+    user_id = request.args.get('user_id', '')
+    if not user_id:
+        return "user_id requis", 400
+    db = connecter()
+    curseur = db.cursor()
+    state_token = _oauth_state_creer(curseur, user_id, 'discord')
+    db.commit(); db.close()
+    uid_js = json.dumps(int(user_id))
+    state_js = json.dumps(state_token)
+    html = f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Connecter Discord — GetShift</title>
+<style>
+  body {{ font-family: system-ui, sans-serif; max-width: 420px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }}
+  h1 {{ font-size: 1.25rem; }}
+  p {{ font-size: 0.9rem; line-height: 1.5; color: #555; }}
+  input {{ width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 0.85rem; }}
+  button {{ margin-top: 12px; width: 100%; padding: 12px; background: #5865F2; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }}
+  button:disabled {{ opacity: 0.6; }}
+  .err {{ color: #c0392b; font-size: 0.85rem; margin-top: 8px; }}
+  ol {{ font-size: 0.85rem; color: #444; padding-left: 1.2rem; }}
+</style></head><body>
+  <h1>Connecter Discord</h1>
+  <p>GetShift enverra une notification dans ton channel pour tes <strong>tâches urgentes (priorité haute)</strong>.</p>
+  <ol>
+    <li>Discord → ton serveur → Paramètres du channel → Intégrations → Webhooks</li>
+    <li>Créer un webhook → copier l'URL</li>
+    <li>Coller l'URL ci-dessous</li>
+  </ol>
+  <input id="wh" type="url" placeholder="https://discord.com/api/webhooks/..." />
+  <button id="btn" onclick="save()">Connecter Discord</button>
+  <p id="err" class="err"></p>
+  <script>
+    async function save() {{
+      const url = document.getElementById('wh').value.trim();
+      const err = document.getElementById('err');
+      const btn = document.getElementById('btn');
+      err.textContent = '';
+      if (!url.startsWith('https://discord.com/api/webhooks/') && !url.startsWith('https://discordapp.com/api/webhooks/')) {{
+        err.textContent = 'URL webhook Discord invalide'; return;
+      }}
+      btn.disabled = true;
+      try {{
+        const r = await fetch('/auth/discord/save', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ user_id: {uid_js}, state: {state_js}, webhook_url: url }})
+        }});
+        const j = await r.json();
+        if (!r.ok) {{ err.textContent = j.erreur || 'Erreur'; btn.disabled = false; return; }}
+        window.opener && window.opener.postMessage({{ type: 'oauth_success', integration: 'discord' }}, '*');
         window.close();
-    </script>"""
+      }} catch (e) {{
+        err.textContent = 'Erreur réseau'; btn.disabled = false;
+      }}
+    }}
+  </script>
+</body></html>"""
+    return html
+
+@app.route('/auth/discord/save', methods=['POST'])
+def auth_discord_save():
+    try:
+        data = request.get_json() or {}
+        user_id = data.get('user_id')
+        state = data.get('state')
+        webhook_url = (data.get('webhook_url') or '').strip()
+        if not user_id or not state:
+            return jsonify({"erreur": "Paramètres manquants"}), 400
+        if not webhook_url.startswith(('https://discord.com/api/webhooks/', 'https://discordapp.com/api/webhooks/')):
+            return jsonify({"erreur": "URL webhook Discord invalide"}), 400
+        db = connecter()
+        curseur = db.cursor(dictionary=True)
+        uid = _oauth_state_consommer(curseur, state, 'discord')
+        if not uid or str(uid) != str(user_id):
+            db.close()
+            return jsonify({"erreur": "Session expirée — réessaie"}), 400
+        _integration_sauvegarder(curseur, user_id, 'discord', {"webhook_url": webhook_url, "source": "webhook"}, chiffrer=True)
+        db.commit(); db.close()
+        envoyer_notification_discord(webhook_url, "GetShift est connecté — tu recevras ici les alertes pour tes tâches urgentes.")
+        return jsonify({"message": "Discord connecté"})
+    except Exception as e:
+        return erreur_500(e)
 
 @app.route('/integrations/status/<int:user_id>', methods=['GET'])
 def integrations_status_global(user_id):
@@ -10246,26 +10598,41 @@ def _ensure_objectifs_schema(curseur):
         except Exception:
             pass
 
-@app.route('/ia/goal-reverse', methods=['POST'])
-def goal_reverse():
-    data = request.json
-    user_id = data.get('user_id')
-    objectif = data.get('objectif')
-    deadline = data.get('deadline')
-    niveau = data.get('niveau', 'realiste')
-    coach_style = data.get('coach_style', 'bienveillant')
-    aujourd_hui = datetime.now().strftime('%Y-%m-%d')
+def _trouver_template_goal(template_id: str):
+    if not template_id:
+        return None
+    tid = str(template_id).strip().lower()
+    for t in GOAL_TEMPLATES:
+        if t.get('id', '').lower() == tid:
+            return t
+    return None
 
-    # ── Contexte user pour personnaliser le plan ──
-    contexte_user = ""
+
+def _formater_curriculum_pour_prompt(template: dict) -> str:
+    jalons = (template or {}).get('curriculum_jalons') or []
+    if not jalons:
+        return ""
+    lines = [
+        "STRUCTURE PÉDAGOGIQUE RECOMMANDÉE (respecte cette progression ; adapte les durées au délai disponible) :"
+    ]
+    for i, j in enumerate(jalons, 1):
+        lines.append(f"  Jalon {i} — {j.get('titre', 'Étape')}")
+        if j.get('themes'):
+            lines.append(f"    Thèmes : {', '.join(j['themes'])}")
+        if j.get('taches_suggerees'):
+            lines.append(f"    Tâches types : {' | '.join(j['taches_suggerees'][:6])}")
+        if j.get('ressources'):
+            lines.append(f"    Ressources : {', '.join(j['ressources'][:4])}")
+    return "\n".join(lines)
+
+
+def _build_goal_reverse_contexte_user(user_id: int) -> str:
     try:
         db = connecter()
         curseur = db.cursor(dictionary=True)
         score_energie = calculer_score_energie(user_id, curseur)
         heure_productive = detecter_heure_productive(user_id, curseur)
         niveau_e = "élevé" if score_energie >= 70 else "moyen" if score_energie >= 40 else "faible"
-
-        # Durées typiques par catégorie sémantique (Task DNA)
         cat_durees = {}
         for cat_titre in [("Préparer doc", "deep_work"), ("Répondre email", "communication"),
                           ("Remplir formulaire", "admin"), ("Brainstormer idée", "creatif"),
@@ -10276,30 +10643,41 @@ def goal_reverse():
                 cat_durees[cat_titre[1]] = d
             except Exception:
                 pass
-
-        # Tâches existantes proches du domaine de l'objectif (top 5)
-        curseur.execute("""SELECT titre FROM taches WHERE user_id=%s AND terminee=0
-                           ORDER BY deadline ASC LIMIT 8""", (user_id,))
+        curseur.execute(
+            "SELECT titre FROM taches WHERE user_id=%s AND terminee=0 ORDER BY deadline ASC LIMIT 8",
+            (user_id,),
+        )
         taches_existantes = [r['titre'] for r in curseur.fetchall()]
         db.close()
-
-        ctx_parts = [f"Énergie user: {score_energie}/100 ({niveau_e})",
-                     f"Heure de pic: {heure_productive}h"]
+        ctx_parts = [
+            f"Énergie user: {score_energie}/100 ({niveau_e})",
+            f"Heure de pic: {heure_productive}h",
+        ]
         if cat_durees:
             ctx_parts.append(f"Durées moyennes user par type (min): {cat_durees}")
         if taches_existantes:
             ctx_parts.append(f"Tâches déjà actives (à NE PAS dupliquer): {' | '.join(taches_existantes[:5])}")
-        contexte_user = "\n".join(ctx_parts)
+        cal_ctx, _ = _build_calendar_context(user_id)
+        if cal_ctx:
+            ctx_parts.append(cal_ctx.strip())
+        return "\n".join(ctx_parts)
     except Exception as e:
-        print(f"[goal_reverse] Contexte user erreur: {e}")
-        contexte_user = ""
+        print(f"[goal_reverse] Contexte user erreur: {e}", flush=True)
+        return ""
 
-    # ── Coach persona ──
+
+def _generer_goal_reverse_plan(user_id, objectif, deadline, niveau='realiste', coach_style='bienveillant',
+                               template_id=None, heures_par_semaine=None):
+    """Génère un plan Goal Reverse (dict). Utilisé par /ia/goal-reverse et l'outil chat."""
+    aujourd_hui = datetime.now().strftime('%Y-%m-%d')
+    contexte_user = _build_goal_reverse_contexte_user(user_id)
     coach = COACH_STYLES.get(coach_style, COACH_STYLES['bienveillant'])
     coach_intro = coach['persona']
     coach_nom = coach['nom']
-
-    # ── Calcul EXACT du nombre de semaines disponibles (Llama est nul en dates) ──
+    template = _trouver_template_goal(template_id)
+    curriculum_block = _formater_curriculum_pour_prompt(template) if template else ""
+    if heures_par_semaine:
+        contexte_user += f"\nDisponibilité déclarée : ~{heures_par_semaine}h/semaine pour cet objectif."
     try:
         from datetime import date as _date
         d_deadline = _date.fromisoformat(str(deadline))
@@ -10309,9 +10687,9 @@ def goal_reverse():
     except Exception:
         jours_dispo = 30
         semaines_dispo = 4
-
     nb_jalons_recommande = min(8, max(2, semaines_dispo))
-
+    if template and template.get('curriculum_jalons'):
+        nb_jalons_recommande = min(8, max(len(template['curriculum_jalons']), 2))
     prompt = f"""{coach_intro}
 
 Tu fais du Goal Reverse Engineering : pars de l'objectif final et reconstruis le chemin à rebours, étape par étape. Tu dois PERSONNALISER selon le contexte réel de l'utilisateur.
@@ -10321,9 +10699,11 @@ AUJOURD'HUI: {aujourd_hui}
 DEADLINE FINALE ABSOLUE: {deadline} (AUCUNE date ne doit dépasser cette deadline)
 TEMPS DISPONIBLE: EXACTEMENT {jours_dispo} jours = {semaines_dispo} semaines
 NIVEAU D'AMBITION: {niveau}
+{f"TEMPLATE: {template.get('titre')} — {template.get('description', '')}" if template else ""}
 
 CONTEXTE USER (utilise ces données pour calibrer les durées et la charge):
 {contexte_user or "(contexte indisponible — utilise des durées génériques)"}
+{chr(10) + curriculum_block if curriculum_block else ""}
 
 RÈGLES STRICTES — RESPECTER ABSOLUMENT:
 1. duree_semaines = {semaines_dispo} (NE PAS dépasser, NE PAS réduire arbitrairement)
@@ -10333,7 +10713,7 @@ RÈGLES STRICTES — RESPECTER ABSOLUMENT:
 5. Le DERNIER jalon DOIT se terminer entre J-3 et {deadline} (pile sur la deadline)
 6. jalons = entre 2 et {nb_jalons_recommande} jalons, ordonnés chronologiquement
 7. semaine commence à 1 et s'incrémente de 1 par jalon (1, 2, 3...)
-8. Max 4 tâches par jalon
+8. Max 4 tâches par jalon — titres actionnables, pas vagues
 9. score_faisabilite = note 0-100 (basé sur niveau + délai + complexité)
 10. conseil_global = signé "{coach_nom}", max 2 phrases, reflète ton personnage
 11. risques = 2-4 risques concrets (deadlines serrées, dépendances, charge)
@@ -10357,19 +10737,110 @@ FORMAT JSON STRICT (rien d'autre, pas de markdown):
     "taches": [{{"titre": "<string>", "duree_estimee": <int>, "priorite": "basse|moyenne|haute", "deadline": "YYYY-MM-DD"}}]
   }}]
 }}"""
+    response = groq_client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.6,
+        max_tokens=2500,
+    )
+    raw = response.choices[0].message.content.strip()
+    if raw.startswith('```'):
+        raw = raw.split('```')[1]
+        if raw.startswith('json'):
+            raw = raw[4:]
+    if raw.endswith('```'):
+        raw = raw[:-3]
+    result = json.loads(raw.strip())
+    result = _clipper_dates_plan(result, deadline)
+    result['_coach'] = {'nom': coach['nom'], 'emoji': coach['emoji']}
+    if template:
+        result['_template'] = {'id': template['id'], 'titre': template.get('titre')}
+    return result
+
+
+def _importer_plan_goal_interne(user_id, objectif_titre, objectif_deadline, objectif_niveau, plan, coach_style='bienveillant'):
+    """Importe un plan Goal Reverse en objectif + tâches. Retourne dict structuré."""
+    taches = []
+    for j in (plan.get('jalons') or []):
+        for t in (j.get('taches') or []):
+            taches.append({
+                'titre': f"[{j.get('titre', 'Jalon')}] {t.get('titre', 'Tâche')}",
+                'priorite': t.get('priorite', 'moyenne'),
+                'deadline': t.get('deadline'),
+            })
+    conn = connecter()
+    cursor = conn.cursor(dictionary=True)
+    _ensure_objectifs_schema(cursor)
+    objectif_id = None
+    ids_crees = []
+    deja = False
+    if objectif_titre and objectif_deadline:
+        cursor.execute(
+            """SELECT id FROM objectifs
+               WHERE user_id=%s AND titre=%s AND deadline=%s
+               ORDER BY cree_le DESC LIMIT 1""",
+            (user_id, objectif_titre[:255], objectif_deadline),
+        )
+        existing = cursor.fetchone()
+        if existing:
+            objectif_id = existing['id']
+            cursor.execute("SELECT id FROM taches WHERE objectif_id=%s", (objectif_id,))
+            ids_crees = [r['id'] for r in cursor.fetchall()]
+            deja = True
+        else:
+            cursor.execute(
+                """INSERT INTO objectifs
+                   (user_id, titre, deadline, niveau, duree_semaines, score_faisabilite,
+                    conseil_global, risques_json, jalons_json, coach_style)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (
+                    user_id, objectif_titre[:255], objectif_deadline, objectif_niveau,
+                    plan.get('duree_semaines'), plan.get('score_faisabilite'),
+                    plan.get('conseil_global'),
+                    json.dumps(plan.get('risques', []), ensure_ascii=False),
+                    json.dumps(plan.get('jalons', []), ensure_ascii=False),
+                    coach_style,
+                ),
+            )
+            objectif_id = cursor.lastrowid
+    if not deja:
+        for t in taches:
+            prio = t['priorite']
+            if prio == 'faible':
+                prio = 'basse'
+            elif prio not in ('haute', 'moyenne', 'basse'):
+                prio = 'moyenne'
+            cursor.execute(
+                "INSERT INTO taches (titre, priorite, deadline, user_id, objectif_id) VALUES (%s, %s, %s, %s, %s)",
+                (t['titre'], prio, t['deadline'], user_id, objectif_id),
+            )
+            ids_crees.append(cursor.lastrowid)
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {
+        'objectif_id': objectif_id,
+        'ids': ids_crees,
+        'nb_taches': len(ids_crees),
+        'deja_existant': deja,
+    }
+
+
+@app.route('/ia/goal-reverse', methods=['POST'])
+def goal_reverse():
+    data = request.json
+    user_id = data.get('user_id')
+    objectif = data.get('objectif')
+    deadline = data.get('deadline')
+    niveau = data.get('niveau', 'realiste')
+    coach_style = data.get('coach_style', 'bienveillant')
+    template_id = data.get('template_id')
     try:
-        response = groq_client.chat.completions.create(model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}], temperature=0.6, max_tokens=2500)
-        raw = response.choices[0].message.content.strip()
-        if raw.startswith('```'):
-            raw = raw.split('```')[1]
-            if raw.startswith('json'): raw = raw[4:]
-        if raw.endswith('```'):
-            raw = raw[:-3]
-        result = json.loads(raw.strip())
-        # Garde-fou : clip toutes les dates qui dépassent la deadline
-        result = _clipper_dates_plan(result, deadline)
-        result['_coach'] = {'nom': coach['nom'], 'emoji': coach['emoji']}
+        result = _generer_goal_reverse_plan(
+            user_id, objectif, deadline, niveau, coach_style,
+            template_id=template_id,
+            heures_par_semaine=data.get('heures_par_semaine'),
+        )
         return jsonify(result)
     except Exception as e:
         return erreur_500(e)
@@ -10718,6 +11189,164 @@ GOAL_TEMPLATES = [
         "niveau": "realiste",
         "description": "Budget, itinéraire, billets, vaccins, logements, sécurité",
         "couleur": "#06b6d4",
+    },
+    {
+        "id": "javascript_30j",
+        "emoji": "💻",
+        "categorie": "Apprentissage",
+        "titre": "JavaScript — bases en 30 jours",
+        "objectif": "Maîtriser les fondamentaux JavaScript (variables, fonctions, DOM, async) et réaliser un mini-projet",
+        "duree_mois": 1,
+        "duree_jours": 30,
+        "niveau": "realiste",
+        "description": "Parcours structuré MDN/freeCodeCamp — 4 jalons, 1h/jour minimum",
+        "couleur": "#f7df1e",
+        "curriculum_jalons": [
+            {
+                "titre": "Fondations (semaine 1)",
+                "themes": ["variables", "types", "opérateurs", "conditions", "boucles"],
+                "taches_suggerees": [
+                    "Lire MDN Getting Started (2h)",
+                    "Exercices variables et boucles (10 exercices)",
+                    "Mini quiz auto-évaluation",
+                ],
+                "ressources": ["MDN JavaScript Guide", "freeCodeCamp JS Basics"],
+            },
+            {
+                "titre": "Fonctions & tableaux (semaine 2)",
+                "themes": ["fonctions", "arrow functions", "tableaux", "map/filter", "objets"],
+                "taches_suggerees": [
+                    "Refactoriser 5 fonctions utilitaires",
+                    "Manipuler un tableau de données JSON",
+                    "Exercices map/filter/reduce",
+                ],
+                "ressources": ["javascript.info", "Exercism JS track"],
+            },
+            {
+                "titre": "DOM & événements (semaine 3)",
+                "themes": ["DOM", "événements", "formulaires", "localStorage"],
+                "taches_suggerees": [
+                    "Todo list vanilla JS (sans framework)",
+                    "Gérer submit et validation formulaire",
+                    "Persister données en localStorage",
+                ],
+                "ressources": ["MDN DOM API"],
+            },
+            {
+                "titre": "Async & mini-projet (semaine 4)",
+                "themes": ["fetch", "promises", "async/await", "API REST"],
+                "taches_suggerees": [
+                    "Consommer une API publique (fetch)",
+                    "Finaliser mini-projet portfolio",
+                    "Revue de code + checklist bonnes pratiques",
+                ],
+                "ressources": ["MDN Fetch API", "JSONPlaceholder"],
+            },
+        ],
+    },
+    {
+        "id": "python_30j",
+        "emoji": "🐍",
+        "categorie": "Apprentissage",
+        "titre": "Python — bases en 30 jours",
+        "objectif": "Maîtriser Python pour l'automatisation et la data (bases + pandas intro)",
+        "duree_mois": 1,
+        "duree_jours": 30,
+        "niveau": "realiste",
+        "description": "Syntaxe, structures, fichiers, intro data — idéal data science",
+        "couleur": "#3776ab",
+        "curriculum_jalons": [
+            {
+                "titre": "Syntaxe & structures (semaine 1)",
+                "themes": ["variables", "listes", "dicts", "boucles", "fonctions"],
+                "taches_suggerees": ["30 exercices Python basics", "Script calculatrice CLI"],
+                "ressources": ["python.org tutorial", "Exercism Python"],
+            },
+            {
+                "titre": "Fichiers & modules (semaine 2)",
+                "themes": ["fichiers", "CSV", "modules", "venv", "pip"],
+                "taches_suggerees": ["Lire/écrire un CSV", "Créer un module utils réutilisable"],
+                "ressources": ["Real Python"],
+            },
+            {
+                "titre": "Data intro (semaine 3)",
+                "themes": ["pandas", "numpy", "visualisation basique"],
+                "taches_suggerees": ["Analyser un dataset CSV avec pandas", "Graphique matplotlib"],
+                "ressources": ["Kaggle Learn Python", "pandas docs"],
+            },
+            {
+                "titre": "Projet final (semaine 4)",
+                "themes": ["automatisation", "script complet", "tests"],
+                "taches_suggerees": ["Automatiser une tâche répétitive", "Projet data perso + README"],
+                "ressources": ["Automate the Boring Stuff"],
+            },
+        ],
+    },
+    {
+        "id": "prep_examen_8sem",
+        "emoji": "📝",
+        "categorie": "Études",
+        "titre": "Préparer un examen (8 semaines)",
+        "objectif": "Réussir mon examen / concours avec un planning de révision structuré et des simulations",
+        "duree_mois": 2,
+        "duree_jours": 56,
+        "niveau": "ambitieux",
+        "description": "Fiches, annales, simulations chronométrées, bilan hebdo",
+        "couleur": "#e08a3c",
+        "curriculum_jalons": [
+            {"titre": "Diagnostic & plan (sem. 1)", "themes": ["bilan niveau", "programme", "planning"],
+             "taches_suggerees": ["Lister tous les chapitres", "Test blanc initial", "Calendrier révisions"]},
+            {"titre": "Fondations (sem. 2-3)", "themes": ["cours de base", "fiches"],
+             "taches_suggerees": ["Fiches chapitres 1-5", "Exercices corrigés", "Session active recall"]},
+            {"titre": "Approfondissement (sem. 4-6)", "themes": ["chapitres difficiles", "annales"],
+             "taches_suggerees": ["Annales 3 dernières années", "Corriger erreurs récurrentes", "Groupe révision"]},
+            {"titre": "Intensif & simulations (sem. 7-8)", "themes": ["simulations", "gestion stress"],
+             "taches_suggerees": ["2 simulations chronométrées/semaine", "Revoir fiches erreurs", "J-3 : light review"]},
+        ],
+    },
+    {
+        "id": "side_project_6sem",
+        "emoji": "🛠️",
+        "categorie": "Carrière",
+        "titre": "Side project en 6 semaines",
+        "objectif": "Lancer un side project fonctionnel (MVP déployé + premiers utilisateurs)",
+        "duree_mois": 2,
+        "duree_jours": 42,
+        "niveau": "ambitieux",
+        "description": "Idée → MVP → déploiement → feedback — build in public",
+        "couleur": "#6c63ff",
+        "curriculum_jalons": [
+            {"titre": "Idéation & scope (sem. 1)", "themes": ["problème", "MVP", "personas"],
+             "taches_suggerees": ["Définir le problème en 1 phrase", "Liste features MVP (max 5)", "Wireframe écran principal"]},
+            {"titre": "Build core (sem. 2-3)", "themes": ["backend", "frontend", "auth"],
+             "taches_suggerees": ["Setup repo + CI", "Feature principale", "Login basique"]},
+            {"titre": "Polish & deploy (sem. 4-5)", "themes": ["UX", "déploiement", "landing"],
+             "taches_suggerees": ["Deploy prod", "Landing page", "Fix bugs critiques"]},
+            {"titre": "Launch & iterate (sem. 6)", "themes": ["feedback", "metrics", "itération"],
+             "taches_suggerees": ["10 utilisateurs beta", "Collecter feedback", "Roadmap v2"]},
+        ],
+    },
+    {
+        "id": "linkedin_8sem",
+        "emoji": "🔗",
+        "categorie": "Carrière",
+        "titre": "Croissance LinkedIn (8 semaines)",
+        "objectif": "Passer de 300 à 800 connexions qualifiées et générer 50+ inscriptions GetShift",
+        "duree_mois": 2,
+        "duree_jours": 56,
+        "niveau": "realiste",
+        "description": "Posts, vidéos, DM, build in public — plan actionnable",
+        "couleur": "#0a66c2",
+        "curriculum_jalons": [
+            {"titre": "Fondations profil (sem. 1)", "themes": ["profil", "bannière", "Featured"],
+             "taches_suggerees": ["Optimiser titre + À propos", "Publier post milestone", "10 commentaires/jour"]},
+            {"titre": "Contenu vidéo (sem. 2-4)", "themes": ["démos GetShift", "Higgsfield", "hooks"],
+             "taches_suggerees": ["4 vidéos features", "Batch Higgsfield samedi", "Répondre chaque commentaire"]},
+            {"titre": "Conversion (sem. 5-6)", "themes": ["DM", "beta testeurs", "UTM"],
+             "taches_suggerees": ["20 DM/semaine ciblés", "Tracker inscriptions UTM", "Post témoignage beta"]},
+            {"titre": "Scale & B2B (sem. 7-8)", "themes": ["écoles", "Sèmè City", "partenariats"],
+             "taches_suggerees": ["Pitch établissement", "Post GetShift School", "Bilan metrics M2"]},
+        ],
     },
 ]
 
@@ -11164,9 +11793,28 @@ def _build_cross_page_snapshot(curseur, user_id) -> str:
             "du jour → Tomorrow Builder) et emmène l'utilisateur sur la bonne page via naviguer_vers.\n"
             + corps + "\n")
 
+# Pseudo appels d'outils parfois écrits en clair par le modèle (surtout en mode stream sans tools API).
+_FUITE_OUTIL_RE = re.compile(
+    r'<function\s*=\s*[^>]+>\s*.*?\s*</function>',
+    re.IGNORECASE | re.DOTALL,
+)
+_FUITE_OUTIL_OUVERT_RE = re.compile(
+    r'<function\s*=\s*[^>]+>\s*\{[^}]*\}',
+    re.IGNORECASE,
+)
+
+def _sanitiser_reponse_ia(text: str) -> str:
+    """Retire les balises <function=...> fuites dans le texte visible."""
+    if not text:
+        return text
+    text = _FUITE_OUTIL_RE.sub('', text)
+    text = _FUITE_OUTIL_OUVERT_RE.sub('', text)
+    return re.sub(r'\n{3,}', '\n\n', text).strip()
+
 def build_elite_system_prompt(user_row: dict, taches: list, memoire: dict, contexte_web: str,
                               coach_style: str = None, focus_today: list = None,
-                              dna_summary: dict = None, recent_coach: list = None) -> str:
+                              dna_summary: dict = None, recent_coach: list = None,
+                              chat_streaming: bool = False) -> str:
     terminees = sum(1 for t in taches if t.get('terminee'))
     prio_order = {'haute': 0, 'moyenne': 1, 'basse': 2}
     en_cours = sorted([t for t in taches if not t.get('terminee')], key=lambda t: prio_order.get(t.get('priorite', 'basse'), 2))
@@ -11255,8 +11903,9 @@ Tâches : {len(taches)} total | {terminees} terminées ({taux}%) | {len(en_cours
 8. LONGUEUR — Question simple = réponse percutante ; complexe = analyse complète mais sans bavardage
 9. PERSONA — Tu es GetShift AI. Si un ton de coach est demandé (bienveillant/énergique/analytique), garde-le dans CHAQUE phrase, pas seulement la première. Tu ne portes jamais de prénom (pas Alex/Max/Nova).
 10. DATE — Tu connais toujours la date et l'heure actuelles (voir bloc DATE & HEURE ci-dessus). Ne jamais prétendre l'ignorer.
-11. AGENT — Tu n'expliques pas ce que tu vas faire avec des phrases comme "je vais créer la tâche". Tu APPELLES directement les outils disponibles (creer_tache, terminer_tache, lister_membres_equipe, creer_tache_equipe, assigner_tache_equipe, obtenir_contexte_global, naviguer_vers, etc.) puis tu confirmes en une phrase le résultat.
-12. PONT ENTRE LES PAGES — Tu es le cerveau central de GetShift, pas le chat d'une seule page. Tu connais l'état de TOUTES les pages (vois le bloc CONSCIENCE TRANSVERSALE). Tu fais activement le lien : une tâche non planifiée → propose la Planification ; un objectif sans tâches liées → propose Goal ; une journée surchargée → propose Tomorrow Builder ; une tâche d'équipe en attente → propose Collaboration. Quand c'est pertinent, emmène l'utilisateur sur la bonne page avec naviguer_vers. Si on te demande "où j'en suis" ou un point global, appelle obtenir_contexte_global.
+{f'''11. MODE CHAT — Tu es en conversation directe (sans outils exécutables). Tu as DÉJÀ le contexte complet dans ce prompt (tâches, stats, focus, mémoire). Utilise-le pour répondre naturellement. N'écris JAMAIS de balises <function=...>, de JSON d'appel d'outil, ni de syntaxe technique invisible pour l'utilisateur. Si l'utilisateur veut une action concrète (créer, modifier, terminer une tâche, planifier, objectif structuré), propose-lui de le formuler clairement ("crée une tâche…", "planifie ma semaine…") ou d'ouvrir la page Goal Reverse / Tomorrow Builder pour un parcours complet.
+12. PONT ENTRE LES PAGES — Tu connais GetShift. Propose activement Goal Reverse pour un objectif à découper (ex : apprendre JS en 30 jours), Tomorrow Builder pour la journée, Planification pour la semaine. Donne le lien ou invite à y aller en une phrase.''' if chat_streaming else '''11. AGENT — Tu n'expliques pas ce que tu vas faire avec des phrases comme "je vais créer la tâche". Tu APPELLES directement les outils disponibles (creer_tache, generer_parcours_objectif pour apprendre X en Y jours ou grands objectifs, terminer_tache, lister_membres_equipe, creer_tache_equipe, assigner_tache_equipe, obtenir_contexte_global, naviguer_vers, etc.) puis tu confirmes en une phrase le résultat.
+12. PONT ENTRE LES PAGES — Tu es le cerveau central de GetShift, pas le chat d'une seule page. Tu connais l'état de TOUTES les pages (vois le bloc CONSCIENCE TRANSVERSALE). Tu fais activement le lien : une tâche non planifiée → propose la Planification ; un objectif sans tâches liées → propose Goal ; une journée surchargée → propose Tomorrow Builder ; une tâche d'équipe en attente → propose Collaboration. Quand c'est pertinent, emmène l'utilisateur sur la bonne page avec naviguer_vers. Si on te demande "où j'en suis" ou un point global, appelle obtenir_contexte_global.'''}
 
 RAPPEL FORMAT : aucun astérisque, aucun caractère # en début de ligne. Si tu veux insister sur un mot, mets-le en MAJUSCULES, jamais entre étoiles.
 
@@ -11500,6 +12149,28 @@ GETSHIFT_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "generer_parcours_objectif",
+            "description": "Génère un parcours structuré (Goal Reverse) pour un grand objectif : apprendre une compétence (JS, Python…), préparer un examen, lancer un projet, atteindre un but sur N jours/semaines. À utiliser dès que l'utilisateur demande un plan, un parcours, apprendre X en Y jours, ou structurer un objectif. Peut importer les tâches automatiquement dans GetShift.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "objectif": {"type": "string", "description": "Formulation claire de l'objectif final"},
+                    "deadline_iso": {"type": "string", "description": "Date limite YYYY-MM-DD"},
+                    "niveau": {"type": "string", "enum": ["realiste", "ambitieux"], "description": "Niveau d'ambition"},
+                    "template_id": {
+                        "type": "string",
+                        "description": "Template curriculum optionnel : javascript_30j, python_30j, prep_examen_8sem, side_project_6sem, linkedin_8sem, concours, saas, etc.",
+                    },
+                    "heures_par_semaine": {"type": "integer", "description": "Heures disponibles par semaine pour cet objectif"},
+                    "importer_taches": {"type": "boolean", "description": "Si true, crée l'objectif et importe toutes les tâches du plan"}
+                },
+                "required": ["objectif", "deadline_iso"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "lister_objectifs",
             "description": "Liste les objectifs (Goals) de l'utilisateur avec deadline, statut et faisabilité. À utiliser quand il demande où en sont ses objectifs, ou avant de rattacher une tâche à un objectif.",
             "parameters": {"type": "object", "properties": {}}
@@ -11582,7 +12253,7 @@ def trouver_membre_par_nom(curseur, equipe_id: int, nom: str):
     return None
 
 
-def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
+def executer_outil(nom_fonction: str, arguments: dict, user_id: int, coach_style: str = None) -> dict:
     """Exécute un tool appelé par l'IA et retourne le résultat structuré."""
     try:
         db = connecter()
@@ -11868,6 +12539,55 @@ def executer_outil(nom_fonction: str, arguments: dict, user_id: int) -> dict:
             db.commit()
             result.update({"tache_id": tache['id'], "tache_titre": tache['titre'], "objectif_id": obj['id'], "objectif_titre": obj['titre']})
 
+        elif nom_fonction == "generer_parcours_objectif":
+            objectif_txt = (arguments.get('objectif') or '').strip()
+            deadline_iso = (arguments.get('deadline_iso') or '').strip()
+            if not objectif_txt or not deadline_iso:
+                db.close()
+                return {"tool": nom_fonction, "ok": False, "erreur": "objectif et deadline_iso requis"}
+            niveau_g = arguments.get('niveau', 'realiste')
+            if niveau_g not in ('realiste', 'ambitieux'):
+                niveau_g = 'realiste'
+            template_id = arguments.get('template_id')
+            heures = arguments.get('heures_par_semaine')
+            importer = bool(arguments.get('importer_taches', False))
+            coach_style_g = coach_style if coach_style in COACH_STYLES else 'bienveillant'
+            cur.close()
+            db.close()
+            try:
+                plan = _generer_goal_reverse_plan(
+                    user_id, objectif_txt, deadline_iso, niveau_g, coach_style_g,
+                    template_id=template_id,
+                    heures_par_semaine=heures,
+                )
+            except Exception as e:
+                return {"tool": nom_fonction, "ok": False, "erreur": f"Génération plan: {str(e)[:180]}"}
+            nb_jalons = len(plan.get('jalons') or [])
+            nb_taches = sum(len(j.get('taches') or []) for j in (plan.get('jalons') or []))
+            payload = {
+                "objectif": objectif_txt,
+                "deadline": deadline_iso,
+                "niveau": niveau_g,
+                "plan": plan,
+                "score_faisabilite": plan.get('score_faisabilite'),
+                "nb_jalons": nb_jalons,
+                "nb_taches": nb_taches,
+                "conseil_global": plan.get('conseil_global'),
+                "page_concernee": "goal-reverse",
+                "navigation": True,
+            }
+            if importer:
+                imp = _importer_plan_goal_interne(
+                    user_id, objectif_txt, deadline_iso, niveau_g, plan, coach_style_g,
+                )
+                payload.update({
+                    "importe": True,
+                    "objectif_id": imp.get('objectif_id'),
+                    "nb_taches_importees": imp.get('nb_taches'),
+                    "deja_existant": imp.get('deja_existant'),
+                })
+            result.update(payload)
+
         else:
             db.close()
             return {"tool": nom_fonction, "ok": False, "erreur": f"Outil inconnu : {nom_fonction}"}
@@ -12038,7 +12758,7 @@ def assistant_augmente():
                         fn_name = tc.function.name
                         try: fn_args = json.loads(tc.function.arguments or '{}')
                         except: fn_args = {}
-                        res = executer_outil(fn_name, fn_args, user_id)
+                        res = executer_outil(fn_name, fn_args, user_id, coach_style=coach_style)
                         actions_executees.append(res)
                         # Renvoyer le résultat au modèle
                         messages_api.append({
@@ -12048,8 +12768,8 @@ def assistant_augmente():
                         })
                     continue  # Boucle pour qu'il termine sa réponse
 
-                # Pas de tool call → réponse finale
-                reponse = (msg.content or "").strip()
+                # Pas de tool call → réponse finale (filtre les fuites <function=...>)
+                reponse = _sanitiser_reponse_ia((msg.content or "").strip())
                 break
             else:
                 reponse = "(L'IA a effectué plusieurs actions mais n'a pas pu finaliser la réponse texte.)"
@@ -12071,7 +12791,9 @@ def assistant_augmente():
 
         # Détecter intention principale à partir des actions
         intention_finale = "chat"
-        if any(a.get('tool') == 'creer_tache' or a.get('tool') == 'creer_taches_lot' for a in actions_executees):
+        if any(a.get('tool') == 'generer_parcours_objectif' for a in actions_executees):
+            intention_finale = "goal_parcours"
+        elif any(a.get('tool') == 'creer_tache' or a.get('tool') == 'creer_taches_lot' for a in actions_executees):
             intention_finale = "action_creer"
         elif any(a.get('tool') == 'terminer_tache' for a in actions_executees):
             intention_finale = "action_terminer"
@@ -12174,6 +12896,7 @@ def assistant_stream():
             user_row, taches, memoire, contexte_web,
             coach_style=coach_style, focus_today=focus_today,
             dna_summary=dna_summary, recent_coach=recent_coach,
+            chat_streaming=True,
         )
         if cross_page_ctx:
             system_prompt += cross_page_ctx
@@ -12211,7 +12934,7 @@ def assistant_stream():
                     if delta:
                         full_response_parts.append(delta)
                         yield f"data: {json.dumps({'type': 'token', 'content': delta})}\n\n"
-                full_response = "".join(full_response_parts)
+                full_response = _sanitiser_reponse_ia("".join(full_response_parts))
                 yield f"data: {json.dumps({'type': 'done', 'full': full_response})}\n\n"
                 # Side effects post-stream (historique + mémoire)
                 try:
@@ -12232,7 +12955,7 @@ def assistant_stream():
                             messages_api, modele,
                             max_tokens=2000, temperature=0.72,
                         )
-                        texte = (completion.choices[0].message.content or "").strip() or GROQ_MSG_SURCHARGE
+                        texte = _sanitiser_reponse_ia((completion.choices[0].message.content or "").strip()) or GROQ_MSG_SURCHARGE
                     except GroqIndisponible:
                         texte = GROQ_MSG_SURCHARGE
                     yield f"data: {json.dumps({'type': 'token', 'content': texte})}\n\n"
@@ -12244,7 +12967,7 @@ def assistant_stream():
                     except Exception:
                         pass
                 else:
-                    partiel = "".join(full_response_parts)
+                    partiel = _sanitiser_reponse_ia("".join(full_response_parts))
                     yield f"data: {json.dumps({'type': 'done', 'full': partiel})}\n\n"
 
         return Response(stream_with_context(generate()), mimetype='text/event-stream', headers={

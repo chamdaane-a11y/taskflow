@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import i18n from '../i18n'
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import { themes } from '../themes'
@@ -304,6 +304,7 @@ function ObjectifsTerminesSection({ objectifs, isMobile }) {
 export default function GoalReverse() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const NIVEAUX = NIVEAUX_BASE.map(n => ({
     ...n,
     label: t(`goal.niveau_${n.id}`),
@@ -363,6 +364,21 @@ export default function GoalReverse() {
   useEffect(() => {
     chargerObjectifs()
   }, [chargerObjectifs])
+
+  // Plan généré depuis le chat IA → pré-remplir Goal Reverse
+  useEffect(() => {
+    const st = location.state
+    if (!st?.fromChat || !st?.plan) return
+    if (st.objectif) setObjectif(st.objectif)
+    if (st.deadline) {
+      try { setDeadline(new Date(`${st.deadline}T12:00:00`)) } catch { /* ignore */ }
+    }
+    if (st.niveau) setNiveau(st.niveau)
+    setResult(st.plan)
+    setImported(!!st.imported)
+    if (st.plan?.jalons?.length > 0) setJalonsOuverts({ 0: true })
+    window.history.replaceState({}, document.title)
+  }, [location.state])
 
   useEffect(() => {
     axios.get(`${API}/ia/goal-reverse/templates`)
