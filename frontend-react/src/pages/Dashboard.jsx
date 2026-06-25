@@ -2716,15 +2716,35 @@ export default function Dashboard() {
 
   const [showCompleted, setShowCompleted] = useState(false)
 
+  // Pendant le parcours guidé : filtre forcé « toutes » (les chips sont masquées)
+  useEffect(() => {
+    if (isEarlyJourney && d.filtre !== 'toutes') d.setFiltre('toutes')
+  }, [isEarlyJourney, d.filtre, d.setFiltre])
+
+  const focusTaskIds = useMemo(
+    () => new Set((d.tachesFocus || []).map(t => t.id)),
+    [d.tachesFocus],
+  )
+  const hasActiveInFocus = (d.tachesFocus || []).length > 0
+
   const tasksForMainList = useMemo(() => {
-    if (d.filtre === 'terminee') return d.tachesFiltrees
-    return d.tachesFiltrees.filter(t => !t.terminee)
-  }, [d.tachesFiltrees, d.filtre])
+    let list
+    if (isEarlyJourney) {
+      list = (d.taches || []).filter(t => !t.terminee)
+      // Évite doublon Focus + liste : le Focus affiche déjà les priorités du jour
+      list = list.filter(t => !focusTaskIds.has(t.id))
+    } else if (d.filtre === 'terminee') {
+      list = d.tachesFiltrees
+    } else {
+      list = d.tachesFiltrees.filter(t => !t.terminee)
+    }
+    return list
+  }, [d.taches, d.tachesFiltrees, d.filtre, isEarlyJourney, focusTaskIds])
 
   const completedCollapsed = useMemo(() => {
-    if (d.filtre !== 'toutes') return []
+    if (!isEarlyJourney && d.filtre !== 'toutes') return []
     return (d.taches || []).filter(t => t.terminee)
-  }, [d.taches, d.filtre])
+  }, [d.taches, d.filtre, isEarlyJourney])
 
   // ── Onboarding spotlight : 1ère vue d'une tâche avec source (Gmail/Drive/GCal) ──
   const [showSourceSpot, setShowSourceSpot] = useState(false)
@@ -3185,6 +3205,22 @@ export default function Dashboard() {
           {/* Liste tâches actives */}
           {d.loading ? (
             <div>{[1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} T={T} />)}</div>
+          ) : isEarlyJourney && hasActiveInFocus && tasksForMainList.length === 0 && completedCollapsed.length === 0 ? (
+            <motion.div
+              style={{
+                textAlign: 'center', padding: '28px 20px',
+                background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
+                borderRadius: 14, marginBottom: 8,
+              }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Target size={28} color="var(--ember)" strokeWidth={1.8} style={{ marginBottom: 10 }} />
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                {t('dashboard.guide_tasks_in_focus')}
+              </p>
+              <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: 0 }}>
+                {t('dashboard.guide_tasks_in_focus_sub')}
+              </p>
+            </motion.div>
           ) : tasksForMainList.length === 0 && !(d.filtre === 'toutes' && completedCollapsed.length > 0) ? (
             <motion.div
               style={{
@@ -3215,6 +3251,8 @@ export default function Dashboard() {
               <p style={{ fontSize: 12.5, marginTop: 4, color: 'var(--text-secondary)', marginBottom: isNewUser ? 16 : 0, fontWeight: 500 }}>
                 {isNewUser
                   ? "Crée ta 1ère tâche maintenant — tu vas voir, c'est rapide."
+                  : isEarlyJourney
+                  ? t('dashboard.guide_add_or_focus')
                   : isMobile ? 'Appuie sur Ajouter pour créer une tâche' : "Ajoute une tâche ou génère-en avec l'IA"}
               </p>
               {isNewUser && (
