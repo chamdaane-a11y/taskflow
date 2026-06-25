@@ -24,9 +24,9 @@ const INTEGRATIONS = [
   { id: 'gmail',           nom: 'Gmail',           description: 'L\'IA extrait les vraies tâches de tes emails.', Logo: LogoGmail,           categorie: 'Google', oauthPath: '/auth/gmail',           couleur: '#EA4335' },
   { id: 'google_drive',    nom: 'Google Drive',    description: 'Attache des fichiers Drive à tes tâches.', Logo: LogoGoogleDrive,    categorie: 'Google', oauthPath: '/auth/google/drive',    couleur: '#00AC47' },
   { id: 'notion',          nom: 'Notion',          description: 'Importe tes pages comme tâches GetShift.',Logo: LogoNotion,          categorie: 'Productivité',  oauthPath: '/auth/notion',      couleur: '#1C1C1C' },
-  { id: 'slack',           nom: 'Slack',           description: 'Rappels de deadlines dans ton canal.',    Logo: LogoSlack,           categorie: 'Communication', oauthPath: '/auth/slack/oauth', couleur: '#E01E5A' },
-  { id: 'zoom',            nom: 'Zoom',            description: 'Crée des tâches de préparation auto.',    Logo: LogoZoom,            categorie: 'Communication', oauthPath: '/auth/zoom',        couleur: '#2D8CFF' },
-  { id: 'discord',         nom: 'Discord',         description: 'Notifications pour tes tâches urgentes.', Logo: LogoDiscord,         categorie: 'Communication', oauthPath: '/auth/discord',     couleur: '#5865F2' },
+  { id: 'slack',           nom: 'Slack',           description: 'Rappels de deadlines dans ton canal.',    Logo: LogoSlack,           categorie: 'Communication', oauthPath: '/auth/slack/oauth', couleur: '#E01E5A', bientot: true },
+  { id: 'zoom',            nom: 'Zoom',            description: 'Crée des tâches de préparation auto.',    Logo: LogoZoom,            categorie: 'Communication', oauthPath: '/auth/zoom',        couleur: '#2D8CFF', bientot: true },
+  { id: 'discord',         nom: 'Discord',         description: 'Notifications pour tes tâches urgentes.', Logo: LogoDiscord,         categorie: 'Communication', oauthPath: '/auth/discord',     couleur: '#5865F2', bientot: true },
 ]
 
 function Spinner({ color = 'currentColor' }) {
