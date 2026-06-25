@@ -19,6 +19,7 @@ import { appTopInset } from '../utils/engagement'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import { useSidebarUser } from '../components/useSidebarUser'
+import { markGuideIaVisited } from '../utils/firstDayGuide'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -478,6 +479,10 @@ export default function IAChat() {
   const isTablet = useMediaQuery('(max-width: 1100px)')
 
   // ── Init ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    markGuideIaVisited()
+  }, [])
+
   useEffect(() => {
     if (!user) { navigate('/'); return }
     // Tout en parallèle, sans bloquer l'UI

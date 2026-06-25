@@ -10,17 +10,40 @@ import {
 
 export const SIDEBAR_W = 248
 
-// Les labels sont des clés i18n — traduits dynamiquement dans le rendu
-export const NAV_ITEMS = [
-  { icon: LayoutDashboard, labelKey: 'nav.dashboard',     path: '/dashboard' },
-  { icon: Bot,             label: 'GetShift AI',          path: '/ia' },
-  { icon: Sparkles,        label: 'Tomorrow Builder',     path: '/tomorrow' },
-  { icon: Flag,            label: 'Goal',                 path: '/goal' },
-  { icon: BarChart2,       label: 'Analytics',           path: '/analytics' },
-  { icon: Calendar,        labelKey: 'nav.planning',      path: '/planification' },
-  { icon: Users,           labelKey: 'nav.collaboration', path: '/collaboration' },
-  { icon: HelpCircle,      labelKey: 'nav.help',          path: '/help' },
+// Labels via i18n — sections pour hiérarchiser la navigation
+export const NAV_SECTIONS = [
+  {
+    labelKey: 'nav.section_main',
+    items: [
+      { icon: LayoutDashboard, labelKey: 'nav.today', path: '/dashboard' },
+      { icon: Bot,             labelKey: 'nav.ai',    path: '/ia' },
+    ],
+  },
+  {
+    labelKey: 'nav.section_goals',
+    items: [
+      { icon: Flag,     labelKey: 'nav.goal',     path: '/goal' },
+      { icon: Sparkles, labelKey: 'nav.tomorrow', path: '/tomorrow' },
+    ],
+  },
+  {
+    labelKey: 'nav.section_track',
+    items: [
+      { icon: BarChart2, labelKey: 'nav.analytics', path: '/analytics' },
+      { icon: Calendar,  labelKey: 'nav.planning',  path: '/planification' },
+    ],
+  },
+  {
+    labelKey: 'nav.section_team',
+    items: [
+      { icon: Users, labelKey: 'nav.collaboration', path: '/collaboration' },
+      { icon: HelpCircle, labelKey: 'nav.help', path: '/help' },
+    ],
+  },
 ]
+
+/** Liste plate (compat tours, filtres mobile) */
+export const NAV_ITEMS = NAV_SECTIONS.flatMap(s => s.items)
 
 export function useSidebarState() {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -254,38 +277,77 @@ export default function AppSidebar({
           </motion.button>
         </div>
 
-        {/* Nav label */}
-        <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: 1.5, marginBottom: 8, padding: '0 8px', textTransform: 'uppercase' }}>Navigation</p>
+        {/* Nav par sections (+ Console fondateur) */}
+        {NAV_SECTIONS.map(section => {
+          const items = section.items.filter(
+            item => !isMobile || !['/dashboard', '/analytics', '/planification', '/ia'].includes(item.path),
+          )
+          if (!items.length) return null
+          return (
+            <div key={section.labelKey} style={{ marginBottom: 12 }}>
+              <p style={{
+                fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)',
+                letterSpacing: 1.2, marginBottom: 6, padding: '0 8px', textTransform: 'uppercase',
+              }}>
+                {t(section.labelKey)}
+              </p>
+              {items.map(item => {
+                const Icon = item.icon
+                const active = location.pathname === item.path
+                return (
+                  <motion.button key={item.path}
+                    data-tour={'nav-' + item.path.slice(1)}
+                    onClick={() => { navigate(item.path); if (isMobile) setSidebarOpen(false) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                      padding: '9px 12px', borderRadius: 'var(--radius-base)',
+                      color: active ? 'var(--ember)' : 'var(--text-secondary)',
+                      background: active ? 'var(--ember-soft)' : 'transparent',
+                      borderLeft: active ? '2px solid var(--ember)' : '2px solid transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 13, fontWeight: active ? 600 : 400,
+                      textAlign: 'left', marginBottom: 2,
+                      fontFamily: 'var(--font-ui)',
+                    }}
+                    whileHover={{ x: 2, color: 'var(--ember)' }}>
+                    <Icon size={16} strokeWidth={active ? 2.5 : 1.8} />
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.label || t(item.labelKey)}
+                    </span>
+                  </motion.button>
+                )
+              })}
+            </div>
+          )
+        })}
 
-        {/* Nav items (+ lien Console réservé au fondateur) */}
-        {[...NAV_ITEMS, ...(user?.is_founder ? [{ icon: Shield, label: 'Console', path: '/admin' }] : [])]
-          .filter(item => !isMobile || !['/dashboard', '/analytics', '/planification'].includes(item.path))
-          .map(item => {
-            const Icon = item.icon
-            const active = location.pathname === item.path
-            return (
-              <motion.button key={item.path}
-                data-tour={'nav-' + item.path.slice(1)}
-                onClick={() => { navigate(item.path); if (isMobile) setSidebarOpen(false) }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: '9px 12px', borderRadius: 'var(--radius-base)',
-                  color: active ? 'var(--ember)' : 'var(--text-secondary)',
-                  background: active ? 'var(--ember-soft)' : 'transparent',
-                  borderLeft: active ? '2px solid var(--ember)' : '2px solid transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 13, fontWeight: active ? 600 : 400,
-                  textAlign: 'left', marginBottom: 2,
-                  fontFamily: 'var(--font-ui)',
-                }}
-                whileHover={{ x: 2, color: 'var(--ember)' }}>
-                <Icon size={16} strokeWidth={active ? 2.5 : 1.8} />
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label || t(item.labelKey)}</span>
-              </motion.button>
-            )
-          })
-        }
+        {user?.is_founder && (
+          <div style={{ marginBottom: 12 }}>
+            <p style={{
+              fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)',
+              letterSpacing: 1.2, marginBottom: 6, padding: '0 8px', textTransform: 'uppercase',
+            }}>
+              Admin
+            </p>
+            <motion.button
+              data-tour="nav-admin"
+              onClick={() => { navigate('/admin'); if (isMobile) setSidebarOpen(false) }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                padding: '9px 12px', borderRadius: 'var(--radius-base)',
+                color: location.pathname === '/admin' ? 'var(--ember)' : 'var(--text-secondary)',
+                background: location.pathname === '/admin' ? 'var(--ember-soft)' : 'transparent',
+                border: 'none', cursor: 'pointer', fontSize: 13,
+                fontWeight: location.pathname === '/admin' ? 600 : 400,
+                textAlign: 'left', fontFamily: 'var(--font-ui)',
+              }}
+              whileHover={{ x: 2, color: 'var(--ember)' }}>
+              <Shield size={16} strokeWidth={location.pathname === '/admin' ? 2.5 : 1.8} />
+              <span>Console</span>
+            </motion.button>
+          </div>
+        )}
 
         {children}
 

@@ -2,11 +2,11 @@
 import { memo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Heart, Plus, Calendar, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, Bot, Plus, Calendar, BarChart2 } from 'lucide-react'
 
 export const BOTTOM_NAV_HEIGHT = 64
 
-const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, onOpenCoach, hidden = false }) {
+const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden = false }) {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -16,12 +16,9 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, onOpenC
     if (onCreateTask) onCreateTask()
     else navigate('/dashboard', { state: { openAddSheet: true } })
   }
-  const handleCoach = () => {
-    if (onOpenCoach) onOpenCoach()
-    else navigate('/dashboard', { state: { openCoach: true } })
-  }
 
   const isOnDashboard = location.pathname === '/dashboard'
+  const isOnIa        = location.pathname === '/ia'
   const isOnPlanning  = location.pathname === '/planification'
   const isOnAnalytics = location.pathname === '/analytics'
 
@@ -47,8 +44,7 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, onOpenC
             background: 'var(--ember-soft)', zIndex: -1,
           }} />
       )}
-      <Icon size={19} strokeWidth={active ? 2.4 : 1.9}
-        fill={active && Icon === Heart ? 'var(--ember)' : 'none'} />
+      <Icon size={19} strokeWidth={active ? 2.4 : 1.9} />
       <span style={{
         fontSize: 9.5,
         fontWeight: active ? 700 : 500,
@@ -73,8 +69,8 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, onOpenC
         paddingBottom: 'env(safe-area-inset-bottom)',
         display: 'flex', alignItems: 'stretch',
       }}>
-      {renderItem('home',  { Icon: LayoutDashboard, label: 'Accueil',  active: isOnDashboard, onClick: () => navigate('/dashboard') })}
-      {renderItem('coach', { Icon: Heart,            label: 'Coach',    active: false,          onClick: handleCoach })}
+      {renderItem('home', { Icon: LayoutDashboard, label: 'Accueil',   active: isOnDashboard, onClick: () => navigate('/dashboard') })}
+      {renderItem('ia',   { Icon: Bot,             label: 'GetShift AI', active: isOnIa,        onClick: () => navigate('/ia') })}
 
       {/* FAB central */}
       <motion.button
@@ -110,7 +106,7 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, onOpenC
       </motion.button>
 
       {renderItem('plan',  { Icon: Calendar,  label: 'Planning', active: isOnPlanning,  onClick: () => navigate('/planification') })}
-      {renderItem('stats', { Icon: BarChart2, label: 'Analytics', active: isOnAnalytics, onClick: () => navigate('/analytics') })}
+      {renderItem('stats', { Icon: BarChart2, label: 'Stats',    active: isOnAnalytics, onClick: () => navigate('/analytics') })}
     </motion.nav>
   )
 })

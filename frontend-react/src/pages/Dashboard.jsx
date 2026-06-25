@@ -28,6 +28,8 @@ import OutilsIntegrations from './OutilsIntegrations'
 import AgendaSection from './AgendaSection'
 import TemplateIconBox from './CustomIcons'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
+import FirstDayChecklist from '../components/FirstDayChecklist'
+import { useFirstDayGuide } from '../hooks/useFirstDayGuide'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import { ProchainBadgePill } from '../components/ProchainBadgeBanner'
 import { BADGES_CONFIG } from '../data/badges'
@@ -2666,6 +2668,34 @@ export default function Dashboard() {
   // Nouveau user = pas chargé encore OU 0 tâche jamais créée
   const isNewUser = !d.loading && (d.taches?.length || 0) === 0 && (d.dashboardStats?.total_taches ?? 0) === 0
 
+  const guide = useFirstDayGuide({
+    loading: d.loading,
+    taches: d.taches,
+    tachesFocus: d.tachesFocus,
+    dashboardStats: d.dashboardStats,
+  })
+  const isEarlyJourney = guide.showChecklist
+
+  const [showBottomSheet, setShowBottomSheet] = useState(false)
+
+  const scrollToFocus = useCallback(() => {
+    const el = document.querySelector('[data-guide="dash-focus"]')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [])
+
+  const handleGuideCreateTask = useCallback(() => {
+    if (isMobile) setShowBottomSheet(true)
+    else {
+      setTimeout(() => {
+        const input = document.querySelector('.smart-task-input-field')
+        if (input) {
+          input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          input.focus()
+        }
+      }, 80)
+    }
+  }, [isMobile])
+
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('sidebar_open') !== 'false' } catch { return true }
   })
@@ -2676,7 +2706,6 @@ export default function Dashboard() {
   }
   useEffect(() => { if (isMobile) setSidebarOpen(d.showSidebar) }, [d.showSidebar, isMobile])
 
-  const [showBottomSheet, setShowBottomSheet] = useState(false)
   const [statsVisible, setStatsVisible] = useState(() => {
     try { return localStorage.getItem('stats_hud_visible') === 'true' } catch { return false }
   })
@@ -2885,9 +2914,9 @@ export default function Dashboard() {
         {/* Contenu scrollable */}
         <div style={{ flex: 1, width: '100%', maxWidth: 1440, marginLeft: 'auto', marginRight: 'auto', padding: isMobile ? '12px 16px 120px' : 'clamp(16px,3vw,40px)', paddingTop: isMobile ? 12 : 60, boxSizing: 'border-box' }}>
 
-          {/* Bannière guide */}
+          {/* Bannière guide (legacy) — masquée pendant le parcours 3 étapes */}
           <AnimatePresence>
-            {d.showGuideBanner && (
+            {d.showGuideBanner && !isEarlyJourney && (
               <motion.div style={{ background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover)15)`, border: `1px solid var(--ember-soft)`, borderRadius: 14, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}
                 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -2972,6 +3001,17 @@ export default function Dashboard() {
 
           <ExportModal isOpen={d.showExport} onClose={() => d.setShowExport(false)} taches={d.taches} stats={{ total, terminees, haute, enCours, pct }} user={d.user} theme={d.theme} />
 
+          {/* Parcours guidé 60 s — 3 étapes */}
+          {isEarlyJourney && (
+            <FirstDayChecklist
+              guide={guide}
+              isMobile={isMobile}
+              onCreateTask={handleGuideCreateTask}
+              onGoFocus={scrollToFocus}
+              onGoIa={() => navigate('/ia')}
+            />
+          )}
+
           {/* ── MODE NOUVEAU USER (0 tâche jamais créée) ──────────────────── */}
           {isNewUser ? (
             <>
@@ -2996,20 +3036,21 @@ export default function Dashboard() {
                 }}
               />
               <StarterTemplates d={d} T={T} isMobile={isMobile} />
-              <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={true} />
             </>
           ) : (
             <>
               {/* Focus du jour — zone principale */}
               <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
 
+              {!isEarlyJourney && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: -6, marginBottom: isMobile ? 14 : 18 }}>
                 <ProchainBadgePill d={d} isMobile={isMobile} minPct={30} onClick={() => navigate('/profile')} />
                 <ObjectifsLienFocus userId={d.user?.id} navigate={navigate} isMobile={isMobile} />
               </div>
+              )}
 
-              {/* Ajout rapide juste sous le focus (desktop) */}
-              {!isMobile && (
+              {/* Ajout rapide juste sous le focus (desktop) — après parcours guidé */}
+              {!isMobile && !isEarlyJourney && (
                 <div className="gs-forms" style={{ marginBottom: 20 }}>
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
                     <SmartTaskInput d={d} T={T} />
@@ -3028,7 +3069,9 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={false} />
+              {!isEarlyJourney && (
+                <CoachDailyMessage d={d} T={T} isMobile={isMobile} isNewUser={false} />
+              )}
 
               {gcalImportNotif && (
                 <motion.div
@@ -3050,12 +3093,14 @@ export default function Dashboard() {
                 </motion.div>
               )}
 
-              <AgendaSection user={d.user} T={T} onImport={() => handleGcalImport(false)} />
+              {!isEarlyJourney && (
+                <AgendaSection user={d.user} T={T} onImport={() => handleGcalImport(false)} />
+              )}
             </>
           )}
 
-          {/* Stats HUD — toggle discret */}
-          {!isNewUser && (
+          {/* Stats HUD — toggle discret (après parcours guidé) */}
+          {!isNewUser && !isEarlyJourney && (
             <>
               <button onClick={toggleStats} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', marginBottom: statsVisible ? 8 : 16, letterSpacing: 0.3, textTransform: 'uppercase' }}>
                 <ChevronDown size={12} strokeWidth={2.5} style={{ transform: statsVisible ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
@@ -3085,12 +3130,13 @@ export default function Dashboard() {
           </AnimatePresence>
 
 
-          {/* Formulaire desktop — nouveaux users uniquement (sinon sous le Focus) */}
+          {/* Formulaire desktop — nouveaux users uniquement */}
           {!isMobile && isNewUser && (
             <div className="gs-forms" style={{ marginBottom: 24 }}>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
                 <SmartTaskInput d={d} T={T} />
               </motion.div>
+              {!isEarlyJourney && (
               <motion.div style={{ background: 'var(--surface-1)', border: `1px solid var(--ember-soft)`, borderRadius: 14, padding: 20 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Sparkles size={15} strokeWidth={2} color="var(--ember)" />Générer avec l'IA
@@ -3102,11 +3148,12 @@ export default function Dashboard() {
                   Générer 5 tâches automatiquement
                 </motion.button>
               </motion.div>
+              )}
             </div>
           )}
 
-          {/* Filtres — tâches actives */}
-          {!isNewUser && (
+          {/* Filtres — après 1ère tâche et hors parcours minimal */}
+          {!isNewUser && !isEarlyJourney && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: 1.2, textTransform: 'uppercase' }}>
                 {d.filtre === 'terminee' ? 'Historique' : 'Autres tâches'}
@@ -3118,6 +3165,7 @@ export default function Dashboard() {
               )}
             </div>
           )}
+          {!isNewUser && !isEarlyJourney && (
           <div data-guide="dash-filters" style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
             {[['toutes', 'Actives'], ['haute', 'Haute'], ['moyenne', 'Moyenne'], ['basse', 'Basse'], ['bloquee', 'Bloquées'], ['terminee', 'Terminées']].map(([val, label]) => (
               <motion.button key={val}
@@ -3132,6 +3180,7 @@ export default function Dashboard() {
               </motion.button>
             ))}
           </div>
+          )}
 
           {/* Liste tâches actives */}
           {d.loading ? (
@@ -3247,7 +3296,6 @@ export default function Dashboard() {
         <BottomNavMobile
           T={T}
           onCreateTask={() => setShowBottomSheet(true)}
-          onOpenCoach={() => d.setShowCoach?.(true)}
           hidden={showBottomSheet}
         />
       )}
@@ -3315,7 +3363,7 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* FAB Coach — desktop only (mobile a déjà Coach dans la BottomNavMobile) */}
+      {/* FAB Coach — desktop uniquement (mobile : GetShift AI dans la bottom nav) */}
       {!d.showCoach && !isMobile && (
         <motion.button onClick={d.ouvrirCoach} initial={{ scale: 0 }} animate={{ scale: 1 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
           style={{ position: 'fixed', bottom: 24, right: 24, width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, var(--ember), var(--ember-hover))', border: 'none', cursor: 'pointer', zIndex: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 6px 20px var(--ember-soft)` }}>
