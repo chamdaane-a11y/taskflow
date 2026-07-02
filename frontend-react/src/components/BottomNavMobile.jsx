@@ -1,14 +1,23 @@
 // BottomNavMobile.jsx — barre de nav iOS-style permanente sur mobile
-import { memo } from 'react'
+import { memo, useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LayoutDashboard, Bot, Plus, Calendar, BarChart2 } from 'lucide-react'
 
 export const BOTTOM_NAV_HEIGHT = 64
 
-const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden = false }) {
+const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden = false, highlightIa: highlightIaProp = false }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const [highlightIaEvent, setHighlightIaEvent] = useState(false)
+
+  useEffect(() => {
+    const onHighlight = (e) => setHighlightIaEvent(!!e.detail?.active)
+    window.addEventListener('gs:guide-highlight-ia', onHighlight)
+    return () => window.removeEventListener('gs:guide-highlight-ia', onHighlight)
+  }, [])
+
+  const highlightIa = highlightIaProp || highlightIaEvent
 
   if (hidden) return null
 
@@ -33,9 +42,25 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden 
     touchAction: 'manipulation',
   }
 
-  const renderItem = (key, { Icon, label, active, onClick }) => (
-    <motion.button key={key} onClick={onClick} whileTap={{ scale: 0.92 }}
-      style={{ ...itemBase, color: active ? 'var(--ember)' : 'var(--text-tertiary)' }}>
+  const renderItem = (key, { Icon, label, active, onClick, pulse = false, tourId }) => (
+    <motion.button
+      key={key}
+      data-tour={tourId}
+      onClick={onClick}
+      whileTap={{ scale: 0.92 }}
+      animate={pulse ? {
+        boxShadow: [
+          '0 0 0 0 rgba(232,98,42,0.55)',
+          '0 0 0 10px rgba(232,98,42,0)',
+          '0 0 0 0 rgba(232,98,42,0)',
+        ],
+      } : {}}
+      transition={pulse ? { duration: 1.6, repeat: Infinity } : {}}
+      style={{
+        ...itemBase,
+        color: active || pulse ? 'var(--ember)' : 'var(--text-tertiary)',
+        borderRadius: pulse ? 12 : undefined,
+      }}>
       {active && (
         <motion.div layoutId="bottomNavActive"
           style={{
@@ -44,10 +69,20 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden 
             background: 'var(--ember-soft)', zIndex: -1,
           }} />
       )}
-      <Icon size={19} strokeWidth={active ? 2.4 : 1.9} />
+      {pulse && !active && (
+        <motion.div
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.4, repeat: Infinity }}
+          style={{
+            position: 'absolute', top: 4,
+            width: 32, height: 26, borderRadius: 99,
+            background: 'var(--ember-soft)', zIndex: -1,
+          }} />
+      )}
+      <Icon size={19} strokeWidth={active || pulse ? 2.4 : 1.9} />
       <span style={{
         fontSize: 9.5,
-        fontWeight: active ? 700 : 500,
+        fontWeight: active || pulse ? 700 : 500,
         letterSpacing: 0.1,
         maxWidth: '100%',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -69,8 +104,15 @@ const BottomNavMobile = memo(function BottomNavMobile({ T, onCreateTask, hidden 
         paddingBottom: 'env(safe-area-inset-bottom)',
         display: 'flex', alignItems: 'stretch',
       }}>
-      {renderItem('home', { Icon: LayoutDashboard, label: 'Accueil',   active: isOnDashboard, onClick: () => navigate('/dashboard') })}
-      {renderItem('ia',   { Icon: Bot,             label: 'GetShift AI', active: isOnIa,        onClick: () => navigate('/ia') })}
+      {renderItem('home', { Icon: LayoutDashboard, label: 'Accueil', active: isOnDashboard, onClick: () => navigate('/dashboard') })}
+      {renderItem('ia', {
+        Icon: Bot,
+        label: 'GetShift AI',
+        active: isOnIa,
+        pulse: highlightIa,
+        tourId: 'nav-ia',
+        onClick: () => navigate('/ia'),
+      })}
 
       {/* FAB central */}
       <motion.button

@@ -12,8 +12,13 @@ export function useFirstDayGuide({ loading, taches, tachesFocus, dashboardStats 
   useEffect(() => {
     const onIa = () => setIaVisited(readGuideIaVisited())
     const onDismiss = () => setDismissed(readGuideDismissed())
+    const onReset = () => {
+      setIaVisited(false)
+      setDismissed(false)
+    }
     window.addEventListener('gs:guide-ia-visited', onIa)
     window.addEventListener('gs:guide-dismissed', onDismiss)
+    window.addEventListener('gs:guide-reset', onReset)
     window.addEventListener('storage', () => {
       onIa()
       onDismiss()
@@ -21,6 +26,7 @@ export function useFirstDayGuide({ loading, taches, tachesFocus, dashboardStats 
     return () => {
       window.removeEventListener('gs:guide-ia-visited', onIa)
       window.removeEventListener('gs:guide-dismissed', onDismiss)
+      window.removeEventListener('gs:guide-reset', onReset)
       window.removeEventListener('storage', onIa)
     }
   }, [])
@@ -31,6 +37,7 @@ export function useFirstDayGuide({ loading, taches, tachesFocus, dashboardStats 
   )
 
   const showChecklist = !dismissed && !steps.allComplete
+  const showCelebration = !dismissed && steps.allComplete
 
-  return { ...steps, dismissed, showChecklist }
+  return { ...steps, dismissed, showChecklist, showCelebration }
 }

@@ -10,7 +10,7 @@ import {
   ArrowLeft, Palette, ExternalLink, LogOut,
   Bell, Shield, ChevronRight, Check, Eye, EyeOff, Download,
   Settings as SettingsIcon, Monitor, Smartphone, Globe, Trash2,
-  Lock, Unlock, Mail, RefreshCw, Laptop,
+  Lock, Unlock, Mail, RefreshCw, Laptop, Sparkles,
 } from 'lucide-react'
 
 const LANGUAGES = [
@@ -26,6 +26,7 @@ import { appTopInset } from '../utils/engagement'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import OutilsIntegrations from './OutilsIntegrations'
 import PushNotifToggle from '../components/PushNotifToggle'
+import { resetFirstDayGuide } from '../utils/firstDayGuide'
 
 const API = 'https://getshift-backend.onrender.com'
 
@@ -700,6 +701,33 @@ export default function Settings() {
                 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.val}</span>
               </div>
             ))}
+          </div>
+
+          {/* Rejouer le parcours guidé */}
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--ember-soft)', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, margin: '0 0 8px', textTransform: 'uppercase' }}>
+              {t('settings.guide_section')}
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.55 }}>
+              {t('settings.guide_replay_desc')}
+            </p>
+            <motion.button
+              onClick={() => {
+                resetFirstDayGuide()
+                setNotification({ type: 'success', msg: t('settings.guide_replay_done') })
+                navigate('/dashboard')
+              }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 18px', borderRadius: 10, border: 'none',
+                background: 'var(--ember)', color: '#fff',
+                fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}>
+              <Sparkles size={15} strokeWidth={2} />
+              {t('settings.guide_replay')}
+            </motion.button>
           </div>
 
           {/* Changer mot de passe */}

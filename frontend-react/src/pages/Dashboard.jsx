@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { memo, useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
 import i18n from '../i18n'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -30,6 +30,7 @@ import TemplateIconBox from './CustomIcons'
 import BottomNavMobile, { BOTTOM_NAV_HEIGHT } from '../components/BottomNavMobile'
 import FirstDayChecklist from '../components/FirstDayChecklist'
 import { useFirstDayGuide } from '../hooks/useFirstDayGuide'
+import { hasAnyTasks, isGuideDataReady } from '../utils/firstDayGuide'
 import AppSidebar, { SIDEBAR_W, SidebarToggle, FloatingLogo } from '../components/AppSidebar'
 import { ProchainBadgePill } from '../components/ProchainBadgeBanner'
 import { BADGES_CONFIG } from '../data/badges'
@@ -1745,15 +1746,31 @@ const ObjectifsLienFocus = memo(function ObjectifsLienFocus({ userId, navigate, 
 })
 
 // ── FocusDuJour — 3 priorités de la journée ──────────────────────────────────
-const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
+const FocusDuJour = memo(forwardRef(function FocusDuJour({ d, T, isMobile, pColor, pBg, guideHighlight = false }, ref) {
   const { t } = useTranslation()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const rootRef = useRef(null)
   const pickerRef = useRef(null)
   const focused = d.tachesFocus || []
   const slots = [0, 1, 2]
   const limitAtteinte = focused.length >= 3
   const dateTitre = new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })
   const focusPlein = focused.length >= 3
+
+  useImperativeHandle(ref, () => ({
+    scrollIntoView() {
+      const el = rootRef.current
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    },
+    openPicker() {
+      if (!limitAtteinte) setPickerOpen(true)
+    },
+    focusAndOpen() {
+      const el = rootRef.current
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setTimeout(() => { if (!limitAtteinte) setPickerOpen(true) }, 400)
+    },
+  }), [limitAtteinte])
 
   useEffect(() => {
     const h = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false) }
@@ -1773,17 +1790,18 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
 
   return (
     <motion.div
+      ref={rootRef}
       data-guide="dash-focus"
       initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
       style={{
         position: 'relative',
         background: focusPlein ? 'linear-gradient(180deg, var(--ember-soft) 0%, var(--surface-1) 42%)' : 'var(--surface-1)',
-        border: `1px solid ${focusPlein ? 'var(--ember-ring)' : 'var(--border-subtle)'}`,
+        border: `2px solid ${guideHighlight ? 'var(--ember)' : focusPlein ? 'var(--ember-ring)' : 'var(--border-subtle)'}`,
         borderRadius: isMobile ? 16 : 20,
         padding: isMobile ? '14px 14px 12px' : '24px 28px 22px',
         marginBottom: isMobile ? 18 : 28,
         overflow: 'visible',
-        boxShadow: focusPlein ? 'var(--shadow-ember)' : 'var(--shadow-md)',
+        boxShadow: guideHighlight ? '0 0 0 4px var(--ember-soft), var(--shadow-ember)' : focusPlein ? 'var(--shadow-ember)' : 'var(--shadow-md)',
       }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: isMobile ? 3 : 4, background: `linear-gradient(90deg, var(--ember), var(--ember-hover))`, borderRadius: isMobile ? '16px 16px 0 0' : '20px 20px 0 0' }} />
 
@@ -2043,7 +2061,7 @@ const FocusDuJour = memo(function FocusDuJour({ d, T, isMobile, pColor, pBg }) {
       </AnimatePresence>
     </motion.div>
   )
-})
+}))
 
 // ── TaskDNAPopup — Analyse IA d'une tâche avant création ────────────────────
 const TaskDNAPopup = memo(function TaskDNAPopup({ d, T, isMobile }) {
@@ -2665,8 +2683,10 @@ export default function Dashboard() {
   const coachStyleObj = COACH_STYLES_LIST.find(s => s.id === d.coachStyle)
   const { statsTaches: { total, terminees, haute, enCours, pct }, T } = d
 
-  // Nouveau user = pas chargé encore OU 0 tâche jamais créée
-  const isNewUser = !d.loading && (d.taches?.length || 0) === 0 && (d.dashboardStats?.total_taches ?? 0) === 0
+  // Nouveau user = données API prêtes ET aucune tâche (garde anti-race login)
+  const dataReady = isGuideDataReady({ loading: d.loading, dashboardStats: d.dashboardStats })
+  const hasTasks = hasAnyTasks({ taches: d.taches, dashboardStats: d.dashboardStats })
+  const isNewUser = dataReady && !hasTasks
 
   const guide = useFirstDayGuide({
     loading: d.loading,
@@ -2674,13 +2694,26 @@ export default function Dashboard() {
     tachesFocus: d.tachesFocus,
     dashboardStats: d.dashboardStats,
   })
-  const isEarlyJourney = guide.showChecklist
+  // Checklist visible pour nouveaux ET anciens users (replay guide)
+  const showGuideChecklist = guide.showChecklist
+  const showGuideCelebration = guide.showCelebration
+  // Mode épuré : uniquement pour vrais nouveaux users (0 tâche) — pas pour les anciens qui rejouent le guide
+  const isEarlyJourney = guide.showChecklist && isNewUser
 
+  // Spotlight bottom nav IA — étape 3 du parcours
+  useEffect(() => {
+    const active = showGuideChecklist && guide.currentStep === 3 && !guide.step3
+    window.dispatchEvent(new CustomEvent('gs:guide-highlight-ia', { detail: { active } }))
+    return () => {
+      window.dispatchEvent(new CustomEvent('gs:guide-highlight-ia', { detail: { active: false } }))
+    }
+  }, [showGuideChecklist, guide.currentStep, guide.step3])
+
+  const focusDuJourRef = useRef(null)
   const [showBottomSheet, setShowBottomSheet] = useState(false)
 
   const scrollToFocus = useCallback(() => {
-    const el = document.querySelector('[data-guide="dash-focus"]')
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    focusDuJourRef.current?.focusAndOpen?.()
   }, [])
 
   const handleGuideCreateTask = useCallback(() => {
@@ -2936,7 +2969,7 @@ export default function Dashboard() {
 
           {/* Bannière guide (legacy) — masquée pendant le parcours 3 étapes */}
           <AnimatePresence>
-            {d.showGuideBanner && !isEarlyJourney && (
+            {d.showGuideBanner && !showGuideChecklist && (
               <motion.div style={{ background: `linear-gradient(135deg, var(--ember-soft), var(--ember-hover)15)`, border: `1px solid var(--ember-soft)`, borderRadius: 14, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}
                 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -3022,10 +3055,11 @@ export default function Dashboard() {
           <ExportModal isOpen={d.showExport} onClose={() => d.setShowExport(false)} taches={d.taches} stats={{ total, terminees, haute, enCours, pct }} user={d.user} theme={d.theme} />
 
           {/* Parcours guidé 60 s — 3 étapes */}
-          {isEarlyJourney && (
+          {(showGuideChecklist || showGuideCelebration) && (
             <FirstDayChecklist
               guide={guide}
               isMobile={isMobile}
+              celebration={showGuideCelebration}
               onCreateTask={handleGuideCreateTask}
               onGoFocus={scrollToFocus}
               onGoIa={() => navigate('/ia')}
@@ -3060,7 +3094,15 @@ export default function Dashboard() {
           ) : (
             <>
               {/* Focus du jour — zone principale */}
-              <FocusDuJour d={d} T={T} isMobile={isMobile} pColor={pColor} pBg={pBg} />
+              <FocusDuJour
+                ref={focusDuJourRef}
+                d={d}
+                T={T}
+                isMobile={isMobile}
+                pColor={pColor}
+                pBg={pBg}
+                guideHighlight={showGuideChecklist && guide.currentStep === 2 && !guide.step2}
+              />
 
               {!isEarlyJourney && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: -6, marginBottom: isMobile ? 14 : 18 }}>
@@ -3335,6 +3377,7 @@ export default function Dashboard() {
           T={T}
           onCreateTask={() => setShowBottomSheet(true)}
           hidden={showBottomSheet}
+          highlightIa={showGuideChecklist && guide.currentStep === 3 && !guide.step3}
         />
       )}
 

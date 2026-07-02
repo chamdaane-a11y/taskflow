@@ -267,7 +267,9 @@ export function useDashboard() {
       if (typeof res.data.streak === 'number') setStreak(res.data.streak)
       if (typeof res.data.points === 'number') setPoints(res.data.points)
       if (typeof res.data.niveau === 'number') setNiveau(res.data.niveau)
-    } catch {}
+    } catch {
+      setDashboardStats(s => s ?? { total_taches: 0 })
+    }
   }, [user?.id])
 
   const chargerDnaInsights = useCallback(async () => {
