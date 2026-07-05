@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
+import { openOAuthPopup } from '../utils/oauthPopup'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -361,29 +362,16 @@ export default function Onboarding({ onTerminer, activerNotifications, userId, e
       return
     }
     setIntegLoading(integ.id)
-    const url = `${API}${integ.oauthPath}?user_id=${userId}`
-    const popup = window.open(url, 'oauth', 'width=520,height=640,top=100,left=100')
-
-    const cleanup = () => {
-      window.removeEventListener('message', listener)
-      clearInterval(checkClosed)
-    }
-    const listener = (e) => {
-      if (e.data?.type === 'oauth_success' && e.data?.integration === integ.id) {
-        cleanup()
-        setIntegConnectees(p => ({ ...p, [integ.id]: true }))
-        setIntegLoading(null)
-        popup?.close()
-      } else if (e.data?.type === 'oauth_error' && e.data?.integration === integ.id) {
-        cleanup()
-        setIntegLoading(null)
-        popup?.close()
-      }
-    }
-    const checkClosed = setInterval(() => {
-      if (popup?.closed) { cleanup(); setIntegLoading(null) }
-    }, 500)
-    window.addEventListener('message', listener)
+    openOAuthPopup(`${API}${integ.oauthPath}?user_id=${userId}`, {
+      onSuccess: (data) => {
+        if (data?.integration === integ.id) {
+          setIntegConnectees(p => ({ ...p, [integ.id]: true }))
+          setIntegLoading(null)
+        }
+      },
+      onFail: () => setIntegLoading(null),
+      onClose: () => setIntegLoading(null),
+    })
   }, [userId, onTerminer, navigate])
 
   const handleNotifs = async () => {

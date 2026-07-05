@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar, ExternalLink, MapPin, ChevronDown, Download } from 'lucide-react'
 import { useCalendarEvents } from './useCalendarEvents'
 import axios from 'axios'
+import { openOAuthPopup } from '../utils/oauthPopup'
 
 const API = 'https://getshift-backend.onrender.com'
 const STORAGE_KEY = 'gs_agenda_section_open'
@@ -57,25 +58,11 @@ const AgendaSection = memo(function AgendaSection({ user, T, dateStr, onImport }
   const onConnectClick = (e) => {
     e?.stopPropagation()
     if (!user?.id) return
-    const popup = window.open(
-      `${API}/auth/google/calendar?user_id=${user.id}`,
-      'gcal_oauth', 'width=540,height=680,menubar=no,toolbar=no'
-    )
-    const listener = (ev) => {
-      if (ev.data?.type === 'oauth_success' && ev.data?.integration === 'google_calendar') {
-        window.removeEventListener('message', listener)
-        setTimeout(() => refresh(), 600)
-      } else if (ev.data?.type === 'oauth_error') {
-        window.removeEventListener('message', listener)
-      }
-    }
-    window.addEventListener('message', listener)
-    const checkClosed = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkClosed)
-        window.removeEventListener('message', listener)
-      }
-    }, 800)
+    openOAuthPopup(`${API}/auth/google/calendar?user_id=${user.id}`, {
+      onSuccess: (data) => {
+        if (data?.integration === 'google_calendar') setTimeout(() => refresh(), 600)
+      },
+    })
   }
 
   // Résumé compact pour le header replié

@@ -7,6 +7,7 @@ import { useState, useCallback, memo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link2, Unlink, CheckCircle2, Wifi } from 'lucide-react'
 import axios from 'axios'
+import { openOAuthPopup } from '../utils/oauthPopup'
 import {
   GoogleCalendarLogo as LogoGoogleCalendar,
   GoogleDriveLogo    as LogoGoogleDrive,
@@ -171,22 +172,21 @@ export default function OutilsIntegrations({ T, userId }) {
 
   const handleConnect = useCallback((integration) => {
     setLoading(integration.id)
-    const w = 500, h = 620
-    const left = window.screenX + (window.outerWidth - w) / 2
-    const top = window.screenY + (window.outerHeight - h) / 2
-    const popup = window.open(`${API}${integration.oauthPath}?user_id=${userId}`, `oauth_${integration.id}`, `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`)
-    const onMsg = (e) => {
-      if (e.data?.type === 'oauth_success' && e.data?.integration === integration.id) {
-        window.removeEventListener('message', onMsg); clearInterval(poll)
-        popup?.close(); setLoading(null); sauvegarder(integration.id, true); notifier(t('outils.toast_connected', { nom: integration.nom }))
-      } else if (e.data?.type === 'oauth_error') {
-        window.removeEventListener('message', onMsg); clearInterval(poll)
-        popup?.close(); setLoading(null); notifier(t('outils.toast_error', { nom: integration.nom, err: e.data?.error || 'annulé' }), 'error')
-      }
-    }
-    window.addEventListener('message', onMsg)
-    const poll = setInterval(() => { if (popup?.closed) { clearInterval(poll); window.removeEventListener('message', onMsg); setLoading(null) } }, 500)
-  }, [userId, sauvegarder, notifier])
+    openOAuthPopup(`${API}${integration.oauthPath}?user_id=${userId}`, {
+      onSuccess: (data) => {
+        if (data?.integration === integration.id) {
+          setLoading(null)
+          sauvegarder(integration.id, true)
+          notifier(t('outils.toast_connected', { nom: integration.nom }))
+        }
+      },
+      onFail: () => {
+        setLoading(null)
+        notifier(t('outils.toast_error', { nom: integration.nom, err: 'annulé' }), 'error')
+      },
+      onClose: () => setLoading(null),
+    })
+  }, [userId, sauvegarder, notifier, t])
 
   const handleDisconnect = useCallback(async (id) => {
     setLoading(id)

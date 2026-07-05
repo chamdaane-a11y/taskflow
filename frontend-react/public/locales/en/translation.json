@@ -390,6 +390,8 @@
     "guide_tasks_in_focus": "Your active tasks are in Focus",
     "guide_tasks_in_focus_sub": "Today's priorities appear at the top — that's expected during the guided tour.",
     "guide_add_or_focus": "Use + to add a task, or pin one in today's Focus.",
+    "tasks_sync_failed": "Couldn't load your tasks (slow server or offline). Local cache is preserved.",
+    "tasks_sync_retry": "Retry",
     "see_guide": "View guide",
     "later": "Later",
     "offline_mode": "Offline mode",

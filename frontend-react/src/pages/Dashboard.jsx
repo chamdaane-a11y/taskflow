@@ -3066,6 +3066,31 @@ export default function Dashboard() {
             />
           )}
 
+          {d.tachesSyncFailed && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                padding: '12px 14px', marginBottom: 14, borderRadius: 12,
+                background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.22)',
+              }}>
+              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.45, flex: 1 }}>
+                {t('dashboard.tasks_sync_failed')}
+              </p>
+              <motion.button
+                type="button"
+                onClick={() => d.chargerTaches()}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flexShrink: 0, padding: '7px 12px', borderRadius: 8, border: 'none',
+                  background: 'var(--ember)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                }}>
+                {t('dashboard.tasks_sync_retry')}
+              </motion.button>
+            </motion.div>
+          )}
+
           {/* ── MODE NOUVEAU USER (0 tâche jamais créée) ──────────────────── */}
           {isNewUser ? (
             <>

@@ -18,8 +18,8 @@ import { useOffline } from '../useOffline'
 
 const API = 'https://getshift-backend.onrender.com'
 
-// Axios avec timeout 8s pour éviter le spinner infini sur cold start
-const api = axios.create({ baseURL: API, timeout: 8000 })
+// Timeout généreux — Render cold start peut dépasser 8s
+const api = axios.create({ baseURL: API, timeout: 20000 })
 
 // Même cache-buster que main.jsx — les instances axios.create() n'héritent pas
 // des interceptors globaux d'axios, il faut le réappliquer. Idem pour le token
@@ -58,6 +58,7 @@ export function useDashboard() {
 
   // ── Tâches ─────────────────────────────────────────────────────────
   const [taches,  setTaches]  = useState([])
+  const [tachesSyncFailed, setTachesSyncFailed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [filtre,  setFiltre]  = useState(() => {
     // Lit un filtre initial depuis sessionStorage (set par Analytics CTA)
@@ -220,7 +221,7 @@ export function useDashboard() {
   // ══════════════════════════════════════════════════════════════════
 
   useEffect(() => {
-    if (!user) { navigate('/'); return }
+    if (!user?.id) { navigate('/'); return }
 
     // Tout en parallèle — on n'attend plus séquentiellement
     Promise.allSettled([
@@ -237,7 +238,8 @@ export function useDashboard() {
       activerNotifications()
       syncGcalImport()
     })
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   useEffect(() => {
     const h = (e) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true) }
@@ -317,31 +319,62 @@ export function useDashboard() {
     }
   }, [user?.id])
 
-  const chargerTaches = useCallback(async () => {
-    // Afficher immédiatement les données localStorage
+  const chargerTaches = useCallback(async ({ silent = false } = {}) => {
+    if (!user?.id) return
+
     const local = await lireTachesLocalement(user.id)
     if (local?.length) {
       setTaches(local)
-      setLoading(false) // stoppe le spinner dès qu'on a du local
-    } else {
+      if (!silent) setLoading(false)
+    } else if (!silent) {
       setLoading(true)
     }
+
+    const fetchTaches = () => api.get(`/taches/${user.id}`, { timeout: 25000 })
+
     try {
-      const res = await api.get(`/taches/${user.id}`)
-      setTaches(res.data)
-      await sauvegarderTachesLocalement(res.data)
-      // Recharger les stats du HUD à chaque sync de tâches (inline pour éviter dep loop)
+      let res
+      try {
+        res = await fetchTaches()
+      } catch {
+        // 2e tentative après cold start Render
+        await new Promise(r => setTimeout(r, 2500))
+        res = await fetchTaches()
+      }
+
+      if (Array.isArray(res.data)) {
+        setTaches(res.data)
+        setTachesSyncFailed(false)
+        if (res.data.length > 0) {
+          await sauvegarderTachesLocalement(res.data, user.id)
+        }
+      }
+
       api.get(`/dashboard/stats/${user.id}`).then(r => {
         setDashboardStats(r.data)
         if (typeof r.data.streak === 'number') setStreak(r.data.streak)
         if (typeof r.data.points === 'number') setPoints(r.data.points)
         if (typeof r.data.niveau === 'number') setNiveau(r.data.niveau)
       }).catch(() => {})
-    } catch {
-      if (!local?.length) setTaches([])
+    } catch (err) {
+      console.warn('[GetShift] sync tâches échouée:', err?.message || err)
+      setTachesSyncFailed(true)
+      // Ne jamais vider l'UI si on a du cache local ou des tâches déjà affichées
+      if (!local?.length) {
+        setTaches(prev => (prev.length > 0 ? prev : []))
+      }
     }
     setLoading(false)
   }, [user?.id])
+
+  // Retry silencieux au retour sur l'onglet si le dernier sync a échoué
+  useEffect(() => {
+    const onFocus = () => {
+      if (tachesSyncFailed) chargerTaches({ silent: true })
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [tachesSyncFailed, chargerTaches])
 
   // Import Google Calendar au chargement (ne dépend plus du webhook, qui expire).
   // Throttlé 5 min pour ne pas spammer l'API GCal ; rafraîchit si de nouveaux events.
@@ -769,7 +802,7 @@ export function useDashboard() {
   return {
     user, T, theme, points, niveau, streak,
     dashboardStats, coachDailyMessage, coachDailyLoading, chargerCoachDailyMessage, dnaInsights,
-    taches, tachesFiltrees, tachesFocus, statsTaches, bloquees, loading,
+    taches, tachesFiltrees, tachesFocus, statsTaches, bloquees, loading, tachesSyncFailed,
     badgesObtenus, badgeNotif, rappels,
     niveauActuel, niveauSuivant, pctNiveau, salut,
     titre, setTitre, priorite, setPriorite, deadline, setDeadline,

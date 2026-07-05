@@ -58,15 +58,28 @@ export const ouvrirDB = () => {
 
 // ============ TACHES ============
 
-export const sauvegarderTachesLocalement = async (taches) => {
+export const sauvegarderTachesLocalement = async (taches, userId) => {
   try {
     const database = await ouvrirDB()
     const tx = database.transaction(STORES.taches, 'readwrite')
     const store = tx.objectStore(STORES.taches)
 
-    // Vider et réécrire
-    store.clear()
-    taches.forEach(t => store.put(t))
+    // Ne supprimer que les tâches de cet utilisateur (pas tout le store)
+    if (userId != null) {
+      const index = store.index('user_id')
+      const existing = await new Promise((resolve, reject) => {
+        const req = index.getAll(userId)
+        req.onsuccess = () => resolve(req.result || [])
+        req.onerror = () => reject(req.error)
+      })
+      for (const t of existing) store.delete(t.id)
+    } else {
+      store.clear()
+    }
+
+    for (const t of taches) {
+      store.put({ ...t, user_id: t.user_id ?? userId })
+    }
 
     return new Promise((resolve, reject) => {
       tx.oncomplete = () => resolve()
